@@ -1,0 +1,191 @@
+"use client";
+
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { RoundedBox } from "@react-three/drei";
+import * as THREE from "three";
+import { COLORS, letterTexture, pipTexture } from "./faceTexture";
+
+export type DieData = {
+  front: string; // blue letter (+Z)
+  right: string; // orange letter (+X)
+  top: number; // dark pip value (+Y)
+};
+
+export type Phase = "meta" | "game" | "year" | "static";
+
+// Whole-die orientation per phase. META rests with the blue letter forward and a
+// gentle tilt; GAME spins the orange face to the front; YEAR tips the pip top up
+// toward the camera. Static is the reduced-motion resting pose.
+const d = THREE.MathUtils.degToRad;
+const quat = (x: number, y: number, z = 0) =>
+  new THREE.Quaternion().setFromEuler(new THREE.Euler(d(x), d(y), d(z), "YXZ"));
+
+// Camera sits on +Z looking toward -Z. Positive X rotation brings +Y (top) into
+// view; negative Y rotation brings +X (right) into view — the classic 3-face die
+// pose. META rests showing the blue +Z face; GAME swings the orange +X face to
+// front; YEAR tips the pip top (+Y) up to the camera.
+const QUAT: Record<Phase, THREE.Quaternion> = {
+  static: quat(20, -28),
+  meta: quat(20, -28),
+  game: quat(20, -118), // -28 - 90: orange +X rotates to front
+  year: quat(66, -16), // +X tips the pip top (+Y) up to face the camera
+};
+
+const SIZE = 1; // die edge length in world units
+const RADIUS = SIZE * 0.08; // bevel radius of the rounded body
+
+// The body's flat (un-beveled) face spans SIZE - 2*RADIUS. The printed panel is
+// a rounded square sized to cover that flat region and reach up to where the
+// bevel begins; its corner radius matches the bevel so the corners tuck into the
+// rounded edge instead of poking past it. PANEL slightly exceeds the flat region
+// so the colored area meets the bevel with no dark gap.
+const FLAT = SIZE - 2 * RADIUS;
+// Panel fills exactly the flat face region (corner radius = bevel radius) and sits
+// coplanar with the face, so it reads as painted-on rather than a raised sticker.
+// polygonOffset (below) avoids z-fighting with the body face.
+const PANEL = FLAT;
+const PANEL_R = RADIUS;
+const LIFT = 0;
+
+// A rounded-rectangle plane centered at the origin in the XY plane, with UVs
+// normalized to 0..1 so a full-bleed face texture maps across it cleanly.
+function roundedPanelGeometry(
+  side: number,
+  radius: number,
+): THREE.ShapeGeometry {
+  const h = side / 2;
+  const r = Math.min(radius, h);
+  const shape = new THREE.Shape();
+  shape.moveTo(-h + r, -h);
+  shape.lineTo(h - r, -h);
+  shape.quadraticCurveTo(h, -h, h, -h + r);
+  shape.lineTo(h, h - r);
+  shape.quadraticCurveTo(h, h, h - r, h);
+  shape.lineTo(-h + r, h);
+  shape.quadraticCurveTo(-h, h, -h, h - r);
+  shape.lineTo(-h, -h + r);
+  shape.quadraticCurveTo(-h, -h, -h + r, -h);
+
+  const geo = new THREE.ShapeGeometry(shape, 12);
+  const pos = geo.attributes.position;
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    uv[i * 2] = (pos.getX(i) + h) / side; // x -> u
+    uv[i * 2 + 1] = (pos.getY(i) + h) / side; // y -> v
+  }
+  geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+  return geo;
+}
+
+// Each printed face: panel center position + the rotation that lays the panel
+// flat against that cube face (panel default normal is +Z).
+const HALF = SIZE / 2 + LIFT;
+const FACES: {
+  pos: [number, number, number];
+  rot: [number, number, number];
+}[] = [
+  { pos: [0, 0, HALF], rot: [0, 0, 0] }, // +Z front (blue letter)
+  { pos: [0, 0, -HALF], rot: [0, Math.PI, 0] }, // -Z back (blue letter)
+  { pos: [HALF, 0, 0], rot: [0, Math.PI / 2, 0] }, // +X right (orange letter)
+  { pos: [-HALF, 0, 0], rot: [0, -Math.PI / 2, 0] }, // -X left (orange letter)
+  { pos: [0, HALF, 0], rot: [-Math.PI / 2, 0, 0] }, // +Y top (dark pips)
+  { pos: [0, -HALF, 0], rot: [Math.PI / 2, 0, 0] }, // -Y bottom (dark pips)
+];
+
+export default function Die({
+  data,
+  phase,
+  delay,
+  x,
+}: {
+  data: DieData;
+  phase: Phase;
+  delay: number;
+  x: number;
+}) {
+  const group = useRef<THREE.Group>(null);
+
+  // One rounded-panel geometry shared by all six faces.
+  const panelGeo = useMemo(() => roundedPanelGeometry(PANEL, PANEL_R), []);
+  useEffect(() => () => panelGeo.dispose(), [panelGeo]);
+
+  // Per-face textures, built once.
+  const textures = useMemo(() => {
+    const blue = letterTexture(data.front, COLORS.blue);
+    const blueBack = letterTexture(data.front, COLORS.blue);
+    const orange = letterTexture(data.right, COLORS.orange);
+    const orangeLeft = letterTexture(data.right, COLORS.orange);
+    const top = pipTexture(data.top);
+    const bottom = pipTexture(7 - data.top);
+    return [blue, blueBack, orange, orangeLeft, top, bottom];
+  }, [data]);
+
+  useEffect(() => () => textures.forEach((t) => t.dispose()), [textures]);
+
+  // Start from the META pose (imperative so re-renders don't snap it back).
+  const started = useRef(false);
+  useEffect(() => {
+    if (group.current && !started.current) {
+      group.current.quaternion.copy(QUAT.meta);
+      started.current = true;
+    }
+  }, []);
+
+  // Each phase change starts a per-die countdown so the row turns in a wave.
+  const target = QUAT[phase];
+  const wait = useRef(0);
+  useEffect(() => {
+    wait.current = delay * 0.16; // seconds of stagger before this die turns
+  }, [phase, delay]);
+
+  useFrame((_, dt) => {
+    const g = group.current;
+    if (!g) return;
+    if (wait.current > 0) {
+      wait.current -= dt;
+      return;
+    }
+    // Eased exponential approach toward the target orientation; the small base
+    // makes a slow, deliberate turn that settles over ~1.5s.
+    const k = 1 - Math.pow(0.04, dt);
+    g.quaternion.slerp(target, k);
+  });
+
+  return (
+    <group position={[x, 0, 0]}>
+      <group ref={group}>
+        {/* ink body — its rounded bevel forms the dark edges/frame */}
+        <RoundedBox
+          args={[SIZE, SIZE, SIZE]}
+          radius={RADIUS}
+          smoothness={8}
+          bevelSegments={8}
+          creaseAngle={0.6}
+          castShadow
+          receiveShadow
+        >
+          <meshStandardMaterial
+            color={COLORS.ink}
+            roughness={0.9}
+            metalness={0}
+          />
+        </RoundedBox>
+
+        {/* printed faces: rounded panels filling each flat face, lit like the body
+            so they read as painted-on rather than stuck-on stickers. */}
+        {FACES.map((f, i) => (
+          <mesh key={i} geometry={panelGeo} position={f.pos} rotation={f.rot}>
+            <meshStandardMaterial
+              map={textures[i]}
+              roughness={0.7}
+              metalness={0}
+              polygonOffset
+              polygonOffsetFactor={-4}
+            />
+          </mesh>
+        ))}
+      </group>
+    </group>
+  );
+}

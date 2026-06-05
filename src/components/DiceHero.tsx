@@ -1,5 +1,11 @@
-import Dice from "./Dice";
+"use client";
+
+import dynamic from "next/dynamic";
 import SignupForm from "./SignupForm";
+
+// True-3D dice (three.js + R3F). Client-only: the WebGL canvas can't render on the
+// server, and skipping SSR keeps three out of the initial HTML payload.
+const Dice3D = dynamic(() => import("./dice3d/Dice3D"), { ssr: false });
 
 // film-grain texture (data-URI kept out of the className for legibility)
 const GRAIN =
@@ -19,7 +25,9 @@ export default function DiceHero() {
       <div aria-hidden className="flex-[3]" />
 
       <div className="flex flex-col items-center gap-[clamp(28px,5vh,56px)]">
-        <Dice />
+        <div className="flex h-[clamp(240px,42vh,420px)] w-full max-w-[1100px] items-center justify-center">
+          <Dice3D />
+        </div>
         <div aria-hidden className="flex-[3]" />
 
         <div className="flex items-center gap-[clamp(10px,2.5vw,22px)] text-center font-[family-name:var(--font-bebas)] text-[clamp(38px,9vw,68px)] leading-[0.85] tracking-[0.02em]">
