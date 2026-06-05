@@ -2,6 +2,12 @@ import { env } from "@/env";
 
 export type SignupResult = { stored: boolean; reason?: string };
 
+// Interest Intake tags each row by Type of Interest; splash signups get the "email list"
+// option. Written by name (the API rejects option ids on write); typecast keeps signups
+// working if it's relabeled — but update this to match, or a stray option gets recreated.
+const INTEREST_FIELD = "Type of Interest";
+const INTEREST_VALUE = "email list";
+
 /**
  * Upsert an email into the Airtable signups table, keyed on the email field so
  * a repeat submission updates rather than duplicates. Uses `performUpsert`, so
@@ -29,7 +35,9 @@ export async function recordSignup(email: string): Promise<SignupResult> {
       },
       body: JSON.stringify({
         performUpsert: { fieldsToMergeOn: [AIRTABLE_EMAIL_FIELD] },
-        records: [{ fields: { [AIRTABLE_EMAIL_FIELD]: email } }],
+        records: [
+          { fields: { [AIRTABLE_EMAIL_FIELD]: email, [INTEREST_FIELD]: [INTEREST_VALUE] } },
+        ],
         typecast: true,
       }),
     },
