@@ -20,6 +20,7 @@ export default function DiceHero() {
 
       <div className="flex flex-col items-center gap-[clamp(28px,5vh,56px)]">
         <Dice />
+        <div aria-hidden className="flex-[3]" />
 
         <div className="flex items-center gap-[clamp(10px,2.5vw,22px)] text-center font-[family-name:var(--font-bebas)] text-[clamp(38px,9vw,68px)] leading-[0.85] tracking-[0.02em]">
           <span>Nov 6&ndash;8, 2026</span>
