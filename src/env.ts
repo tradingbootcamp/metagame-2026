@@ -24,12 +24,14 @@ const ENV_SPEC: EnvSpec[] = [
   {
     name: "AIRTABLE_BASE_ID",
     required: true,
-    description: 'Airtable base id (starts with "app") holding the signups table',
+    description:
+      'Airtable base id (starts with "app") holding the signups table',
   },
   {
     name: "AIRTABLE_TABLE_ID",
     required: true,
-    description: 'Airtable table id (starts with "tbl") or table name for signups',
+    description:
+      'Airtable table id (starts with "tbl") or table name for signups',
   },
   {
     name: "AIRTABLE_EMAIL_FIELD",

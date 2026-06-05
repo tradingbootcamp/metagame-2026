@@ -70,7 +70,9 @@ export default function SignupForm() {
         </button>
       </div>
       {status === "error" && (
-        <p className="text-sm text-[#c0392b]">Something went wrong. Try again.</p>
+        <p className="text-sm text-[#c0392b]">
+          Something went wrong. Try again.
+        </p>
       )}
     </form>
   );

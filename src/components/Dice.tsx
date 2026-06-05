@@ -45,14 +45,11 @@ function Pips({ value }: { value: number }) {
 }
 
 export default function Dice() {
-  const [phase, setPhase] = useState<keyof typeof PHASE>("meta");
+  // Start on the static pose; animate unless the user prefers reduced motion.
+  const [phase, setPhase] = useState<keyof typeof PHASE>("static");
 
   useEffect(() => {
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      setPhase("static");
-      return;
-    }
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     let step = 0;
     const id = setInterval(() => {
       step = (step + 1) % SEQ.length;
@@ -68,7 +65,10 @@ export default function Dice() {
           <div key={i} className={styles.dieWrap}>
             <div
               className={styles.die}
-              style={{ transform: PHASE[phase], transitionDelay: `${i * 0.11}s` }}
+              style={{
+                transform: PHASE[phase],
+                transitionDelay: `${i * 0.11}s`,
+              }}
             >
               <div className={`${styles.face} ${styles.front}`}>
                 <span className={styles.glyph}>{d.front}</span>

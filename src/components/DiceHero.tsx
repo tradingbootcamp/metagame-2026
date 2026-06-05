@@ -34,7 +34,7 @@ export default function DiceHero() {
           </p>
           <SignupForm />
           <a
-            className="mt-1 border-b-[1.5px] border-transparent pb-px text-[13px] uppercase tracking-[0.16em] text-[#1b1530]/70 transition hover:border-[#eaa35a] hover:text-[#1b1530]"
+            className="mt-1 border-b-[1.5px] border-transparent pb-px text-[13px] tracking-[0.16em] text-[#1b1530]/70 uppercase transition hover:border-[#eaa35a] hover:text-[#1b1530]"
             href="https://2025.metagame.games"
             target="_blank"
             rel="noopener noreferrer"
@@ -46,7 +46,7 @@ export default function DiceHero() {
 
       <div aria-hidden className="flex-[1]" />
 
-      <footer className="pointer-events-none absolute bottom-3 right-4 z-[70] text-[11px] tracking-wider text-[#1b1530]/40">
+      <footer className="pointer-events-none absolute right-4 bottom-3 z-[70] text-[11px] tracking-wider text-[#1b1530]/40">
         © Metagame LLC 2026
       </footer>
     </main>

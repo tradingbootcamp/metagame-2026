@@ -21,8 +21,16 @@ const NAME_FIELD = "Name";
  * a warning so local dev still works — the splash form succeeds, the email just
  * isn't persisted.
  */
-export async function recordSignup(email: string, name?: string): Promise<SignupResult> {
-  const { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_TABLE_ID, AIRTABLE_EMAIL_FIELD } = env;
+export async function recordSignup(
+  email: string,
+  name?: string,
+): Promise<SignupResult> {
+  const {
+    AIRTABLE_API_KEY,
+    AIRTABLE_BASE_ID,
+    AIRTABLE_TABLE_ID,
+    AIRTABLE_EMAIL_FIELD,
+  } = env;
 
   if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID || !AIRTABLE_TABLE_ID) {
     console.warn(`[signup] Airtable not configured — not stored: ${email}`);

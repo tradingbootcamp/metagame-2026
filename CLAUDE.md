@@ -28,12 +28,25 @@ in local dev without credentials.
 
 ## Styling
 
-Tailwind v4 for ordinary UI (layout, spacing, type, forms, palette tokens in `globals.css`).
-Reach for a **scoped CSS module** only for genuinely complex / 3D / custom-property-heavy CSS
-that maps badly to utilities — currently just the dice hero (`DiceHero.module.css`: `preserve-3d`,
-per-face `translateZ(var(--h))`, the `--s`/`--h` `calc()`/`clamp()` cube system). Don't convert
-that to arbitrary-value classes; everything else stays Tailwind. (The non-dice hero chrome —
-date band, signup, links — could move to Tailwind out of the module; fine to leave for now.)
+Tailwind v4 for ordinary UI — layout, spacing, type, forms, the hero shell (`DiceHero.tsx`),
+palette tokens in `globals.css`. Reach for a **scoped CSS module** only for genuinely complex /
+3D / custom-property-heavy CSS that maps badly to utilities — currently just the dice cube
+(`Dice.tsx` + `Dice.module.css`: `preserve-3d`, per-face `translateZ(var(--h))`, the `--s`/`--h`
+`calc()`/`clamp()` system). Don't convert that to arbitrary-value classes; everything else
+stays Tailwind.
+
+## Code comments
+
+Comments are good — lean toward a short one that explains the _why_. Keep them tight: a
+one-liner, not a 3–4 line block, and don't add a comment narrating a routine edit just because
+you touched the line. If the prose isn't doing real work, cut it.
+
+## Linting & formatting
+
+- `pnpm check` = `typecheck` + `lint` + `format:check`. Run it before pushing.
+- **Prettier** (with `prettier-plugin-tailwindcss`, which auto-sorts class names) — `pnpm format`
+  applies it. **ESLint** via `eslint-config-next`.
+- CI (`.github/workflows/ci.yml`) runs `check` + `build` on every PR / push to main.
 
 ## Worktrees & parallel work
 
