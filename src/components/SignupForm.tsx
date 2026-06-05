@@ -5,6 +5,7 @@ import { useState } from "react";
 type Status = "idle" | "submitting" | "success" | "error";
 
 export default function SignupForm() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
 
@@ -16,10 +17,11 @@ export default function SignupForm() {
       const res = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ name, email }),
       });
       if (!res.ok) throw new Error("Request failed");
       setStatus("success");
+      setName("");
       setEmail("");
     } catch {
       setStatus("error");
@@ -34,31 +36,44 @@ export default function SignupForm() {
     );
   }
 
+  const inputClass =
+    "h-12 rounded-full border border-foreground/15 bg-transparent px-5 text-base outline-none placeholder:text-foreground/40 focus:border-foreground/40";
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-10 flex w-full max-w-sm flex-col gap-3 sm:flex-row"
+      className="mt-10 flex w-full max-w-sm flex-col gap-3"
     >
       <input
-        type="email"
-        required
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="you@example.com"
-        aria-label="Email address"
-        className="h-12 flex-1 rounded-full border border-foreground/15 bg-transparent px-5 text-base outline-none placeholder:text-foreground/40 focus:border-foreground/40"
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Name (optional)"
+        aria-label="Name (optional)"
+        autoComplete="name"
+        className={`${inputClass} w-full`}
       />
-      <button
-        type="submit"
-        disabled={status === "submitting"}
-        className="h-12 rounded-full bg-foreground px-6 text-base font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
-      >
-        {status === "submitting" ? "…" : "Notify me"}
-      </button>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          aria-label="Email address"
+          autoComplete="email"
+          className={`${inputClass} flex-1`}
+        />
+        <button
+          type="submit"
+          disabled={status === "submitting"}
+          className="h-12 rounded-full bg-foreground px-6 text-base font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          {status === "submitting" ? "…" : "Notify me"}
+        </button>
+      </div>
       {status === "error" && (
-        <p className="text-sm text-red-500 sm:absolute sm:mt-14">
-          Something went wrong. Try again.
-        </p>
+        <p className="text-sm text-red-500">Something went wrong. Try again.</p>
       )}
     </form>
   );
