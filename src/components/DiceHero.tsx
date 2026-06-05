@@ -67,7 +67,10 @@ export default function DiceHero() {
       <div className={styles.grain} />
       <h1 className={styles.srOnly}>Metagame 2026</h1>
 
-      <div className={styles.arena}>
+      <div className={styles.spacerTop} aria-hidden="true" />
+
+      <div className={styles.content}>
+        <div className={styles.arena}>
         <div className={styles.diceRow}>
           {DICE.map((d, i) => (
             <div key={i} className={styles.dieWrap}>
@@ -118,6 +121,13 @@ export default function DiceHero() {
           Revisit 2025 <span className={styles.revisitArrow}>↗</span>
         </a>
       </div>
+      </div>
+
+      <div className={styles.spacerBottom} aria-hidden="true" />
+
+      <footer className="pointer-events-none absolute bottom-3 right-4 z-[70] text-[11px] tracking-wider text-[#1b1530]/40">
+        © Metagame LLC 2026
+      </footer>
     </main>
   );
 }
