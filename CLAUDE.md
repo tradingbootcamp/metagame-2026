@@ -61,3 +61,8 @@ Metagame-specific setup that differs from the arbiter repos:
   Environment variables above). Without it the signup form gracefully no-ops.
 - `pnpm dev` starts the dev server, auto-incrementing from port 3000 if it's taken. Read the
   actual port from startup output before surfacing a localhost link.
+- **When previewing, surface _both_ URLs `next dev` prints** — the `Local:` (`localhost`) link
+  *and* the `Network:` (LAN IP, e.g. `http://10.x.x.x:<port>`) link — so the change can be opened
+  on a phone/other device on the same network for mobile testing. Next 16 binds to `0.0.0.0` by
+  default and prints both; no extra flag needed. Read the real IP+port from the startup output —
+  don't assume them.
