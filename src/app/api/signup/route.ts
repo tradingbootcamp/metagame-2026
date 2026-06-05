@@ -17,6 +17,16 @@ export async function POST(request: Request) {
 
   try {
     const result = await recordSignup(email.trim(), trimmedName || undefined);
+    // In dev the not-configured no-op is intentional, but in production it means
+    // misconfigured env (missing PAT) — surface it instead of faking success and
+    // silently dropping the signup.
+    if (!result.stored && process.env.NODE_ENV === "production") {
+      console.error("[signup] Airtable not configured in production — signup not stored");
+      return NextResponse.json(
+        { error: "Signup is temporarily unavailable" },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ ok: true, stored: result.stored });
   } catch (err) {
     console.error("[signup] failed to store email:", err);
