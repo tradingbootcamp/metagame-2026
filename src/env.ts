@@ -1,11 +1,8 @@
 /**
- * Central environment-variable contract for the site.
- *
- * Keep this in sync with `.env.example`. `validateEnv()` is wired into
- * `next.config.ts`, so it runs on `next dev` and `next build` and prints a
- * warning listing anything required that's missing. It never throws — the site
- * still builds and runs without credentials; the signup form just can't reach
- * Airtable until they're set.
+ * Central environment-variable contract. validateEnv() (wired into next.config.ts)
+ * warns on missing required vars locally so dev works without creds, but throws on
+ * Vercel so a misconfigured deploy fails the build instead of silently shipping.
+ * Keep in sync with .env.example.
  */
 
 type EnvSpec = {
@@ -40,9 +37,9 @@ const ENV_SPEC: EnvSpec[] = [
 
 let alreadyValidated = false;
 
-/** Logs a warning for any missing required env vars. Never throws. */
+/** Warns on missing required env vars locally; throws on Vercel so a bad deploy fails the build. */
 export function validateEnv(): void {
-  // next.config is evaluated more than once per build; only warn once per process.
+  // next.config is evaluated more than once per build; only act once per process.
   if (alreadyValidated) return;
   alreadyValidated = true;
 
@@ -50,15 +47,15 @@ export function validateEnv(): void {
   if (missing.length === 0) return;
 
   const lines = missing.map((v) => `   • ${v.name} — ${v.description}`);
+  const summary = `Missing ${missing.length} required environment variable${missing.length > 1 ? "s" : ""}:`;
+
+  // On Vercel, fail the build instead of shipping a deploy that silently drops signups.
+  if (process.env.VERCEL) {
+    throw new Error([summary, ...lines].join("\n"));
+  }
+
   console.warn(
-    [
-      "",
-      `⚠  Missing ${missing.length} required environment variable${missing.length > 1 ? "s" : ""}:`,
-      ...lines,
-      "   Copy .env.example to .env.local and fill these in. The site still runs,",
-      "   but email signups won't be stored until they're set.",
-      "",
-    ].join("\n"),
+    ["", `⚠  ${summary}`, ...lines, "   Copy .env.example to .env.local and fill these in.", ""].join("\n"),
   );
 }
 
