@@ -85,11 +85,9 @@
 }
 .front .glyph {
   color: #2b9bf0;
-  transform: scaleX(-1);
 }
 .right .glyph {
   color: #eaa35a;
-  transform: scaleX(-1);
 }
 .back .glyph {
   color: #2b9bf0;

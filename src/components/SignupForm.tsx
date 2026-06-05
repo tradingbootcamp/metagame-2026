@@ -33,8 +33,8 @@ export default function SignupForm() {
 
   if (status === "success") {
     return (
-      <p className="text-center text-base text-[#1b1530]">
-        Thanks — you&apos;re on the list. We&apos;ll be in touch.
+      <p className="flex flex-col gap-2 text-center text-base text-[#1b1530]">
+        <span>Thanks — you&apos;re on the list. We&apos;ll be in touch.</span>
       </p>
     );
   }

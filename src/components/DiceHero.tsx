@@ -7,7 +7,7 @@ const GRAIN =
 
 export default function DiceHero() {
   return (
-    <main className="relative flex min-h-dvh flex-1 flex-col items-center overflow-hidden bg-[#f4ecd2] px-[clamp(20px,5vw,56px)] py-[clamp(24px,4vh,48px)] font-[family-name:var(--font-space-grotesk)] text-[#1b1530]">
+    <main className="relative flex min-h-dvh flex-1 flex-col items-center overflow-hidden bg-[#687ee2] px-[clamp(20px,5vw,56px)] py-[clamp(24px,4vh,48px)] font-[family-name:var(--font-space-grotesk)] text-[#1b1530]">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 z-[60] opacity-40 mix-blend-multiply"
@@ -24,15 +24,23 @@ export default function DiceHero() {
 
         <div className="flex items-center gap-[clamp(10px,2.5vw,22px)] text-center font-[family-name:var(--font-bebas)] text-[clamp(38px,9vw,68px)] leading-[0.85] tracking-[0.02em]">
           <span>Nov 6&ndash;8, 2026</span>
-          <span className="text-[0.5em] text-[#2b9bf0]">&middot;</span>
+          <span className="text-[0.5em] text-[#eaa35a]">&middot;</span>
           <span>Berkeley, CA</span>
         </div>
 
         <div className="relative z-[5] flex w-full max-w-[440px] flex-col items-center gap-[14px]">
-          <p className="m-0 font-[family-name:var(--font-bebas)] text-[clamp(26px,6vw,38px)] tracking-[0.05em]">
+          <p className="m-0 text-center font-[family-name:var(--font-bebas)] text-[clamp(26px,6vw,38px)] leading-tight tracking-[0.05em]">
             Get notified
+            <br />
+            <span className="block text-center font-sans text-[clamp(15px,3.6vw,22px)] leading-[1.2] font-normal tracking-normal not-italic">
+              About ticket sales, updates, volunteer opportunities, and more
+            </span>
           </p>
           <SignupForm />
+          <span className="text-center text-base text-[#1b1530]">
+            Questions? Interested in speaking/participating/sponsoring? Email us
+            at <a href="mailto:team@metagame.games">team@metagame.games</a>
+          </span>
           <a
             className="mt-1 border-b-[1.5px] border-transparent pb-px text-[13px] tracking-[0.16em] text-[#1b1530]/70 uppercase transition hover:border-[#eaa35a] hover:text-[#1b1530]"
             href="https://2025.metagame.games"

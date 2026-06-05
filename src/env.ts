@@ -57,7 +57,13 @@ export function validateEnv(): void {
   }
 
   console.warn(
-    ["", `⚠  ${summary}`, ...lines, "   Copy .env.example to .env.local and fill these in.", ""].join("\n"),
+    [
+      "",
+      `⚠  ${summary}`,
+      ...lines,
+      "   Copy .env.example to .env.local and fill these in.",
+      "",
+    ].join("\n"),
   );
 }
 
