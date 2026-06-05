@@ -78,7 +78,7 @@
   inset: 0;
   box-sizing: border-box;
   border: max(3px, calc(var(--s) * 0.033)) solid #141417;
-  border-radius: calc(var(--s) * 0.12);
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
