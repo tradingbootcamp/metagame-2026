@@ -1,0 +1,206 @@
+.root {
+  position: relative;
+  flex: 1;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(28px, 6vh, 64px);
+  padding: clamp(28px, 5vw, 64px) clamp(20px, 5vw, 56px);
+  background: #f4ecd2;
+  color: #1b1530;
+  overflow: hidden;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+}
+
+/* film-grain texture over everything */
+.grain {
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)' opacity='0.35'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- dice ---- */
+.arena {
+  perspective: 1700px;
+  perspective-origin: 50% 45%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.diceRow {
+  display: flex;
+  gap: clamp(16px, 5vw, 78px);
+  transform-style: preserve-3d;
+}
+.dieWrap {
+  --s: clamp(52px, 14vw, 150px);
+  --h: calc(var(--s) / 2);
+  position: relative;
+  transform-style: preserve-3d;
+}
+.dieShadow {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--s) * -0.44);
+  width: var(--s);
+  height: calc(var(--s) * 0.22);
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(20, 20, 23, 0.34), rgba(20, 20, 23, 0) 70%);
+  filter: blur(2px);
+}
+.die {
+  width: var(--s);
+  height: var(--s);
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 1s cubic-bezier(0.62, 0.04, 0.26, 1);
+}
+.face {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: max(3px, calc(var(--s) * 0.033)) solid #141417;
+  border-radius: calc(var(--s) * 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  box-shadow: inset 0 -10px 22px rgba(0, 0, 0, 0.16), inset 0 8px 14px rgba(255, 255, 255, 0.14);
+}
+.front {
+  transform: translateZ(var(--h));
+  background: #2b9bf0;
+}
+.right {
+  transform: rotateY(90deg) translateZ(var(--h));
+  background: #eaa35a;
+}
+.top {
+  transform: rotateX(90deg) translateZ(var(--h));
+  background: #222227;
+}
+.back {
+  transform: rotateY(180deg) translateZ(var(--h));
+  background: #2b9bf0;
+}
+.left {
+  transform: rotateY(-90deg) translateZ(var(--h));
+  background: #eaa35a;
+}
+.bottom {
+  transform: rotateX(-90deg) translateZ(var(--h));
+  background: #222227;
+}
+
+.glyph {
+  font-family: var(--font-bebas), sans-serif;
+  font-size: calc(var(--s) * 0.85);
+  line-height: 1;
+  -webkit-text-stroke: max(3px, calc(var(--s) * 0.047)) #141417;
+  paint-order: stroke fill;
+}
+.front .glyph {
+  color: #2b9bf0;
+  transform: scaleX(-1);
+}
+.right .glyph {
+  color: #eaa35a;
+  transform: scaleX(-1);
+}
+.back .glyph {
+  color: #2b9bf0;
+  opacity: 0.85;
+}
+.left .glyph {
+  color: #eaa35a;
+  opacity: 0.85;
+}
+
+/* pips */
+.pips {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: calc(var(--s) * 0.13);
+  box-sizing: border-box;
+}
+.pip {
+  width: calc(var(--s) * 0.145);
+  height: calc(var(--s) * 0.145);
+  border-radius: 50%;
+  background: #fff;
+  align-self: center;
+  justify-self: center;
+  box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.35);
+}
+.pipOn {
+  visibility: visible;
+}
+.pipOff {
+  visibility: hidden;
+}
+
+/* ---- date band ---- */
+.band {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2.5vw, 22px);
+  font-family: var(--font-bebas), sans-serif;
+  font-size: clamp(38px, 9vw, 68px);
+  line-height: 0.85;
+  letter-spacing: 0.02em;
+  color: #1b1530;
+  text-align: center;
+}
+.sep {
+  font-size: 0.5em;
+  color: #2b9bf0;
+}
+.sepB {
+  color: #eaa35a;
+}
+
+/* ---- signup ---- */
+.signup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 440px;
+  position: relative;
+  z-index: 5;
+}
+.signupHead {
+  font-family: var(--font-bebas), sans-serif;
+  font-size: clamp(26px, 6vw, 38px);
+  letter-spacing: 0.05em;
+  color: #1b1530;
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .die {
+    transition: none;
+  }
+}
