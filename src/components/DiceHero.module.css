@@ -110,6 +110,33 @@
   background: #222227;
 }
 
+/* dark inner cube: square-cornered faces 2px behind the colored faces, so the
+   rounded-corner gaps reveal a solid dark body instead of the cream background */
+.core {
+  position: absolute;
+  inset: 0;
+  background: #141417;
+  backface-visibility: hidden;
+}
+.coreFront {
+  transform: translateZ(calc(var(--h) - 2px));
+}
+.coreRight {
+  transform: rotateY(90deg) translateZ(calc(var(--h) - 2px));
+}
+.coreTop {
+  transform: rotateX(90deg) translateZ(calc(var(--h) - 2px));
+}
+.coreBack {
+  transform: rotateY(180deg) translateZ(calc(var(--h) - 2px));
+}
+.coreLeft {
+  transform: rotateY(-90deg) translateZ(calc(var(--h) - 2px));
+}
+.coreBottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--h) - 2px));
+}
+
 .glyph {
   font-family: var(--font-bebas), sans-serif;
   font-size: calc(var(--s) * 0.85);
@@ -197,6 +224,26 @@
   letter-spacing: 0.05em;
   color: #1b1530;
   margin: 0;
+}
+
+.revisit {
+  margin-top: 4px;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #1b1530;
+  text-decoration: none;
+  border-bottom: 1.5px solid transparent;
+  padding-bottom: 1px;
+  opacity: 0.7;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.revisit:hover {
+  opacity: 1;
+  border-bottom-color: #eaa35a;
+}
+.revisitArrow {
+  color: #2b9bf0;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -31,6 +31,10 @@ const PHASE = {
 };
 const SEQ = ["meta", "game", "year"] as const;
 
+// dark inner-cube faces sit just behind the colored faces; their square corners
+// fill the rounded-corner gaps so each die reads as a solid object, not flat tiles
+const CORE_FACES = ["coreFront", "coreRight", "coreTop", "coreBack", "coreLeft", "coreBottom"];
+
 function Pips({ value }: { value: number }) {
   const on = PIP_MAP[value] ?? [];
   return (
@@ -93,6 +97,9 @@ export default function DiceHero() {
                 <div className={`${styles.face} ${styles.bottom}`}>
                   <Pips value={7 - d.top} />
                 </div>
+                {CORE_FACES.map((c) => (
+                  <div key={c} className={`${styles.core} ${styles[c]}`} />
+                ))}
               </div>
               <div className={styles.dieShadow} />
             </div>
@@ -101,16 +108,22 @@ export default function DiceHero() {
       </div>
 
       <div className={styles.band}>
-        <span>Nov 6&ndash;8</span>
+        <span>Nov 6&ndash;8, 2026</span>
         <span className={styles.sep}>&middot;</span>
-        <span>Berkeley</span>
-        <span className={`${styles.sep} ${styles.sepB}`}>&middot;</span>
-        <span>2026</span>
+        <span>Berkeley, CA</span>
       </div>
 
       <div className={styles.signup}>
         <p className={styles.signupHead}>Get notified</p>
         <SignupForm />
+        <a
+          className={styles.revisit}
+          href="https://2025.metagame.games"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Revisit 2025 <span className={styles.revisitArrow}>↗</span>
+        </a>
       </div>
     </main>
   );
