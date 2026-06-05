@@ -3,9 +3,13 @@ import { env } from "@/env";
 export type SignupResult = { stored: boolean; reason?: string };
 
 /**
- * Append an email to the Airtable signups table. If Airtable isn't configured
- * yet (no token / base / table), this no-ops with a warning so local dev still
- * works — the splash form succeeds, the email just isn't persisted.
+ * Upsert an email into the Airtable signups table, keyed on the email field so
+ * a repeat submission updates rather than duplicates. Uses `performUpsert`, so
+ * it dedupes server-side with only `data.records:write` scope — no read needed.
+ *
+ * If Airtable isn't configured yet (no token / base / table), this no-ops with
+ * a warning so local dev still works — the splash form succeeds, the email just
+ * isn't persisted.
  */
 export async function recordSignup(email: string): Promise<SignupResult> {
   const { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_TABLE_ID, AIRTABLE_EMAIL_FIELD } = env;
@@ -18,12 +22,13 @@ export async function recordSignup(email: string): Promise<SignupResult> {
   const res = await fetch(
     `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_ID)}`,
     {
-      method: "POST",
+      method: "PATCH",
       headers: {
         Authorization: `Bearer ${AIRTABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        performUpsert: { fieldsToMergeOn: [AIRTABLE_EMAIL_FIELD] },
         records: [{ fields: { [AIRTABLE_EMAIL_FIELD]: email } }],
         typecast: true,
       }),
