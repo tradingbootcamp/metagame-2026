@@ -1,0 +1,90 @@
+.arena {
+  perspective: 1700px;
+  perspective-origin: 50% 45%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.diceRow {
+  display: flex;
+  gap: clamp(16px, 5vw, 78px);
+  transform-style: preserve-3d;
+}
+.dieWrap {
+  --s: clamp(52px, 14vw, 150px);
+  --h: calc(var(--s) / 2);
+  position: relative;
+  transform-style: preserve-3d;
+}
+.dieShadow {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--s) * -0.44);
+  width: var(--s);
+  height: calc(var(--s) * 0.22);
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(20, 20, 23, 0.34), rgba(20, 20, 23, 0) 70%);
+  filter: blur(2px);
+}
+.die {
+  width: var(--s);
+  height: var(--s);
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 1s cubic-bezier(0.62, 0.04, 0.26, 1);
+}
+.face {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: max(3px, calc(var(--s) * 0.033)) solid #141417;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  box-shadow: inset 0 -10px 22px rgba(0, 0, 0, 0.16), inset 0 8px 14px rgba(255, 255, 255, 0.14);
+}
+.front { transform: translateZ(var(--h)); background: #2b9bf0; }
+.right { transform: rotateY(90deg) translateZ(var(--h)); background: #eaa35a; }
+.top { transform: rotateX(90deg) translateZ(var(--h)); background: #222227; }
+.back { transform: rotateY(180deg) translateZ(var(--h)); background: #2b9bf0; }
+.left { transform: rotateY(-90deg) translateZ(var(--h)); background: #eaa35a; }
+.bottom { transform: rotateX(-90deg) translateZ(var(--h)); background: #222227; }
+
+.glyph {
+  font-family: var(--font-bebas), sans-serif;
+  font-size: calc(var(--s) * 0.85);
+  line-height: 1;
+  -webkit-text-stroke: max(3px, calc(var(--s) * 0.047)) #141417;
+  paint-order: stroke fill;
+}
+.front .glyph { color: #2b9bf0; transform: scaleX(-1); }
+.right .glyph { color: #eaa35a; transform: scaleX(-1); }
+.back .glyph { color: #2b9bf0; opacity: 0.85; }
+.left .glyph { color: #eaa35a; opacity: 0.85; }
+
+.pips {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: calc(var(--s) * 0.13);
+  box-sizing: border-box;
+}
+.pip {
+  width: calc(var(--s) * 0.145);
+  height: calc(var(--s) * 0.145);
+  border-radius: 50%;
+  background: #fff;
+  align-self: center;
+  justify-self: center;
+  box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.35);
+}
+.pipOn { visibility: visible; }
+.pipOff { visibility: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  .die { transition: none; }
+}

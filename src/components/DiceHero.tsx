@@ -1,129 +1,49 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import styles from "./DiceHero.module.css";
+import Dice from "./Dice";
 import SignupForm from "./SignupForm";
 
-// blue front spells META, orange right spells GAME, dark tops show 2026 in pips
-const DICE = [
-  { front: "M", right: "G", top: 2 },
-  { front: "E", right: "A", top: 0 },
-  { front: "T", right: "M", top: 2 },
-  { front: "A", right: "E", top: 6 },
-];
-
-// 3x3 pip grid positions (0-8) for each value. Opposite faces sum to 7, so each
-// die's bottom shows 7 - top — including 7 (a 6 with a center pip) opposite the blank.
-const PIP_MAP: Record<number, number[]> = {
-  0: [],
-  1: [4],
-  2: [0, 8],
-  5: [0, 2, 4, 6, 8],
-  6: [0, 2, 3, 5, 6, 8],
-  7: [0, 2, 3, 4, 5, 6, 8],
-};
-
-const PHASE = {
-  static: "rotateX(14deg) rotateY(-16deg)",
-  meta: "rotateX(13deg) rotateY(-13deg)",
-  game: "rotateX(8deg) rotateY(90deg)",
-  year: "rotateX(-78deg) rotateY(8deg)",
-};
-const SEQ = ["meta", "game", "year"] as const;
-
-function Pips({ value }: { value: number }) {
-  const on = PIP_MAP[value] ?? [];
-  return (
-    <div className={styles.pips}>
-      {Array.from({ length: 9 }, (_, i) => (
-        <div
-          key={i}
-          className={`${styles.pip} ${on.includes(i) ? styles.pipOn : styles.pipOff}`}
-        />
-      ))}
-    </div>
-  );
-}
+// film-grain texture (data-URI kept out of the className for legibility)
+const GRAIN =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)' opacity='0.35'/%3E%3C/svg%3E\")";
 
 export default function DiceHero() {
-  const [phase, setPhase] = useState<keyof typeof PHASE>("meta");
-
-  useEffect(() => {
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) {
-      setPhase("static");
-      return;
-    }
-    let step = 0;
-    const id = setInterval(() => {
-      step = (step + 1) % SEQ.length;
-      setPhase(SEQ[step]);
-    }, 2300);
-    return () => clearInterval(id);
-  }, []);
-
   return (
-    <main className={styles.root}>
-      <div className={styles.grain} />
-      <h1 className={styles.srOnly}>Metagame 2026</h1>
+    <main className="relative flex min-h-dvh flex-1 flex-col items-center overflow-hidden bg-[#f4ecd2] px-[clamp(20px,5vw,56px)] py-[clamp(24px,4vh,48px)] font-[family-name:var(--font-space-grotesk)] text-[#1b1530]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-[60] opacity-40 mix-blend-multiply"
+        style={{ backgroundImage: GRAIN }}
+      />
+      <h1 className="sr-only">Metagame 2026</h1>
 
-      <div className={styles.spacerTop} aria-hidden="true" />
+      {/* top spacer larger than bottom → dice land at the optical center */}
+      <div aria-hidden className="flex-[3]" />
 
-      <div className={styles.content}>
-        <div className={styles.arena}>
-        <div className={styles.diceRow}>
-          {DICE.map((d, i) => (
-            <div key={i} className={styles.dieWrap}>
-              <div
-                className={styles.die}
-                style={{ transform: PHASE[phase], transitionDelay: `${i * 0.11}s` }}
-              >
-                <div className={`${styles.face} ${styles.front}`}>
-                  <span className={styles.glyph}>{d.front}</span>
-                </div>
-                <div className={`${styles.face} ${styles.right}`}>
-                  <span className={styles.glyph}>{d.right}</span>
-                </div>
-                <div className={`${styles.face} ${styles.top}`}>
-                  <Pips value={d.top} />
-                </div>
-                <div className={`${styles.face} ${styles.back}`}>
-                  <span className={styles.glyph}>{d.front}</span>
-                </div>
-                <div className={`${styles.face} ${styles.left}`}>
-                  <span className={styles.glyph}>{d.right}</span>
-                </div>
-                <div className={`${styles.face} ${styles.bottom}`}>
-                  <Pips value={7 - d.top} />
-                </div>
-              </div>
-              <div className={styles.dieShadow} />
-            </div>
-          ))}
+      <div className="flex flex-col items-center gap-[clamp(28px,5vh,56px)]">
+        <Dice />
+
+        <div className="flex items-center gap-[clamp(10px,2.5vw,22px)] text-center font-[family-name:var(--font-bebas)] text-[clamp(38px,9vw,68px)] leading-[0.85] tracking-[0.02em]">
+          <span>Nov 6&ndash;8, 2026</span>
+          <span className="text-[0.5em] text-[#2b9bf0]">&middot;</span>
+          <span>Berkeley, CA</span>
+        </div>
+
+        <div className="relative z-[5] flex w-full max-w-[440px] flex-col items-center gap-[14px]">
+          <p className="m-0 font-[family-name:var(--font-bebas)] text-[clamp(26px,6vw,38px)] tracking-[0.05em]">
+            Get notified
+          </p>
+          <SignupForm />
+          <a
+            className="mt-1 border-b-[1.5px] border-transparent pb-px text-[13px] uppercase tracking-[0.16em] text-[#1b1530]/70 transition hover:border-[#eaa35a] hover:text-[#1b1530]"
+            href="https://2025.metagame.games"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Revisit 2025 <span className="text-[#2b9bf0]">↗</span>
+          </a>
         </div>
       </div>
 
-      <div className={styles.band}>
-        <span>Nov 6&ndash;8, 2026</span>
-        <span className={styles.sep}>&middot;</span>
-        <span>Berkeley, CA</span>
-      </div>
-
-      <div className={styles.signup}>
-        <p className={styles.signupHead}>Get notified</p>
-        <SignupForm />
-        <a
-          className={styles.revisit}
-          href="https://2025.metagame.games"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Revisit 2025 <span className={styles.revisitArrow}>↗</span>
-        </a>
-      </div>
-      </div>
-
-      <div className={styles.spacerBottom} aria-hidden="true" />
+      <div aria-hidden className="flex-[1]" />
 
       <footer className="pointer-events-none absolute bottom-3 right-4 z-[70] text-[11px] tracking-wider text-[#1b1530]/40">
         © Metagame LLC 2026
