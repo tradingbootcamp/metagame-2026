@@ -26,6 +26,15 @@ in local dev without credentials.
 - Add a new var in **both** `.env.example` and `ENV_SPEC` to keep them in sync.
 - Supabase isn't used yet — its vars are commented placeholders in `.env.example` only.
 
+## Styling
+
+Tailwind v4 for ordinary UI (layout, spacing, type, forms, palette tokens in `globals.css`).
+Reach for a **scoped CSS module** only for genuinely complex / 3D / custom-property-heavy CSS
+that maps badly to utilities — currently just the dice hero (`DiceHero.module.css`: `preserve-3d`,
+per-face `translateZ(var(--h))`, the `--s`/`--h` `calc()`/`clamp()` cube system). Don't convert
+that to arbitrary-value classes; everything else stays Tailwind. (The non-dice hero chrome —
+date band, signup, links — could move to Tailwind out of the module; fine to leave for now.)
+
 ## Worktrees & parallel work
 
 This repo follows the shared `~/Arbor/` worktree convention (see `~/Arbor/CLAUDE.md`):
@@ -35,7 +44,7 @@ branched off `origin/main`, torn down with `~/Arbor/cleanup-worktree.sh`.
 Metagame-specific setup that differs from the arbiter repos:
 
 - Each worktree needs its own `pnpm install` (node_modules aren't shared).
-- No env vars are required yet (none until Airtable is wired). Add an env template here and
-  reference it in this file once that lands.
+- Copy env into each worktree: `cp .env.example .env.local` and add the Airtable PAT (see
+  Environment variables above). Without it the signup form gracefully no-ops.
 - `pnpm dev` starts the dev server, auto-incrementing from port 3000 if it's taken. Read the
   actual port from startup output before surfacing a localhost link.

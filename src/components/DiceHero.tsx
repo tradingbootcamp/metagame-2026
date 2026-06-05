@@ -31,10 +31,6 @@ const PHASE = {
 };
 const SEQ = ["meta", "game", "year"] as const;
 
-// dark inner-cube faces sit just behind the colored faces; their square corners
-// fill the rounded-corner gaps so each die reads as a solid object, not flat tiles
-const CORE_FACES = ["coreFront", "coreRight", "coreTop", "coreBack", "coreLeft", "coreBottom"];
-
 function Pips({ value }: { value: number }) {
   const on = PIP_MAP[value] ?? [];
   return (
@@ -97,9 +93,6 @@ export default function DiceHero() {
                 <div className={`${styles.face} ${styles.bottom}`}>
                   <Pips value={7 - d.top} />
                 </div>
-                {CORE_FACES.map((c) => (
-                  <div key={c} className={`${styles.core} ${styles[c]}`} />
-                ))}
               </div>
               <div className={styles.dieShadow} />
             </div>

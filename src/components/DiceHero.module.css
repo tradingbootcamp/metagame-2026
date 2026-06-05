@@ -110,33 +110,6 @@
   background: #222227;
 }
 
-/* dark inner cube: square-cornered faces 2px behind the colored faces, so the
-   rounded-corner gaps reveal a solid dark body instead of the cream background */
-.core {
-  position: absolute;
-  inset: 0;
-  background: #141417;
-  backface-visibility: hidden;
-}
-.coreFront {
-  transform: translateZ(calc(var(--h) - 2px));
-}
-.coreRight {
-  transform: rotateY(90deg) translateZ(calc(var(--h) - 2px));
-}
-.coreTop {
-  transform: rotateX(90deg) translateZ(calc(var(--h) - 2px));
-}
-.coreBack {
-  transform: rotateY(180deg) translateZ(calc(var(--h) - 2px));
-}
-.coreLeft {
-  transform: rotateY(-90deg) translateZ(calc(var(--h) - 2px));
-}
-.coreBottom {
-  transform: rotateX(-90deg) translateZ(calc(var(--h) - 2px));
-}
-
 .glyph {
   font-family: var(--font-bebas), sans-serif;
   font-size: calc(var(--s) * 0.85);
