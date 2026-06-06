@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import InterestFollowup from "./InterestFollowup";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -10,6 +11,8 @@ const FIELD =
 export default function SignupForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  // Remembered after success so the interest follow-up can patch the same row.
+  const [submittedEmail, setSubmittedEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -23,6 +26,7 @@ export default function SignupForm() {
         body: JSON.stringify({ name, email }),
       });
       if (!res.ok) throw new Error("Request failed");
+      setSubmittedEmail(email);
       setStatus("success");
       setName("");
       setEmail("");
@@ -33,9 +37,12 @@ export default function SignupForm() {
 
   if (status === "success") {
     return (
-      <p className="flex flex-col gap-2 text-center text-base text-[#1b1530]">
-        <span>Thanks — you&apos;re on the list. We&apos;ll be in touch.</span>
-      </p>
+      <div className="flex w-full flex-col items-center gap-4">
+        <p className="text-center text-base text-[#1b1530]">
+          Thanks — you&apos;re on the list. We&apos;ll be in touch.
+        </p>
+        <InterestFollowup email={submittedEmail} />
+      </div>
     );
   }
 

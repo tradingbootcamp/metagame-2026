@@ -1,6 +1,6 @@
 import Dice from "./Dice";
 import SignupForm from "./SignupForm";
-import { FaExternalLinkAlt } from "react-icons/fa";
+import { FaEnvelope, FaExternalLinkAlt } from "react-icons/fa";
 // film-grain texture (data-URI kept out of the className for legibility)
 const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)' opacity='0.35'/%3E%3C/svg%3E\")";
@@ -41,9 +41,12 @@ export default function DiceHero() {
           </p>
           <SignupForm />
           <span className="text-center text-sm text-[#1b1530]">
-            Questions? Interested in speaking, participating, or sponsoring?
-            Email us at{" "}
-            <a href="mailto:team@metagame.games" className="underline">
+            Questions?
+            <a
+              href="mailto:team@metagame.games"
+              className="ml-2 inline-flex items-center gap-1 underline"
+            >
+              <FaEnvelope size={12} aria-hidden className="translate-y-[1px]" />
               team@metagame.games
             </a>
           </span>

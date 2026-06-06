@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { recordSignup } from "@/lib/airtable";
+import { isInterestValue } from "@/lib/interests";
 
 export async function POST(request: Request) {
-  let body: { email?: unknown; name?: unknown };
+  let body: {
+    email?: unknown;
+    name?: unknown;
+    interests?: unknown;
+    notes?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
@@ -12,14 +18,23 @@ export async function POST(request: Request) {
     );
   }
 
-  const { email, name } = body;
+  const { email, name, interests, notes } = body;
   if (typeof email !== "string" || !email.includes("@")) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
   const trimmedName = typeof name === "string" ? name.trim() : "";
+  // Whitelist so client input can't typecast stray options into the table.
+  const validInterests = Array.isArray(interests)
+    ? interests.filter(isInterestValue)
+    : [];
+  const trimmedNotes = typeof notes === "string" ? notes.trim() : "";
 
   try {
-    const result = await recordSignup(email.trim(), trimmedName || undefined);
+    const result = await recordSignup(email.trim(), {
+      name: trimmedName || undefined,
+      interests: validInterests,
+      notes: trimmedNotes || undefined,
+    });
     // Not stored in prod = misconfigured env; error instead of faking success.
     if (!result.stored && process.env.NODE_ENV === "production") {
       console.error(
