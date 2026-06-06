@@ -28,11 +28,11 @@ export default function DiceHero() {
           </span>
           <a
             className="flex items-center justify-center gap-2 border-b-[1.5px] border-transparent pb-px text-[13px] tracking-[0.16em] text-[#1b1530]/70 uppercase transition hover:border-[#eaa35a] hover:text-[#1b1530]"
-            href="https://2025.metagame.games/#schedule"
+            href="https://2025.metagame.games/#speakers"
             target="_blank"
             rel="noopener noreferrer"
           >
-            <span>Last year&rsquo;s schedule</span>
+            <span>See last year&rsquo;s lineup</span>
             <span>
               <FaExternalLinkAlt size={12} />
             </span>
