@@ -22,9 +22,22 @@ export default function DiceHero() {
         <Dice />
         <div aria-hidden className="hidden flex-[3] sm:block" />
 
-        <span className="text-center text-lg text-[#1b1530]">
-          A conference for game design, strategy, narrative, and play.
-        </span>
+        <div className="flex flex-col items-center gap-2">
+          <span className="text-center text-lg text-[#1b1530]">
+            A conference for game design, strategy, narrative, and play.
+          </span>
+          <a
+            className="flex items-center justify-center gap-2 border-b-[1.5px] border-transparent pb-px text-[13px] tracking-[0.16em] text-[#1b1530]/70 uppercase transition hover:border-[#eaa35a] hover:text-[#1b1530]"
+            href="https://2025.metagame.games/#schedule"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span>Last year&rsquo;s schedule</span>
+            <span>
+              <FaExternalLinkAlt size={12} />
+            </span>
+          </a>
+        </div>
         <div className="flex items-center gap-[clamp(10px,2.5vw,22px)] text-center font-[family-name:var(--font-bebas)] text-[clamp(38px,9vw,68px)] leading-[0.85] tracking-[0.02em]">
           <span>Nov 6&ndash;8, 2026</span>
           <span className="text-[0.5em] text-[#eaa35a]">&middot;</span>
@@ -50,17 +63,6 @@ export default function DiceHero() {
               team@metagame.games
             </a>
           </span>
-          <a
-            className="mt-1 flex items-center justify-center gap-2 border-b-[1.5px] border-transparent pb-px text-[13px] tracking-[0.16em] text-[#1b1530]/70 uppercase transition hover:border-[#eaa35a] hover:text-[#1b1530]"
-            href="https://2025.metagame.games"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span>Revisit 2025</span>
-            <span>
-              <FaExternalLinkAlt size={12} />
-            </span>
-          </a>
         </div>
       </div>
 
