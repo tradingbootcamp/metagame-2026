@@ -11,7 +11,7 @@
   transform-style: preserve-3d;
 }
 .dieWrap {
-  --s: clamp(52px, 14vw, 150px);
+  --s: clamp(52px, 16vw, 150px);
   --h: calc(var(--s) / 2);
   position: relative;
   transform-style: preserve-3d;

@@ -37,9 +37,11 @@ stays Tailwind.
 
 ## Code comments
 
-Comments are good — lean toward a short one that explains the _why_. Keep them tight: a
-one-liner, not a 3–4 line block, and don't add a comment narrating a routine edit just because
-you touched the line. If the prose isn't doing real work, cut it.
+Comments are good — lean toward a short one that explains the _why_. Use the fewest words that
+still say all we need: a one-line "blue box behind button, revealed on hover" beats a two-line
+recap of mechanics the code already shows — unless an important or genuinely complicated
+annotation calls for the extra length. Don't narrate a routine edit just because you touched the
+line; if the prose isn't doing real work, cut it.
 
 ## Linting & formatting
 
@@ -62,7 +64,7 @@ Metagame-specific setup that differs from the arbiter repos:
 - `pnpm dev` starts the dev server, auto-incrementing from port 3000 if it's taken. Read the
   actual port from startup output before surfacing a localhost link.
 - **When previewing, surface _both_ URLs `next dev` prints** — the `Local:` (`localhost`) link
-  *and* the `Network:` (LAN IP, e.g. `http://10.x.x.x:<port>`) link — so the change can be opened
+  _and_ the `Network:` (LAN IP, e.g. `http://10.x.x.x:<port>`) link — so the change can be opened
   on a phone/other device on the same network for mobile testing. Next 16 binds to `0.0.0.0` by
   default and prints both; no extra flag needed. Read the real IP+port from the startup output —
   don't assume them.

@@ -1,13 +1,13 @@
 import Dice from "./Dice";
 import SignupForm from "./SignupForm";
-
+import { FaExternalLinkAlt } from "react-icons/fa";
 // film-grain texture (data-URI kept out of the className for legibility)
 const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)' opacity='0.35'/%3E%3C/svg%3E\")";
 
 export default function DiceHero() {
   return (
-    <main className="relative flex min-h-dvh flex-1 flex-col items-center overflow-hidden bg-[#687ee2] px-[clamp(20px,5vw,56px)] py-[clamp(24px,4vh,48px)] font-[family-name:var(--font-space-grotesk)] text-[#1b1530]">
+    <main className="relative flex min-h-dvh flex-1 flex-col items-center overflow-hidden bg-[#fff5e4] px-[clamp(20px,5vw,56px)] py-[clamp(24px,4vh,48px)] font-[family-name:var(--font-space-grotesk)] text-[#1b1530]">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 z-[60] opacity-40 mix-blend-multiply"
@@ -28,7 +28,7 @@ export default function DiceHero() {
           <span>Berkeley, CA</span>
         </div>
 
-        <div className="relative z-[5] flex w-full max-w-[440px] flex-col items-center gap-[14px]">
+        <div className="relative z-[5] flex w-full max-w-[440px] flex-col items-center gap-[8px] sm:gap-[14px]">
           <p className="m-0 text-center font-[family-name:var(--font-bebas)] text-[clamp(26px,6vw,38px)] leading-tight tracking-[0.05em]">
             Get notified
             <br />
@@ -37,17 +37,23 @@ export default function DiceHero() {
             </span>
           </p>
           <SignupForm />
-          <span className="text-center text-base text-[#1b1530]">
-            Questions? Interested in speaking/participating/sponsoring? Email us
-            at <a href="mailto:team@metagame.games">team@metagame.games</a>
+          <span className="text-center text-sm text-[#1b1530]">
+            Questions? Interested in speaking, participating, or sponsoring?
+            Email us at{" "}
+            <a href="mailto:team@metagame.games" className="underline">
+              team@metagame.games
+            </a>
           </span>
           <a
-            className="mt-1 border-b-[1.5px] border-transparent pb-px text-[13px] tracking-[0.16em] text-[#1b1530]/70 uppercase transition hover:border-[#eaa35a] hover:text-[#1b1530]"
+            className="mt-1 flex items-center justify-center gap-2 border-b-[1.5px] border-transparent pb-px text-[13px] tracking-[0.16em] text-[#1b1530]/70 uppercase transition hover:border-[#eaa35a] hover:text-[#1b1530]"
             href="https://2025.metagame.games"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Revisit 2025 <span className="text-[#2b9bf0]">↗</span>
+            <span>Revisit 2025</span>
+            <span>
+              <FaExternalLinkAlt size={12} />
+            </span>
           </a>
         </div>
       </div>
