@@ -25,7 +25,9 @@ const PIP_MAP: Record<number, number[]> = {
 const PHASE = {
   static: "rotateX(14deg) rotateY(-16deg)",
   meta: "rotateX(13deg) rotateY(-13deg)",
-  game: "rotateX(8deg) rotateY(90deg)",
+  // turn left→right (negative Y) so the reveal reads naturally; the right face
+  // carries the same "GAME" letters as the left, so it still lands on "game"
+  game: "rotateX(8deg) rotateY(-90deg)",
   year: "rotateX(-78deg) rotateY(8deg)",
 };
 const SEQ = ["meta", "game", "year"] as const;
