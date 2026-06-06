@@ -59,7 +59,7 @@ export default function SignupForm() {
           placeholder="you@example.com"
           aria-label="Email address"
           autoComplete="email"
-          className={`${FIELD} flex-1`}
+          className={`${FIELD} w-full sm:w-auto sm:flex-1`}
         />
         <button
           type="submit"
