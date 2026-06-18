@@ -16,24 +16,7 @@ const ENV_SPEC: EnvSpec[] = [
     name: "AIRTABLE_API_KEY",
     required: true,
     description:
-      "Airtable personal access token (data.records:write) — destination for email signups",
-  },
-  {
-    name: "AIRTABLE_BASE_ID",
-    required: true,
-    description:
-      'Airtable base id (starts with "app") holding the signups table',
-  },
-  {
-    name: "AIRTABLE_TABLE_ID",
-    required: true,
-    description:
-      'Airtable table id (starts with "tbl") or table name for signups',
-  },
-  {
-    name: "AIRTABLE_EMAIL_FIELD",
-    required: false,
-    description: 'Email column name in the signups table (defaults to "Email")',
+      "Airtable personal access token (data.records:write) — destination for email signups + ticket purchases. Base/table ids live in src/lib/airtable-config.ts.",
   },
   {
     name: "STRIPE_SECRET_KEY",
@@ -46,12 +29,6 @@ const ENV_SPEC: EnvSpec[] = [
     required: false,
     description:
       "Stripe webhook signing secret (whsec_…) for /api/stripe-webhook. Per-endpoint and per-mode; without it the webhook can't verify and no-ops.",
-  },
-  {
-    name: "AIRTABLE_PURCHASES_TABLE_ID",
-    required: false,
-    description:
-      'Airtable table id for ticket purchases (defaults to the "Stripe Purchases" table)',
   },
 ];
 
@@ -85,14 +62,9 @@ export function validateEnv(): void {
   );
 }
 
-/** Typed, server-side accessor for env values (with defaults applied). */
+/** Typed, server-side accessor for the secret env values. */
 export const env = {
   AIRTABLE_API_KEY: process.env.AIRTABLE_API_KEY,
-  AIRTABLE_BASE_ID: process.env.AIRTABLE_BASE_ID,
-  AIRTABLE_TABLE_ID: process.env.AIRTABLE_TABLE_ID,
-  AIRTABLE_EMAIL_FIELD: process.env.AIRTABLE_EMAIL_FIELD ?? "Email",
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-  AIRTABLE_PURCHASES_TABLE_ID:
-    process.env.AIRTABLE_PURCHASES_TABLE_ID ?? "tblMEDrxbS2abAHob",
 } as const;

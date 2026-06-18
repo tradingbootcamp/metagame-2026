@@ -1,4 +1,5 @@
 import { env } from "@/env";
+import { airtableConfig } from "@/lib/airtable-config";
 import { EMAIL_LIST_VALUE, type InterestValue } from "@/lib/interests";
 
 export type SignupResult = { stored: boolean; reason?: string };
@@ -41,20 +42,15 @@ export async function recordSignup(
   email: string,
   { name, interests = [], notes }: SignupFields = {},
 ): Promise<SignupResult> {
-  const {
-    AIRTABLE_API_KEY,
-    AIRTABLE_BASE_ID,
-    AIRTABLE_TABLE_ID,
-    AIRTABLE_EMAIL_FIELD,
-  } = env;
+  const { AIRTABLE_API_KEY } = env;
 
-  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID || !AIRTABLE_TABLE_ID) {
+  if (!AIRTABLE_API_KEY) {
     console.warn(`[signup] Airtable not configured — not stored: ${email}`);
     return { stored: false, reason: "airtable-not-configured" };
   }
 
   const fields: Record<string, unknown> = {
-    [AIRTABLE_EMAIL_FIELD]: email,
+    [airtableConfig.signupEmailField]: email,
     [INTEREST_FIELD]: Array.from(new Set([EMAIL_LIST_VALUE, ...interests])),
     [TEST_FIELD]: process.env.NODE_ENV !== "production",
   };
@@ -62,7 +58,7 @@ export async function recordSignup(
   if (notes) fields[NOTES_FIELD] = notes;
 
   const res = await fetch(
-    `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_ID)}`,
+    `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.signupsTableId)}`,
     {
       method: "PATCH",
       headers: {
@@ -70,7 +66,7 @@ export async function recordSignup(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        performUpsert: { fieldsToMergeOn: [AIRTABLE_EMAIL_FIELD] },
+        performUpsert: { fieldsToMergeOn: [airtableConfig.signupEmailField] },
         records: [{ fields }],
         typecast: true,
       }),
@@ -115,10 +111,9 @@ export type PurchaseRecord = {
 export async function recordPurchase(
   purchase: PurchaseRecord,
 ): Promise<SignupResult> {
-  const { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_PURCHASES_TABLE_ID } =
-    env;
+  const { AIRTABLE_API_KEY } = env;
 
-  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID || !AIRTABLE_PURCHASES_TABLE_ID) {
+  if (!AIRTABLE_API_KEY) {
     console.warn(
       `[purchase] Airtable not configured — not stored: ${purchase.id}`,
     );
@@ -147,7 +142,7 @@ export async function recordPurchase(
   if (purchase.notes) fields["Notes"] = purchase.notes;
 
   const res = await fetch(
-    `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_PURCHASES_TABLE_ID)}`,
+    `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.purchasesTableId)}`,
     {
       method: "PATCH",
       headers: {
