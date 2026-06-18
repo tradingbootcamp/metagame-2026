@@ -21,7 +21,7 @@ const PHASE_MS = 3200; // hold each phase ~3.2s — deliberate but not sluggish
 // flip to true to bring back the soft ground shadow under the dice (off for now)
 const SHOW_CONTACT_SHADOW: boolean = false;
 
-const GAP = 1.3; // world-space spacing between dice centers
+const GAP = 1.5; // world-space spacing between dice centers
 // row spans the outer dice centers plus a die's worth of half-width each side
 const ROW_WIDTH = (DICE.length - 1) * GAP + 1.6;
 

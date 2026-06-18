@@ -124,20 +124,6 @@ export function pipTexture(value: number): THREE.CanvasTexture {
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fillStyle = COLORS.white;
     ctx.fill();
-
-    // inner bottom shadow to read as a recessed/raised pip
-    const pg = ctx.createRadialGradient(
-      x,
-      y - r * 0.3,
-      r * 0.1,
-      x,
-      y + r * 0.4,
-      r * 1.1,
-    );
-    pg.addColorStop(0, "rgba(0,0,0,0)");
-    pg.addColorStop(1, "rgba(0,0,0,0.4)");
-    ctx.fillStyle = pg;
-    ctx.fill();
   }
 
   return toTexture(canvas);

@@ -29,7 +29,7 @@ const QUAT: Record<Phase, THREE.Quaternion> = {
   static: quat(-13, -13),
   meta: quat(-13, -13), // CSS-matched resting tilt: blue META up front, slight underside
   game: quat(-0, -85, -5), // orange +X face turns to front
-  year: quat(90, 3), // tips the pip top (+Y) nearly straight-on to read 2026
+  year: quat(80, 3), // tips the pip top (+Y) nearly straight-on to read 2026
 };
 
 const TURN_S = 1.0; // seconds for a die to complete its turn
@@ -187,9 +187,9 @@ export default function Die({
           <mesh key={i} geometry={panelGeo} position={f.pos} rotation={f.rot}>
             <meshStandardMaterial
               map={textures[i]}
-              // pip faces (top/bottom) match the body's matte roughness so they don't
-              // read as a glossy sticker; the colored letter faces stay a touch shinier
-              roughness={i >= 4 ? 0.9 : 0.7}
+              // pip faces (top/bottom) get a glossier finish so the white pips catch
+              // specular highlights and read brighter; letter faces stay a touch matte
+              roughness={i >= 4 ? 0.35 : 0.7}
               metalness={0}
               polygonOffset
               polygonOffsetFactor={-4}
