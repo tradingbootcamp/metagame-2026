@@ -27,7 +27,7 @@ const quat = (x: number, y: number, z = 0) =>
 // front; YEAR tips the pip top (+Y) up to the camera.
 const QUAT: Record<Phase, THREE.Quaternion> = {
   static: quat(-13, -13),
-  meta: quat(-13, -13), // CSS-matched resting tilt: blue META up front, slight underside
+  meta: quat(-10, -5), // CSS-matched resting tilt: blue META up front, slight underside
   game: quat(-0, -85, -5), // orange +X face turns to front
   year: quat(80, 3), // tips the pip top (+Y) nearly straight-on to read 2026
 };

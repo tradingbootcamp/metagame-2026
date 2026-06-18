@@ -45,8 +45,8 @@ function Scene({ phase }: { phase: Phase }) {
           the printed panels z-fight the body and faces flash black when dead-on. */}
       <PerspectiveCamera
         makeDefault
-        position={[0, 0.3, 18]}
-        fov={12}
+        position={[0, 0.3, 17]}
+        fov={7}
         near={12}
         far={26}
       />
