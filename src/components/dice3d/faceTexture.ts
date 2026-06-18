@@ -85,7 +85,7 @@ export function letterTexture(letter: string, bg: string): THREE.CanvasTexture {
   const [canvas, ctx] = makeCanvas();
   paintPanel(ctx, bg);
 
-  ctx.font = `${Math.round(TEX * 0.74)}px "BebasNeueDice", sans-serif`;
+  ctx.font = `${Math.round(TEX * 0.88)}px "BebasNeueDice", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 

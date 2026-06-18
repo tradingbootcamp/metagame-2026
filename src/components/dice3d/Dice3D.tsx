@@ -21,7 +21,7 @@ const PHASE_MS = 3200; // hold each phase ~3.2s — deliberate but not sluggish
 // flip to true to bring back the soft ground shadow under the dice (off for now)
 const SHOW_CONTACT_SHADOW: boolean = false;
 
-const GAP = 1.6; // world-space spacing between dice centers
+const GAP = 1.3; // world-space spacing between dice centers
 // row spans the outer dice centers plus a die's worth of half-width each side
 const ROW_WIDTH = (DICE.length - 1) * GAP + 1.6;
 
@@ -34,9 +34,9 @@ function Scene({ phase }: { phase: Phase }) {
   // Fit the whole row to the canvas width: scale down on narrow viewports so
   // all four dice stay on-screen; cap so they don't balloon on wide ones.
   const viewportWidth = useThree((s) => s.viewport.width);
-  // fill ~85% of the canvas width so the dice have margin to sweep wider mid-turn
+  // fill ~95% of the canvas width so the dice have margin to sweep wider mid-turn
   // (a cube rotating 90° reaches ~1.4× its width at the diagonal) without clipping.
-  const scale = Math.min(2.4, (viewportWidth * 0.85) / ROW_WIDTH);
+  const scale = Math.min(2.4, (viewportWidth * 0.95) / ROW_WIDTH);
 
   return (
     <>

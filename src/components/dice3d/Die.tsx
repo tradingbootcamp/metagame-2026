@@ -28,15 +28,15 @@ const quat = (x: number, y: number, z = 0) =>
 const QUAT: Record<Phase, THREE.Quaternion> = {
   static: quat(-13, -13),
   meta: quat(-13, -13), // CSS-matched resting tilt: blue META up front, slight underside
-  game: quat(-8, -90), // orange +X face turns to front
-  year: quat(78, 8), // tips the pip top (+Y) up to read 2026
+  game: quat(-0, -85, -5), // orange +X face turns to front
+  year: quat(90, 3), // tips the pip top (+Y) nearly straight-on to read 2026
 };
 
 const TURN_S = 1.0; // seconds for a die to complete its turn
 const STAGGER = 0.04; // tiny per-die delay — the row turns near-unison, not a wave
 
 const SIZE = 1; // die edge length in world units
-const RADIUS = SIZE * 0.08; // bevel radius of the rounded body
+const RADIUS = SIZE * 0.06; // bevel radius of the rounded body
 
 // The body's flat (un-beveled) face spans SIZE - 2*RADIUS. The printed panel is
 // a rounded square sized to cover that flat region and reach up to where the

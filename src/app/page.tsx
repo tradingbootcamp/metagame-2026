@@ -22,7 +22,6 @@ export default function Home() {
 
       <div className="flex flex-col items-center gap-[clamp(28px,5vh,56px)]">
         <Dice />
-        <div aria-hidden className="hidden flex-[3] sm:block" />
 
         <div className="flex flex-col items-center gap-2">
           <span className="text-center text-lg text-[#1b1530]">
