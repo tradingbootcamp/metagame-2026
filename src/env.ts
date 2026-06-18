@@ -53,6 +53,12 @@ const ENV_SPEC: EnvSpec[] = [
     description:
       'Airtable table id for ticket purchases (defaults to the "Stripe Purchases" table)',
   },
+  {
+    name: "TEST_COUPON_CODES",
+    required: false,
+    description:
+      "Comma-separated promo codes used for in-prod test purchases; matching live purchases get flagged Test in Airtable.",
+  },
 ];
 
 let alreadyValidated = false;
@@ -95,4 +101,5 @@ export const env = {
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   AIRTABLE_PURCHASES_TABLE_ID:
     process.env.AIRTABLE_PURCHASES_TABLE_ID ?? "tblMEDrxbS2abAHob",
+  TEST_COUPON_CODES: process.env.TEST_COUPON_CODES,
 } as const;
