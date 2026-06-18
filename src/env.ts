@@ -30,6 +30,12 @@ const ENV_SPEC: EnvSpec[] = [
     description:
       "Stripe webhook signing secret (whsec_…) for /api/stripe-webhook. Per-endpoint and per-mode; without it the webhook can't verify and no-ops.",
   },
+  {
+    name: "STRIPE_TEST_99_CODE",
+    required: false,
+    description:
+      "Promo code for the in-prod 99%-off test purchase; live purchases using it get flagged Test in Airtable.",
+  },
 ];
 
 let alreadyValidated = false;
@@ -67,4 +73,5 @@ export const env = {
   AIRTABLE_API_KEY: process.env.AIRTABLE_API_KEY,
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+  STRIPE_TEST_99_CODE: process.env.STRIPE_TEST_99_CODE,
 } as const;

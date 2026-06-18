@@ -106,6 +106,12 @@ export async function POST(request: Request) {
       ? full.total_details.amount_discount / 100
       : undefined;
 
+    // A live purchase made with the in-prod test coupon gets flagged Test too, so it
+    // doesn't pollute real-sales filters. (Abuse protection is the coupon's own Stripe
+    // restrictions — this is just bookkeeping.)
+    const testCode = env.STRIPE_TEST_99_CODE?.trim().toUpperCase();
+    const isTestCoupon = !!testCode && couponCode?.toUpperCase() === testCode;
+
     await recordPurchase({
       // Prefer the PaymentIntent id (the canonical payment) as the upsert key.
       id: paymentIntent?.id ?? full.id,
@@ -121,10 +127,9 @@ export async function POST(request: Request) {
       amountDiscount,
       receiptUrl: charge?.receipt_url ?? undefined,
       status,
-      // Stripe stamps every event with `livemode`; test-mode (sandbox) checkouts
-      // come through as livemode=false → tick the Test box so they filter out of
-      // real sales.
-      test: !event.livemode,
+      // Flag Test if it's a sandbox checkout (livemode=false) OR used an in-prod test
+      // coupon — either way it shouldn't count as a real sale.
+      test: !event.livemode || isTestCoupon,
     });
   } catch (err) {
     // 500 → Stripe retries; recordPurchase upserts, so a retry can't duplicate.
