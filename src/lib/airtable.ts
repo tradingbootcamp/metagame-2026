@@ -83,3 +83,88 @@ export async function recordSignup(
 
   return { stored: true };
 }
+
+// Lifecycle of a purchase. Card → Paid instantly; ACH bank debits land Pending
+// then settle to Paid (or bounce to Failed) days later.
+export type PurchaseStatus = "Pending" | "Paid" | "Failed";
+
+export type PurchaseRecord = {
+  id: string; // Stripe payment id — the upsert key, so redelivered events dedupe
+  status: PurchaseStatus;
+  test: boolean; // true for test-mode (sandbox) purchases — checks the Test box
+  customerName?: string;
+  customerEmail?: string;
+  amount?: number; // dollars (Airtable currency field)
+  fee?: number;
+  net?: number;
+  billingName?: string;
+  billingEmail?: string;
+  ticketType?: string;
+  couponCode?: string; // promotion code the buyer used, e.g. "EARLYBIRD"
+  amountDiscount?: number; // dollars knocked off by the coupon
+  receiptUrl?: string;
+  notes?: string;
+};
+
+/**
+ * Upsert a ticket purchase into the Airtable "Stripe Purchases" table, keyed on
+ * the Stripe payment id so Stripe's at-least-once webhook redelivery can't create
+ * duplicate rows. No-ops with a warning when Airtable isn't configured, mirroring
+ * recordSignup. Only fields we actually have are sent, so blanks never clobber.
+ */
+export async function recordPurchase(
+  purchase: PurchaseRecord,
+): Promise<SignupResult> {
+  const { AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_PURCHASES_TABLE_ID } =
+    env;
+
+  if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID || !AIRTABLE_PURCHASES_TABLE_ID) {
+    console.warn(
+      `[purchase] Airtable not configured — not stored: ${purchase.id}`,
+    );
+    return { stored: false, reason: "airtable-not-configured" };
+  }
+
+  const fields: Record<string, unknown> = {
+    ID: purchase.id,
+    Status: purchase.status,
+    Test: purchase.test,
+  };
+  if (purchase.customerName) fields["Customer Name"] = purchase.customerName;
+  if (purchase.customerEmail) fields["Customer Email"] = purchase.customerEmail;
+  if (purchase.amount != null) fields["Amount"] = purchase.amount;
+  if (purchase.fee != null) fields["Balance Transaction Fee"] = purchase.fee;
+  if (purchase.net != null) fields["Balance Transaction Net"] = purchase.net;
+  if (purchase.billingName)
+    fields["Billing Details Name"] = purchase.billingName;
+  if (purchase.billingEmail)
+    fields["Billing Details Email"] = purchase.billingEmail;
+  if (purchase.ticketType) fields["Ticket Type"] = purchase.ticketType;
+  if (purchase.couponCode) fields["Coupon Code"] = purchase.couponCode;
+  if (purchase.amountDiscount != null)
+    fields["Amount Discounted"] = purchase.amountDiscount;
+  if (purchase.receiptUrl) fields["Receipt URL"] = purchase.receiptUrl;
+  if (purchase.notes) fields["Notes"] = purchase.notes;
+
+  const res = await fetch(
+    `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_PURCHASES_TABLE_ID)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        performUpsert: { fieldsToMergeOn: ["ID"] },
+        records: [{ fields }],
+        typecast: true,
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(`Airtable responded ${res.status}: ${await res.text()}`);
+  }
+
+  return { stored: true };
+}

@@ -35,6 +35,24 @@ const ENV_SPEC: EnvSpec[] = [
     required: false,
     description: 'Email column name in the signups table (defaults to "Email")',
   },
+  {
+    name: "STRIPE_SECRET_KEY",
+    required: false,
+    description:
+      "Stripe secret key (sk_…) — used server-side by the ticket webhook to verify events and read purchase details. Without it the webhook no-ops.",
+  },
+  {
+    name: "STRIPE_WEBHOOK_SECRET",
+    required: false,
+    description:
+      "Stripe webhook signing secret (whsec_…) for /api/stripe-webhook. Per-endpoint and per-mode; without it the webhook can't verify and no-ops.",
+  },
+  {
+    name: "AIRTABLE_PURCHASES_TABLE_ID",
+    required: false,
+    description:
+      'Airtable table id for ticket purchases (defaults to the "Stripe Purchases" table)',
+  },
 ];
 
 let alreadyValidated = false;
@@ -73,4 +91,8 @@ export const env = {
   AIRTABLE_BASE_ID: process.env.AIRTABLE_BASE_ID,
   AIRTABLE_TABLE_ID: process.env.AIRTABLE_TABLE_ID,
   AIRTABLE_EMAIL_FIELD: process.env.AIRTABLE_EMAIL_FIELD ?? "Email",
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+  AIRTABLE_PURCHASES_TABLE_ID:
+    process.env.AIRTABLE_PURCHASES_TABLE_ID ?? "tblMEDrxbS2abAHob",
 } as const;
