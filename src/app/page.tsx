@@ -47,6 +47,10 @@ export default function Home() {
         </div>
 
         <TicketsButton />
+        <p className="-mt-3 max-w-[440px] text-center text-sm text-[#1b1530]/70">
+          More information about volunteer tickets and financial aid coming
+          soon.
+        </p>
 
         <div className="relative z-[5] flex w-full max-w-[440px] flex-col items-center gap-[8px] sm:gap-[14px]">
           <NotifyMe />
