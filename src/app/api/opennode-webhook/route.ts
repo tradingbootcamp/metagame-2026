@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { recordPurchase } from "@/lib/airtable";
-import { getCharge, verifyWebhookSignature } from "@/lib/opennode";
+import {
+  getCharge,
+  getHostedCheckoutUrl,
+  verifyWebhookSignature,
+} from "@/lib/opennode";
 
 // HMAC verification + the OpenNode key need Node crypto — keep this off the edge.
 export const runtime = "nodejs";
@@ -69,6 +73,18 @@ export async function POST(request: Request) {
   const btcAmount =
     typeof charge.amount === "number" ? charge.amount / 1e8 : undefined;
 
+  // First on-chain txid, if any. Lightning payments have transactions[] without a tx.
+  const btcTxId = charge.transactions?.find((t) => t.tx)?.tx;
+  // Heuristic network discriminator pending live verification: we infer On-chain
+  // from the presence of an on-chain address/tx, and treat a settled charge with
+  // transactions but no on-chain markers as Lightning.
+  const hasOnChain = charge.transactions?.some((t) => t.address || t.tx);
+  const btcNetwork: "On-chain" | "Lightning" | undefined = hasOnChain
+    ? "On-chain"
+    : charge.transactions?.length
+      ? "Lightning"
+      : undefined;
+
   try {
     await recordPurchase({
       id: charge.id,
@@ -81,6 +97,13 @@ export async function POST(request: Request) {
       status: "Paid",
       test: meta.test === true || meta.test === "true",
       paymentMethod: "btc",
+      openNodeOrderId: charge.order_id,
+      btcTxId,
+      // Derived (validated) URL, never an unvalidated payload value.
+      hostedCheckoutUrl: getHostedCheckoutUrl(charge.id),
+      networkFeeBtc: charge.fee != null ? charge.fee / 1e8 : undefined,
+      settledFiatValue: charge.fiat_value,
+      btcNetwork,
     });
   } catch (err) {
     // 500 → OpenNode retries; recordPurchase upserts on ID, so a retry can't dupe.
