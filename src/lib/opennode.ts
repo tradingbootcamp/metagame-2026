@@ -13,9 +13,25 @@ function getEnv(): OpenNodeEnv {
 function getKey(): string {
   const key = process.env.OPENNODE_KEY;
   if (!key) {
+    // In production (live) a missing key is a misconfiguration, not an expected
+    // dev state — fail loudly so it surfaces instead of silently degrading.
+    if (getEnv() === "live") {
+      throw new Error(
+        "OPENNODE_KEY is not set but OPENNODE_ENV=live — refusing to handle live Bitcoin payments without it",
+      );
+    }
     throw new Error("OPENNODE_KEY is not set");
   }
   return key;
+}
+
+// OpenNode charge ids are UUID v4 (hex with dashes). Validate before using one
+// in a URL path or trusting it from a client/query param.
+const CHARGE_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isValidChargeId(id: string): boolean {
+  return CHARGE_ID_RE.test(id);
 }
 
 function getBaseUrl(): string {
@@ -85,9 +101,15 @@ export async function createCharge(
 }
 
 export async function getCharge(id: string): Promise<OpenNodeCharge> {
-  const res = await fetch(`${getBaseUrl()}/v1/charge/${id}`, {
-    headers: { Authorization: getKey() },
-  });
+  if (!isValidChargeId(id)) {
+    throw new Error("Invalid OpenNode charge id");
+  }
+  const res = await fetch(
+    `${getBaseUrl()}/v1/charge/${encodeURIComponent(id)}`,
+    {
+      headers: { Authorization: getKey() },
+    },
+  );
   const text = await res.text();
   if (!res.ok) {
     throw new Error(
@@ -119,12 +141,38 @@ export function verifyWebhookSignature({
   return crypto.timingSafeEqual(a, b);
 }
 
-/** Hosted checkout URL: prefer the charge's own, else derive from the id. */
+/** True if `url` is an OpenNode checkout host (and https). */
+export function isOpenNodeCheckoutUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:") return false;
+  const host = parsed.hostname.toLowerCase();
+  return (
+    host === "checkout.opennode.com" ||
+    host === "checkout.dev.opennode.com" ||
+    host.endsWith(".opennode.com")
+  );
+}
+
+/**
+ * Hosted checkout URL: prefer the charge's own, else derive from the id. The
+ * charge's URL is only used if it validates as an OpenNode host — otherwise we
+ * fall back to the safe derived URL so we never redirect to an arbitrary host.
+ */
 export function getHostedCheckoutUrl(
   chargeId: string,
   charge?: OpenNodeCharge,
 ): string {
-  if (charge?.hosted_checkout_url) return charge.hosted_checkout_url;
+  if (
+    charge?.hosted_checkout_url &&
+    isOpenNodeCheckoutUrl(charge.hosted_checkout_url)
+  ) {
+    return charge.hosted_checkout_url;
+  }
   const sub = getEnv() === "live" ? "" : ".dev";
-  return `https://checkout${sub}.opennode.com/${chargeId}`;
+  return `https://checkout${sub}.opennode.com/${encodeURIComponent(chargeId)}`;
 }

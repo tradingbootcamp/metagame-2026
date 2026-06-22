@@ -25,10 +25,19 @@ export async function POST(request: Request) {
     }
   } catch {
     keyConfigured = false;
+    // In production a missing key isn't an expected dev state — surface it loudly.
+    // We still fail closed below (acknowledge, never record an unverified event).
+    if (process.env.OPENNODE_ENV === "live") {
+      console.error(
+        "[opennode-webhook] OPENNODE_KEY unset in live mode — cannot verify webhook; not recording",
+      );
+    }
   }
 
-  // Only act on a paid charge; everything else gets a fast 200 so OpenNode stops.
-  if (status !== "paid") {
+  // Cheap early-out: the posted status is untrusted, but a clearly non-terminal
+  // event (no chance of being paid) can skip the getCharge round-trip. The
+  // authoritative paid decision comes from the re-fetched charge below.
+  if (status && status !== "paid") {
     return NextResponse.json({ received: true });
   }
 
@@ -38,16 +47,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, configured: false });
   }
 
+  let charge;
   try {
-    const charge = await getCharge(id);
-    const meta = (charge.metadata ?? {}) as Record<string, unknown>;
+    charge = await getCharge(id);
+  } catch (err) {
+    // 500 → OpenNode retries; the fetch (not the record) failed, so retry is safe.
+    console.error("[opennode-webhook] getCharge failed:", err);
+    return NextResponse.json({ error: "Processing failed" }, { status: 500 });
+  }
 
+  // Trust the re-fetched charge, never the POSTed status. OpenNode statuses are
+  // paid / underpaid / processing / expired / refunded — only "paid" settles.
+  // Anything else gets a 200 (no record) so OpenNode stops retrying.
+  if (charge.status !== "paid") {
+    return NextResponse.json({ received: true, status: charge.status });
+  }
+
+  const meta = (charge.metadata ?? {}) as Record<string, unknown>;
+  // charge.amount is in satoshis for a BTC charge — this is the BTC actually
+  // settled, not the quoted metadata.btc.
+  const btcAmount =
+    typeof charge.amount === "number" ? charge.amount / 1e8 : undefined;
+
+  try {
     await recordPurchase({
       id: charge.id,
       customerName: meta.name ? String(meta.name) : undefined,
       customerEmail: meta.email ? String(meta.email) : undefined,
+      // usd is the quoted price from metadata, not settled fiat.
       amount: meta.usd != null ? Number(meta.usd) : undefined,
-      btcAmount: meta.btc != null ? Number(meta.btc) : undefined,
+      btcAmount,
       ticketType: meta.ticketLabel ? String(meta.ticketLabel) : undefined,
       status: "Paid",
       test: meta.test === true || meta.test === "true",

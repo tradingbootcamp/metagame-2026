@@ -6,6 +6,19 @@ import type { TicketTier } from "@/lib/tickets";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Defensive client-side guard: never navigate to a non-OpenNode host even if the
+// API response is tampered with. The server already validates, this is belt-and-suspenders.
+function isOpenNodeCheckoutUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    return host === "checkout.opennode.com" || host.endsWith(".opennode.com");
+  } catch {
+    return false;
+  }
+}
+
 const FIELD =
   "h-12 w-full border-[1.5px] border-[#1b1530]/35 bg-[#f4ecd2] px-4 text-base text-[#1b1530] outline-none transition-colors placeholder:text-[#1b1530]/40 focus:border-[#eaa35a]";
 
@@ -43,6 +56,9 @@ export default function TicketModal({
       const data = await res.json();
       if (!res.ok || !data.hostedCheckoutUrl) {
         throw new Error(data.error || "Could not start Bitcoin checkout.");
+      }
+      if (!isOpenNodeCheckoutUrl(data.hostedCheckoutUrl)) {
+        throw new Error("Could not start Bitcoin checkout.");
       }
       // Stash the charge id so the return page can poll status (no DB to look it up).
       try {
