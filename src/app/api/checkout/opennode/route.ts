@@ -13,6 +13,7 @@ function resolveOrigin(request: Request): string {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_FIELD_LEN = 200;
 
 export async function POST(request: Request) {
   let body: { ticketId?: string; name?: string; email?: string };
@@ -26,6 +27,12 @@ export async function POST(request: Request) {
   if (!ticketId || !name?.trim() || !email?.trim()) {
     return NextResponse.json(
       { error: "ticketId, name, and email are required" },
+      { status: 400 },
+    );
+  }
+  if (name.length > MAX_FIELD_LEN || email.length > MAX_FIELD_LEN) {
+    return NextResponse.json(
+      { error: "Name or email too long" },
       { status: 400 },
     );
   }

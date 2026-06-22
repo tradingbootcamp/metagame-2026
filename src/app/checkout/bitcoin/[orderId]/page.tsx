@@ -6,20 +6,31 @@ import { useEffect, useState } from "react";
 import { FaEnvelope } from "react-icons/fa";
 
 // OpenNode charge lifecycle, narrowed to what we surface here.
-type Phase = "loading" | "pending" | "paid" | "expired" | "error";
+type Phase =
+  | "loading"
+  | "pending"
+  | "paid"
+  | "underpaid"
+  | "expired"
+  | "refunded"
+  | "error";
 
 function phaseFor(status: string | null): Phase {
   switch (status) {
     case "paid":
+      return "paid";
     case "processing":
-      return status === "paid" ? "paid" : "pending";
+      return "pending";
+    case "underpaid":
+      return "underpaid";
     case "expired":
-    case "refunded":
       return "expired";
+    case "refunded":
+      return "refunded";
     case null:
       return "error";
     default:
-      // unpaid / underpaid / anything else → still waiting.
+      // unpaid / anything else → still waiting.
       return "pending";
   }
 }
@@ -68,7 +79,11 @@ export default function BitcoinCheckoutPage() {
     };
   }, [chargeId]);
 
-  const settled = phase === "paid" || phase === "expired";
+  const settled =
+    phase === "paid" ||
+    phase === "expired" ||
+    phase === "underpaid" ||
+    phase === "refunded";
 
   return (
     <main className="relative flex min-h-dvh flex-1 flex-col items-center justify-center bg-[#fff5e4] px-[clamp(20px,5vw,56px)] py-[clamp(24px,4vh,48px)] font-[family-name:var(--font-space-grotesk)] text-[#1b1530]">
@@ -123,6 +138,35 @@ export default function BitcoinCheckoutPage() {
                 Back to tickets
               </span>
             </Link>
+          </div>
+        )}
+
+        {phase === "underpaid" && (
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-center font-[family-name:var(--font-bebas)] text-[28px] tracking-[0.04em] text-[#c0392b]">
+              Partial payment received
+            </p>
+            <p className="text-center text-base">
+              We received a partial payment that didn&rsquo;t cover the full
+              ticket price. Please don&rsquo;t send more without contacting us
+              first — email{" "}
+              <a href="mailto:team@metagame.games" className="underline">
+                team@metagame.games
+              </a>{" "}
+              and we&rsquo;ll sort it out.
+            </p>
+          </div>
+        )}
+
+        {phase === "refunded" && (
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-center text-base">
+              This payment was refunded. If that wasn&rsquo;t expected, email{" "}
+              <a href="mailto:team@metagame.games" className="underline">
+                team@metagame.games
+              </a>{" "}
+              and we&rsquo;ll help.
+            </p>
           </div>
         )}
 

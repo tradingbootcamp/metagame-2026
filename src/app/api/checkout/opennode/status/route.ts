@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCharge } from "@/lib/opennode";
+import { getCharge, isValidChargeId } from "@/lib/opennode";
 
 // Reads the OpenNode key server-side — never expose it to the client.
 export const runtime = "nodejs";
@@ -9,6 +9,9 @@ export async function GET(request: Request) {
   const id = new URL(request.url).searchParams.get("id");
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+  if (!isValidChargeId(id)) {
+    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
 
   try {
