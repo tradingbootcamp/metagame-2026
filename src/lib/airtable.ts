@@ -103,6 +103,12 @@ export type PurchaseRecord = {
   receiptUrl?: string;
   notes?: string;
   discordHandle?: string; // Discord Username custom field from the Payment Link checkout
+  openNodeOrderId?: string;
+  btcTxId?: string;
+  hostedCheckoutUrl?: string;
+  networkFeeBtc?: number;
+  settledFiatValue?: number;
+  btcNetwork?: "On-chain" | "Lightning";
 };
 
 /**
@@ -146,6 +152,16 @@ export async function recordPurchase(
   if (purchase.receiptUrl) fields["Receipt URL"] = purchase.receiptUrl;
   if (purchase.notes) fields["Notes"] = purchase.notes;
   if (purchase.discordHandle) fields["Discord Handle"] = purchase.discordHandle;
+  if (purchase.openNodeOrderId)
+    fields["OpenNode Order ID"] = purchase.openNodeOrderId;
+  if (purchase.btcTxId) fields["BTC Tx ID"] = purchase.btcTxId;
+  if (purchase.hostedCheckoutUrl)
+    fields["Hosted Checkout URL"] = purchase.hostedCheckoutUrl;
+  if (purchase.networkFeeBtc != null)
+    fields["Network Fee (BTC)"] = purchase.networkFeeBtc;
+  if (purchase.settledFiatValue != null)
+    fields["Settled Fiat Value"] = purchase.settledFiatValue;
+  if (purchase.btcNetwork) fields["BTC Network"] = purchase.btcNetwork;
 
   const res = await fetch(
     `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.purchasesTableId)}`,

@@ -46,8 +46,17 @@ export type OpenNodeCharge = {
   status: string;
   amount: number;
   order_id?: string;
+  fee?: number;
+  fiat_value?: number;
   hosted_checkout_url?: string;
   metadata?: Record<string, unknown>;
+  transactions?: Array<{
+    tx?: string;
+    address?: string;
+    amount?: number;
+    settled_at?: number | string;
+    status?: string;
+  }>;
   [key: string]: unknown;
 };
 
