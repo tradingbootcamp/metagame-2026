@@ -36,6 +36,18 @@ const ENV_SPEC: EnvSpec[] = [
     description:
       "Promo code for the in-prod 99%-off test purchase; live purchases using it get flagged Test in Airtable.",
   },
+  {
+    name: "OPENNODE_KEY",
+    required: false,
+    description:
+      "OpenNode API key for Bitcoin ticket checkout. Without it the BTC routes throw a clear error and BTC checkout is unavailable.",
+  },
+  {
+    name: "OPENNODE_ENV",
+    required: false,
+    description:
+      'OpenNode environment: "dev" (sandbox, default) or "live". Picks the API + hosted-checkout host.',
+  },
 ];
 
 let alreadyValidated = false;

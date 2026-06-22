@@ -85,12 +85,14 @@ export async function recordSignup(
 export type PurchaseStatus = "Pending" | "Paid" | "Failed";
 
 export type PurchaseRecord = {
-  id: string; // Stripe payment id — the upsert key, so redelivered events dedupe
+  id: string; // payment id (Stripe payment / OpenNode charge) — the upsert key, so redelivered events dedupe
   status: PurchaseStatus;
   test: boolean; // true for test-mode (sandbox) purchases — checks the Test box
+  paymentMethod: "stripe" | "btc";
   customerName?: string;
   customerEmail?: string;
   amount?: number; // dollars (Airtable currency field)
+  btcAmount?: number; // whole BTC paid (only set for BTC purchases)
   fee?: number;
   net?: number;
   billingName?: string;
@@ -125,7 +127,9 @@ export async function recordPurchase(
     ID: purchase.id,
     Status: purchase.status,
     Test: purchase.test,
+    "Payment Method": purchase.paymentMethod === "btc" ? "BTC" : "Stripe",
   };
+  if (purchase.btcAmount != null) fields["BTC Amount"] = purchase.btcAmount;
   if (purchase.customerName) fields["Customer Name"] = purchase.customerName;
   if (purchase.customerEmail) fields["Customer Email"] = purchase.customerEmail;
   if (purchase.amount != null) fields["Amount"] = purchase.amount;
