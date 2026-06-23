@@ -22,8 +22,6 @@ export default function TicketsButton() {
 
   if (!ticket || !stripeHref) return null;
 
-  const { full, earlyBird } = ticket.prices;
-
   return (
     <>
       <button
@@ -40,11 +38,6 @@ export default function TicketsButton() {
             <span className="bg-[#eaa35a] px-2 py-[2px] text-[15px] tracking-[0.18em] text-[#1b1530]">
               LIVE
             </span>
-          </span>
-          <span className="flex items-center gap-2 text-[28px]">
-            {/* full price struck through, early-bird price in the accent orange */}
-            <span className="text-[#f4ecd2]/45 line-through">${full.usd}</span>
-            <span className="text-[#eaa35a]">${earlyBird.usd}</span>
           </span>
         </span>
       </button>
