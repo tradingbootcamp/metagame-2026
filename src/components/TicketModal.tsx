@@ -126,7 +126,7 @@ export default function TicketModal({
           >
             <span aria-hidden className="absolute inset-0 bg-[#2b9bf0]" />
             <span className="relative flex h-12 items-center justify-center bg-[#1b1530] px-7 font-[family-name:var(--font-bebas)] text-xl tracking-[0.08em] text-[#f4ecd2] transition-transform group-hover:-translate-x-[5px] group-hover:-translate-y-[5px]">
-              Continue to card checkout
+              Checkout with Stripe
             </span>
           </a>
         </section>
