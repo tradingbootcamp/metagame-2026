@@ -81,8 +81,10 @@ export async function recordSignup(
 }
 
 // Lifecycle of a purchase. Card → Paid instantly; ACH bank debits land Pending
-// then settle to Paid (or bounce to Failed) days later.
-export type PurchaseStatus = "Pending" | "Paid" | "Failed";
+// then settle to Paid (or bounce to Failed) days later. BTC charges land Pending
+// (on-chain processing) then settle to Paid, or land Underpaid. "Underpaid" is a
+// new singleSelect option auto-created by the upsert's typecast.
+export type PurchaseStatus = "Pending" | "Paid" | "Failed" | "Underpaid";
 
 export type PurchaseRecord = {
   id: string; // payment id (Stripe payment / OpenNode charge) — the upsert key, so redelivered events dedupe

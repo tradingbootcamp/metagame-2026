@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { recordPurchase } from "@/lib/airtable";
+import { recordPurchase, type PurchaseStatus } from "@/lib/airtable";
 import {
   getCharge,
   getHostedCheckoutUrl,
@@ -13,7 +13,6 @@ export async function POST(request: Request) {
   // OpenNode posts application/x-www-form-urlencoded.
   const params = new URLSearchParams(await request.text());
   const id = params.get("id") ?? "";
-  const status = params.get("status") ?? "";
   const hashedOrder = params.get("hashed_order") ?? "";
 
   if (!id) {
@@ -38,19 +37,14 @@ export async function POST(request: Request) {
     }
   }
 
-  // Cheap early-out: the posted status is untrusted, but a clearly non-terminal
-  // event (no chance of being paid) can skip the getCharge round-trip. The
-  // authoritative paid decision comes from the re-fetched charge below.
-  if (status && status !== "paid") {
-    return NextResponse.json({ received: true });
-  }
-
   if (!keyConfigured) {
-    // Can't trust an unverified "paid" — acknowledge but don't record.
-    console.warn("[opennode-webhook] OPENNODE_KEY unset — ignoring paid event");
+    // Can't trust an unverified event — acknowledge but don't record.
+    console.warn("[opennode-webhook] OPENNODE_KEY unset — ignoring event");
     return NextResponse.json({ received: true, configured: false });
   }
 
+  // Always re-fetch — the POSTed status is untrusted, so even a non-"paid" event
+  // round-trips to getCharge and we branch on the authoritative fetched status.
   let charge;
   try {
     charge = await getCharge(id);
@@ -60,11 +54,27 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Processing failed" }, { status: 500 });
   }
 
-  // Trust the re-fetched charge, never the POSTed status. OpenNode statuses are
-  // paid / underpaid / processing / expired / refunded — only "paid" settles.
-  // Anything else gets a 200 (no record) so OpenNode stops retrying.
-  if (charge.status !== "paid") {
-    return NextResponse.json({ received: true, status: charge.status });
+  // Status mapping, derived from the RE-FETCHED charge (the trust boundary —
+  // never the POSTed body). OpenNode statuses → our Airtable Status:
+  //   processing → "Pending"   (on-chain confirming; record now so the row exists)
+  //   paid       → "Paid"      (settled; updates the same upserted row)
+  //   underpaid  → "Underpaid"
+  //   everything else (unpaid / expired / refunded / unknown) → 200, no record.
+  // recordPurchase upserts on ID (= charge id), so the later paid event updates
+  // the row a processing event created.
+  let recordStatus: PurchaseStatus;
+  switch (charge.status) {
+    case "paid":
+      recordStatus = "Paid";
+      break;
+    case "processing":
+      recordStatus = "Pending";
+      break;
+    case "underpaid":
+      recordStatus = "Underpaid";
+      break;
+    default:
+      return NextResponse.json({ received: true, status: charge.status });
   }
 
   const meta = (charge.metadata ?? {}) as Record<string, unknown>;
@@ -94,7 +104,7 @@ export async function POST(request: Request) {
       amount: meta.usd != null ? Number(meta.usd) : undefined,
       btcAmount,
       ticketType: meta.ticketLabel ? String(meta.ticketLabel) : undefined,
-      status: "Paid",
+      status: recordStatus,
       test: meta.test === true || meta.test === "true",
       paymentMethod: "btc",
       // getCharge omits the top-level order_id, so read our generated id from
