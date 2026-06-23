@@ -97,12 +97,19 @@ export async function POST(request: Request) {
       status: "Paid",
       test: meta.test === true || meta.test === "true",
       paymentMethod: "btc",
-      openNodeOrderId: charge.order_id,
+      // getCharge omits the top-level order_id, so read our generated id from
+      // metadata (set as metadata.orderId by the create route); fall back to
+      // order_id if it's ever present.
+      openNodeOrderId: meta.orderId ? String(meta.orderId) : charge.order_id,
       btcTxId,
       // Derived (validated) URL, never an unvalidated payload value.
       hostedCheckoutUrl: getHostedCheckoutUrl(charge.id),
       networkFeeBtc: charge.fee != null ? charge.fee / 1e8 : undefined,
-      settledFiatValue: charge.fiat_value,
+      // getCharge returns fiat_value in cents (create returns dollars); the
+      // webhook uses the GET value. Observed against the dev API — re-confirm on
+      // the first real charge.
+      settledFiatValue:
+        charge.fiat_value != null ? charge.fiat_value / 100 : undefined,
       btcNetwork,
     });
   } catch (err) {
