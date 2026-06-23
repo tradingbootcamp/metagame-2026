@@ -16,25 +16,31 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FIELD_LEN = 200;
 
 export async function POST(request: Request) {
-  let body: { ticketId?: string; name?: string; email?: string };
+  let body: {
+    ticketId?: string;
+    name?: string;
+    email?: string;
+    discord?: string;
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { ticketId, name, email } = body;
+  const { ticketId, name, email, discord } = body;
   if (!ticketId || !name?.trim() || !email?.trim()) {
     return NextResponse.json(
       { error: "ticketId, name, and email are required" },
       { status: 400 },
     );
   }
-  if (name.length > MAX_FIELD_LEN || email.length > MAX_FIELD_LEN) {
-    return NextResponse.json(
-      { error: "Name or email too long" },
-      { status: 400 },
-    );
+  if (
+    name.length > MAX_FIELD_LEN ||
+    email.length > MAX_FIELD_LEN ||
+    (discord != null && discord.length > MAX_FIELD_LEN)
+  ) {
+    return NextResponse.json({ error: "A field is too long" }, { status: 400 });
   }
   if (!EMAIL_RE.test(email)) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
@@ -68,6 +74,8 @@ export async function POST(request: Request) {
     ticketLabel: ticket.label,
     name: name.trim(),
     email: email.trim(),
+    // Optional Discord handle — only ride it along when the buyer supplied one.
+    ...(discord?.trim() ? { discord: discord.trim() } : {}),
     usd,
     btc,
     test,

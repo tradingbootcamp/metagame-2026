@@ -100,6 +100,7 @@ export async function POST(request: Request) {
       id: charge.id,
       customerName: meta.name ? String(meta.name) : undefined,
       customerEmail: meta.email ? String(meta.email) : undefined,
+      discordHandle: meta.discord ? String(meta.discord) : undefined,
       // usd is the quoted price from metadata, not settled fiat.
       amount: meta.usd != null ? Number(meta.usd) : undefined,
       btcAmount,
