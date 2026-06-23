@@ -112,6 +112,14 @@ export async function POST(request: Request) {
     const testCode = env.STRIPE_TEST_99_CODE?.trim().toUpperCase();
     const isTestCoupon = !!testCode && couponCode?.toUpperCase() === testCode;
 
+    // Optional "Discord Username" custom field on the Payment Link. Match by key OR
+    // label so a future key/label tweak doesn't silently drop it.
+    const discord = full.custom_fields?.find(
+      (f) =>
+        f.key === "discordusername" ||
+        f.label?.custom?.toLowerCase().includes("discord"),
+    )?.text?.value;
+
     await recordPurchase({
       // Prefer the PaymentIntent id (the canonical payment) as the upsert key.
       id: paymentIntent?.id ?? full.id,
@@ -126,6 +134,7 @@ export async function POST(request: Request) {
       couponCode,
       amountDiscount,
       receiptUrl: charge?.receipt_url ?? undefined,
+      discordHandle: discord ?? undefined,
       status,
       // Flag Test if it's a sandbox checkout (livemode=false) OR used an in-prod test
       // coupon — either way it shouldn't count as a real sale.

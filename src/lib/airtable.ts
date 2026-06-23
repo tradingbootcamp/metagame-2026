@@ -100,6 +100,7 @@ export type PurchaseRecord = {
   amountDiscount?: number; // dollars knocked off by the coupon
   receiptUrl?: string;
   notes?: string;
+  discordHandle?: string; // Discord Username custom field from the Payment Link checkout
 };
 
 /**
@@ -140,6 +141,7 @@ export async function recordPurchase(
     fields["Amount Discounted"] = purchase.amountDiscount;
   if (purchase.receiptUrl) fields["Receipt URL"] = purchase.receiptUrl;
   if (purchase.notes) fields["Notes"] = purchase.notes;
+  if (purchase.discordHandle) fields["Discord Handle"] = purchase.discordHandle;
 
   const res = await fetch(
     `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.purchasesTableId)}`,
