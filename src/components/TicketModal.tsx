@@ -100,7 +100,7 @@ export default function TicketModal({
           id={titleId}
           className="font-[family-name:var(--font-bebas)] text-[clamp(26px,6vw,34px)] leading-tight tracking-[0.04em]"
         >
-          Get your {ticket.label} ticket
+          Get your ticket
         </h2>
 
         {/* Pay with card (Stripe) */}
