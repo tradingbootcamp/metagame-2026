@@ -7,11 +7,11 @@ import BtcModal from "./BtcModal";
 type Currency = "usd" | "btc";
 const CURRENCY_KEY = "ticket-currency";
 
-// Persisted-currency external store. The server / first-paint snapshot is `null`
-// (pending) rather than a real currency, so SSR never commits to USD or BTC — the
-// price renders as a layout-reserving placeholder until the client resolves the
-// saved value. This avoids the USD→BTC flip a returning BTC user would otherwise
-// see. Writes go through setCurrency(), which persists and notifies subscribers.
+// Persisted-currency store. The *visible* toggle/prices are driven by the
+// html[data-currency] attribute (set before first paint by an inline script in the
+// root layout), so the display never flashes USD→BTC on load. This store mirrors
+// that value into React for the checkout action + aria state; setCurrency() keeps
+// localStorage, the attribute, and subscribers in sync when the user toggles.
 const currencyListeners = new Set<() => void>();
 
 function subscribeCurrency(onChange: () => void): () => void {
@@ -29,9 +29,8 @@ function getCurrencySnapshot(): Currency {
   return "usd";
 }
 
-// Sentinel for server render + the hydration pass: no currency is chosen yet.
-function getCurrencyServerSnapshot(): Currency | null {
-  return null;
+function getCurrencyServerSnapshot(): Currency {
+  return "usd";
 }
 
 function setCurrency(next: Currency) {
@@ -39,6 +38,9 @@ function setCurrency(next: Currency) {
     localStorage.setItem(CURRENCY_KEY, next);
   } catch {
     // best-effort persistence
+  }
+  if (typeof document !== "undefined") {
+    document.documentElement.dataset.currency = next;
   }
   currencyListeners.forEach((fn) => fn());
 }
@@ -67,10 +69,6 @@ export default function TicketsButton() {
   if (!ticket || !stripeHref) return null;
 
   const { full, earlyBird } = ticket.prices;
-  // currency is null on the server + first client paint (sentinel); treat it as
-  // USD for behavior, but hide the price text until it resolves so no wrong-
-  // currency value flashes.
-  const pending = currency === null;
   const isBtc = currency === "btc";
 
   // USD → straight to the Stripe Payment Link in a new tab; BTC → BTC-only modal.
@@ -99,28 +97,26 @@ export default function TicketsButton() {
               LIVE
             </span>
           </span>
-          {/* While the stored currency is still pending (server + first paint),
-              the prices render with visibility:hidden — width/height stays
-              reserved so resolving to USD or BTC doesn't shift layout, and no
-              wrong-currency value is ever shown. */}
-          <span
-            className="flex items-center gap-2 text-[28px]"
-            style={pending ? { visibility: "hidden" } : undefined}
-          >
-            {/* full price struck through, early-bird price in the accent orange */}
+          {/* Both currency prices are rendered; CSS (keyed on html[data-currency],
+              set pre-paint) shows the active one — so the right price paints on load
+              with no USD→BTC flash. */}
+          <span className="ccy-usd flex items-center gap-2 text-[28px]">
+            <span className="text-[#f4ecd2]/45 line-through">${full.usd}</span>
+            <span className="text-[#eaa35a]">${earlyBird.usd}</span>
+          </span>
+          <span className="ccy-btc flex items-center gap-2 text-[28px]">
             <span className="text-[#f4ecd2]/45 line-through">
-              {isBtc ? `₿${full.btc}` : `$${full.usd}`}
+              &#8383;{full.btc}
             </span>
-            <span className="text-[#eaa35a]">
-              {isBtc ? `₿${earlyBird.btc}` : `$${earlyBird.usd}`}
-            </span>
+            <span className="text-[#eaa35a]">&#8383;{earlyBird.btc}</span>
           </span>
         </span>
       </button>
 
-      {/* currency toggle, sitting just below the button — one click target;
-          clicking anywhere (or Space/Enter) flips USD↔BTC. A sliding knob in the
-          accent orange sits under the active side. */}
+      {/* currency toggle — one click target; clicking anywhere (or Space/Enter)
+          flips USD↔BTC. Knob position + label emphasis are CSS-driven off
+          html[data-currency], so they paint correct on load (no flash) and animate
+          only on a user toggle. */}
       <button
         type="button"
         role="switch"
@@ -129,25 +125,15 @@ export default function TicketsButton() {
         onClick={() => setCurrency(isBtc ? "usd" : "btc")}
         className="relative grid grid-cols-2 items-stretch border-[1.5px] border-[#1b1530]/30 font-[family-name:var(--font-bebas)] text-[18px] tracking-[0.08em]"
       >
-        {/* sliding knob: covers the left (USD) or right (BTC) half */}
+        {/* sliding knob: covers the USD (left) or BTC (right) half */}
         <span
           aria-hidden
-          className={`absolute inset-y-0 left-0 w-1/2 bg-[#eaa35a] transition-transform ${
-            isBtc ? "translate-x-full" : "translate-x-0"
-          }`}
+          className="ccy-knob absolute inset-y-0 left-0 w-1/2 bg-[#eaa35a] transition-transform"
         />
-        <span
-          className={`relative px-5 py-1 transition-colors ${
-            !isBtc ? "text-[#1b1530]" : "text-[#1b1530]/60"
-          }`}
-        >
+        <span className="ccy-label-usd relative px-5 py-1 transition-colors">
           USD
         </span>
-        <span
-          className={`relative px-5 py-1 transition-colors ${
-            isBtc ? "text-[#1b1530]" : "text-[#1b1530]/60"
-          }`}
-        >
+        <span className="ccy-label-btc relative px-5 py-1 transition-colors">
           BTC
         </span>
       </button>

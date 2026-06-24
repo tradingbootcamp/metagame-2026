@@ -27,9 +27,20 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${bebasNeue.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {/* Apply the saved ticket currency before first paint (localStorage is
+            client-only, so the server can't know it) — keeps the tickets toggle
+            from flashing USD→BTC on load. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var c=localStorage.getItem('ticket-currency');document.documentElement.dataset.currency=c==='btc'?'btc':'usd'}catch(e){document.documentElement.dataset.currency='usd'}`,
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

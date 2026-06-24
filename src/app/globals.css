@@ -18,3 +18,34 @@ body {
   color: var(--foreground);
   font-family: var(--font-space-grotesk), system-ui, sans-serif;
 }
+
+/* Tickets currency toggle — visible state is driven by html[data-currency], which
+   an inline script (root layout) sets from localStorage before first paint, so the
+   toggle never flashes USD→BTC on load. Defaults to USD when the attribute is absent. */
+.ccy-btc {
+  display: none;
+}
+[data-currency="btc"] .ccy-usd {
+  display: none;
+}
+[data-currency="btc"] .ccy-btc {
+  display: flex;
+}
+.ccy-knob {
+  transform: translateX(0);
+}
+[data-currency="btc"] .ccy-knob {
+  transform: translateX(100%);
+}
+.ccy-label-usd {
+  color: #1b1530;
+}
+.ccy-label-btc {
+  color: rgba(27, 21, 48, 0.55);
+}
+[data-currency="btc"] .ccy-label-usd {
+  color: rgba(27, 21, 48, 0.55);
+}
+[data-currency="btc"] .ccy-label-btc {
+  color: #1b1530;
+}
