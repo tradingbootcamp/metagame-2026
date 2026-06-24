@@ -102,6 +102,7 @@ export type PurchaseRecord = {
   ticketType?: string;
   couponCode?: string; // promotion code the buyer used, e.g. "EARLYBIRD"
   amountDiscount?: number; // dollars knocked off by the coupon
+  btcAmountDiscounted?: number; // whole BTC knocked off by a BTC discount code
   receiptUrl?: string;
   notes?: string;
   discordHandle?: string; // Discord Username custom field from the Payment Link checkout
@@ -151,6 +152,8 @@ export async function recordPurchase(
   if (purchase.couponCode) fields["Coupon Code"] = purchase.couponCode;
   if (purchase.amountDiscount != null)
     fields["Amount Discounted"] = purchase.amountDiscount;
+  if (purchase.btcAmountDiscounted != null && purchase.btcAmountDiscounted > 0)
+    fields["BTC Amount Discounted"] = purchase.btcAmountDiscounted;
   if (purchase.receiptUrl) fields["Receipt URL"] = purchase.receiptUrl;
   if (purchase.notes) fields["Notes"] = purchase.notes;
   if (purchase.discordHandle) fields["Discord Handle"] = purchase.discordHandle;

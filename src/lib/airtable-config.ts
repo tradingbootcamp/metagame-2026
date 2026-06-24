@@ -11,4 +11,6 @@ export const airtableConfig = {
   signupEmailField: "Email",
   /** "Stripe Purchases" table — ticket purchases recorded by the webhook. */
   purchasesTableId: "tblMEDrxbS2abAHob",
+  /** "Discount Codes" table — server-validated BTC discount codes (ground truth). */
+  discountCodesTableId: "tble7XP43WyeKeHXd",
 } as const;

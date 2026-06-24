@@ -105,6 +105,11 @@ export async function POST(request: Request) {
       amount: meta.usd != null ? Number(meta.usd) : undefined,
       btcAmount,
       ticketType: meta.ticketLabel ? String(meta.ticketLabel) : undefined,
+      couponCode: meta.discountCode ? String(meta.discountCode) : undefined,
+      btcAmountDiscounted:
+        meta.btcAmountDiscounted != null
+          ? Number(meta.btcAmountDiscounted)
+          : undefined,
       status: recordStatus,
       test: meta.test === true || meta.test === "true",
       paymentMethod: "btc",
