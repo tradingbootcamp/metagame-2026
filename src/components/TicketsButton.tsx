@@ -7,10 +7,11 @@ import BtcModal from "./BtcModal";
 type Currency = "usd" | "btc";
 const CURRENCY_KEY = "ticket-currency";
 
-// Persisted-currency external store. useSyncExternalStore reads localStorage with a
-// distinct server snapshot ("usd"), so SSR and the first client paint agree and there's
-// no hydration mismatch on the toggle — then it reconciles to the saved value. Writes go
-// through setCurrency(), which persists and notifies subscribers so the UI re-renders.
+// Persisted-currency external store. The server / first-paint snapshot is `null`
+// (pending) rather than a real currency, so SSR never commits to USD or BTC — the
+// price renders as a layout-reserving placeholder until the client resolves the
+// saved value. This avoids the USD→BTC flip a returning BTC user would otherwise
+// see. Writes go through setCurrency(), which persists and notifies subscribers.
 const currencyListeners = new Set<() => void>();
 
 function subscribeCurrency(onChange: () => void): () => void {
@@ -28,8 +29,9 @@ function getCurrencySnapshot(): Currency {
   return "usd";
 }
 
-function getCurrencyServerSnapshot(): Currency {
-  return "usd";
+// Sentinel for server render + the hydration pass: no currency is chosen yet.
+function getCurrencyServerSnapshot(): Currency | null {
+  return null;
 }
 
 function setCurrency(next: Currency) {
@@ -65,6 +67,10 @@ export default function TicketsButton() {
   if (!ticket || !stripeHref) return null;
 
   const { full, earlyBird } = ticket.prices;
+  // currency is null on the server + first client paint (sentinel); treat it as
+  // USD for behavior, but hide the price text until it resolves so no wrong-
+  // currency value flashes.
+  const pending = currency === null;
   const isBtc = currency === "btc";
 
   // USD → straight to the Stripe Payment Link in a new tab; BTC → BTC-only modal.
@@ -93,7 +99,14 @@ export default function TicketsButton() {
               LIVE
             </span>
           </span>
-          <span className="flex items-center gap-2 text-[28px]">
+          {/* While the stored currency is still pending (server + first paint),
+              the prices render with visibility:hidden — width/height stays
+              reserved so resolving to USD or BTC doesn't shift layout, and no
+              wrong-currency value is ever shown. */}
+          <span
+            className="flex items-center gap-2 text-[28px]"
+            style={pending ? { visibility: "hidden" } : undefined}
+          >
             {/* full price struck through, early-bird price in the accent orange */}
             <span className="text-[#f4ecd2]/45 line-through">
               {isBtc ? `₿${full.btc}` : `$${full.usd}`}
@@ -105,39 +118,39 @@ export default function TicketsButton() {
         </span>
       </button>
 
-      {/* currency toggle, sitting just below the button */}
-      <div
-        role="radiogroup"
-        aria-label="Payment currency"
-        className="flex items-stretch border-[1.5px] border-[#1b1530]/30 font-[family-name:var(--font-bebas)] text-[18px] tracking-[0.08em]"
+      {/* currency toggle, sitting just below the button — one click target;
+          clicking anywhere (or Space/Enter) flips USD↔BTC. A sliding knob in the
+          accent orange sits under the active side. */}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isBtc}
+        aria-label="Payment currency: USD or BTC"
+        onClick={() => setCurrency(isBtc ? "usd" : "btc")}
+        className="relative grid grid-cols-2 items-stretch border-[1.5px] border-[#1b1530]/30 font-[family-name:var(--font-bebas)] text-[18px] tracking-[0.08em]"
       >
-        <button
-          type="button"
-          role="radio"
-          aria-checked={!isBtc}
-          onClick={() => setCurrency("usd")}
-          className={`px-5 py-1 transition-colors ${
-            !isBtc
-              ? "bg-[#eaa35a] text-[#1b1530]"
-              : "bg-transparent text-[#1b1530]/60 hover:text-[#1b1530]"
+        {/* sliding knob: covers the left (USD) or right (BTC) half */}
+        <span
+          aria-hidden
+          className={`absolute inset-y-0 left-0 w-1/2 bg-[#eaa35a] transition-transform ${
+            isBtc ? "translate-x-full" : "translate-x-0"
+          }`}
+        />
+        <span
+          className={`relative px-5 py-1 transition-colors ${
+            !isBtc ? "text-[#1b1530]" : "text-[#1b1530]/60"
           }`}
         >
           USD
-        </button>
-        <button
-          type="button"
-          role="radio"
-          aria-checked={isBtc}
-          onClick={() => setCurrency("btc")}
-          className={`px-5 py-1 transition-colors ${
-            isBtc
-              ? "bg-[#eaa35a] text-[#1b1530]"
-              : "bg-transparent text-[#1b1530]/60 hover:text-[#1b1530]"
+        </span>
+        <span
+          className={`relative px-5 py-1 transition-colors ${
+            isBtc ? "text-[#1b1530]" : "text-[#1b1530]/60"
           }`}
         >
           BTC
-        </button>
-      </div>
+        </span>
+      </button>
 
       {open && <BtcModal ticket={ticket} onClose={() => setOpen(false)} />}
     </div>
