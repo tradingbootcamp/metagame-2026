@@ -1,5 +1,10 @@
 import { env } from "@/env";
 import { airtableConfig } from "@/lib/airtable-config";
+import { ticketTiers } from "@/lib/tickets";
+
+// Full BTC price of the standard ticket; discounts are resolved relative to it.
+const FULL_BTC =
+  ticketTiers.find((t) => t.id === "standard")?.prices.full.btc ?? 0.0065;
 
 export type DiscountCode = {
   code: string;
@@ -43,8 +48,32 @@ export async function lookupDiscountCode(
     const fields = data.records?.[0]?.fields;
     if (!fields) return null;
 
-    const btcPrice = Number(fields["BTC Price"]);
-    if (!Number.isFinite(btcPrice) || btcPrice <= 0) return null;
+    const discountType = fields["Discount Type"];
+    const value = Number(fields["Value"]);
+    if (typeof discountType !== "string" || !Number.isFinite(value))
+      return null;
+
+    let price: number;
+    switch (discountType) {
+      case "End price":
+        price = value;
+        break;
+      case "Amount off":
+        price = FULL_BTC - value;
+        break;
+      case "Percent off":
+        price = FULL_BTC * (1 - value / 100);
+        break;
+      default:
+        return null;
+    }
+
+    // Round to whole-satoshi precision so percent/amount math displays cleanly.
+    const btcPrice = Math.round(price * 1e8) / 1e8;
+    // A discount can only lower the price within (0, full]; anything else is invalid.
+    if (!Number.isFinite(btcPrice) || btcPrice <= 0 || btcPrice > FULL_BTC) {
+      return null;
+    }
 
     const label = fields["Label"];
     return {
