@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getTicket } from "@/lib/tickets";
+import { lookupDiscountCode } from "@/lib/discount-codes";
 import { createCharge, getHostedCheckoutUrl } from "@/lib/opennode";
 
 export const runtime = "nodejs";
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
     name?: string;
     email?: string;
     discord?: string;
+    discountCode?: string;
   };
   try {
     body = await request.json();
@@ -28,7 +30,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { ticketId, name, email, discord } = body;
+  const { ticketId, name, email, discord, discountCode } = body;
   if (!ticketId || !name?.trim() || !email?.trim()) {
     return NextResponse.json(
       { error: "ticketId, name, and email are required" },
@@ -51,9 +53,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unknown ticket" }, { status: 400 });
   }
 
-  // BTC charge currently always uses the early-bird price (mirrors the Stripe
-  // early-bird promo). Switch to `ticket.prices.full` to change the active phase.
-  const { usd, btc } = ticket.prices.earlyBird;
+  // The charged BTC price is always server-derived: a valid Airtable discount code
+  // lowers it, otherwise full price. A bad/unknown code never charges less — it
+  // falls through to full. Never trust a client-sent price.
+  const applied = discountCode ? await lookupDiscountCode(discountCode) : null;
+  const btc = applied?.btcPrice ?? ticket.prices.full.btc;
+  const btcAmountDiscounted = applied ? ticket.prices.full.btc - btc : 0;
+  // usd is the advertised dollar amount stored as the Airtable `Amount`; the
+  // discount only drives the BTC charge, so usd stays anchored to the promo price.
+  const { usd } = ticket.prices.earlyBird;
   const amountSats = Math.round(btc * 1e8);
 
   const orderId = crypto.randomUUID();
@@ -78,6 +86,8 @@ export async function POST(request: Request) {
     ...(discord?.trim() ? { discord: discord.trim() } : {}),
     usd,
     btc,
+    discountCode: applied?.code ?? "",
+    btcAmountDiscounted,
     test,
   };
 

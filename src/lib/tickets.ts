@@ -3,10 +3,10 @@
 // links serve only in production; local dev and Vercel previews use the sandbox
 // (test_) links so testing never fires a real charge.
 //
-// BTC prices are hardcoded (no live conversion). The BTC charge currently always
-// uses the early-bird price, mirroring the Stripe early-bird promo. To switch the
-// active phase later, point the BTC route at `prices.full` instead — no cutoff
-// logic is built here on purpose.
+// BTC prices are hardcoded (no live conversion). The actual BTC charge is now
+// code-driven: full price by default, lowered by a validated Airtable discount
+// code (see src/lib/discount-codes.ts). `earlyBird.btc` here is just the
+// advertised default the homepage button shows.
 
 type StripeMode = "test" | "live";
 
@@ -36,6 +36,9 @@ export const ticketTiers: TicketTier[] = [
     label: "Standard",
     prices: {
       full: { usd: 425, btc: 0.0065 },
+      // The actual BTC charge is now code-driven (Airtable "Discount Codes" table);
+      // earlyBird.btc here is just the advertised default the homepage button shows,
+      // matching the seeded EARLYBIRD code. Don't read it for the charge amount.
       earlyBird: { usd: 325, btc: 0.005 },
     },
     // Must match the promotion code string created in Stripe ($100-off coupon).

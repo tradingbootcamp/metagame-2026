@@ -49,3 +49,21 @@ body {
 [data-currency="btc"] .ccy-label-btc {
   color: #1b1530;
 }
+
+/* Animated "." ".." "..." while a discount code is being validated. */
+@keyframes ccy-ellipsis {
+  0%,
+  100% {
+    content: ".";
+  }
+  33% {
+    content: "..";
+  }
+  66% {
+    content: "...";
+  }
+}
+.ccy-checking::after {
+  content: ".";
+  animation: ccy-ellipsis 1.2s infinite;
+}
