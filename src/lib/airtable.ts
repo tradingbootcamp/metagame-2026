@@ -81,16 +81,20 @@ export async function recordSignup(
 }
 
 // Lifecycle of a purchase. Card → Paid instantly; ACH bank debits land Pending
-// then settle to Paid (or bounce to Failed) days later.
-export type PurchaseStatus = "Pending" | "Paid" | "Failed";
+// then settle to Paid (or bounce to Failed) days later. BTC charges land Pending
+// (on-chain processing) then settle to Paid, or land Underpaid. "Underpaid" is a
+// new singleSelect option auto-created by the upsert's typecast.
+export type PurchaseStatus = "Pending" | "Paid" | "Failed" | "Underpaid";
 
 export type PurchaseRecord = {
-  id: string; // Stripe payment id — the upsert key, so redelivered events dedupe
+  id: string; // payment id (Stripe payment / OpenNode charge) — the upsert key, so redelivered events dedupe
   status: PurchaseStatus;
   test: boolean; // true for test-mode (sandbox) purchases — checks the Test box
+  paymentMethod: "stripe" | "btc";
   customerName?: string;
   customerEmail?: string;
   amount?: number; // dollars (Airtable currency field)
+  btcAmount?: number; // whole BTC paid (only set for BTC purchases)
   fee?: number;
   net?: number;
   billingName?: string;
@@ -101,6 +105,12 @@ export type PurchaseRecord = {
   receiptUrl?: string;
   notes?: string;
   discordHandle?: string; // Discord Username custom field from the Payment Link checkout
+  openNodeOrderId?: string;
+  btcTxId?: string;
+  hostedCheckoutUrl?: string;
+  networkFeeBtc?: number;
+  settledFiatValue?: number;
+  btcNetwork?: "On-chain" | "Lightning";
 };
 
 /**
@@ -125,7 +135,9 @@ export async function recordPurchase(
     ID: purchase.id,
     Status: purchase.status,
     Test: purchase.test,
+    "Payment Method": purchase.paymentMethod === "btc" ? "BTC" : "Stripe",
   };
+  if (purchase.btcAmount != null) fields["BTC Amount"] = purchase.btcAmount;
   if (purchase.customerName) fields["Customer Name"] = purchase.customerName;
   if (purchase.customerEmail) fields["Customer Email"] = purchase.customerEmail;
   if (purchase.amount != null) fields["Amount"] = purchase.amount;
@@ -142,6 +154,16 @@ export async function recordPurchase(
   if (purchase.receiptUrl) fields["Receipt URL"] = purchase.receiptUrl;
   if (purchase.notes) fields["Notes"] = purchase.notes;
   if (purchase.discordHandle) fields["Discord Handle"] = purchase.discordHandle;
+  if (purchase.openNodeOrderId)
+    fields["OpenNode Order ID"] = purchase.openNodeOrderId;
+  if (purchase.btcTxId) fields["BTC Tx ID"] = purchase.btcTxId;
+  if (purchase.hostedCheckoutUrl)
+    fields["Hosted Checkout URL"] = purchase.hostedCheckoutUrl;
+  if (purchase.networkFeeBtc != null)
+    fields["Network Fee (BTC)"] = purchase.networkFeeBtc;
+  if (purchase.settledFiatValue != null)
+    fields["Settled Fiat Value"] = purchase.settledFiatValue;
+  if (purchase.btcNetwork) fields["BTC Network"] = purchase.btcNetwork;
 
   const res = await fetch(
     `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.purchasesTableId)}`,

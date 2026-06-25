@@ -136,6 +136,7 @@ export async function POST(request: Request) {
       receiptUrl: charge?.receipt_url ?? undefined,
       discordHandle: discord ?? undefined,
       status,
+      paymentMethod: "stripe",
       // Flag Test if it's a sandbox checkout (livemode=false) OR used an in-prod test
       // coupon — either way it shouldn't count as a real sale.
       test: !event.livemode || isTestCoupon,
