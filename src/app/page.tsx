@@ -1,5 +1,5 @@
 import Dice from "@/components/Dice";
-import TicketsButton from "@/components/TicketsButton";
+import TicketsSection from "@/components/TicketsSection";
 import NotifyMe from "@/components/NotifyMe";
 import { FaEnvelope, FaExternalLinkAlt } from "react-icons/fa";
 
@@ -46,7 +46,7 @@ export default function Home() {
           <span>Berkeley, CA</span>
         </div>
 
-        <TicketsButton />
+        <TicketsSection />
         <p className="-mt-3 max-w-[440px] text-center text-sm text-[#1b1530]/70">
           More information about volunteer tickets and financial aid coming
           soon.

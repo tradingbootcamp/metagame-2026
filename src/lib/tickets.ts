@@ -8,7 +8,7 @@
 // code (see src/lib/discount-codes.ts). `earlyBird.btc` here is just the
 // advertised default the homepage button shows.
 
-type StripeMode = "test" | "live";
+export type StripeMode = "test" | "live";
 
 const stripeMode: StripeMode =
   process.env.VERCEL_ENV === "production" ? "live" : "test";
@@ -53,6 +53,68 @@ export const ticketTiers: TicketTier[] = [
 /** Look up a tier by id; undefined when none matches. */
 export function getTicket(id: string): TicketTier | undefined {
   return ticketTiers.find((t) => t.id === id);
+}
+
+// ── Supporter tier ──────────────────────────────────────────────────────────
+// A pay-what-you-want tier (floor $525 / ₿0.0087) sitting alongside the standard
+// ticket. USD checkout uses one Stripe Payment Link per quick-pick amount; BTC
+// checkout goes through the OpenNode modal with an editable amount.
+
+/** One quick-pick amount: a USD Stripe preset + its hardcoded BTC equivalent. */
+export type SupporterChip = {
+  usd: number; // Stripe price preset (dollars)
+  btc: number; // ~equivalent whole BTC, hardcoded
+  links: Record<StripeMode, string>; // Payment Link for this chip's custom-amount Stripe price
+};
+
+export type SupporterTier = {
+  id: "supporter";
+  label: string;
+  floor: Price; // minimum accepted in either currency
+  defaultChipUsd: number; // which chip is selected when the modal opens
+  chips: SupporterChip[];
+};
+
+// TODO_PAYMENT_LINK: Brian — fill in each chip's test/live Stripe Payment Link
+// below (the only thing left to fill in here). Grep `TODO_PAYMENT_LINK` to find
+// them. Until then the UI renders fine but USD checkout opens nothing.
+export const supporterTier: SupporterTier = {
+  id: "supporter",
+  label: "Supporter",
+  floor: { usd: 525, btc: 0.0087 },
+  defaultChipUsd: 650,
+  chips: [
+    {
+      usd: 525,
+      btc: 0.0087,
+      links: { test: "TODO_PAYMENT_LINK", live: "TODO_PAYMENT_LINK" },
+    },
+    {
+      usd: 650,
+      btc: 0.0108,
+      links: { test: "TODO_PAYMENT_LINK", live: "TODO_PAYMENT_LINK" },
+    },
+    {
+      usd: 750,
+      btc: 0.0124,
+      links: { test: "TODO_PAYMENT_LINK", live: "TODO_PAYMENT_LINK" },
+    },
+    {
+      usd: 1024,
+      btc: 0.017,
+      links: { test: "TODO_PAYMENT_LINK", live: "TODO_PAYMENT_LINK" },
+    },
+  ],
+};
+
+/**
+ * The supporter chip's Payment Link for the active Stripe mode, or null when it's
+ * still an unfilled placeholder — so the UI can render without navigating nowhere.
+ */
+export function supporterChipUrl(chip: SupporterChip): string | null {
+  const link = chip.links[stripeMode];
+  if (!link || link === "TODO_PAYMENT_LINK") return null;
+  return link;
 }
 
 /**

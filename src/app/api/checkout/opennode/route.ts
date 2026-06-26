@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { getTicket } from "@/lib/tickets";
+import { getTicket, supporterTier } from "@/lib/tickets";
 import { lookupDiscountCode } from "@/lib/discount-codes";
 import { createCharge, getHostedCheckoutUrl } from "@/lib/opennode";
 
@@ -23,6 +23,7 @@ export async function POST(request: Request) {
     email?: string;
     discord?: string;
     discountCode?: string;
+    btc?: number; // supporter path only: the chosen pay-what-you-want amount
   };
   try {
     body = await request.json();
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { ticketId, name, email, discord, discountCode } = body;
+  const { ticketId, name, email, discord, discountCode, btc: btcInput } = body;
   if (!ticketId || !name?.trim() || !email?.trim()) {
     return NextResponse.json(
       { error: "ticketId, name, and email are required" },
@@ -48,20 +49,54 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
 
-  const ticket = getTicket(ticketId);
-  if (!ticket) {
-    return NextResponse.json({ error: "Unknown ticket" }, { status: 400 });
+  // Shared shape both paths fill in, then feed into the charge + metadata below.
+  let ticketIdOut: string;
+  let ticketLabel: string;
+  let usd: number;
+  let btc: number;
+  let appliedCode = "";
+  let btcAmountDiscounted = 0;
+
+  if (ticketId === supporterTier.id) {
+    // Supporter: pay-what-you-want BTC, no discount codes. Re-validate the amount
+    // is ≥ floor server-side — never trust the client-sent amount.
+    if (typeof btcInput !== "number" || !isFinite(btcInput)) {
+      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    }
+    if (btcInput < supporterTier.floor.btc) {
+      return NextResponse.json(
+        { error: `Minimum is ₿${supporterTier.floor.btc}` },
+        { status: 400 },
+      );
+    }
+    ticketIdOut = supporterTier.id;
+    ticketLabel = supporterTier.label;
+    btc = btcInput;
+    // usd recorded for the Airtable `Amount` — derive from the floor's USD/BTC ratio
+    // so the dollar figure roughly tracks the chosen BTC amount.
+    usd = Math.round((btc / supporterTier.floor.btc) * supporterTier.floor.usd);
+  } else {
+    const ticket = getTicket(ticketId);
+    if (!ticket) {
+      return NextResponse.json({ error: "Unknown ticket" }, { status: 400 });
+    }
+
+    // The charged BTC price is always server-derived: a valid Airtable discount code
+    // lowers it, otherwise full price. A bad/unknown code never charges less — it
+    // falls through to full. Never trust a client-sent price.
+    const applied = discountCode
+      ? await lookupDiscountCode(discountCode)
+      : null;
+    btc = applied?.btcPrice ?? ticket.prices.full.btc;
+    btcAmountDiscounted = applied ? ticket.prices.full.btc - btc : 0;
+    // usd is the advertised dollar amount stored as the Airtable `Amount`; the
+    // discount only drives the BTC charge, so usd stays anchored to the promo price.
+    usd = ticket.prices.earlyBird.usd;
+    ticketIdOut = ticket.id;
+    ticketLabel = ticket.label;
+    appliedCode = applied?.code ?? "";
   }
 
-  // The charged BTC price is always server-derived: a valid Airtable discount code
-  // lowers it, otherwise full price. A bad/unknown code never charges less — it
-  // falls through to full. Never trust a client-sent price.
-  const applied = discountCode ? await lookupDiscountCode(discountCode) : null;
-  const btc = applied?.btcPrice ?? ticket.prices.full.btc;
-  const btcAmountDiscounted = applied ? ticket.prices.full.btc - btc : 0;
-  // usd is the advertised dollar amount stored as the Airtable `Amount`; the
-  // discount only drives the BTC charge, so usd stays anchored to the promo price.
-  const { usd } = ticket.prices.earlyBird;
   const amountSats = Math.round(btc * 1e8);
 
   const orderId = crypto.randomUUID();
@@ -78,15 +113,15 @@ export async function POST(request: Request) {
   // since there's no DB to look it up in later.
   const metadata = {
     orderId,
-    ticketId: ticket.id,
-    ticketLabel: ticket.label,
+    ticketId: ticketIdOut,
+    ticketLabel,
     name: name.trim(),
     email: email.trim(),
     // Optional Discord handle — only ride it along when the buyer supplied one.
     ...(discord?.trim() ? { discord: discord.trim() } : {}),
     usd,
     btc,
-    discountCode: applied?.code ?? "",
+    discountCode: appliedCode,
     btcAmountDiscounted,
     test,
   };
@@ -95,7 +130,7 @@ export async function POST(request: Request) {
   try {
     charge = await createCharge({
       amountSats,
-      description: `Metagame 2026 ${ticket.label} ticket — ${email.trim()}`,
+      description: `Metagame 2026 ${ticketLabel} ticket — ${email.trim()}`,
       customerEmail: email.trim(),
       orderId,
       metadata,
