@@ -87,22 +87,34 @@ export const supporterTier: SupporterTier = {
     {
       usd: 525,
       btc: 0.0087,
-      links: { test: "TODO_PAYMENT_LINK", live: "TODO_PAYMENT_LINK" },
+      links: {
+        test: "https://buy.stripe.com/test_00wcN43430oLcF5aZkfw40b",
+        live: "TODO_PAYMENT_LINK",
+      },
     },
     {
       usd: 650,
       btc: 0.0108,
-      links: { test: "TODO_PAYMENT_LINK", live: "TODO_PAYMENT_LINK" },
+      links: {
+        test: "https://buy.stripe.com/test_eVq14m0VV2wT7kL8Rcfw40c",
+        live: "TODO_PAYMENT_LINK",
+      },
     },
     {
       usd: 750,
       btc: 0.0124,
-      links: { test: "TODO_PAYMENT_LINK", live: "TODO_PAYMENT_LINK" },
+      links: {
+        test: "https://buy.stripe.com/test_6oU4gy343fjF9sTebwfw40d",
+        live: "TODO_PAYMENT_LINK",
+      },
     },
     {
       usd: 1024,
       btc: 0.017,
-      links: { test: "TODO_PAYMENT_LINK", live: "TODO_PAYMENT_LINK" },
+      links: {
+        test: "https://buy.stripe.com/test_4gM4gy3435J56gH9Vgfw40e",
+        live: "TODO_PAYMENT_LINK",
+      },
     },
   ],
 };
