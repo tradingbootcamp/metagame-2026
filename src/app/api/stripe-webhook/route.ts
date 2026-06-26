@@ -112,11 +112,11 @@ export async function POST(request: Request) {
     const testCode = env.STRIPE_TEST_99_CODE?.trim().toUpperCase();
     const isTestCoupon = !!testCode && couponCode?.toUpperCase() === testCode;
 
-    // Optional "Discord Username" custom field on the Payment Link. Match by key OR
-    // label so a future key/label tweak doesn't silently drop it.
+    // Optional "Discord" custom field on the Payment Link. Match by key OR label so
+    // a future key/label tweak doesn't silently drop it.
     const discord = full.custom_fields?.find(
       (f) =>
-        f.key === "discordusername" ||
+        f.key === "discord" ||
         f.label?.custom?.toLowerCase().includes("discord"),
     )?.text?.value;
 
