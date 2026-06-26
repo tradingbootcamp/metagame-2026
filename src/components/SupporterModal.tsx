@@ -136,6 +136,31 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
     }
   }
 
+  // Quick-pick amount chips — placed differently per mode (USD: above the copy;
+  // BTC: below the editable amount input it populates), so defined once here.
+  const chipRow = (
+    <div className="flex flex-wrap gap-2">
+      {chips.map((c, i) => {
+        const active = i === selected;
+        return (
+          <button
+            key={c.usd}
+            type="button"
+            aria-pressed={active}
+            onClick={() => pickChip(i)}
+            className={`border-[1.5px] px-4 py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors ${
+              active
+                ? "border-[#1b1530] bg-[#1b1530] text-[#f4ecd2]"
+                : "border-[#1b1530]/35 text-[#1b1530] hover:border-[#eaa35a]"
+            }`}
+          >
+            {isBtc ? <>&#8383;{c.btc}</> : <>${c.usd}</>}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div
       ref={overlayRef}
@@ -157,44 +182,29 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
           <FaTimes size={18} />
         </button>
 
-        <h2
-          id={titleId}
-          className="flex items-center gap-2 pr-6 font-[family-name:var(--font-bebas)] text-[clamp(26px,6vw,34px)] leading-tight tracking-[0.04em]"
-        >
-          {isBtc && <FaBitcoin aria-hidden className="text-[#eaa35a]" />}
-          Supporter Tier
-        </h2>
-
-        {/* Quick-pick amount chips — shown in both modes. */}
-        <div className="flex flex-wrap gap-2">
-          {chips.map((c, i) => {
-            const active = i === selected;
-            return (
-              <button
-                key={c.usd}
-                type="button"
-                aria-pressed={active}
-                onClick={() => pickChip(i)}
-                className={`border-[1.5px] px-4 py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors ${
-                  active
-                    ? "border-[#1b1530] bg-[#1b1530] text-[#f4ecd2]"
-                    : "border-[#1b1530]/35 text-[#1b1530] hover:border-[#eaa35a]"
-                }`}
-              >
-                {isBtc ? <>&#8383;{c.btc}</> : <>${c.usd}</>}
-              </button>
-            );
-          })}
+        <div className="flex flex-col gap-1 pr-6">
+          <h2
+            id={titleId}
+            className="flex items-center gap-2 font-[family-name:var(--font-bebas)] text-[clamp(26px,6vw,34px)] leading-tight tracking-[0.04em]"
+          >
+            {isBtc && <FaBitcoin aria-hidden className="text-[#eaa35a]" />}
+            Supporter Tier
+          </h2>
+          {!isBtc && (
+            <p className="text-base text-[#1b1530]/80">
+              Help make Metagame 2026 even better!
+            </p>
+          )}
         </div>
 
         {isBtc ? (
           <form onSubmit={payWithBtc} className="flex flex-col gap-3">
             <p className="text-sm text-[#1b1530]/75">
-              For the less funding-constrained to help make Metagame 2026 even
-              better! Pay-what-you-want, &ge;$525. There may be benefits/perks
-              for Supporters in the future, but we haven&rsquo;t decided if/what
-              those might be yet. If you&rsquo;re interested in a more
-              formal/recognized sponsorship, reach out to{" "}
+              Help make Metagame 2026 even better! Pay-what-you-want,
+              &ge;&#8383;{floor.btc}. There may be benefits/perks for
+              Supporters, but we haven&rsquo;t decided if/what those might be
+              yet. If you&rsquo;re interested in a more formal sponsorship,
+              reach out to{" "}
               <a
                 href="mailto:team@metagame.games"
                 className="underline transition-colors hover:text-[#eaa35a]"
@@ -223,6 +233,7 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
                 </p>
               )}
             </div>
+            {chipRow}
             <input
               type="text"
               value={name}
@@ -268,19 +279,20 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
           </form>
         ) : (
           <div className="flex flex-col gap-3">
+            {chipRow}
+            <p className="text-xs text-[#1b1530]/55">
+              You can set any custom amount &ge;$525 at the Stripe checkout
+              page.
+            </p>
             <p className="text-sm text-[#1b1530]/75">
-              Help make Metagame 2026 even better! For formal sponsorship, reach
-              out to{" "}
+              Interested in a formal sponsorship? Reach out to{" "}
               <a
                 href="mailto:team@metagame.games"
                 className="underline transition-colors hover:text-[#eaa35a]"
               >
                 team@metagame.games
               </a>
-              .
-            </p>
-            <p className="text-xs text-[#1b1530]/55">
-              You can set a custom amount once on the Stripe checkout page.
+              !
             </p>
             <button
               type="button"
