@@ -75,9 +75,6 @@ export type SupporterTier = {
   chips: SupporterChip[];
 };
 
-// TODO_PAYMENT_LINK: Brian — fill in each chip's test/live Stripe Payment Link
-// below (the only thing left to fill in here). Grep `TODO_PAYMENT_LINK` to find
-// them. Until then the UI renders fine but USD checkout opens nothing.
 export const supporterTier: SupporterTier = {
   id: "supporter",
   label: "Supporter",
@@ -89,7 +86,7 @@ export const supporterTier: SupporterTier = {
       btc: 0.0087,
       links: {
         test: "https://buy.stripe.com/test_00wcN43430oLcF5aZkfw40b",
-        live: "TODO_PAYMENT_LINK",
+        live: "https://buy.stripe.com/4gM9AS5cb1sP8oP6J4fw406",
       },
     },
     {
@@ -97,7 +94,7 @@ export const supporterTier: SupporterTier = {
       btc: 0.0108,
       links: {
         test: "https://buy.stripe.com/test_eVq14m0VV2wT7kL8Rcfw40c",
-        live: "TODO_PAYMENT_LINK",
+        live: "https://buy.stripe.com/bJeaEW1ZZ2wT48z8Rcfw407",
       },
     },
     {
@@ -105,7 +102,7 @@ export const supporterTier: SupporterTier = {
       btc: 0.0124,
       links: {
         test: "https://buy.stripe.com/test_6oU4gy343fjF9sTebwfw40d",
-        live: "TODO_PAYMENT_LINK",
+        live: "https://buy.stripe.com/3cIeVc9sr4F1dJ91oKfw408",
       },
     },
     {
@@ -113,7 +110,7 @@ export const supporterTier: SupporterTier = {
       btc: 0.017,
       links: {
         test: "https://buy.stripe.com/test_4gM4gy3435J56gH9Vgfw40e",
-        live: "TODO_PAYMENT_LINK",
+        live: "https://buy.stripe.com/4gMaEWcED7RdeNdgjEfw409",
       },
     },
   ],
