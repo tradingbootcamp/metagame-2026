@@ -10,8 +10,12 @@
 
 export type StripeMode = "test" | "live";
 
+// Must be NEXT_PUBLIC_* — this module is imported by client components (the ticket
+// buttons + modals), and Next only inlines NEXT_PUBLIC_ vars into the browser bundle.
+// Plain VERCEL_ENV is undefined client-side, which silently pinned every link to test.
+// Vercel auto-exposes NEXT_PUBLIC_VERCEL_ENV for Next.js projects.
 const stripeMode: StripeMode =
-  process.env.VERCEL_ENV === "production" ? "live" : "test";
+  process.env.NEXT_PUBLIC_VERCEL_ENV === "production" ? "live" : "test";
 
 /** A price point in both currencies. usd = dollars, btc = whole bitcoin. */
 export type Price = {
