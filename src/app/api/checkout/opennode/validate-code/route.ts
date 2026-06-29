@@ -22,19 +22,24 @@ export async function POST(request: Request) {
   const fullBtc = ticket.prices.full.btc;
 
   const code = (body.code ?? "").trim();
-  const applied = code ? await lookupDiscountCode(code) : null;
+  const applied = code
+    ? await lookupDiscountCode(code)
+    : ({ status: "none" } as const);
+
+  const valid = applied.status === "valid" ? applied : null;
 
   // Mirror the charge route's cap check so the client learns a code is exhausted
   // before checkout. Charge creation stays the source of truth.
   const exhausted =
-    applied?.maxUses != null &&
-    (await countCodeRedemptions(applied.code)) >= applied.maxUses;
+    valid?.maxUses != null &&
+    (await countCodeRedemptions(valid.code)) >= valid.maxUses;
 
   return NextResponse.json({
-    valid: applied != null && !exhausted,
+    valid: valid != null && !exhausted,
+    test: applied.status === "test",
     exhausted,
-    btcPrice: exhausted ? null : (applied?.btcPrice ?? null),
-    label: applied?.label,
+    btcPrice: valid && !exhausted ? valid.btcPrice : null,
+    label: valid?.label,
     fullBtc,
   });
 }

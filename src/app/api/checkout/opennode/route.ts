@@ -87,12 +87,19 @@ export async function POST(request: Request) {
     const applied = discountCode
       ? await lookupDiscountCode(discountCode)
       : null;
+    if (applied?.status === "test") {
+      return NextResponse.json(
+        { error: "That's a test promo code — it can't be used here." },
+        { status: 400 },
+      );
+    }
+    const valid = applied?.status === "valid" ? applied : null;
 
     // Authoritative redemption-cap check — the point a code is actually consumed.
     // Skip when uncapped (maxUses null). Don't create the charge if over the cap.
-    if (applied?.maxUses != null) {
-      const used = await countCodeRedemptions(applied.code);
-      if (used >= applied.maxUses) {
+    if (valid?.maxUses != null) {
+      const used = await countCodeRedemptions(valid.code);
+      if (used >= valid.maxUses) {
         return NextResponse.json(
           { error: "This discount code has reached its redemption limit." },
           { status: 409 },
@@ -100,14 +107,14 @@ export async function POST(request: Request) {
       }
     }
 
-    btc = applied?.btcPrice ?? ticket.prices.full.btc;
-    btcAmountDiscounted = applied ? ticket.prices.full.btc - btc : 0;
+    btc = valid?.btcPrice ?? ticket.prices.full.btc;
+    btcAmountDiscounted = valid ? ticket.prices.full.btc - btc : 0;
     // usd is the advertised dollar amount stored as the Airtable `Amount`; the
     // discount only drives the BTC charge, so usd stays anchored to the promo price.
     usd = ticket.prices.earlyBird.usd;
     ticketIdOut = ticket.id;
     ticketLabel = ticket.label;
-    appliedCode = applied?.code ?? "";
+    appliedCode = valid?.code ?? "";
   }
 
   const amountSats = Math.round(btc * 1e8);

@@ -43,10 +43,11 @@ export default function BtcModal({
   const [codeState, setCodeState] = useState<{
     validating: boolean;
     valid: boolean;
+    test: boolean;
     btcPrice: number | null;
     label?: string;
     exhausted?: boolean; // code is real but has hit its redemption cap
-  }>({ validating: true, valid: false, btcPrice: null });
+  }>({ validating: true, valid: false, test: false, btcPrice: null });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -61,7 +62,12 @@ export default function BtcModal({
     // body) so the new-Next react-hooks linter doesn't flag a cascading render.
     const t = setTimeout(() => {
       if (!code) {
-        setCodeState({ validating: false, valid: false, btcPrice: null });
+        setCodeState({
+          validating: false,
+          valid: false,
+          test: false,
+          btcPrice: null,
+        });
         return;
       }
       setCodeState((s) => ({ ...s, validating: true }));
@@ -76,6 +82,7 @@ export default function BtcModal({
           setCodeState({
             validating: false,
             valid: Boolean(d.valid),
+            test: Boolean(d.test),
             btcPrice: typeof d.btcPrice === "number" ? d.btcPrice : null,
             label: d.label,
             exhausted: Boolean(d.exhausted),
@@ -83,7 +90,12 @@ export default function BtcModal({
         )
         .catch((err) => {
           if (err?.name === "AbortError") return;
-          setCodeState({ validating: false, valid: false, btcPrice: null });
+          setCodeState({
+            validating: false,
+            valid: false,
+            test: false,
+            btcPrice: null,
+          });
         });
     }, 400);
     return () => {
@@ -94,11 +106,14 @@ export default function BtcModal({
 
   const codeEmpty = !discountCode.trim();
   const discounted = codeState.valid && codeState.btcPrice != null;
-  const codeInvalid = !codeEmpty && !codeState.validating && !codeState.valid;
+  const isTestCode = !codeEmpty && !codeState.validating && codeState.test;
+  const codeInvalid =
+    !codeEmpty && !codeState.validating && !codeState.valid && !codeState.test;
 
   async function payWithBtc(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    if (isTestCode) return setError("Remove the test promo code to continue.");
     if (!name.trim()) return setError("Please enter your name.");
     if (!EMAIL_RE.test(email)) return setError("Please enter a valid email.");
 
@@ -244,11 +259,16 @@ export default function BtcModal({
                   : "Code not found"}
               </p>
             )}
+            {isTestCode && (
+              <p className="text-xs text-[#c0392b]">
+                That&rsquo;s a test code &mdash; it won&rsquo;t apply here.
+              </p>
+            )}
           </div>
           {error && <p className="text-sm text-[#c0392b]">{error}</p>}
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || isTestCode}
             className="group relative disabled:opacity-60"
           >
             <span aria-hidden className="absolute inset-0 bg-[#eaa35a]" />
