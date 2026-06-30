@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getTicket, supporterTier } from "@/lib/tickets";
-import { lookupDiscountCode } from "@/lib/discount-codes";
+import { countCodeRedemptions, lookupDiscountCode } from "@/lib/discount-codes";
 import { createCharge, getHostedCheckoutUrl } from "@/lib/opennode";
 
 export const runtime = "nodejs";
@@ -87,6 +87,19 @@ export async function POST(request: Request) {
     const applied = discountCode
       ? await lookupDiscountCode(discountCode)
       : null;
+
+    // Authoritative redemption-cap check — the point a code is actually consumed.
+    // Skip when uncapped (maxUses null). Don't create the charge if over the cap.
+    if (applied?.maxUses != null) {
+      const used = await countCodeRedemptions(applied.code);
+      if (used >= applied.maxUses) {
+        return NextResponse.json(
+          { error: "This discount code has reached its redemption limit." },
+          { status: 409 },
+        );
+      }
+    }
+
     btc = applied?.btcPrice ?? ticket.prices.full.btc;
     btcAmountDiscounted = applied ? ticket.prices.full.btc - btc : 0;
     // usd is the advertised dollar amount stored as the Airtable `Amount`; the

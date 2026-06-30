@@ -80,6 +80,63 @@ export async function recordSignup(
   return { stored: true };
 }
 
+/**
+ * Flip an already-recorded purchase to Failed, keyed on the payment id (= the
+ * upsert key recordPurchase uses). No-ops when no row exists yet — a charge that
+ * never reached `processing` was never recorded and so never counted as a
+ * redemption, leaving nothing to heal. Idempotent: re-running just re-sets Failed.
+ * Updates by record id (not an upsert) so it can never create a row.
+ */
+export async function markPurchaseFailedIfExists(
+  paymentId: string,
+): Promise<boolean> {
+  const { AIRTABLE_API_KEY } = env;
+  if (!AIRTABLE_API_KEY) {
+    console.warn(
+      `[purchase] Airtable not configured — cannot mark failed: ${paymentId}`,
+    );
+    return false;
+  }
+
+  // OpenNode charge ids are hex + dashes; strip anything else to neutralize
+  // filterByFormula injection.
+  const safe = paymentId.replace(/[^0-9a-fA-F-]/g, "");
+  if (!safe) return false;
+
+  const tableUrl = `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.purchasesTableId)}`;
+
+  const findRes = await fetch(
+    `${tableUrl}?filterByFormula=${encodeURIComponent(`{ID}='${safe}'`)}&maxRecords=1`,
+    { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` } },
+  );
+  if (!findRes.ok) {
+    throw new Error(
+      `Airtable responded ${findRes.status}: ${await findRes.text()}`,
+    );
+  }
+  const found = (await findRes.json()) as { records?: { id: string }[] };
+  const recordId = found.records?.[0]?.id;
+  if (!recordId) return false;
+
+  const failed: PurchaseStatus = "Failed";
+  const patchRes = await fetch(tableUrl, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      records: [{ id: recordId, fields: { Status: failed } }],
+    }),
+  });
+  if (!patchRes.ok) {
+    throw new Error(
+      `Airtable responded ${patchRes.status}: ${await patchRes.text()}`,
+    );
+  }
+  return true;
+}
+
 // Lifecycle of a purchase. Card → Paid instantly; ACH bank debits land Pending
 // then settle to Paid (or bounce to Failed) days later. BTC charges land Pending
 // (on-chain processing) then settle to Paid, or land Underpaid. "Underpaid" is a

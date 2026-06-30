@@ -45,6 +45,7 @@ export default function BtcModal({
     valid: boolean;
     btcPrice: number | null;
     label?: string;
+    exhausted?: boolean; // code is real but has hit its redemption cap
   }>({ validating: true, valid: false, btcPrice: null });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +78,7 @@ export default function BtcModal({
             valid: Boolean(d.valid),
             btcPrice: typeof d.btcPrice === "number" ? d.btcPrice : null,
             label: d.label,
+            exhausted: Boolean(d.exhausted),
           }),
         )
         .catch((err) => {
@@ -236,7 +238,11 @@ export default function BtcModal({
               </p>
             )}
             {codeInvalid && (
-              <p className="text-xs text-[#c0392b]">Code not found</p>
+              <p className="text-xs text-[#c0392b]">
+                {codeState.exhausted
+                  ? "This code has reached its redemption limit."
+                  : "Code not found"}
+              </p>
             )}
           </div>
           {error && <p className="text-sm text-[#c0392b]">{error}</p>}

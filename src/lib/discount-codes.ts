@@ -10,6 +10,7 @@ export type DiscountCode = {
   code: string;
   btcPrice: number; // the discounted BTC price this code charges
   label?: string;
+  maxUses: number | null; // redemption cap; null when the Airtable field is blank (unlimited)
 };
 
 /**
@@ -76,13 +77,67 @@ export async function lookupDiscountCode(
     }
 
     const label = fields["Label"];
+    const maxUsesRaw = fields["Max Uses"];
+    // Blank Airtable number field comes back absent → null → unlimited.
+    const maxUses =
+      typeof maxUsesRaw === "number" && Number.isFinite(maxUsesRaw)
+        ? maxUsesRaw
+        : null;
     return {
       code: safe,
       btcPrice,
       label: typeof label === "string" && label ? label : undefined,
+      maxUses,
     };
   } catch (err) {
     console.warn("[discount] lookup failed:", err);
     return null;
   }
+}
+
+/**
+ * Count committed BTC redemptions of a code in the "Stripe Purchases" ledger.
+ * Pending + Paid + Underpaid all count (any committed payment); only an explicit
+ * Failed is excluded. An abandoned/expired charge never created a purchase row,
+ * so it never counts — which is why a redemption cap needs no decrement anywhere.
+ * Fail-soft (returns the best-effort count, never throws) like lookupDiscountCode.
+ */
+export async function countCodeRedemptions(code: string): Promise<number> {
+  const { AIRTABLE_API_KEY } = env;
+  if (!AIRTABLE_API_KEY) return 0;
+
+  // Same sanitizing as lookupDiscountCode: normalize to the stored form and
+  // neutralize filterByFormula injection.
+  const safe = code.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  if (!safe) return 0;
+
+  const formula = `AND(UPPER({Coupon Code})='${safe}',{Payment Method}='BTC',{Status}!='Failed')`;
+  const base =
+    `https://api.airtable.com/v0/${airtableConfig.baseId}/` +
+    encodeURIComponent(airtableConfig.purchasesTableId);
+
+  let count = 0;
+  let offset: string | undefined;
+  try {
+    do {
+      const params = new URLSearchParams({ filterByFormula: formula });
+      if (offset) params.set("offset", offset);
+      const res = await fetch(`${base}?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+      });
+      if (!res.ok) {
+        console.warn(`[discount] redemption count responded ${res.status}`);
+        return count;
+      }
+      const data = (await res.json()) as {
+        records?: unknown[];
+        offset?: string;
+      };
+      count += data.records?.length ?? 0;
+      offset = data.offset;
+    } while (offset);
+  } catch (err) {
+    console.warn("[discount] redemption count failed:", err);
+  }
+  return count;
 }

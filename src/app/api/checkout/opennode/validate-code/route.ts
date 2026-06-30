@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getTicket } from "@/lib/tickets";
-import { lookupDiscountCode } from "@/lib/discount-codes";
+import { countCodeRedemptions, lookupDiscountCode } from "@/lib/discount-codes";
 
 export const runtime = "nodejs";
 
@@ -24,9 +24,16 @@ export async function POST(request: Request) {
   const code = (body.code ?? "").trim();
   const applied = code ? await lookupDiscountCode(code) : null;
 
+  // Mirror the charge route's cap check so the client learns a code is exhausted
+  // before checkout. Charge creation stays the source of truth.
+  const exhausted =
+    applied?.maxUses != null &&
+    (await countCodeRedemptions(applied.code)) >= applied.maxUses;
+
   return NextResponse.json({
-    valid: applied != null,
-    btcPrice: applied?.btcPrice ?? null,
+    valid: applied != null && !exhausted,
+    exhausted,
+    btcPrice: exhausted ? null : (applied?.btcPrice ?? null),
     label: applied?.label,
     fullBtc,
   });

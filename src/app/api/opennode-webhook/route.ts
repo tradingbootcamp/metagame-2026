@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { recordPurchase, type PurchaseStatus } from "@/lib/airtable";
+import {
+  markPurchaseFailedIfExists,
+  recordPurchase,
+  type PurchaseStatus,
+} from "@/lib/airtable";
 import {
   getCharge,
   getHostedCheckoutUrl,
@@ -59,7 +63,8 @@ export async function POST(request: Request) {
   //   processing → "Pending"   (on-chain confirming; record now so the row exists)
   //   paid       → "Paid"      (settled; updates the same upserted row)
   //   underpaid  → "Underpaid"
-  //   everything else (unpaid / expired / refunded / unknown) → 200, no record.
+  //   expired / refunded → self-heal: flip an existing row to "Failed" (below).
+  //   everything else (unpaid / unknown) → 200, no record.
   // recordPurchase upserts on ID (= charge id), so the later paid event updates
   // the row a processing event created.
   let recordStatus: PurchaseStatus;
@@ -73,6 +78,23 @@ export async function POST(request: Request) {
     case "underpaid":
       recordStatus = "Underpaid";
       break;
+    case "expired":
+    case "refunded":
+      // Terminal failure. If a row already exists (the charge had reached
+      // processing/underpaid and was counted as a redemption), flip it to Failed
+      // so a rare stuck-Pending drops out of the redemption count. No row → the
+      // charge never counted, so there's nothing to heal (keep the no-op).
+      try {
+        await markPurchaseFailedIfExists(charge.id);
+      } catch (err) {
+        // 500 → OpenNode retries; the update is idempotent on charge id.
+        console.error("[opennode-webhook] self-heal to Failed failed:", err);
+        return NextResponse.json(
+          { error: "Processing failed" },
+          { status: 500 },
+        );
+      }
+      return NextResponse.json({ received: true, status: charge.status });
     default:
       return NextResponse.json({ received: true, status: charge.status });
   }
