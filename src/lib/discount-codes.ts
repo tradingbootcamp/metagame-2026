@@ -37,7 +37,10 @@ export async function lookupDiscountCode(
   const safe = code.toUpperCase().replace(/[^A-Z0-9-]/g, "");
   if (!safe) return { status: "none" };
 
-  const formula = `AND(UPPER({Code})='${safe}',{Active})`;
+  // Method=Stripe rows live in this table for logging only (mirrored by the
+  // stripe-webhook) and must never be honored as BTC discounts; blank Method
+  // (legacy/manual codes like EARLYBIRD) is still honored.
+  const formula = `AND(UPPER({Code})='${safe}',{Active},{Method}!='Stripe')`;
   const url =
     `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.discountCodesTableId)}` +
     `?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`;
@@ -56,24 +59,37 @@ export async function lookupDiscountCode(
     const fields = data.records?.[0]?.fields;
     if (!fields) return { status: "none" };
 
-    const discountType = fields["Discount Type"];
-    const value = Number(fields["Value"]);
-    if (typeof discountType !== "string" || !Number.isFinite(value))
-      return { status: "none" };
+    // New per-unit columns: exactly one is populated. BTC Off is a flat BTC
+    // subtraction (a fixed price is expressed as its equivalent); Percent Off is %.
+    const btcOffRaw = Number(fields["BTC Off"]);
+    const percentOffRaw = Number(fields["Percent Off"]);
+    const btcOff = Number.isFinite(btcOffRaw) ? btcOffRaw : null;
+    const percentOff = Number.isFinite(percentOffRaw) ? percentOffRaw : null;
 
     let price: number;
-    switch (discountType) {
-      case "End price":
-        price = value;
-        break;
-      case "Amount off":
-        price = FULL_BTC - value;
-        break;
-      case "Percent off":
-        price = FULL_BTC * (1 - value / 100);
-        break;
-      default:
+    if (btcOff != null) {
+      price = FULL_BTC - btcOff;
+    } else if (percentOff != null) {
+      price = FULL_BTC * (1 - percentOff / 100);
+    } else {
+      // Legacy fallback for un-migrated rows on the old Discount Type/Value columns.
+      const discountType = fields["Discount Type"];
+      const value = Number(fields["Value"]);
+      if (typeof discountType !== "string" || !Number.isFinite(value))
         return { status: "none" };
+      switch (discountType) {
+        case "End price":
+          price = value;
+          break;
+        case "Amount off":
+          price = FULL_BTC - value;
+          break;
+        case "Percent off":
+          price = FULL_BTC * (1 - value / 100);
+          break;
+        default:
+          return { status: "none" };
+      }
     }
 
     // Round to whole-satoshi precision so percent/amount math displays cleanly.

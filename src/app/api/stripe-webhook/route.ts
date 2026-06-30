@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { env } from "@/env";
-import { recordPurchase, type PurchaseStatus } from "@/lib/airtable";
+import {
+  recordDiscountCode,
+  recordPurchase,
+  type PurchaseStatus,
+} from "@/lib/airtable";
 import { getStripe } from "@/lib/stripe";
 
 // Signature verification needs the raw body + Node crypto — keep this off the edge.
@@ -40,6 +44,48 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("[stripe-webhook] signature verification failed:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
+  // Mirror promotion-code lifecycle into the Discount Codes table as Method=Stripe
+  // rows so every code (Stripe + BTC) lives in one table. Hand-made dashboard codes
+  // fire here too; lookupDiscountCode excludes Method=Stripe rows, so these are
+  // logged but never honored as BTC discounts.
+  if (
+    event.type === "promotion_code.created" ||
+    event.type === "promotion_code.updated"
+  ) {
+    const promo = event.data.object as Stripe.PromotionCode;
+    try {
+      // The coupon (discount definition) lives under `promotion` in recent API
+      // versions; fall back to a legacy top-level field for older event payloads.
+      const coupon = expanded<Stripe.Coupon>(
+        promo.promotion?.coupon ??
+          (promo as { coupon?: string | Stripe.Coupon | null }).coupon,
+      );
+
+      // A coupon carries exactly one of percent_off / amount_off (minor units → USD).
+      const percentOff = coupon?.percent_off ?? undefined;
+      const usdOff =
+        coupon?.amount_off != null ? coupon.amount_off / 100 : undefined;
+
+      const name = promo.metadata?.name;
+      await recordDiscountCode({
+        code: promo.code,
+        active: promo.active,
+        test: !event.livemode,
+        maxUses: promo.max_redemptions ?? null,
+        percentOff,
+        usdOff,
+        email: promo.metadata?.email || undefined,
+        label: name ? `Comp – ${name}` : (coupon?.name ?? undefined),
+      });
+    } catch (err) {
+      // 500 → Stripe retries; recordDiscountCode upserts, so a retry can't duplicate.
+      console.error("[stripe-webhook] failed to record discount code:", err);
+      return NextResponse.json({ error: "Processing failed" }, { status: 500 });
+    }
+
+    return NextResponse.json({ received: true });
   }
 
   // Instant methods (card) settle on `completed`; delayed methods (ACH bank debit)

@@ -17,6 +17,22 @@ The form posts to `/api/signup` (`src/app/api/signup/route.ts`) → `recordSignu
 set it **gracefully no-ops** (logs + returns `{ ok: true, stored: false }`), so the form works
 in local dev without credentials.
 
+## Discount codes (one table, two rails)
+
+All discount codes live in the Airtable **"Discount Codes"** table. The discount amount is
+expressed in per-unit columns — exactly one populated per row: `Percent Off` (e.g. 100 = 100%),
+`USD Off` (currency), or `BTC Off` (whole BTC subtracted from the full 0.0065; a fixed BTC price is
+written as its equivalent `BTC Off`). These replace the old `Discount Type`/`Value` pair.
+`lookupDiscountCode()` (`src/lib/discount-codes.ts`) reads `BTC Off` / `Percent Off` (gated by
+`Method`), falling back to the legacy `Discount Type`/`Value` switch for un-migrated rows. The
+**stripe-webhook** (`src/app/api/stripe-webhook/route.ts`)
+is the sole writer of `Method=Stripe` rows: on `promotion_code.created` / `promotion_code.updated`
+it mirrors every Stripe promotion code (dashboard- or comp-tool-made) into the same table via
+`recordDiscountCode()`, so one table covers both rails. `lookupDiscountCode` excludes
+`Method=Stripe` rows — they're logged, never honored as BTC discounts (blank `Method`, e.g. legacy
+`EARLYBIRD`, still is). The two `promotion_code.*` events must be enabled on the webhook endpoint in
+**both** test and live mode.
+
 ## Environment variables
 
 - **`.env.example`** is the committed source of truth — `cp .env.example .env.local` and fill in.

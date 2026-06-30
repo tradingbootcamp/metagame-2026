@@ -247,3 +247,75 @@ export async function recordPurchase(
 
   return { stored: true };
 }
+
+export type DiscountCodeRecord = {
+  code: string;
+  active: boolean;
+  test: boolean; // true for test-mode (sandbox) codes — checks the Test box
+  maxUses: number | null; // redemption cap; null clears the field (uncapped)
+  percentOff?: number; // e.g. 100 = 100% off
+  usdOff?: number; // dollars off (Airtable currency field)
+  email?: string;
+  label?: string;
+};
+
+/**
+ * Mirror a Stripe promotion code into the Airtable "Discount Codes" table as a
+ * Method=Stripe row, so every code (Stripe + BTC) lives in one table. The
+ * stripe-webhook is the sole writer of Method=Stripe rows. No-ops with a warning
+ * when Airtable isn't configured, mirroring recordPurchase.
+ */
+export async function recordDiscountCode(
+  record: DiscountCodeRecord,
+): Promise<SignupResult> {
+  const { AIRTABLE_API_KEY } = env;
+
+  if (!AIRTABLE_API_KEY) {
+    console.warn(
+      `[discount] Airtable not configured — not stored: ${record.code}`,
+    );
+    return { stored: false, reason: "airtable-not-configured" };
+  }
+
+  const fields: Record<string, unknown> = {
+    Code: record.code.toUpperCase(),
+    Method: "Stripe",
+    Active: record.active,
+    Archived: !record.active,
+    Test: record.test,
+    // Explicit null clears a stale cap when the promo is uncapped (omitting would keep it).
+    "Max Uses": record.maxUses,
+    // Marker must NOT contain "comp-tool" — the comp tool keys its own rows off that substring.
+    Notes: "Stripe promo (stripe-webhook)",
+  };
+  // Exactly one per-unit column is populated per code (the other stays blank).
+  if (record.percentOff != null) fields["Percent Off"] = record.percentOff;
+  if (record.usdOff != null) fields["USD Off"] = record.usdOff;
+  // Only set Email/Label when present so a repeat event can't blank an existing value.
+  if (record.email) fields.Email = record.email;
+  if (record.label) fields.Label = record.label;
+
+  const res = await fetch(
+    `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.discountCodesTableId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        // Code+Method, not Code alone: a deterministic comp code can also exist as a
+        // Method=BTC row, and merging on Code would clobber it.
+        performUpsert: { fieldsToMergeOn: ["Code", "Method"] },
+        records: [{ fields }],
+        typecast: true,
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(`Airtable responded ${res.status}: ${await res.text()}`);
+  }
+
+  return { stored: true };
+}
