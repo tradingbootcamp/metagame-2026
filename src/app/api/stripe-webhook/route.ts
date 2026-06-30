@@ -76,6 +76,7 @@ export async function POST(request: Request) {
         maxUses: promo.max_redemptions ?? null,
         percentOff,
         usdOff,
+        redeemed: promo.times_redeemed ?? 0,
         email: promo.metadata?.email || undefined,
         label: name ? `Comp – ${name}` : (coupon?.name ?? undefined),
       });

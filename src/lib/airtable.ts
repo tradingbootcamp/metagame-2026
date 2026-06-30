@@ -255,6 +255,7 @@ export type DiscountCodeRecord = {
   maxUses: number | null; // redemption cap; null clears the field (uncapped)
   percentOff?: number; // e.g. 100 = 100% off
   usdOff?: number; // dollars off (Airtable currency field)
+  redeemed?: number; // mirror of the promo's times_redeemed (Stripe stays source of truth)
   email?: string;
   label?: string;
 };
@@ -291,6 +292,7 @@ export async function recordDiscountCode(
   // Exactly one per-unit column is populated per code (the other stays blank).
   if (record.percentOff != null) fields["Percent Off"] = record.percentOff;
   if (record.usdOff != null) fields["USD Off"] = record.usdOff;
+  if (record.redeemed != null) fields["Stripe Redeemed"] = record.redeemed;
   // Only set Email/Label when present so a repeat event can't blank an existing value.
   if (record.email) fields.Email = record.email;
   if (record.label) fields.Label = record.label;
