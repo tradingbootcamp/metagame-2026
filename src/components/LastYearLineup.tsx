@@ -1,8 +1,8 @@
 import LastYearSchedule from "./LastYearSchedule";
 
-// Home-page section: last year's full program, all three days in order. Inherits
-// the page background + grain so it reads as one continuous flow with the hero.
-// (The standalone /last-year page shows the same data day-by-day.)
+// Home-page section: last year's program, one day at a time (a day switcher, same
+// as the standalone /last-year page). Inherits the page background + grain so it
+// reads as one continuous flow with the hero.
 export default function LastYearLineup() {
   return (
     <section className="relative px-[clamp(20px,5vw,56px)] py-[clamp(40px,7vh,80px)]">
@@ -19,7 +19,7 @@ export default function LastYearLineup() {
         </header>
 
         <div className="w-full">
-          <LastYearSchedule variant="sequential" />
+          <LastYearSchedule variant="tabbed" />
         </div>
       </div>
     </section>
