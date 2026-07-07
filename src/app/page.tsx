@@ -1,6 +1,7 @@
 import Dice from "@/components/Dice";
 import TicketsSection from "@/components/TicketsSection";
 import NotifyMe from "@/components/NotifyMe";
+import LastYearLineup from "@/components/LastYearLineup";
 import { FaEnvelope, FaExternalLinkAlt } from "react-icons/fa";
 
 // film-grain texture (data-URI kept out of the className for legibility)
@@ -9,69 +10,79 @@ const GRAIN =
 
 export default function Home() {
   return (
-    <main className="relative flex min-h-dvh flex-1 flex-col items-center overflow-hidden bg-[#fff5e4] px-[clamp(20px,5vw,56px)] py-[clamp(24px,4vh,48px)] font-[family-name:var(--font-space-grotesk)] text-[#1b1530]">
+    <div className="relative bg-[#fff5e4] font-[family-name:var(--font-space-grotesk)] text-[#1b1530]">
+      {/* one film-grain layer for the whole page, so the hero and the lineup
+          section below share the same texture and background */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-[60] opacity-40 mix-blend-multiply"
+        className="pointer-events-none fixed inset-0 z-[60] opacity-40 mix-blend-multiply"
         style={{ backgroundImage: GRAIN }}
       />
-      <h1 className="sr-only">Metagame 2026</h1>
+      <main className="relative flex min-h-dvh flex-col items-center overflow-hidden px-[clamp(20px,5vw,56px)] py-[clamp(24px,4vh,48px)]">
+        <h1 className="sr-only">Metagame 2026</h1>
 
-      {/* top spacer larger than bottom → dice land at the optical center */}
-      <div aria-hidden className="flex-[3]" />
+        {/* top spacer larger than bottom → dice land at the optical center */}
+        <div aria-hidden className="flex-[3]" />
 
-      <div className="flex flex-col items-center gap-[clamp(28px,5vh,56px)]">
-        <Dice />
+        <div className="flex flex-col items-center gap-[clamp(28px,5vh,56px)]">
+          <Dice />
 
-        <div className="flex flex-col items-center gap-2">
-          <span className="text-center text-lg text-[#1b1530]">
-            A conference for game design, strategy, narrative, and play.
-          </span>
-          <a
-            className="flex items-center justify-center gap-2 border-b-[1.5px] border-transparent pb-px text-[13px] tracking-[0.16em] text-[#1b1530]/70 uppercase transition hover:border-[#eaa35a] hover:text-[#1b1530]"
-            href="https://2025.metagame.games/#speakers"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span>See last year&rsquo;s lineup</span>
-            <span>
-              <FaExternalLinkAlt size={12} />
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-center text-lg text-[#1b1530]">
+              A conference for game design, strategy, narrative, and play.
             </span>
-          </a>
-        </div>
-        {/* mobile: pull date/location tighter to its neighbors; full gap returns at sm */}
-        <div className="-my-4 flex items-center gap-[clamp(10px,2.5vw,22px)] text-center font-[family-name:var(--font-bebas)] text-[clamp(38px,9vw,68px)] leading-[0.85] tracking-[0.02em] sm:my-0">
-          <span>Nov 6&ndash;8, 2026</span>
-          <span className="text-[0.5em] text-[#eaa35a]">&middot;</span>
-          <span>Berkeley, CA</span>
-        </div>
-
-        <TicketsSection />
-        <p className="-mt-3 max-w-[440px] text-center text-sm text-[#1b1530]/70">
-          More information about volunteer tickets and financial aid coming
-          soon.
-        </p>
-
-        <div className="relative z-[5] flex w-full max-w-[440px] flex-col items-center gap-[8px] sm:gap-[14px]">
-          <NotifyMe />
-          <span className="text-center text-sm text-[#1b1530]">
-            Questions?
             <a
-              href="mailto:team@metagame.games"
-              className="ml-2 inline-flex items-center gap-1 underline"
+              className="flex items-center justify-center gap-2 border-b-[1.5px] border-transparent pb-px text-[13px] tracking-[0.16em] text-[#1b1530]/70 uppercase transition hover:border-[#eaa35a] hover:text-[#1b1530]"
+              href="https://2025.metagame.games/"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <FaEnvelope size={12} aria-hidden className="translate-y-[1px]" />
-              team@metagame.games
+              <span>See last year&rsquo;s event</span>
+              <span>
+                <FaExternalLinkAlt size={12} />
+              </span>
             </a>
-          </span>
+          </div>
+          {/* mobile: pull date/location tighter to its neighbors; full gap returns at sm */}
+          <div className="-my-4 flex items-center gap-[clamp(10px,2.5vw,22px)] text-center font-[family-name:var(--font-bebas)] text-[clamp(38px,9vw,68px)] leading-[0.85] tracking-[0.02em] sm:my-0">
+            <span>Nov 6&ndash;8, 2026</span>
+            <span className="text-[0.5em] text-[#eaa35a]">&middot;</span>
+            <span>Berkeley, CA</span>
+          </div>
+
+          <TicketsSection />
+          <p className="-mt-3 max-w-[440px] text-center text-sm text-[#1b1530]/70">
+            More information about volunteer tickets and financial aid coming
+            soon.
+          </p>
+
+          <div className="relative z-[5] flex w-full max-w-[440px] flex-col items-center gap-[8px] sm:gap-[14px]">
+            <NotifyMe />
+            <span className="text-center text-sm text-[#1b1530]">
+              Questions?
+              <a
+                href="mailto:team@metagame.games"
+                className="ml-2 inline-flex items-center gap-1 underline"
+              >
+                <FaEnvelope
+                  size={12}
+                  aria-hidden
+                  className="translate-y-[1px]"
+                />
+                team@metagame.games
+              </a>
+            </span>
+          </div>
         </div>
-      </div>
 
-      <div aria-hidden className="flex-[1]" />
+        <div aria-hidden className="flex-[1]" />
+      </main>
 
-      <footer className="pointer-events-none absolute right-4 bottom-3 z-[70] text-[11px] tracking-wider text-[#1b1530]/40">
+      <LastYearLineup />
+
+      <footer className="relative px-[clamp(20px,5vw,56px)] pt-4 pb-8 text-center text-[11px] tracking-wider text-[#1b1530]/40">
         © Metagame LLC 2026
       </footer>
-    </main>
+    </div>
   );
 }
