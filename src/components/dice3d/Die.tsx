@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { COLORS, letterTexture, pipTexture } from "./faceTexture";
+import { sampleRollIn, type RollInConfig } from "./rollIn";
 
 export type DieData = {
   front: string; // blue letter (+Z)
@@ -101,13 +102,16 @@ export default function Die({
   phase,
   delay,
   x,
+  rollIn,
 }: {
   data: DieData;
   phase: Phase;
   delay: number;
   x: number;
+  rollIn?: RollInConfig;
 }) {
   const group = useRef<THREE.Group>(null);
+  const mover = useRef<THREE.Group>(null); // outer group: position (roll-in flight path)
 
   // One rounded-panel geometry shared by all six faces.
   const panelGeo = useMemo(() => roundedPanelGeometry(PANEL, PANEL_R), []);
@@ -126,13 +130,30 @@ export default function Die({
 
   useEffect(() => () => textures.forEach((t) => t.dispose()), [textures]);
 
-  // Start from the META pose (imperative so re-renders don't snap it back).
+  // Start pose (imperative so re-renders don't snap it back): mid-air off-screen
+  // when rolling in, otherwise the META rest pose. Position lives here too — the
+  // outer group carries no position prop, so a mid-flight re-render can't
+  // teleport the die to its slot.
   const started = useRef(false);
+  const introT = useRef(0);
+  const introDone = useRef(!rollIn);
   useEffect(() => {
-    if (group.current && !started.current) {
+    if (!group.current || !mover.current || started.current) return;
+    started.current = true;
+    if (rollIn) {
+      sampleRollIn(
+        rollIn,
+        0,
+        x,
+        QUAT.meta,
+        mover.current.position,
+        group.current.quaternion,
+      );
+    } else {
+      mover.current.position.set(x, 0, 0);
       group.current.quaternion.copy(QUAT.meta);
-      started.current = true;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Each phase change eases the die from its current pose to the new one over a
@@ -149,7 +170,29 @@ export default function Die({
 
   useFrame((_, dt) => {
     const g = group.current;
-    if (!g || prog.current >= 1) return;
+    const m = mover.current;
+    if (!g || !m) return;
+
+    // Roll-in owns the pose until it settles; the phase machine takes over from
+    // the exact rest pose it lands in.
+    if (!introDone.current && rollIn) {
+      introT.current += dt;
+      const settled = sampleRollIn(
+        rollIn,
+        introT.current,
+        x,
+        QUAT.meta,
+        m.position,
+        g.quaternion,
+      );
+      if (settled) {
+        introDone.current = true;
+        prog.current = 1;
+      }
+      return;
+    }
+
+    if (prog.current >= 1) return;
     if (wait.current > 0) {
       wait.current -= dt;
       return;
@@ -162,7 +205,7 @@ export default function Die({
   });
 
   return (
-    <group position={[x, 0, 0]}>
+    <group ref={mover}>
       <group ref={group}>
         {/* ink body — its rounded bevel forms the dark edges/frame */}
         <RoundedBox

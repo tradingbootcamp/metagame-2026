@@ -6,6 +6,7 @@ import { ContactShadows, PerspectiveCamera } from "@react-three/drei";
 import * as THREE from "three";
 import Die, { type DieData, type Phase } from "./Die";
 import { ensureFont } from "./faceTexture";
+import { makeRollIn, ROLL_IN_MS, type RollInConfig } from "./rollIn";
 
 // blue front spells META, orange right spells GAME, dark tops show 2026 in pips
 const DICE: DieData[] = [
@@ -25,7 +26,7 @@ const GAP = 1.5; // world-space spacing between dice centers
 // row spans the outer dice centers plus a die's worth of half-width each side
 const ROW_WIDTH = (DICE.length - 1) * GAP + 1.6;
 
-function Scene({ phase }: { phase: Phase }) {
+function Scene({ phase, intro }: { phase: Phase; intro: boolean }) {
   const positions = useMemo(
     () => DICE.map((_, i) => (i - (DICE.length - 1) / 2) * GAP),
     [],
@@ -34,9 +35,19 @@ function Scene({ phase }: { phase: Phase }) {
   // Fit the whole row to the canvas width: scale down on narrow viewports so
   // all four dice stay on-screen; cap so they don't balloon on wide ones.
   const viewportWidth = useThree((s) => s.viewport.width);
+  const viewportHeight = useThree((s) => s.viewport.height);
   // fill ~95% of the canvas width so the dice have margin to sweep wider mid-turn
   // (a cube rotating 90° reaches ~1.4× its width at the diagonal) without clipping.
   const scale = Math.min(2.4, (viewportWidth * 0.95) / ROW_WIDTH);
+
+  // Roll-in launch configs, drawn once at mount (fresh randomness per load) from
+  // a point just past the canvas's top-left edge in the row's local units.
+  const [rollIns] = useState<RollInConfig[] | null>(() => {
+    if (!intro) return null;
+    const startX = -viewportWidth / 2 / scale - 1.4;
+    const startY = (viewportHeight / 2 - 0.1) / scale + 1;
+    return DICE.map((_, i) => makeRollIn(i, startX, startY));
+  });
 
   return (
     <>
@@ -77,7 +88,14 @@ function Scene({ phase }: { phase: Phase }) {
 
       <group position={[0, 0.1, 0]} scale={scale}>
         {DICE.map((d, i) => (
-          <Die key={i} data={d} phase={phase} delay={i} x={positions[i]} />
+          <Die
+            key={i}
+            data={d}
+            phase={phase}
+            delay={i}
+            x={positions[i]}
+            rollIn={rollIns?.[i]}
+          />
         ))}
       </group>
 
@@ -116,6 +134,16 @@ export default function Dice3D() {
   const [phase, setPhase] = useState<Phase>(initialPhase);
   const [fontLoaded, setFontLoaded] = useState(false);
 
+  // Roll-in runs only on the default animated start — a pinned ?phase= or
+  // reduced-motion load goes straight to its resting pose.
+  const [intro] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return (
+      initialPhase() === "meta" &&
+      !new URLSearchParams(window.location.search).has("phase")
+    );
+  });
+
   useEffect(() => {
     ensureFont().then(() => setFontLoaded(true));
   }, []);
@@ -128,11 +156,21 @@ export default function Dice3D() {
       new URLSearchParams(window.location.search).has("phase");
     if (phase !== "meta" || pinned) return;
     let step = 0;
-    const id = setInterval(() => {
-      step = (step + 1) % SEQ.length;
-      setPhase(SEQ[step]);
-    }, PHASE_MS);
-    return () => clearInterval(id);
+    let id: ReturnType<typeof setInterval> | undefined;
+    // Hold META until the roll-in lands, then cycle as before.
+    const start = setTimeout(
+      () => {
+        id = setInterval(() => {
+          step = (step + 1) % SEQ.length;
+          setPhase(SEQ[step]);
+        }, PHASE_MS);
+      },
+      intro ? ROLL_IN_MS : 0,
+    );
+    return () => {
+      clearTimeout(start);
+      if (id) clearInterval(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -149,7 +187,7 @@ export default function Dice3D() {
       }}
       style={{ width: "100%", height: "100%", background: "transparent" }}
     >
-      <Scene phase={phase} />
+      <Scene phase={phase} intro={intro} />
     </Canvas>
   );
 }
