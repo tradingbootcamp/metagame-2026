@@ -1,7 +1,5 @@
 import { FaArrowRight } from "react-icons/fa";
-
-const FORM_URL =
-  "https://airtable.com/appROpPV6XUP4CSqX/pagVuzTEXODlUwoi0/form";
+import { RFP_FORM_URL } from "@/lib/links";
 
 // Home-page section: call for session proposals. Inherits the page background +
 // grain so it reads as one continuous flow with the hero and the lineup.
@@ -20,7 +18,7 @@ export default function ProposeSession() {
 
         {/* signature button: dark front slides to reveal the orange box on hover */}
         <a
-          href={FORM_URL}
+          href={RFP_FORM_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="group relative inline-block"

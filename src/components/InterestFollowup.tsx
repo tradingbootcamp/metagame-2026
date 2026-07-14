@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { FaArrowRight } from "react-icons/fa";
 import {
   EMAIL_LIST_VALUE,
   INTEREST_OPTIONS,
   type InterestValue,
 } from "@/lib/interests";
+import { RFP_FORM_URL } from "@/lib/links";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
@@ -80,6 +82,20 @@ export default function InterestFollowup({ email }: { email: string }) {
             </label>
           ))}
         </fieldset>
+
+        {/* Checking "Speaking" means they want a session slot — point them
+            straight at the request-for-proposals form. */}
+        {selected.includes("speaking") && (
+          <a
+            href={RFP_FORM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 text-sm text-[#2b9bf0] underline underline-offset-2 hover:text-[#1b1530]"
+          >
+            Want to speak? Submit a session proposal
+            <FaArrowRight size={12} aria-hidden />
+          </a>
+        )}
 
         <input
           type="text"
