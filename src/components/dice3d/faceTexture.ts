@@ -22,35 +22,6 @@ export const PIP_MAP: Record<number, number[]> = {
 
 const TEX = 512; // per-face texture resolution
 
-// The texture is full-bleed colored: the rounded shape is supplied by the panel
-// geometry (a rounded-rect plane that tucks inside the body bevel), so the
-// texture only needs the flat color, a baked light gradient, and the glyph/pips.
-
-let fontReady: Promise<void> | null = null;
-
-// Load the bundled Bebas Neue so canvas-drawn letters match the page font.
-// Returns a resolved promise once the face glyphs can be drawn.
-export function ensureFont(): Promise<void> {
-  if (fontReady) return fontReady;
-  if (typeof document === "undefined") {
-    fontReady = Promise.resolve();
-    return fontReady;
-  }
-  const face = new FontFace(
-    "BebasNeueDice",
-    "url(/fonts/BebasNeue.woff2) format('woff2')",
-  );
-  fontReady = face
-    .load()
-    .then((loaded) => {
-      document.fonts.add(loaded);
-    })
-    .catch(() => {
-      // Fall back to a system face; letters still render, just less on-brand.
-    });
-  return fontReady;
-}
-
 function makeCanvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const canvas = document.createElement("canvas");
   canvas.width = TEX;
@@ -78,46 +49,6 @@ export function letterImageTexture(
   tex.anisotropy = 8;
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
-}
-
-// Fill the whole texture with the base color plus a baked top-light gradient.
-function paintPanel(ctx: CanvasRenderingContext2D, bg: string) {
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, TEX, TEX);
-
-  const grad = ctx.createLinearGradient(0, 0, 0, TEX);
-  grad.addColorStop(0, "rgba(255,255,255,0.18)");
-  grad.addColorStop(0.5, "rgba(255,255,255,0)");
-  grad.addColorStop(1, "rgba(0,0,0,0.10)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, TEX, TEX);
-}
-
-// A colored letter face: flat colored panel with a bold ink-outlined glyph.
-export function letterTexture(letter: string, bg: string): THREE.CanvasTexture {
-  const [canvas, ctx] = makeCanvas();
-  paintPanel(ctx, bg);
-
-  ctx.font = `${Math.round(TEX * 0.88)}px "BebasNeueDice", sans-serif`;
-  ctx.textAlign = "center";
-  // Center on the glyph's real ink box, not the em-box: Bebas is all-caps, so
-  // "middle" leaves the letter floating high above unused descender space. Draw
-  // from the alphabetic baseline and offset by the measured cap height.
-  ctx.textBaseline = "alphabetic";
-
-  // ink outline + colored fill (paint-order: stroke under fill)
-  ctx.lineJoin = "round";
-  ctx.lineWidth = Math.round(TEX * 0.05);
-  ctx.strokeStyle = COLORS.ink;
-  ctx.fillStyle = bg;
-  const cx = TEX / 2;
-  const m = ctx.measureText(letter);
-  const cy =
-    TEX / 2 + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
-  ctx.strokeText(letter, cx, cy);
-  ctx.fillText(letter, cx, cy);
-
-  return toTexture(canvas);
 }
 
 // A pip face for the given die value. Flat ink fill (no baked gradient, body color)

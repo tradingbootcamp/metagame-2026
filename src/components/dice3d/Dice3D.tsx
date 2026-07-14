@@ -5,7 +5,6 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, PerspectiveCamera } from "@react-three/drei";
 import * as THREE from "three";
 import Die, { type DieData, type Phase } from "./Die";
-import { ensureFont } from "./faceTexture";
 import { makeRollIn, ROLL_IN_MS, type RollInConfig } from "./rollIn";
 
 // blue front spells META, orange right spells GAME, dark tops show 2026 in pips
@@ -141,7 +140,6 @@ function initialPhase(): Phase {
 
 export default function Dice3D() {
   const [phase, setPhase] = useState<Phase>(initialPhase);
-  const [fontLoaded, setFontLoaded] = useState(false);
 
   // Roll-in runs only on the default animated start — a pinned ?phase= or
   // reduced-motion load goes straight to its resting pose.
@@ -152,10 +150,6 @@ export default function Dice3D() {
       !new URLSearchParams(window.location.search).has("phase")
     );
   });
-
-  useEffect(() => {
-    ensureFont().then(() => setFontLoaded(true));
-  }, []);
 
   useEffect(() => {
     // A pinned ?phase= or reduced-motion start holds still; only the default
@@ -183,10 +177,8 @@ export default function Dice3D() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Re-key the scene once the font resolves so canvas textures redraw with Bebas.
   return (
     <Canvas
-      key={fontLoaded ? "font" : "nofont"}
       shadows
       dpr={[1, 2]}
       gl={{
