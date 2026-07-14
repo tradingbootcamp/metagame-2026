@@ -52,7 +52,9 @@ export async function recordSignup(
   const fields: Record<string, unknown> = {
     [airtableConfig.signupEmailField]: email,
     [INTEREST_FIELD]: Array.from(new Set([EMAIL_LIST_VALUE, ...interests])),
-    [TEST_FIELD]: process.env.NODE_ENV !== "production",
+    // VERCEL_ENV distinguishes preview from production (NODE_ENV is "production"
+    // for both), so preview deploys + local dev (undefined) are marked test.
+    [TEST_FIELD]: process.env.VERCEL_ENV !== "production",
   };
   if (name) fields[NAME_FIELD] = name;
   if (notes) fields[NOTES_FIELD] = notes;
