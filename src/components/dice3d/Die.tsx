@@ -17,7 +17,8 @@ export type Phase = "meta" | "game" | "year" | "static";
 
 // Whole-die orientation per phase. META rests with the blue letter forward and a
 // gentle tilt; GAME spins the orange face to the front; YEAR tips the pip top up
-// toward the camera. Static is the reduced-motion resting pose.
+// toward the camera. STATIC rests edge-on between the two letters and renders
+// orthographic (reduced-motion, also pinnable via ?phase=static); construction below.
 const d = THREE.MathUtils.degToRad;
 const quat = (x: number, y: number, z = 0) =>
   new THREE.Quaternion().setFromEuler(new THREE.Euler(d(x), d(y), d(z), "YXZ"));
@@ -26,8 +27,20 @@ const quat = (x: number, y: number, z = 0) =>
 // view; negative Y rotation brings +X (right) into view — the classic 3-face die
 // pose. META rests showing the blue +Z face; GAME swings the orange +X face to
 // front; YEAR tips the pip top (+Y) up to the camera.
+// STATIC pose, built as an explicit rotation sequence so each axis is a separate
+// dial (tune the three angles): yaw to sit edge-on between the letters, an optional
+// roll about the view axis, then a downward pitch.
+const staticPose = new THREE.Quaternion()
+  .setFromAxisAngle(new THREE.Vector3(1, 0, 0), d(20)) // pitch down
+  .multiply(
+    new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), d(0)),
+  ) // roll about the view axis
+  .multiply(
+    new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), d(-45)),
+  ); // yaw: edge-on between the two letters
+
 const QUAT: Record<Phase, THREE.Quaternion> = {
-  static: quat(-13, -13),
+  static: staticPose,
   meta: quat(-10, -5), // CSS-matched resting tilt: blue META up front, slight underside
   game: quat(-0, -85, -5), // orange +X face turns to front
   year: quat(80, 3), // tips the pip top (+Y) nearly straight-on to read 2026

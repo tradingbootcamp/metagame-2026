@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
-import { ContactShadows, PerspectiveCamera } from "@react-three/drei";
+import {
+  ContactShadows,
+  OrthographicCamera,
+  PerspectiveCamera,
+} from "@react-three/drei";
 import * as THREE from "three";
 import Die, { type DieData, type Phase } from "./Die";
 import { makeRollIn, ROLL_IN_MS, type RollInConfig } from "./rollIn";
@@ -42,6 +46,12 @@ function Scene({ phase, intro }: { phase: Phase; intro: boolean }) {
   // all four dice stay on-screen; cap so they don't balloon on wide ones.
   const viewportWidth = useThree((s) => s.viewport.width);
   const viewportHeight = useThree((s) => s.viewport.height);
+  const canvasHeightPx = useThree((s) => s.size.height);
+  // Zoom that makes the STATIC ortho camera cover the same vertical world-height as
+  // the perspective camera (2·dist·tan(fov/2), dist 17, fov 7°), so swapping to it
+  // doesn't reframe the dice. Ortho visible height = canvasHeightPx / zoom.
+  const orthoZoom =
+    canvasHeightPx / (2 * 17 * Math.tan(THREE.MathUtils.degToRad(7) / 2));
   // fill ~95% of the canvas width so the dice have margin to sweep wider mid-turn
   // (a cube rotating 90° reaches ~1.4× its width at the diagonal) without clipping.
   const scale = Math.min(2.4, (viewportWidth * 0.95) / ROW_WIDTH);
@@ -59,16 +69,29 @@ function Scene({ phase, intro }: { phase: Phase; intro: boolean }) {
 
   return (
     <>
-      {/* far + narrow FOV ≈ orthographic: no fisheye, every die reads identically.
-          tight near/far brackets the dice so depth precision stays high — without it
-          the printed panels z-fight the body and faces flash black when dead-on. */}
-      <PerspectiveCamera
-        makeDefault
-        position={[0, 0.3, 17]}
-        fov={7}
-        near={12}
-        far={26}
-      />
+      {/* STATIC gets a true orthographic camera (no perspective at all); the other
+          phases use a far + narrow-FOV perspective that only *approximates* ortho.
+          Both bracket the dice tightly in near/far so depth precision stays high —
+          without it the printed panels z-fight the body and flash black when dead-on.
+          The responsive `scale` fits the row to the width under either camera, so the
+          dice stay the same on-screen size across the swap. */}
+      {phase === "static" ? (
+        <OrthographicCamera
+          makeDefault
+          position={[0, 0.3, 17]}
+          zoom={orthoZoom}
+          near={12}
+          far={26}
+        />
+      ) : (
+        <PerspectiveCamera
+          makeDefault
+          position={[0, 0.3, 17]}
+          fov={7}
+          near={12}
+          far={26}
+        />
+      )}
 
       <ambientLight intensity={1.15} />
       <hemisphereLight
@@ -131,7 +154,8 @@ function Scene({ phase, intro }: { phase: Phase; intro: boolean }) {
 function initialPhase(): Phase {
   if (typeof window === "undefined") return "meta";
   const pin = new URLSearchParams(window.location.search).get("phase");
-  if (pin === "meta" || pin === "game" || pin === "year") return pin;
+  if (pin === "meta" || pin === "game" || pin === "year" || pin === "static")
+    return pin;
   if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
     return "static";
   }
