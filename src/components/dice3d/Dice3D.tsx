@@ -14,9 +14,9 @@ import { makeRollIn, ROLL_IN_MS, type RollInConfig } from "./rollIn";
 // blue front spells META, orange right spells GAME, dark tops show 2026 in pips
 const DICE: DieData[] = [
   { front: "M", right: "G", top: 2 },
-  { front: "E", right: "A", top: 0 },
+  { front: "E", right: "A_CANTED", top: 0 },
   { front: "T", right: "M", top: 2 },
-  { front: "A", right: "E", top: 6 },
+  { front: "A_CANTED", right: "E", top: 6 },
 ];
 
 // STATIC-mode letters: the two edge-on faces of each die read left→right as
@@ -29,11 +29,11 @@ const STATIC_LETTERS: StaticLetters[] = [
   },
   {
     front: { letter: "T", color: "blue" },
-    right: { letter: "A", color: "blue" },
+    right: { letter: "A_CANTED", color: "blue" },
   },
   {
     front: { letter: "G", color: "orange" },
-    right: { letter: "A", color: "orange" },
+    right: { letter: "A_CANTED", color: "orange" },
   },
   {
     front: { letter: "M", color: "orange" },
