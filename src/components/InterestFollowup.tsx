@@ -63,9 +63,9 @@ export default function InterestFollowup({ email }: { email: string }) {
             rel="noopener noreferrer"
             className="group relative inline-block"
           >
-            {/* orange box behind, revealed on hover — matches the "Run a session" CTA */}
+            {/* orange box behind, revealed on hover as the blue front slides */}
             <span aria-hidden className="absolute inset-0 bg-[#eaa35a]" />
-            <span className="relative flex min-h-14 items-center justify-center gap-2 bg-[#1b1530] px-6 py-3 text-center font-[family-name:var(--font-bebas)] text-[clamp(18px,4.5vw,24px)] leading-tight tracking-[0.06em] text-[#f4ecd2] transition-transform group-hover:-translate-x-[5px] group-hover:-translate-y-[5px]">
+            <span className="relative flex min-h-14 items-center justify-center gap-2 border-2 border-[#eaa35a] bg-[#2b9bf0] px-6 py-3 text-center font-[family-name:var(--font-bebas)] text-[clamp(18px,4.5vw,24px)] leading-tight tracking-[0.06em] text-[#f4ecd2] transition-transform group-hover:-translate-x-[5px] group-hover:-translate-y-[5px]">
               Interested in speaking? Fill out the Session Proposal form!
               <FaArrowRight size={16} aria-hidden className="shrink-0" />
             </span>
