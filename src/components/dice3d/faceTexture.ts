@@ -69,10 +69,7 @@ function toTexture(canvas: HTMLCanvasElement): THREE.CanvasTexture {
 
 const loader = new THREE.TextureLoader();
 
-// Full-bleed letter face from a pre-rendered tile in /public/dice-letters
-// (`<color>_<letter>.png`, e.g. blue_m.png). The image already carries the
-// rounded-square design; the cube body's bevel frames it. The texture fills
-// asynchronously — r3f is animating, so it appears once the PNG loads.
+// Letter face from a pre-rendered tile: /public/dice-letters/<color>_<letter>.png.
 export function letterImageTexture(
   letter: string,
   color: "blue" | "orange",
@@ -133,7 +130,7 @@ export function pipTexture(value: number): THREE.CanvasTexture {
   const on = PIP_MAP[value] ?? [];
   const pad = TEX * 0.22;
   const cell = (TEX - pad * 2) / 2; // gaps between the 3x3 centers
-  const r = TEX * 0.095; // chunky pips to match the heavy letter glyphs
+  const r = TEX * 0.095;
 
   for (const idx of on) {
     const col = idx % 3;
