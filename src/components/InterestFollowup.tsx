@@ -51,9 +51,27 @@ export default function InterestFollowup({ email }: { email: string }) {
 
   if (status === "success") {
     return (
-      <p className="text-center text-sm text-[#1b1530]">
-        Additional details submitted ✓
-      </p>
+      <div className="flex w-full flex-col items-center gap-4">
+        <p className="text-center text-sm text-[#1b1530]">
+          Additional details submitted ✓
+        </p>
+        {/* Submitted "Speaking" → push them to the session-proposal (RFP) form. */}
+        {selected.includes("speaking") && (
+          <a
+            href={RFP_FORM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative inline-block"
+          >
+            {/* orange box behind, revealed on hover — matches the "Run a session" CTA */}
+            <span aria-hidden className="absolute inset-0 bg-[#eaa35a]" />
+            <span className="relative flex min-h-14 items-center justify-center gap-2 bg-[#1b1530] px-6 py-3 text-center font-[family-name:var(--font-bebas)] text-[clamp(18px,4.5vw,24px)] leading-tight tracking-[0.06em] text-[#f4ecd2] transition-transform group-hover:-translate-x-[5px] group-hover:-translate-y-[5px]">
+              Interested in speaking? Fill out the Session Proposal form!
+              <FaArrowRight size={16} aria-hidden className="shrink-0" />
+            </span>
+          </a>
+        )}
+      </div>
     );
   }
 
@@ -82,20 +100,6 @@ export default function InterestFollowup({ email }: { email: string }) {
             </label>
           ))}
         </fieldset>
-
-        {/* Checking "Speaking" means they want a session slot — point them
-            straight at the request-for-proposals form. */}
-        {selected.includes("speaking") && (
-          <a
-            href={RFP_FORM_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 text-sm text-[#2b9bf0] underline underline-offset-2 hover:text-[#1b1530]"
-          >
-            Want to speak? Submit a session proposal
-            <FaArrowRight size={12} aria-hidden />
-          </a>
-        )}
 
         <input
           type="text"
