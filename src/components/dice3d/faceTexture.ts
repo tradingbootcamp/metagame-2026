@@ -133,7 +133,7 @@ export function pipTexture(value: number): THREE.CanvasTexture {
   const on = PIP_MAP[value] ?? [];
   const pad = TEX * 0.22;
   const cell = (TEX - pad * 2) / 2; // gaps between the 3x3 centers
-  const r = TEX * 0.11; // chunky pips to match the heavy letter glyphs
+  const r = TEX * 0.095; // chunky pips to match the heavy letter glyphs
 
   for (const idx of on) {
     const col = idx % 3;
