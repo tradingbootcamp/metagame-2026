@@ -1,5 +1,7 @@
 import * as THREE from "three";
 
+import { LETTER_PATHS, LETTER_VIEWBOX } from "./letterPaths";
+
 // Design tokens (mirror DiceHero / the CSS dice)
 export const COLORS = {
   blue: "#2b9bf0",
@@ -38,17 +40,22 @@ function toTexture(canvas: HTMLCanvasElement): THREE.CanvasTexture {
   return tex;
 }
 
-const loader = new THREE.TextureLoader();
-
-// Letter face from a pre-rendered tile: /public/dice-letters/<color>_<letter>.png.
-export function letterImageTexture(
+// Letter face baked from the colorless glyph path (see letterPaths.ts): the tile
+// is filled in the die color and everything outside stays transparent, so the
+// panel material's alphaTest drops the counters and the ink body shows through.
+export function letterTexture(
   letter: string,
   color: "blue" | "orange",
-): THREE.Texture {
-  const tex = loader.load(`/dice-letters/${color}_${letter.toLowerCase()}.png`);
-  tex.anisotropy = 8;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
+): THREE.CanvasTexture {
+  const [canvas, ctx] = makeCanvas();
+  const d = LETTER_PATHS[letter.toLowerCase()];
+  if (d) {
+    const s = TEX / LETTER_VIEWBOX;
+    ctx.scale(s, s);
+    ctx.fillStyle = COLORS[color];
+    ctx.fill(new Path2D(d), "evenodd");
+  }
+  return toTexture(canvas);
 }
 
 // A pip face for the given die value. Flat ink fill (no baked gradient, body color)

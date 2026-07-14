@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
-import { COLORS, letterImageTexture, pipTexture } from "./faceTexture";
+import { COLORS, letterTexture, pipTexture } from "./faceTexture";
 import { sampleRollIn, type RollInConfig } from "./rollIn";
 
 export type DieData = {
@@ -140,10 +140,10 @@ export default function Die({
 
   // Per-face textures, built once.
   const textures = useMemo(() => {
-    const blue = letterImageTexture(data.front, "blue");
-    const blueBack = letterImageTexture(data.front, "blue");
-    const orange = letterImageTexture(data.right, "orange");
-    const orangeLeft = letterImageTexture(data.right, "orange");
+    const blue = letterTexture(data.front, "blue");
+    const blueBack = letterTexture(data.front, "blue");
+    const orange = letterTexture(data.right, "orange");
+    const orangeLeft = letterTexture(data.right, "orange");
     const top = pipTexture(data.top);
     const bottom = pipTexture(7 - data.top);
     return [blue, blueBack, orange, orangeLeft, top, bottom];
@@ -157,10 +157,10 @@ export default function Die({
     if (!staticLetters) return null;
     const { front, right } = staticLetters;
     return [
-      letterImageTexture(front.letter, front.color),
-      letterImageTexture(front.letter, front.color),
-      letterImageTexture(right.letter, right.color),
-      letterImageTexture(right.letter, right.color),
+      letterTexture(front.letter, front.color),
+      letterTexture(front.letter, front.color),
+      letterTexture(right.letter, right.color),
+      letterTexture(right.letter, right.color),
       pipTexture(data.top),
       pipTexture(7 - data.top),
     ];
