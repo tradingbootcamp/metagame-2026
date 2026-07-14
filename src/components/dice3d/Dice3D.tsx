@@ -8,7 +8,7 @@ import {
   PerspectiveCamera,
 } from "@react-three/drei";
 import * as THREE from "three";
-import Die, { type DieData, type Phase } from "./Die";
+import Die, { type DieData, type Phase, type StaticLetters } from "./Die";
 import { makeRollIn, ROLL_IN_MS, type RollInConfig } from "./rollIn";
 
 // blue front spells META, orange right spells GAME, dark tops show 2026 in pips
@@ -17,6 +17,28 @@ const DICE: DieData[] = [
   { front: "E", right: "A", top: 0 },
   { front: "T", right: "M", top: 2 },
   { front: "A", right: "E", top: 6 },
+];
+
+// STATIC-mode letters: the two edge-on faces of each die read left→right as
+// ME · TA · GA · ME, so the whole row spells METAGAME (META blue, GAME orange)
+// for viewers who never see the animated META/GAME reveal.
+const STATIC_LETTERS: StaticLetters[] = [
+  {
+    front: { letter: "M", color: "blue" },
+    right: { letter: "E", color: "blue" },
+  },
+  {
+    front: { letter: "T", color: "blue" },
+    right: { letter: "A", color: "blue" },
+  },
+  {
+    front: { letter: "G", color: "orange" },
+    right: { letter: "A", color: "orange" },
+  },
+  {
+    front: { letter: "M", color: "orange" },
+    right: { letter: "E", color: "orange" },
+  },
 ];
 
 // Opposite faces sum to 7, so a die carries its 7-pip face on the bottom (-Y)
@@ -126,6 +148,7 @@ function Scene({ phase, intro }: { phase: Phase; intro: boolean }) {
             delay={i}
             x={positions[i]}
             rollIn={rollIns?.[i]}
+            staticLetters={STATIC_LETTERS[i]}
           />
         ))}
       </group>

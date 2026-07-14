@@ -15,6 +15,12 @@ export type DieData = {
 
 export type Phase = "meta" | "game" | "year" | "static";
 
+// In STATIC mode a die can override its two visible faces (front = left glyph,
+// right = right glyph at the edge-on yaw) so the row spells METAGAME straight
+// across instead of weaving META over GAME.
+export type LetterFace = { letter: string; color: "blue" | "orange" };
+export type StaticLetters = { front: LetterFace; right: LetterFace };
+
 // Whole-die orientation per phase. META rests with the blue letter forward and a
 // gentle tilt; GAME spins the orange face to the front; YEAR tips the pip top up
 // toward the camera. STATIC rests edge-on between the two letters and renders
@@ -116,12 +122,14 @@ export default function Die({
   delay,
   x,
   rollIn,
+  staticLetters,
 }: {
   data: DieData;
   phase: Phase;
   delay: number;
   x: number;
   rollIn?: RollInConfig;
+  staticLetters?: StaticLetters;
 }) {
   const group = useRef<THREE.Group>(null);
   const mover = useRef<THREE.Group>(null); // outer group: position (roll-in flight path)
@@ -143,10 +151,34 @@ export default function Die({
 
   useEffect(() => () => textures.forEach((t) => t.dispose()), [textures]);
 
+  // STATIC-only face set: the front/right show the overridden letters (back/left
+  // mirror them since they're hidden edge-on), pips unchanged.
+  const staticTextures = useMemo(() => {
+    if (!staticLetters) return null;
+    const { front, right } = staticLetters;
+    return [
+      letterImageTexture(front.letter, front.color),
+      letterImageTexture(front.letter, front.color),
+      letterImageTexture(right.letter, right.color),
+      letterImageTexture(right.letter, right.color),
+      pipTexture(data.top),
+      pipTexture(7 - data.top),
+    ];
+  }, [staticLetters, data.top]);
+
+  useEffect(
+    () => () => staticTextures?.forEach((t) => t.dispose()),
+    [staticTextures],
+  );
+
+  const faceTextures =
+    phase === "static" && staticTextures ? staticTextures : textures;
+
   // Start pose (imperative so re-renders don't snap it back): mid-air off-screen
-  // when rolling in, otherwise the META rest pose. Position lives here too — the
-  // outer group carries no position prop, so a mid-flight re-render can't
-  // teleport the die to its slot.
+  // when rolling in, otherwise the resting pose for the starting phase — so a
+  // pinned or reduced-motion start lands settled with no intro slerp. Position
+  // lives here too — the outer group carries no position prop, so a mid-flight
+  // re-render can't teleport the die to its slot.
   const started = useRef(false);
   const introT = useRef(0);
   const introDone = useRef(!rollIn);
@@ -164,7 +196,7 @@ export default function Die({
       );
     } else {
       mover.current.position.set(x, 0, 0);
-      group.current.quaternion.copy(QUAT.meta);
+      group.current.quaternion.copy(QUAT[phase]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -242,7 +274,7 @@ export default function Die({
         {FACES.map((f, i) => (
           <mesh key={i} geometry={panelGeo} position={f.pos} rotation={f.rot}>
             <meshStandardMaterial
-              map={textures[i]}
+              map={faceTextures[i]}
               // pip faces (top/bottom) get a glossier finish so the white pips catch
               // specular highlights and read brighter; letter faces stay a touch matte
               roughness={i >= 4 ? 0.35 : 0.7}
