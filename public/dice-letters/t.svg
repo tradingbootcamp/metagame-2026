@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- T — single silhouette: top bar + centered stem -->
+  <path fill="currentColor" d="
+    M22 0H490A22 22 0 0 1 512 22V153H333V512H177V153H0V22A22 22 0 0 1 22 0Z
+  "/>
+</svg>

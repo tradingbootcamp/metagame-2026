@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- A (canted) — sides lean in 40px at the top; cutout walls slant in parallel for uniform stroke -->
+  <path fill="currentColor" fill-rule="evenodd" d="
+    M38.2865 21.9332Q40 0 62 0L450 0Q472 0 473.714 21.9332L510.286 490.067Q512 512 490 512L22 512Q0 512 1.71353 490.067Z
+    M181.9 155L331.1 155L337.5 237L175.5 237Z
+    M172.4 276L340.6 276L359 512L154 512Z
+  "/>
+</svg>
