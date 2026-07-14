@@ -1,10 +1,11 @@
-// Runtime path data for the dice glyphs, mirroring the colorless originals in
-// ./letters/*.svg. Each is a single evenodd path on a 512x512 viewBox: the solid
-// region is the letter tile, the cutouts are its counters. We rasterize these at
-// the die color (see letterTexture) instead of shipping pre-colored PNGs, so the
-// letters scale to any texture resolution and recolor for free.
+// The dice glyphs, as SVG path data. Each is a single evenodd path on a
+// LETTER_VIEWBOX-square: the solid region is the letter tile, the cutouts are its
+// counters. letterTexture rasterizes these at the die color, so letters scale to
+// any texture resolution and recolor for free (vs. shipping pre-colored PNGs).
 //
-// If you redraw a glyph in the vector source, update the matching string here too.
+// This is the source of truth for the shapes — edit a `d` string to reshape a
+// glyph. To preview one on its own, drop it into <svg viewBox="0 0 512 512"><path
+// fill-rule="evenodd" d="..."/></svg>.
 export const LETTER_VIEWBOX = 512;
 
 export const LETTER_PATHS: Record<string, string> = {

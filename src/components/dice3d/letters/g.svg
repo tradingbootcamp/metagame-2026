@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- G — rounded square minus one C-shaped channel -->
-  <path fill="currentColor" fill-rule="evenodd" d="
-    M0 22Q0 0 22 0L490 0Q512 0 512 22L512 490Q512 512 490 512L22 512Q0 512 0 490Z
-    M151 152H512V178H177V332H357V358H151Z
-  "/>
-</svg>

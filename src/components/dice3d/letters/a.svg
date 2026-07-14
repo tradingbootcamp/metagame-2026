@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- A — rounded square minus counter + leg gap -->
-  <path fill="currentColor" fill-rule="evenodd" d="
-    M0 22Q0 0 22 0L490 0Q512 0 512 22L512 490Q512 512 490 512L22 512Q0 512 0 490Z
-    M154 155H359V237H154Z
-    M154 276H359V512H154Z
-  "/>
-</svg>
