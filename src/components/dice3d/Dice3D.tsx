@@ -16,6 +16,13 @@ const DICE: DieData[] = [
   { front: "A", right: "E", top: 6 },
 ];
 
+// Opposite faces sum to 7, so a die carries its 7-pip face on the bottom (-Y)
+// exactly when its top face is blank — only the E/A die here. Return that face's
+// local normal so its roll-in landing keeps the 7 turned away from the camera.
+function sevenPipFaceNormal(d: DieData): THREE.Vector3 | undefined {
+  return d.top === 0 ? new THREE.Vector3(0, -1, 0) : undefined;
+}
+
 const SEQ: Phase[] = ["meta", "game", "year"];
 const PHASE_MS = 3200; // hold each phase ~3.2s — deliberate but not sluggish
 
@@ -46,7 +53,9 @@ function Scene({ phase, intro }: { phase: Phase; intro: boolean }) {
     if (!intro) return null;
     const startX = -viewportWidth / 2 / scale - 1.4;
     const startY = (viewportHeight / 2 - 0.1) / scale + 1;
-    return DICE.map((_, i) => makeRollIn(i, startX, startY));
+    return DICE.map((d, i) =>
+      makeRollIn(i, startX, startY, sevenPipFaceNormal(d)),
+    );
   });
 
   return (

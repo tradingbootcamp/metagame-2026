@@ -35,6 +35,7 @@ export function makeRollIn(
   i: number,
   startX: number,
   startY: number,
+  avoidCameraFace?: THREE.Vector3, // local face normal to keep turned away on landing
 ): RollInConfig {
   const axis = new THREE.Vector3(
     Math.random() * 2 - 1,
@@ -48,22 +49,39 @@ export function makeRollIn(
   // then tipped toward the camera (top face peeking) with a hint of roll so
   // the resting dice don't sit as a flat grid of parallel edges.
   const quarter = () => (Math.PI / 2) * Math.floor(Math.random() * 4);
-  const landQuat = new THREE.Quaternion()
-    .setFromAxisAngle(RIGHT, 0.15 + Math.random() * 0.2) // ~9–20° toward viewer
-    .multiply(
-      new THREE.Quaternion().setFromAxisAngle(
-        FORWARD,
-        (Math.random() - 0.5) * 0.25, // ±7° roll
-      ),
-    )
-    .multiply(
-      new THREE.Quaternion().setFromAxisAngle(UP, Math.random() * Math.PI * 2),
-    )
-    .multiply(
-      new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(quarter(), quarter(), quarter()),
-      ),
-    );
+  const buildLandQuat = () =>
+    new THREE.Quaternion()
+      .setFromAxisAngle(RIGHT, 0.15 + Math.random() * 0.2) // ~9–20° toward viewer
+      .multiply(
+        new THREE.Quaternion().setFromAxisAngle(
+          FORWARD,
+          (Math.random() - 0.5) * 0.25, // ±7° roll
+        ),
+      )
+      .multiply(
+        new THREE.Quaternion().setFromAxisAngle(
+          UP,
+          Math.random() * Math.PI * 2,
+        ),
+      )
+      .multiply(
+        new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(quarter(), quarter(), quarter()),
+        ),
+      );
+
+  // The camera looks down -Z, so a face points at the viewer when its rotated
+  // normal has a positive world-Z. Re-roll the scattered landing until the
+  // guarded face (the E/A die's 7-pip) turns away from the camera, keeping that
+  // gag subtle. ~half of draws pass, so this converges in a couple of tries.
+  let landQuat = buildLandQuat();
+  if (avoidCameraFace) {
+    const n = new THREE.Vector3();
+    for (let tries = 0; tries < 24; tries++) {
+      if (n.copy(avoidCameraFace).applyQuaternion(landQuat).z < 0.1) break;
+      landQuat = buildLandQuat();
+    }
+  }
 
   return {
     delay: i * STAGGER + Math.random() * 0.06,
