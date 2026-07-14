@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- E — rounded square minus two right-open slots -->
+  <!-- E — rounded square minus two right-open slots; 52 cuts / 136 arms -->
   <path fill="currentColor" fill-rule="evenodd" d="
     M0 22Q0 0 22 0L490 0Q512 0 512 22L512 490Q512 512 490 512L22 512Q0 512 0 490Z
-    M154 152H512V178H154Z
-    M154 334H512V360H154Z
+    M136 136H512V188H136Z
+    M136 324H512V376H136Z
   "/>
 </svg>
