@@ -234,9 +234,6 @@ export default function Die({
               // specular highlights and read brighter; letter faces stay a touch matte
               roughness={i >= 4 ? 0.35 : 0.7}
               metalness={0}
-              // letter tiles carry a keyed alpha: the black regions drop out so the
-              // die body shows through instead of a flatter, deader pure black
-              alphaTest={i < 4 ? 0.5 : 0}
               polygonOffset
               polygonOffsetFactor={-4}
             />
