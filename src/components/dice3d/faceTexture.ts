@@ -87,7 +87,10 @@ export function letterTexture(letter: string, bg: string): THREE.CanvasTexture {
 
   ctx.font = `${Math.round(TEX * 0.88)}px "BebasNeueDice", sans-serif`;
   ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  // Center on the glyph's real ink box, not the em-box: Bebas is all-caps, so
+  // "middle" leaves the letter floating high above unused descender space. Draw
+  // from the alphabetic baseline and offset by the measured cap height.
+  ctx.textBaseline = "alphabetic";
 
   // ink outline + colored fill (paint-order: stroke under fill)
   ctx.lineJoin = "round";
@@ -95,7 +98,9 @@ export function letterTexture(letter: string, bg: string): THREE.CanvasTexture {
   ctx.strokeStyle = COLORS.ink;
   ctx.fillStyle = bg;
   const cx = TEX / 2;
-  const cy = TEX / 2 + TEX * 0.04;
+  const m = ctx.measureText(letter);
+  const cy =
+    TEX / 2 + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
   ctx.strokeText(letter, cx, cy);
   ctx.fillText(letter, cx, cy);
 
