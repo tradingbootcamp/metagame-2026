@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   ContactShadows,
   OrthographicCamera,
   PerspectiveCamera,
 } from "@react-three/drei";
 import * as THREE from "three";
-import Die, { type DieData, type Phase, type StaticLetters } from "./Die";
-import { makeRollIn, ROLL_IN_MS, type RollInConfig } from "./rollIn";
+import Die, { QUAT, type DieData, type Phase, type StaticLetters } from "./Die";
+import { INTRO_CAP_MS, type IntroDriver, type RollInTake } from "./introDriver";
+import { createPlayback } from "./rollInPlayback";
+import { IntroController, type TakeMeta } from "./physicsRollIn";
 
 // blue front spells META, orange right spells GAME, dark tops show 2026 in pips
 const DICE: DieData[] = [
@@ -41,13 +43,6 @@ const STATIC_LETTERS: StaticLetters[] = [
   },
 ];
 
-// Opposite faces sum to 7, so a die carries its 7-pip face on the bottom (-Y)
-// exactly when its top face is blank — only the E/A die here. Return that face's
-// local normal so its roll-in landing keeps the 7 turned away from the camera.
-function sevenPipFaceNormal(d: DieData): THREE.Vector3 | undefined {
-  return d.top === 0 ? new THREE.Vector3(0, -1, 0) : undefined;
-}
-
 const SEQ: Phase[] = ["meta", "game", "year"];
 const PHASE_MS = 3200; // hold each phase ~3.2s — deliberate but not sluggish
 
@@ -58,7 +53,29 @@ const GAP = 1.5; // world-space spacing between dice centers
 // row spans the outer dice centers plus a die's worth of half-width each side
 const ROW_WIDTH = (DICE.length - 1) * GAP + 1.6;
 
-function Scene({ phase, intro }: { phase: Phase; intro: boolean }) {
+// ?record=1 publishes each finished live-sim take here for the recording
+// harness (scripts/record-rollin.mjs) to collect.
+declare global {
+  interface Window {
+    __rollInTake?: { take: RollInTake; meta: TakeMeta };
+  }
+}
+function publishTake(take: RollInTake, meta: TakeMeta) {
+  window.__rollInTake = { take, meta };
+  console.info("[roll-in take]", JSON.stringify(meta));
+}
+
+function Scene({
+  phase,
+  intro,
+  record,
+  onIntroDone,
+}: {
+  phase: Phase;
+  intro: boolean;
+  record: boolean;
+  onIntroDone: () => void;
+}) {
   const positions = useMemo(
     () => DICE.map((_, i) => (i - (DICE.length - 1) / 2) * GAP),
     [],
@@ -67,7 +84,6 @@ function Scene({ phase, intro }: { phase: Phase; intro: boolean }) {
   // Fit the whole row to the canvas width: scale down on narrow viewports so
   // all four dice stay on-screen; cap so they don't balloon on wide ones.
   const viewportWidth = useThree((s) => s.viewport.width);
-  const viewportHeight = useThree((s) => s.viewport.height);
   const canvasHeightPx = useThree((s) => s.size.height);
   // Zoom that makes the STATIC ortho camera cover the same vertical world-height as
   // the perspective camera (2·dist·tan(fov/2), dist 17, fov 7°), so swapping to it
@@ -78,16 +94,26 @@ function Scene({ phase, intro }: { phase: Phase; intro: boolean }) {
   // (a cube rotating 90° reaches ~1.4× its width at the diagonal) without clipping.
   const scale = Math.min(2.4, (viewportWidth * 0.95) / ROW_WIDTH);
 
-  // Roll-in launch configs, drawn once at mount (fresh randomness per load) from
-  // a point just past the canvas's top-left edge in the row's local units.
-  const [rollIns] = useState<RollInConfig[] | null>(() => {
+  // Roll-in pose driver, built once at mount. Normal loads play back a baked
+  // physics take (createPlayback); ?record=1 — or a dev tree with no takes
+  // baked yet — runs the live Rapier sim instead (which lazy-loads the wasm).
+  const [introDriver] = useState<IntroDriver | null>(() => {
     if (!intro) return null;
-    const startX = -viewportWidth / 2 / scale - 1.4;
-    const startY = (viewportHeight / 2 - 0.1) / scale + 1;
-    return DICE.map((d, i) =>
-      makeRollIn(i, startX, startY, sevenPipFaceNormal(d)),
-    );
+    const opts = { slots: positions, restQuat: QUAT.meta, onDone: onIntroDone };
+    if (!record) {
+      const playback = createPlayback(opts);
+      if (playback) return playback;
+    }
+    return new IntroController({
+      ...opts,
+      record,
+      onTake: record ? publishTake : undefined,
+    });
   });
+  useEffect(() => () => introDriver?.dispose(), [introDriver]);
+  // Single owner ticks the driver each frame, at an earlier priority than the
+  // dice's default-priority useFrames so every die reads the same instant.
+  useFrame((_, dt) => introDriver?.tick(dt), -1);
 
   return (
     <>
@@ -145,9 +171,9 @@ function Scene({ phase, intro }: { phase: Phase; intro: boolean }) {
             key={i}
             data={d}
             phase={phase}
-            delay={i}
+            index={i}
             x={positions[i]}
-            rollIn={rollIns?.[i]}
+            intro={introDriver ?? undefined}
             staticLetters={STATIC_LETTERS[i]}
           />
         ))}
@@ -198,31 +224,39 @@ export default function Dice3D() {
     );
   });
 
+  // ?record=1: run the live physics sim instead of baked playback and publish
+  // the resulting take for the recording harness (dev/tuning tool).
+  const [record] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).has("record"),
+  );
+
+  // The intro's actual length varies per take/sim, so the phase cycle waits for
+  // the driver's done signal rather than a fixed constant, with a generous
+  // hard cap as a backstop in case the signal never arrives.
+  const [introOver, setIntroOver] = useState(!intro);
+  useEffect(() => {
+    if (!intro || introOver) return;
+    const cap = setTimeout(() => setIntroOver(true), INTRO_CAP_MS);
+    return () => clearTimeout(cap);
+  }, [intro, introOver]);
+
   useEffect(() => {
     // A pinned ?phase= or reduced-motion start holds still; only the default
-    // META start auto-cycles through the phases.
+    // META start auto-cycles through the phases, once the roll-in has landed.
     const pinned =
       typeof window !== "undefined" &&
       new URLSearchParams(window.location.search).has("phase");
-    if (phase !== "meta" || pinned) return;
+    if (phase !== "meta" || pinned || !introOver) return;
     let step = 0;
-    let id: ReturnType<typeof setInterval> | undefined;
-    // Hold META until the roll-in lands, then cycle as before.
-    const start = setTimeout(
-      () => {
-        id = setInterval(() => {
-          step = (step + 1) % SEQ.length;
-          setPhase(SEQ[step]);
-        }, PHASE_MS);
-      },
-      intro ? ROLL_IN_MS : 0,
-    );
-    return () => {
-      clearTimeout(start);
-      if (id) clearInterval(id);
-    };
+    const id = setInterval(() => {
+      step = (step + 1) % SEQ.length;
+      setPhase(SEQ[step]);
+    }, PHASE_MS);
+    return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [introOver]);
 
   return (
     <Canvas
@@ -235,7 +269,12 @@ export default function Dice3D() {
       }}
       style={{ width: "100%", height: "100%", background: "transparent" }}
     >
-      <Scene phase={phase} intro={intro} />
+      <Scene
+        phase={phase}
+        intro={intro}
+        record={record}
+        onIntroDone={() => setIntroOver(true)}
+      />
     </Canvas>
   );
 }

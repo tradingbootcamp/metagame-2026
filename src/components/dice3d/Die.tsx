@@ -5,7 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { COLORS, letterTexture, pipTexture } from "./faceTexture";
-import { sampleRollIn, type RollInConfig } from "./rollIn";
+import type { IntroDriver } from "./introDriver";
 
 export type DieData = {
   front: string; // blue letter (+Z)
@@ -45,7 +45,9 @@ const staticPose = new THREE.Quaternion()
     new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), d(-45)),
   ); // yaw: edge-on between the two letters
 
-const QUAT: Record<Phase, THREE.Quaternion> = {
+// Exported so the roll-in drivers can target the META rest orientation — the
+// handoff contract is that the intro ends exactly at (slotX, 0, 0, QUAT.meta).
+export const QUAT: Record<Phase, THREE.Quaternion> = {
   static: staticPose,
   meta: quat(-10, -5), // CSS-matched resting tilt: blue META up front, slight underside
   game: quat(-0, -85, -5), // orange +X face turns to front
@@ -119,16 +121,16 @@ const FACES: {
 export default function Die({
   data,
   phase,
-  delay,
+  index,
   x,
-  rollIn,
+  intro,
   staticLetters,
 }: {
   data: DieData;
   phase: Phase;
-  delay: number;
+  index: number; // die's position in the row; also the phase-turn stagger key
   x: number;
-  rollIn?: RollInConfig;
+  intro?: IntroDriver; // roll-in pose source; Scene ticks it, dice read from it
   staticLetters?: StaticLetters;
 }) {
   const group = useRef<THREE.Group>(null);
@@ -180,20 +182,12 @@ export default function Die({
   // lives here too — the outer group carries no position prop, so a mid-flight
   // re-render can't teleport the die to its slot.
   const started = useRef(false);
-  const introT = useRef(0);
-  const introDone = useRef(!rollIn);
+  const introDone = useRef(!intro);
   useEffect(() => {
     if (!group.current || !mover.current || started.current) return;
     started.current = true;
-    if (rollIn) {
-      sampleRollIn(
-        rollIn,
-        0,
-        x,
-        QUAT.meta,
-        mover.current.position,
-        group.current.quaternion,
-      );
+    if (intro) {
+      intro.poseOf(index, mover.current.position, group.current.quaternion);
     } else {
       mover.current.position.set(x, 0, 0);
       group.current.quaternion.copy(QUAT[phase]);
@@ -210,8 +204,8 @@ export default function Die({
   useEffect(() => {
     if (group.current) fromQ.current.copy(group.current.quaternion);
     prog.current = 0;
-    wait.current = delay * STAGGER;
-  }, [phase, delay]);
+    wait.current = index * STAGGER;
+  }, [phase, index]);
 
   useFrame((_, dt) => {
     const g = group.current;
@@ -219,17 +213,10 @@ export default function Die({
     if (!g || !m) return;
 
     // Roll-in owns the pose until it settles; the phase machine takes over from
-    // the exact rest pose it lands in.
-    if (!introDone.current && rollIn) {
-      introT.current += dt;
-      const settled = sampleRollIn(
-        rollIn,
-        introT.current,
-        x,
-        QUAT.meta,
-        m.position,
-        g.quaternion,
-      );
+    // the exact rest pose it lands in. The driver is ticked once per frame by
+    // Scene (at an earlier useFrame priority) — dice only read poses here.
+    if (!introDone.current && intro) {
+      const settled = intro.poseOf(index, m.position, g.quaternion);
       if (settled) {
         introDone.current = true;
         prog.current = 1;
