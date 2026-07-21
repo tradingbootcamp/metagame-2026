@@ -30,10 +30,22 @@ export function createPlayback(opts: {
 }): IntroDriver | null {
   if (TAKES.length === 0) return null; // no baked takes — caller falls back to the live sim
 
-  const take = TAKES[Math.floor(Math.random() * TAKES.length)];
+  const takeIndex = Math.floor(Math.random() * TAKES.length);
+  const take = TAKES[takeIndex];
   const rate = 0.94 + Math.random() * 0.12; // subtle per-load tempo variation
   const flightEnd = (take.n - 1) / take.hz / rate; // wall-clock end of the take
   const alignDelay = opts.slots.map(() => Math.random() * ALIGN_JITTER);
+
+  // Log what this load played (take + the per-load jitter draws) so a roll that
+  // looks especially good or bad can be identified and pinned later.
+  console.log(
+    "[dice roll-in]",
+    JSON.stringify({
+      takeIndex,
+      rate: Math.round(rate * 1e3) / 1e3,
+      alignDelay: alignDelay.map((d) => Math.round(d * 1e3) / 1e3),
+    }),
+  );
 
   // The take's final keyframe is the captured rest pose the tail blends from.
   const endPos = take.dice.map((d) =>
