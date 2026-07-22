@@ -8,9 +8,9 @@ import type { TakeMeta } from "./physicsRollIn";
 // Dev-only curation panel (Dice.tsx mounts it only in development): pick any
 // baked take from a dropdown, throw fresh live rolls without a page reload,
 // and keep a good roll — it's POSTed to /api/dev/keep-take and folded into the
-// baked set later. Mode changes rewrite the URL params Dice3D already reads
-// (?sim / ?record) and remount it via onRemount, so the intro paths themselves
-// stay untouched.
+// baked set later. Mode changes rewrite the URL params the intro drivers
+// already read (?sim / ?record / ?launch) and remount Dice3D via onRemount, so
+// the intro paths themselves stay untouched.
 
 type Mode = "random" | "live" | number;
 
@@ -22,11 +22,19 @@ function currentMode(): Mode {
   return "random";
 }
 
-function writeModeToUrl(mode: Mode) {
+function currentLow(): boolean {
+  return new URLSearchParams(window.location.search).get("launch") === "low";
+}
+
+function writeModeToUrl(mode: Mode, low: boolean) {
   const p = new URLSearchParams(window.location.search);
   p.delete("sim");
   p.delete("record");
-  if (mode === "live") p.set("record", "1");
+  p.delete("launch");
+  if (mode === "live") {
+    p.set("record", "1");
+    if (low) p.set("launch", "low");
+  }
   if (typeof mode === "number") p.set("sim", String(mode));
   const q = p.toString();
   history.replaceState(null, "", q ? `?${q}` : window.location.pathname);
@@ -78,6 +86,7 @@ function judge(take: RollInTake, meta: TakeMeta): Badge[] {
 
 export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
   const [mode, setMode] = useState<Mode>(currentMode);
+  const [low, setLow] = useState<boolean>(currentLow);
   const [roll, setRoll] = useState<{
     take: RollInTake;
     meta: TakeMeta;
@@ -97,11 +106,12 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
     return () => window.removeEventListener("roll-in-take", onTake);
   }, []);
 
-  const switchTo = (m: Mode) => {
+  const switchTo = (m: Mode, l: boolean = low) => {
     setMode(m);
+    setLow(l);
     setRoll(null);
     setSaved(null);
-    writeModeToUrl(m);
+    writeModeToUrl(m, l);
     onRemount();
   };
 
@@ -155,6 +165,16 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
       >
         roll
       </button>
+      {mode === "live" && (
+        <label className="flex cursor-pointer items-center gap-1">
+          <input
+            type="checkbox"
+            checked={low}
+            onChange={(e) => switchTo("live", e.target.checked)}
+          />
+          low
+        </label>
+      )}
       {mode === "live" && roll && (
         <>
           {roll.badges.map((b) => (

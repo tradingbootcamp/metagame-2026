@@ -40,7 +40,7 @@ export type RollInTake = {
 // constraint binds, which is every realistic viewport. START_Y sits above the
 // tallest local canvas half-height (~1.4 on mobile aspect) plus a die.
 export const START_X = -4.4; // launches draw from START_X - [0, 0.8]
-export const START_Y = 2.4; // launches draw from START_Y + [0, 0.5]
+export const START_Y = 2.4; // high-lob launch height (low profile overrides — physicsRollIn PROFILES)
 // The x walls sit at ±(x + 0.4) with 0.25 half-thickness (physicsRollIn.ts),
 // so their inner faces land at ±3.10, a 0.1 margin inside the ~±3.2 visible
 // edge: a hard wall-impact can transiently penetrate ~0.05–0.1 before the

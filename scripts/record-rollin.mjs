@@ -3,7 +3,7 @@
 // best, and bakes them into src/components/dice3d/rollInTakes.ts for the
 // playback driver to ship. Rerun after tuning physicsRollIn.ts.
 //
-//   node scripts/record-rollin.mjs [--runs 14] [--keep 5] [--jobs 4] [--port 4600] [--url http://...]
+//   node scripts/record-rollin.mjs [--runs 14] [--keep 5] [--jobs 4] [--port 4600] [--url http://...] [--launch low]
 //
 // Pass --url to use an already-running dev server; otherwise the script starts
 // `next dev` on --port and kills it when done.
@@ -28,6 +28,9 @@ const PORT = Number(arg("port", 4600));
 // sim advances by fixed steps of accumulated (dt-clamped) frame time — slow,
 // contended rendering only stretches a run's wall clock, never its outcome.
 const JOBS = Number(arg("jobs", 4));
+// Launch profile for the live sim (physicsRollIn.ts PROFILES): the default
+// high lob, or the low ground-skim style via --launch low.
+const LAUNCH = arg("launch", "high");
 let url = arg("url", null);
 
 // --- bake-time orientation retcon -------------------------------------------
@@ -232,7 +235,10 @@ async function worker() {
       viewport: { width: 1280, height: 800 },
     });
     try {
-      await page.goto(`${url}/?record=1`, { waitUntil: "domcontentloaded" });
+      await page.goto(
+        `${url}/?record=1${LAUNCH === "high" ? "" : `&launch=${LAUNCH}`}`,
+        { waitUntil: "domcontentloaded" },
+      );
       // Generous timeout: JOBS-way contended swiftshader frames are slow, and
       // the dt clamp makes slow frames stretch a run's wall clock.
       await page.waitForFunction(

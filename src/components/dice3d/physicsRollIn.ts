@@ -41,11 +41,78 @@ const STEP = 1 / 120; // small fixed step keeps die-vs-die contacts crisp
 // still happen — neighbors jostle where bounce tumbles overlap — but at bounce
 // energy, not launch energy, which is what kept flinging dice across the row.
 const LAUNCH_STAGGER = 0.17; // s between launches
-const FLIGHT_S = 0.62; // base ballistic flight time; + up to 0.18 jitter
-const SPIN = 9; // rad/s launch tumble; + up to 5 jitter
-// Aim this far short (left) of the slot: the throw's leftover horizontal speed
-// carries the die the rest of the way while the floor sheds it.
-const UNDERSHOOT = 0.4;
+
+// Launch profiles, selected per load with ?launch=low (default stays the
+// original "high" lob, untouched).
+//
+// The two differ in *kind*, not just in numbers. "high" is a lob: the launch
+// solves for the vy that lands the die on its slot after `flightS` of flight,
+// which always throws the die UP first (it peaks around y 2.8 and drops in).
+// "low" is a throw: vy is solved so the die reaches the FLOOR in `descentS`
+// from a modest height, which comes out negative — the die is thrown downward
+// into the table well short of its slot, then skips and tumbles the rest of
+// the way like a real dice roll.
+export type LaunchProfileName = "high" | "low";
+type LaunchProfile = {
+  startY: number; // launch height; draws + [0, startYJitter]
+  startYJitter: number;
+  // Lob timing: seconds of flight before arriving at the slot (high only).
+  flightS: number;
+  flightJitter: number;
+  // Throw timing (low only): setting these switches the launch solve from lob
+  // to downward throw (see #step). Descent time is derived per die from how
+  // far it has to fly, at ~throwVx, then clamped — otherwise a fixed descent
+  // makes the near die crawl and slings the far one in at 16 u/s, which
+  // detonates the row. The clamp ceiling must stay under sqrt(2·startY/g)
+  // (~0.45s here) or the solve turns the throw back into a lob.
+  descentMinS?: number;
+  descentMaxS?: number;
+  throwVx?: number;
+  // Aim this far short (left) of the slot — for "low" this is where the die
+  // first hits the floor, so it's large: the skip and roll cover the rest.
+  undershoot: number;
+  undershootJitter: number;
+  spin: number; // rad/s launch tumble; draws + [0, spinJitter]
+  spinJitter: number;
+};
+const PROFILES: Record<LaunchProfileName, LaunchProfile> = {
+  high: {
+    startY: START_Y,
+    startYJitter: 0.5,
+    flightS: 0.62,
+    flightJitter: 0.18,
+    undershoot: 0.4,
+    undershootJitter: 0,
+    spin: 9,
+    spinJitter: 5,
+  },
+  // Low: a thrown roll. Enters from off-screen left at roughly head height
+  // over the row, angled down hard enough to hit the floor in ~a third of a
+  // second, landing 1.4–2.6 units short of the slot. Restitution then gives a
+  // visible skip, and the ground steering reels the die the rest of the way —
+  // travel it covers tumbling, not gliding, since floor friction converts the
+  // leftover horizontal speed into roll.
+  low: {
+    startY: 1.45,
+    startYJitter: 0.35,
+    flightS: 0, // unused: descentS drives the low launch
+    flightJitter: 0,
+    descentMinS: 0.28,
+    descentMaxS: 0.44,
+    throwVx: 9,
+    undershoot: 1.3,
+    undershootJitter: 1.0,
+    spin: 7,
+    spinJitter: 6,
+  },
+};
+function activeProfile(): LaunchProfile {
+  const raw =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("launch")
+      : null;
+  return PROFILES[raw === "low" ? "low" : "high"];
+}
 
 // Steering: a horizontal spring toward each die's slot (and z toward 0) so
 // collisions can't strand a die far from home — which matters because the align
@@ -134,6 +201,7 @@ type State = "loading" | "sim" | "post" | "done" | "failed";
 
 export class IntroController implements IntroDriver {
   #opts: Options;
+  #profile: LaunchProfile;
   #state: State = "loading";
   #disposed = false;
   #doneFired = false;
@@ -187,22 +255,34 @@ export class IntroController implements IntroDriver {
 
   constructor(opts: Options) {
     this.#opts = opts;
+    const prof = (this.#profile = activeProfile());
     const n = opts.slots.length;
     for (let i = 0; i < n; i++) {
       this.#startPos.push(
         new THREE.Vector3(
           START_X - Math.random() * 0.8,
-          START_Y + Math.random() * 0.5,
+          prof.startY + Math.random() * prof.startYJitter,
           (Math.random() - 0.5) * 0.5,
         ),
       );
       this.#startQuat.push(new THREE.Quaternion().random());
       this.#delay.push((n - 1 - i) * LAUNCH_STAGGER + Math.random() * 0.06);
       this.#targetX.push(
-        opts.slots[i] - UNDERSHOOT + (Math.random() - 0.5) * 0.5,
+        opts.slots[i] -
+          prof.undershoot -
+          Math.random() * prof.undershootJitter +
+          (Math.random() - 0.5) * 0.5,
       );
       this.#targetZ.push((Math.random() - 0.5) * 0.5);
-      this.#flightT.push(FLIGHT_S + Math.random() * 0.18);
+      this.#flightT.push(
+        prof.throwVx !== undefined
+          ? THREE.MathUtils.clamp(
+              Math.abs(this.#targetX[i] - this.#startPos[i].x) / prof.throwVx,
+              prof.descentMinS ?? 0.28,
+              prof.descentMaxS ?? 0.44,
+            )
+          : prof.flightS + Math.random() * prof.flightJitter,
+      );
       this.#alignDelay.push(Math.random() * ALIGN_JITTER);
       this.#bodies.push(null);
       this.#launched.push(false);
@@ -332,24 +412,28 @@ export class IntroController implements IntroDriver {
     this.#stepCount++;
 
     for (let i = 0; i < this.#bodies.length; i++) {
-      // Staggered launch: create the body and throw it at its slot — solve the
-      // ballistic vy so it arrives at the target x/z at roughly bounce height.
+      // Staggered launch: create the body and throw it at its target x/z in T
+      // seconds, solving vy for the height it should be at when it gets there.
+      // The lob profile aims for bounce height (0.55), which needs an upward
+      // vy; the thrown profile aims for the floor (0), which comes out
+      // negative — the die is driven down into the table and skips onward.
       if (!this.#launched[i]) {
         if (this.#elapsed < this.#delay[i]) continue;
         this.#launched[i] = true;
         const body = (this.#bodies[i] = this.#spawnDie!(i));
         const s = this.#startPos[i];
         const T = this.#flightT[i];
+        const arriveY = this.#profile.throwVx !== undefined ? 0 : 0.55;
         body.setLinvel(
           {
             x: (this.#targetX[i] - s.x) / T,
-            y: (0.55 - s.y + 0.5 * GRAVITY * T * T) / T,
+            y: (arriveY - s.y + 0.5 * GRAVITY * T * T) / T,
             z: (this.#targetZ[i] - s.z) / T,
           },
           true,
         );
         const axis = new THREE.Vector3().randomDirection();
-        const w = SPIN + Math.random() * 5;
+        const w = this.#profile.spin + Math.random() * this.#profile.spinJitter;
         body.setAngvel({ x: axis.x * w, y: axis.y * w, z: axis.z * w }, true);
         continue;
       }
