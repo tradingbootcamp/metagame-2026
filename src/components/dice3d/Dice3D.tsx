@@ -53,8 +53,8 @@ const GAP = 1.5; // world-space spacing between dice centers
 // row spans the outer dice centers plus a die's worth of half-width each side
 const ROW_WIDTH = (DICE.length - 1) * GAP + 1.6;
 
-// ?record=1 publishes each finished live-sim take here for the recording
-// harness (scripts/record-rollin.mjs) to collect.
+// ?record=1 publishes each finished live-sim take here for the dev curation
+// panel to judge and keep.
 declare global {
   interface Window {
     __rollInTake?: { take: RollInTake; meta: TakeMeta };
@@ -99,9 +99,9 @@ function Scene({
   // (a cube rotating 90° reaches ~1.4× its width at the diagonal) without clipping.
   const scale = Math.min(2.4, (viewportWidth * 0.95) / ROW_WIDTH);
 
-  // Roll-in pose driver, built once at mount. Normal loads play back a baked
-  // physics take (createPlayback); ?record=1 — or a dev tree with no takes
-  // baked yet — runs the live Rapier sim instead (which lazy-loads the wasm).
+  // Roll-in pose driver, built once at mount. Normal loads play back one of the
+  // kept physics takes (createPlayback); ?record=1 — or a tree with nothing kept
+  // yet — runs the live Rapier sim instead (which lazy-loads the wasm).
   const [introDriver] = useState<IntroDriver | null>(() => {
     if (!intro) return null;
     const opts = { slots: positions, restQuat: QUAT.meta, onDone: onIntroDone };

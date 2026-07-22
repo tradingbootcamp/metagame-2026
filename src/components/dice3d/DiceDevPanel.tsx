@@ -5,17 +5,17 @@ import type { RollInTake } from "./introDriver";
 import type { TakeMeta } from "./physicsRollIn";
 
 // Dev-only curation panel (Dice.tsx mounts it only in development): throw fresh
-// live rolls, re-watch the one just thrown, keep the good ones, and replay any
-// roll kept earlier. The dropdown lists the kept rolls in
-// scripts/curated-takes/ (served by /api/dev/keep-take) rather than the baked
-// set, so what you review is the source material the shipped takes come from.
+// live rolls, re-watch the one just thrown, keep the good ones, and replay or
+// delete any roll kept earlier. The dropdown lists the kept rolls in
+// src/components/dice3d/takes/ (served by /api/dev/keep-take), which IS the
+// shipped set — keeping a roll ships it, deleting one unships it.
 //
 // Playing an arbitrary take works through window.__replayTake: the panel queues
 // a take there and remounts Dice3D, which consumes it. Live mode is a URL param
 // the intro already reads (?record / ?launch), so mode changes rewrite those and
 // remount too — the intro paths themselves stay untouched.
 
-type Mode = "live" | "baked" | { file: string };
+type Mode = "live" | "kept" | { file: string };
 type Listed = {
   name: string;
   meta: TakeMeta;
@@ -37,8 +37,8 @@ function writeModeToUrl(mode: Mode, low: boolean) {
   history.replaceState(null, "", q ? `?${q}` : window.location.pathname);
 }
 
-// Review-time mirror of the recorder's keep criteria (scripts/record-rollin.mjs)
-// so a roll that looks good can be checked for being legal before it's kept.
+// Legality check on a roll — a good-looking roll can still put a die off-camera
+// or out of slot order, and a kept roll ships as-is.
 const EDGE = 3.18; // visible canvas edge in local units, minus a hair
 const GAP_MIN = 1.0; // adjacent rest centers — protects the align slide
 const NEAR_MAX = 0.9; // |restX - slotX|
@@ -101,9 +101,7 @@ const shortName = (f: string) => f.replace(/^take-|\.json$/g, "").slice(-6);
 
 export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
   const [mode, setMode] = useState<Mode>(() =>
-    new URLSearchParams(window.location.search).has("record")
-      ? "live"
-      : "baked",
+    new URLSearchParams(window.location.search).has("record") ? "live" : "kept",
   );
   const [low, setLow] = useState<boolean>(
     () => new URLSearchParams(window.location.search).get("launch") === "low",
@@ -116,6 +114,7 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
   } | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [armed, setArmed] = useState(false); // delete needs a second click
 
   const refreshList = useCallback(
     () =>
@@ -152,6 +151,7 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
   const selectCurated = async (file: string) => {
     setMode({ file });
     setSaved(null);
+    setArmed(false);
     writeModeToUrl({ file }, low);
     try {
       const res = await fetch(
@@ -166,18 +166,19 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
     }
   };
 
-  const switchTo = (m: "live" | "baked", l: boolean = low) => {
+  const switchTo = (m: "live" | "kept", l: boolean = low) => {
     delete window.__replayTake; // stop replaying whatever was selected
     setMode(m);
     setLow(l);
     setRoll(null);
     setSaved(null);
+    setArmed(false);
     writeModeToUrl(m, l);
     onRemount();
   };
 
-  // Re-watch whatever is loaded: the exact take for a curated or live roll,
-  // otherwise just a fresh mount of the random shipped set.
+  // Re-watch whatever is loaded: the exact take for a kept or live roll,
+  // otherwise just a fresh mount of the random kept set.
   const replay = () => {
     if (roll) play(roll.take);
     else onRemount();
@@ -202,6 +203,30 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
     }
   };
 
+  // Unship the selected kept roll. Two-step rather than a confirm() dialog,
+  // which would block the page (and any browser automation driving it). The arm
+  // lapses on a timer rather than on blur — a dev-server hot reload re-renders
+  // the panel, and a focus-based disarm would swallow the confirming click.
+  const remove = async () => {
+    if (typeof mode !== "object" || busy) return;
+    if (!armed) {
+      setArmed(true);
+      setTimeout(() => setArmed(false), 3000);
+      return;
+    }
+    setBusy(true);
+    try {
+      await fetch(`/api/dev/keep-take?file=${encodeURIComponent(mode.file)}`, {
+        method: "DELETE",
+      });
+      await refreshList();
+      switchTo("kept"); // clears the queued replay of the take just deleted
+    } finally {
+      setArmed(false);
+      setBusy(false);
+    }
+  };
+
   const selectValue = typeof mode === "object" ? `file:${mode.file}` : mode;
 
   return (
@@ -211,11 +236,11 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
         value={selectValue}
         onChange={(e) => {
           const v = e.target.value;
-          if (v === "live" || v === "baked") switchTo(v);
+          if (v === "live" || v === "kept") switchTo(v);
           else void selectCurated(v.slice("file:".length));
         }}
       >
-        <option value="baked">shipped (random)</option>
+        <option value="kept">kept (random)</option>
         <option value="live">live roll</option>
         {listed.length > 0 && (
           <optgroup label={`kept rolls (${listed.length})`}>
@@ -239,6 +264,15 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
       >
         roll
       </button>
+      {typeof mode === "object" && (
+        <button
+          className="rounded bg-red-500/30 px-2 py-0.5 hover:bg-red-500/50 disabled:opacity-40"
+          disabled={busy}
+          onClick={remove}
+        >
+          {armed ? "sure?" : "delete"}
+        </button>
+      )}
       {mode === "live" && (
         <label className="flex cursor-pointer items-center gap-1">
           <input

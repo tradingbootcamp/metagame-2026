@@ -6,18 +6,20 @@ import {
   type IntroDriver,
   type RollInTake,
 } from "./introDriver";
-import { TAKES } from "./rollInTakes";
+import { drawRetcon } from "./cubeRetcon";
+import { TAKES } from "./takes";
 
-// Production roll-in: play back one of the pre-recorded physics takes. The dice
+// Production roll-in: play back one of the kept physics takes. The dice
 // genuinely collided when the take was simulated (see physicsRollIn.ts), so
 // playback shows real jostling with none of rapier's ~2 MB wasm in the client —
-// the baked keyframes are a few KB — and no risk of a pathological live-sim
-// outcome, since only takes that settled cleanly get baked.
+// the keyframes are a few KB each — and no risk of a pathological live-sim
+// outcome, since every shipped take is one a human watched and kept.
 //
-// Apparent per-load randomness comes from picking a random take, a slight
-// global playback-rate jitter, and fresh per-die align-stagger draws; the beat +
-// align tail is generated live from the take's final keyframe, ending exactly
-// at (slotX, 0, 0, restQuat) for the phase-machine handoff.
+// Apparent per-load randomness comes from picking a random take, a fresh
+// orientation retcon (cubeRetcon.ts), a slight global playback-rate jitter, and
+// fresh per-die align-stagger draws; the beat + align tail is generated live
+// from the take's final keyframe, ending exactly at (slotX, 0, 0, restQuat) for
+// the phase-machine handoff.
 
 // Reusable sampling temps — poseOf runs per die per frame.
 const QA = new THREE.Quaternion();
@@ -35,11 +37,11 @@ export function createPlayback(
   // kept. Played pinned (no jitter), so re-watching is exact.
   override?: RollInTake,
 ): IntroDriver | null {
-  if (!override && TAKES.length === 0) return null; // no baked takes — caller falls back to the live sim
+  if (!override && TAKES.length === 0) return null; // nothing kept — caller falls back to the live sim
 
-  // ?sim=N (1-based) pins take N and zeroes the per-load jitter (rate 1, no
-  // align stagger) so a given URL replays the identical roll every load —
-  // review tool for grading baked candidates. Anything invalid or out of range
+  // ?sim=N (1-based) pins take N and zeroes the per-load jitter (rate 1, fixed
+  // retcon, no align stagger) so a given URL replays the identical roll every
+  // load — review tool for grading kept rolls. Anything invalid or out of range
   // falls through to the normal random pick.
   const simRaw =
     typeof window !== "undefined"
@@ -49,13 +51,16 @@ export function createPlayback(
   const pinned =
     !!override || (Number.isInteger(sim) && sim >= 1 && sim <= TAKES.length);
 
-  // -1 for a panel replay, which plays a take that isn't in the baked set.
+  // -1 for a panel replay, which plays a take that isn't in the kept set.
   const takeIndex = override
     ? -1
     : pinned
       ? sim - 1
       : Math.floor(Math.random() * TAKES.length);
   const take = override ?? TAKES[takeIndex];
+  // Which printed face ends up where — free variety, since the takes ship as
+  // raw sim output now (see cubeRetcon.ts).
+  const retcon = drawRetcon(take, pinned);
   // Subtle per-load tempo variation (identity when pinned).
   const rate = pinned ? 1 : 0.94 + Math.random() * 0.12;
   const flightEnd = (take.n - 1) / take.hz / rate; // wall-clock end of the take
@@ -78,8 +83,8 @@ export function createPlayback(
   const endPos = take.dice.map((d) =>
     new THREE.Vector3().fromArray(d.p, (take.n - 1) * 3),
   );
-  const endQuat = take.dice.map((d) =>
-    new THREE.Quaternion().fromArray(d.q, (take.n - 1) * 4),
+  const endQuat = take.dice.map((d, i) =>
+    new THREE.Quaternion().fromArray(d.q, (take.n - 1) * 4).multiply(retcon[i]),
   );
 
   let clock = 0;
@@ -104,7 +109,8 @@ export function createPlayback(
         outPos.fromArray(d.p, i0 * 3).lerp(PA.fromArray(d.p, i1 * 3), u);
         outQuat
           .copy(QA.fromArray(d.q, i0 * 4))
-          .slerp(QB.fromArray(d.q, i1 * 4), u);
+          .slerp(QB.fromArray(d.q, i1 * 4), u)
+          .multiply(retcon[i]);
         return false;
       }
       return sampleAlign(

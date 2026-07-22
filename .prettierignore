@@ -3,5 +3,5 @@ out/
 node_modules/
 pnpm-lock.yaml
 next-env.d.ts
-# generated (scripts/record-rollin.mjs) — flat keyframe arrays, not for humans
-src/components/dice3d/rollInTakes.ts
+# kept rolls, written by /api/dev/keep-take — flat keyframe arrays, not for humans
+src/components/dice3d/takes/*.json

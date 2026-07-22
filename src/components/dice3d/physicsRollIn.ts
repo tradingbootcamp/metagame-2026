@@ -19,11 +19,11 @@ import {
 // captured, the world is torn down, and the shared beat + align tail carries
 // each die to exactly (slotX, 0, 0, restQuat).
 //
-// In production this driver isn't used directly — it's the rig that records the
-// baked takes rollInPlayback.ts ships (load any page with ?record=1, or run
-// scripts/record-rollin.mjs). Rapier's ~2 MB wasm accordingly never loads on a
-// normal visit: the import lives inside #load(), code-split behind constructing
-// this class, which only happens under ?record (or if no takes are baked).
+// In production this driver isn't used directly — it's the rig that throws the
+// rolls kept in the dev panel, which are what rollInPlayback.ts ships (load any
+// page with ?record=1). Rapier's ~2 MB wasm accordingly never loads on a normal
+// visit: the import lives inside #load(), code-split behind constructing this
+// class, which only happens under ?record (or if nothing has been kept).
 
 // --- physics tuning -----------------------------------------------------------
 // Real 9.81 reads floaty at die-sized scale; 14 matches the old kinematic arc's
@@ -160,8 +160,8 @@ const RECORD_EVERY = 4; // sample recorded takes every 4th step = 30 Hz
 
 // True x-reach of the beveled die at pose q: support along x of the Minkowski
 // sum of the 0.44-half-width cube and the r=0.06 bevel sphere — 0.5 face-on up
-// to ~0.822 corner-on. (The recorder's on-screen keep criterion uses the same
-// formula; see scripts/record-rollin.mjs.)
+// to ~0.822 corner-on. (The panel's on-screen keep criterion uses the same
+// formula; see DiceDevPanel.tsx.)
 const REACH_V = new THREE.Vector3();
 const REACH_Q = new THREE.Quaternion();
 const REACH_AXES = [

@@ -2,10 +2,10 @@ import * as THREE from "three";
 
 // Shared contract for the roll-in intro's pose source. Two drivers implement it:
 //
-//   - rollInPlayback.ts — the production path. Plays back a pre-recorded physics
-//     take (baked keyframes, a few KB) picked at random per load.
-//   - physicsRollIn.ts — a live Rapier rigid-body sim. It's the recording rig
-//     that produced those takes (?record=1) and the fallback if none are baked.
+//   - rollInPlayback.ts — the production path. Plays back one of the kept
+//     physics takes (a few KB of keyframes each) picked at random per load.
+//   - physicsRollIn.ts — a live Rapier rigid-body sim. It's the rig that threw
+//     those takes (?record=1) and the fallback if nothing has been kept.
 //
 // Both end the same way: once the dice are at rest scattered near their slots,
 // a beat + align ease (sampleAlign below) carries each die to exactly
@@ -23,7 +23,7 @@ export type IntroDriver = {
 };
 
 // A recorded take: per-die keyframe streams sampled at `hz`, flat arrays to keep
-// the baked file compact ([x,y,z,...] and [x,y,z,w,...]). The last keyframe is
+// the stored JSON compact ([x,y,z,...] and [x,y,z,w,...]). The last keyframe is
 // the captured rest pose; the beat + align tail is generated at playback time
 // (with fresh per-load jitter), not recorded.
 export type RollInTake = {
@@ -46,7 +46,7 @@ export const START_Y = 2.4; // high-lob launch height (low profile overrides —
 // edge: a hard wall-impact can transiently penetrate ~0.05–0.1 before the
 // solver pushes back (worst observed reach past the face was +0.095), so the
 // margin is what actually keeps every excursion on-camera. The recorder's
-// keep criterion (record-rollin.mjs) separately requires the landed portion
+// keep criterion (DiceDevPanel.tsx) separately requires the landed portion
 // and rest tableau to stay inside ±3.1.
 export const BOUNDS = { left: -2.95, right: 2.95, halfDepth: 1.4 };
 
