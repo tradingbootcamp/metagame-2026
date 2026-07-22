@@ -287,9 +287,10 @@ export class IntroController implements IntroDriver {
       };
 
       this.#state = "sim";
-    } catch {
+    } catch (e) {
       // Rapier failed to load — degrade to snapping straight to the rest pose
       // (poseOf handles it) and let the phase cycle start.
+      console.warn("[roll-in] rapier failed to load; skipping intro sim", e);
       this.#state = "failed";
     }
   }

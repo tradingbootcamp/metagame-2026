@@ -62,6 +62,8 @@ declare global {
 }
 function publishTake(take: RollInTake, meta: TakeMeta) {
   window.__rollInTake = { take, meta };
+  // lets the dev curation panel react to the take landing (harness just polls)
+  window.dispatchEvent(new Event("roll-in-take"));
   console.info("[roll-in take]", JSON.stringify(meta));
 }
 
