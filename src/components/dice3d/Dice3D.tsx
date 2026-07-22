@@ -44,7 +44,7 @@ const STATIC_LETTERS: StaticLetters[] = [
 ];
 
 const SEQ: Phase[] = ["meta", "game", "year"];
-const PHASE_MS = 3200; // hold each phase ~3.2s — deliberate but not sluggish
+const PHASE_MS = 2700; // hold each phase ~3.2s — deliberate but not sluggish
 
 // flip to true to bring back the soft ground shadow under the dice (off for now)
 const SHOW_CONTACT_SHADOW: boolean = false;
@@ -276,7 +276,7 @@ export default function Dice3D() {
 
   return (
     <Canvas
-      shadows
+      shadows="percentage"
       dpr={[1, 2]}
       gl={{
         antialias: true,
