@@ -30,11 +30,25 @@ export function createPlayback(opts: {
 }): IntroDriver | null {
   if (TAKES.length === 0) return null; // no baked takes — caller falls back to the live sim
 
-  const takeIndex = Math.floor(Math.random() * TAKES.length);
+  // ?sim=N (1-based) pins take N and zeroes the per-load jitter (rate 1, no
+  // align stagger) so a given URL replays the identical roll every load —
+  // review tool for grading baked candidates. Anything invalid or out of range
+  // falls through to the normal random pick.
+  const simRaw =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("sim")
+      : null;
+  const sim = simRaw === null ? NaN : Number(simRaw);
+  const pinned = Number.isInteger(sim) && sim >= 1 && sim <= TAKES.length;
+
+  const takeIndex = pinned ? sim - 1 : Math.floor(Math.random() * TAKES.length);
   const take = TAKES[takeIndex];
-  const rate = 0.94 + Math.random() * 0.12; // subtle per-load tempo variation
+  // Subtle per-load tempo variation (identity when pinned).
+  const rate = pinned ? 1 : 0.94 + Math.random() * 0.12;
   const flightEnd = (take.n - 1) / take.hz / rate; // wall-clock end of the take
-  const alignDelay = opts.slots.map(() => Math.random() * ALIGN_JITTER);
+  const alignDelay = opts.slots.map(() =>
+    pinned ? 0 : Math.random() * ALIGN_JITTER,
+  );
 
   // Log what this load played (take + the per-load jitter draws) so a roll that
   // looks especially good or bad can be identified and pinned later.
