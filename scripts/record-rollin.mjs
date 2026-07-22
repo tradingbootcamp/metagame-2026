@@ -185,6 +185,7 @@ function usable(take, meta, screen) {
   const ordered = restX.every((x, i) => i === 0 || x - restX[i - 1] >= 1.0);
   return (
     ordered &&
+    !meta.crashed &&
     !meta.timedOut &&
     meta.nudges === 0 &&
     meta.duration <= 3.0 &&
@@ -251,7 +252,7 @@ async function worker() {
           `dur=${meta.duration.toFixed(2)}s err=[${meta.finalErr.map((e) => e.toFixed(2)).join(",")}] ` +
           `y=[${meta.finalY.map((y) => y.toFixed(2)).join(",")}] ` +
           `ext=[${screen.minLeft.toFixed(2)},${screen.maxRight.toFixed(2)}] ` +
-          `nudges=${meta.nudges}${meta.timedOut ? " TIMEOUT" : ""}` +
+          `nudges=${meta.nudges}${meta.timedOut ? " TIMEOUT" : ""}${meta.crashed ? " CRASH" : ""}` +
           (sevenZ
             ? ` sevenZ=[${sevenZ.map((v) => (v === null ? "-" : v.toFixed(2))).join(",")}]`
             : ""),

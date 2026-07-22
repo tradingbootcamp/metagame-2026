@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { Collider, RigidBody, World } from "@dimforge/rapier3d-compat";
+import type { RigidBody, World } from "@dimforge/rapier3d-compat";
 import {
   ALIGN_JITTER,
   BOUNDS,
@@ -79,6 +79,7 @@ const RECORD_EVERY = 4; // sample recorded takes every 4th step = 30 Hz
 export type TakeMeta = {
   duration: number; // s from sim start to capture
   timedOut: boolean;
+  crashed: boolean; // wasm panic mid-sim; poses are the last good pre-panic ones
   nudges: number;
   maxY: number; // highest center after first floor contact (bounce/stack height)
   maxAbsZ: number;
@@ -113,7 +114,16 @@ export class IntroController implements IntroDriver {
 
   #world: World | null = null;
   #bodies: (RigidBody | null)[] = [];
-  #leftWall: Collider | null = null;
+  // Deferred creation hooks, bound in #load where the RAPIER module and world
+  // are in scope. Dice bodies and the left wall are ADDED to the world at the
+  // moment they're needed rather than created disabled and toggled on:
+  // setEnabled() flips have a history of corrupting rapier.js's broad phase
+  // (intermittent wasm "unreachable" panics — dimforge/rapier.js#345, never
+  // fixed before the repo was archived), while mid-sim insertion is the
+  // ordinary, well-tested path.
+  #spawnDie: ((i: number) => RigidBody) | null = null;
+  #raiseLeftWall: (() => void) | null = null;
+  #leftWallRaised = false;
   #launched: boolean[] = [];
   #touched: boolean[] = [];
   #restT: number[] = [];
@@ -122,10 +132,16 @@ export class IntroController implements IntroDriver {
   #stepCount = 0;
   #nudges = 0;
   #postT = 0;
+  #crashed = false;
 
   // Captured rest poses the beat + align tail blends from.
   #capturedPos: THREE.Vector3[] = [];
   #capturedQuat: THREE.Quaternion[] = [];
+  // Last known-good poses, refreshed every step from plain JS numbers so a
+  // wasm panic (which poisons every rapier object) can still capture
+  // something sensible to align out from.
+  #lastPos: THREE.Vector3[] = [];
+  #lastQuat: THREE.Quaternion[] = [];
 
   // Recording buffers (flat, per die) + diagnostics.
   #recP: number[][] = [];
@@ -159,6 +175,8 @@ export class IntroController implements IntroDriver {
       this.#restT.push(0);
       this.#capturedPos.push(new THREE.Vector3());
       this.#capturedQuat.push(new THREE.Quaternion());
+      this.#lastPos.push(this.#startPos[i].clone());
+      this.#lastQuat.push(this.#startQuat[i].clone());
       this.#recP.push([]);
       this.#recQ.push([]);
     }
@@ -193,8 +211,9 @@ export class IntroController implements IntroDriver {
       // Invisible containment with x-wall inner faces just *inside* the
       // visible edge (±3.15 vs ~±3.2 — see BOUNDS) so an unlucky bounce can't
       // send a die out of view. The right and z walls are always up; the
-      // left wall starts disabled (the dice fly in across it) and is raised in
-      // #step once every die has passed it.
+      // left wall doesn't exist yet (the dice fly in across its line) and is
+      // added in #step once every die has passed it — added, not enable-
+      // toggled, per the setEnabled broad-phase bug noted on #spawnDie.
       const wall = (x: number, y: number, z: number, hx: number, hz: number) =>
         world.createCollider(
           RAPIER.ColliderDesc.cuboid(hx, 3, hz)
@@ -206,19 +225,15 @@ export class IntroController implements IntroDriver {
       wall(BOUNDS.right + 0.4, 2.5, 0, 0.25, BOUNDS.halfDepth + 3);
       wall(0, 2.5, BOUNDS.halfDepth + 0.25, 40, 0.25);
       wall(0, 2.5, -(BOUNDS.halfDepth + 0.25), 40, 0.25);
-      this.#leftWall = wall(
-        BOUNDS.left - 0.4,
-        2.5,
-        0,
-        0.25,
-        BOUNDS.halfDepth + 3,
-      );
-      this.#leftWall.setEnabled(false);
+      this.#raiseLeftWall = () => {
+        wall(BOUNDS.left - 0.4, 2.5, 0, 0.25, BOUNDS.halfDepth + 3);
+      };
 
-      // Dice: disabled until their staggered launch, then thrown ballistically
-      // at their slot. Rounded colliders match the visual bevel and tumble more
-      // naturally than sharp cuboids (no edge-catching).
-      for (let i = 0; i < this.#opts.slots.length; i++) {
+      // Dice: each body is created at its staggered launch moment (see
+      // #spawnDie note above), thrown ballistically at its slot. Rounded
+      // colliders match the visual bevel and tumble more naturally than
+      // sharp cuboids (no edge-catching).
+      this.#spawnDie = (i: number) => {
         const s = this.#startPos[i];
         const q = this.#startQuat[i];
         const body = world.createRigidBody(
@@ -227,8 +242,7 @@ export class IntroController implements IntroDriver {
             .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w })
             .setLinearDamping(LIN_DAMPING)
             .setAngularDamping(ANG_DAMPING)
-            .setCcdEnabled(true)
-            .setEnabled(false),
+            .setCcdEnabled(true),
         );
         world.createCollider(
           RAPIER.ColliderDesc.roundCuboid(0.44, 0.44, 0.44, 0.06)
@@ -236,8 +250,8 @@ export class IntroController implements IntroDriver {
             .setFriction(FRICTION),
           body,
         );
-        this.#bodies[i] = body;
-      }
+        return body;
+      };
 
       this.#state = "sim";
     } catch {
@@ -258,7 +272,14 @@ export class IntroController implements IntroDriver {
       this.#acc += Math.min(dt, 0.1);
       while (this.#acc >= STEP && this.#state === "sim") {
         this.#acc -= STEP;
-        this.#step();
+        try {
+          this.#step();
+        } catch (e) {
+          // A wasm panic poisons every rapier object irrecoverably (and
+          // upstream rapier.js is archived) — degrade to aligning out from
+          // the last good poses instead of freezing the dice mid-air.
+          this.#crash(e);
+        }
       }
       return;
     }
@@ -277,14 +298,12 @@ export class IntroController implements IntroDriver {
     this.#stepCount++;
 
     for (let i = 0; i < this.#bodies.length; i++) {
-      const body = this.#bodies[i]!;
-
-      // Staggered launch: enable the body and throw it at its slot — solve the
+      // Staggered launch: create the body and throw it at its slot — solve the
       // ballistic vy so it arrives at the target x/z at roughly bounce height.
       if (!this.#launched[i]) {
         if (this.#elapsed < this.#delay[i]) continue;
         this.#launched[i] = true;
-        body.setEnabled(true);
+        const body = (this.#bodies[i] = this.#spawnDie!(i));
         const s = this.#startPos[i];
         const T = this.#flightT[i];
         body.setLinvel(
@@ -301,8 +320,13 @@ export class IntroController implements IntroDriver {
         continue;
       }
 
+      const body = this.#bodies[i]!;
       const p = body.translation();
       const v = body.linvel();
+      // Refresh the crash-capture cache while we're already reading state.
+      const rq = body.rotation();
+      this.#lastPos[i].set(p.x, p.y, p.z);
+      this.#lastQuat[i].set(rq.x, rq.y, rq.z, rq.w);
       if (!this.#touched[i] && p.y < TOUCH_Y) {
         this.#touched[i] = true;
         body.setAngularDamping(ANG_DAMPING_FLOOR);
@@ -330,12 +354,12 @@ export class IntroController implements IntroDriver {
 
     // Raise the left wall once every die has flown past it, sealing the box.
     if (
-      this.#leftWall &&
-      !this.#leftWall.isEnabled() &&
+      !this.#leftWallRaised &&
       this.#launched.every(Boolean) &&
       this.#bodies.every((b) => b!.translation().x > BOUNDS.left + 0.7)
     ) {
-      this.#leftWall.setEnabled(true);
+      this.#raiseLeftWall?.();
+      this.#leftWallRaised = true;
     }
 
     world.step();
@@ -401,11 +425,32 @@ export class IntroController implements IntroDriver {
       this.#capturedPos[i].set(p.x, p.y, p.z);
       this.#capturedQuat[i].set(q.x, q.y, q.z, q.w);
     }
+    if (this.#opts.record) this.#recordFrame(); // exact rest pose as final keyframe
+    this.#finish();
+  }
+
+  // Wasm panic mid-sim: every rapier object is poisoned (any call throws), so
+  // capture from the JS-side pose cache and align out from there — the intro
+  // completes instead of freezing. Recording still publishes (flagged
+  // `crashed`) so the harness can reject the take immediately rather than
+  // waiting out a page timeout.
+  #crash(e: unknown) {
+    if (this.#state !== "sim") return;
+    console.error("[roll-in] physics sim crashed; aligning out early", e);
+    this.#crashed = true;
+    for (let i = 0; i < this.#bodies.length; i++) {
+      this.#capturedPos[i].copy(this.#lastPos[i]);
+      this.#capturedQuat[i].copy(this.#lastQuat[i]);
+    }
+    this.#finish();
+  }
+
+  #finish() {
     if (this.#opts.record) {
-      this.#recordFrame(); // exact rest pose as the final keyframe
       this.#opts.onTake?.(this.#buildTake(), {
         duration: this.#elapsed,
         timedOut: this.#timedOut,
+        crashed: this.#crashed,
         nudges: this.#nudges,
         maxY: this.#maxY,
         maxAbsZ: this.#maxAbsZ,
@@ -415,7 +460,11 @@ export class IntroController implements IntroDriver {
         finalY: this.#capturedPos.map((p) => p.y),
       });
     }
-    this.#world?.free();
+    try {
+      this.#world?.free();
+    } catch {
+      // Poisoned world; the page is being left to GC what it can.
+    }
     this.#world = null;
     this.#state = "post";
     this.#postT = 0;
@@ -470,12 +519,17 @@ export class IntroController implements IntroDriver {
       return false;
     }
     if (this.#state === "sim") {
-      const body = this.#bodies[i]!;
-      const p = body.translation();
-      const q = body.rotation();
-      outPos.set(p.x, p.y, p.z);
-      outQuat.set(q.x, q.y, q.z, q.w);
-      return false;
+      try {
+        const body = this.#bodies[i]!;
+        const p = body.translation();
+        const q = body.rotation();
+        outPos.set(p.x, p.y, p.z);
+        outQuat.set(q.x, q.y, q.z, q.w);
+        return false;
+      } catch (e) {
+        // Same wasm-panic degrade as tick(); fall through to the tail below.
+        this.#crash(e);
+      }
     }
     // post / done: the shared beat + align tail from the captured rest pose.
     return sampleAlign(
@@ -492,7 +546,11 @@ export class IntroController implements IntroDriver {
 
   dispose() {
     this.#disposed = true;
-    this.#world?.free();
+    try {
+      this.#world?.free();
+    } catch {
+      // Poisoned world (wasm panic); nothing left to free safely.
+    }
     this.#world = null;
   }
 }
