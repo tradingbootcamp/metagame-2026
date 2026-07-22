@@ -30,6 +30,10 @@ export type RollInTake = {
   hz: number;
   n: number; // keyframes per die
   dice: { p: number[]; q: number[] }[];
+  // Hand-picked scattered tableau: one cube symmetry per die as [x,y,z,w]
+  // (cubeRetcon.ts). Takes kept before the picker existed have none and draw a
+  // random symmetry per load instead.
+  retcon?: number[][];
 };
 
 // Canonical launch geometry, in the dice group's local units (the group's

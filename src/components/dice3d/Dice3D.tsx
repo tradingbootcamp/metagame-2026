@@ -8,18 +8,10 @@ import {
   PerspectiveCamera,
 } from "@react-three/drei";
 import * as THREE from "three";
-import Die, { QUAT, type DieData, type Phase, type StaticLetters } from "./Die";
+import Die, { DICE, QUAT, type Phase, type StaticLetters } from "./Die";
 import { INTRO_CAP_MS, type IntroDriver, type RollInTake } from "./introDriver";
 import { createPlayback } from "./rollInPlayback";
 import { IntroController, type TakeMeta } from "./physicsRollIn";
-
-// blue front spells META, orange right spells GAME, dark tops show 2026 in pips
-const DICE: DieData[] = [
-  { front: "M", right: "G", top: 2 },
-  { front: "E", right: "A_CANTED", top: 0 },
-  { front: "T", right: "M", top: 2 },
-  { front: "A_CANTED", right: "E", top: 6 },
-];
 
 // STATIC-mode letters: the two edge-on faces of each die read left→right as
 // ME · TA · GA · ME, so the whole row spells METAGAME (META blue, GAME orange)

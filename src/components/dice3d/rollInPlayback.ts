@@ -7,6 +7,7 @@ import {
   type RollInTake,
 } from "./introDriver";
 import { drawRetcon } from "./cubeRetcon";
+import { tableauPreview } from "./tableauPreview";
 import { TAKES } from "./takes";
 
 // Production roll-in: play back one of the kept physics takes. The dice
@@ -16,7 +17,8 @@ import { TAKES } from "./takes";
 // outcome, since every shipped take is one a human watched and kept.
 //
 // Apparent per-load randomness comes from picking a random take, a fresh
-// orientation retcon (cubeRetcon.ts), a slight global playback-rate jitter, and
+// orientation retcon where the take hasn't pinned one (cubeRetcon.ts), a slight
+// global playback-rate jitter, and
 // fresh per-die align-stagger draws; the beat + align tail is generated live
 // from the take's final keyframe, ending exactly at (slotX, 0, 0, restQuat) for
 // the phase-machine handoff.
@@ -24,6 +26,7 @@ import { TAKES } from "./takes";
 // Reusable sampling temps — poseOf runs per die per frame.
 const QA = new THREE.Quaternion();
 const QB = new THREE.Quaternion();
+const QR = new THREE.Quaternion();
 const PA = new THREE.Vector3();
 
 export function createPlayback(
@@ -58,9 +61,11 @@ export function createPlayback(
       ? sim - 1
       : Math.floor(Math.random() * TAKES.length);
   const take = override ?? TAKES[takeIndex];
-  // Which printed face ends up where — free variety, since the takes ship as
-  // raw sim output now (see cubeRetcon.ts).
-  const retcon = drawRetcon(take, pinned);
+  // Which printed face ends up where: the take's hand-picked tableau if it has
+  // one, otherwise a free random draw (see cubeRetcon.ts).
+  const retcon = take.retcon
+    ? take.retcon.map((s) => new THREE.Quaternion().fromArray(s))
+    : drawRetcon(take, pinned);
   // Subtle per-load tempo variation (identity when pinned).
   const rate = pinned ? 1 : 0.94 + Math.random() * 0.12;
   const flightEnd = (take.n - 1) / take.hz / rate; // wall-clock end of the take
@@ -83,8 +88,8 @@ export function createPlayback(
   const endPos = take.dice.map((d) =>
     new THREE.Vector3().fromArray(d.p, (take.n - 1) * 3),
   );
-  const endQuat = take.dice.map((d, i) =>
-    new THREE.Quaternion().fromArray(d.q, (take.n - 1) * 4).multiply(retcon[i]),
+  const endQuat = take.dice.map((d) =>
+    new THREE.Quaternion().fromArray(d.q, (take.n - 1) * 4),
   );
 
   let clock = 0;
@@ -93,12 +98,17 @@ export function createPlayback(
   return {
     tick(dt) {
       clock += Math.min(dt, 0.1);
-      if (!doneFired && clock >= flightEnd + TAIL_S + 0.05) {
+      if (
+        !doneFired &&
+        !tableauPreview().hold &&
+        clock >= flightEnd + TAIL_S + 0.05
+      ) {
         doneFired = true;
         opts.onDone?.();
       }
     },
     poseOf(i, outPos, outQuat) {
+      const s = tableauPreview().retcon?.[i] ?? retcon[i];
       if (clock < flightEnd) {
         // Lerp/slerp between the two neighboring keyframes.
         const f = Math.min(clock * rate * take.hz, take.n - 1);
@@ -110,14 +120,20 @@ export function createPlayback(
         outQuat
           .copy(QA.fromArray(d.q, i0 * 4))
           .slerp(QB.fromArray(d.q, i1 * 4), u)
-          .multiply(retcon[i]);
+          .multiply(s);
+        return false;
+      }
+      const rest = QR.copy(endQuat[i]).multiply(s);
+      if (tableauPreview().hold) {
+        outPos.copy(endPos[i]);
+        outQuat.copy(rest);
         return false;
       }
       return sampleAlign(
         clock - flightEnd,
         alignDelay[i],
         endPos[i],
-        endQuat[i],
+        rest,
         opts.slots[i],
         opts.restQuat,
         outPos,

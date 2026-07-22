@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { DICE } from "./Die";
 import type { RollInTake } from "./introDriver";
 
 // Orientation retcon, applied at playback (it used to happen at bake time, when
@@ -8,9 +9,10 @@ import type { RollInTake } from "./introDriver";
 // the blue letter, ±X the orange, ±Y the pips. The body is a symmetric cube, so
 // right-multiplying any cube rotation-group element s into every keyframe
 // (q' = q·s) leaves the visible motion identical and only relabels which
-// printed face is where. Each die draws s uniformly at random per load, so the
-// scattered rest tableau keeps full orientation variety across visits — the
-// same roll never reads as the same roll twice.
+// printed face is where. A take can pin its four symmetries (RollInTake.retcon,
+// hand-picked in the dev panel); one that doesn't draws each die's s uniformly
+// at random per load, so the scattered rest tableau keeps full orientation
+// variety across visits — the same roll never reads as the same roll twice.
 //
 // One hard rule: the 7-pip face (only die index 1 carries one, on local −Y —
 // Dice3D's tops are [2,0,2,6], bottoms 7−top) must never end pointing at the
@@ -81,4 +83,121 @@ export function drawRetcon(
       : CUBE_GROUP;
     return pool[pinned ? 0 : Math.floor(Math.random() * pool.length)];
   });
+}
+
+// Local face axes, and the direction the printed glyph's top points on each, in
+// Die.tsx FACES order (its panel rotations applied to the panel's +Y).
+const FACE_AXIS = [
+  new THREE.Vector3(0, 0, 1),
+  new THREE.Vector3(0, 0, -1),
+  new THREE.Vector3(1, 0, 0),
+  new THREE.Vector3(-1, 0, 0),
+  new THREE.Vector3(0, 1, 0),
+  new THREE.Vector3(0, -1, 0),
+];
+const FACE_UP = [
+  new THREE.Vector3(0, 1, 0),
+  new THREE.Vector3(0, 1, 0),
+  new THREE.Vector3(0, 1, 0),
+  new THREE.Vector3(0, 1, 0),
+  new THREE.Vector3(0, 0, -1),
+  new THREE.Vector3(0, 0, 1),
+];
+
+// Which way the camera-ward glyph's top points, by spin index.
+export const SPIN_LABELS = ["↑", "→", "↓", "←"];
+
+// What die `i` prints on each face, in FACE_AXIS order. Front/back and
+// right/left carry identical art, so the trailing letter is all that separates
+// their labels.
+function faceLabels(i: number): string[] {
+  const d = DICE[i];
+  const glyph = (s: string) => s.replace("_CANTED", "");
+  return [
+    `blue ${glyph(d.front)} f`,
+    `blue ${glyph(d.front)} b`,
+    `orange ${glyph(d.right)} r`,
+    `orange ${glyph(d.right)} l`,
+    `pips ${d.top}`,
+    `pips ${7 - d.top}`,
+  ];
+}
+
+export type RetconFaceGroup = {
+  label: string;
+  spins: THREE.Quaternion[]; // 4, most upright first, then clockwise
+};
+
+// The four spins in a group sit exactly 90° apart, so offsetting by 45° before
+// wrapping puts the most upright one first with no tie.
+const spinOrder = (roll: number) =>
+  (((roll + Math.PI / 4) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+
+/**
+ * Die `i`'s 24 symmetries in this take, as the human factorization: 6
+ * camera-ward faces × 4 quarter-turn spins. Which printed face a symmetry
+ * brings camera-ward depends on the die's rest pose in the take (it settles
+ * tilted, not axis-aligned), so this can't be precomputed. All 24 are offered —
+ * the 7-pip rule only guards the random draw, not a deliberate pick.
+ */
+export function retconOptions(take: RollInTake, i: number): RetconFaceGroup[] {
+  const qFinal = new THREE.Quaternion().fromArray(
+    take.dice[i].q,
+    (take.n - 1) * 4,
+  );
+  // A symmetry only chooses which printed face points along the die's
+  // camera-ward direction; the direction itself is fixed by the rest pose.
+  const camWorld = FACE_AXIS.map((a) =>
+    a.clone().applyQuaternion(qFinal),
+  ).reduce((best, v) => (v.z > best.z ? v : best));
+  const ref =
+    Math.abs(camWorld.y) > 0.9
+      ? new THREE.Vector3(1, 0, 0)
+      : new THREE.Vector3(0, 1, 0);
+  const screenUp = ref.projectOnPlane(camWorld).normalize();
+  const screenRight = screenUp.clone().cross(camWorld);
+
+  const labels = faceLabels(i);
+  const groups: { s: THREE.Quaternion; roll: number }[][] = FACE_AXIS.map(
+    () => [],
+  );
+  const rest = new THREE.Quaternion();
+  for (const s of CUBE_GROUP) {
+    rest.copy(qFinal).multiply(s);
+    let face = 0;
+    let bestZ = -Infinity;
+    for (let k = 0; k < FACE_AXIS.length; k++) {
+      const z = FACE_AXIS[k].clone().applyQuaternion(rest).z;
+      if (z > bestZ) {
+        bestZ = z;
+        face = k;
+      }
+    }
+    const up = FACE_UP[face].clone().applyQuaternion(rest);
+    groups[face].push({
+      s,
+      roll: Math.atan2(up.dot(screenRight), up.dot(screenUp)),
+    });
+  }
+  return groups.map((g, f) => ({
+    label: labels[f],
+    spins: g
+      .sort((a, b) => spinOrder(a.roll) - spinOrder(b.roll))
+      .map((o) => o.s),
+  }));
+}
+
+/** Where a saved symmetry sits in the face × spin grid. */
+export function matchRetcon(
+  groups: RetconFaceGroup[],
+  q: THREE.Quaternion,
+): { face: number; spin: number } {
+  for (let face = 0; face < groups.length; face++) {
+    // q and −q are the same rotation.
+    const spin = groups[face].spins.findIndex(
+      (s) => Math.abs(s.dot(q)) > 0.999,
+    );
+    if (spin >= 0) return { face, spin };
+  }
+  return { face: 0, spin: 0 };
 }

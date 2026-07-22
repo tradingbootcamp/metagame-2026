@@ -3,9 +3,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 // Dev-only store behind the dice curation panel. POST saves a live roll as raw
-// JSON under src/components/dice3d/takes/, DELETE drops one, GET lists what's
-// saved (metadata only, so the dropdown stays cheap) or returns one take in full
-// for replay. Every write regenerates the sibling index.ts, which is what the
+// JSON under src/components/dice3d/takes/, PATCH pins a saved roll's scattered
+// tableau, DELETE drops one, GET lists what's saved (metadata only, so the
+// dropdown stays cheap) or returns one take in full for replay. Every write regenerates the sibling index.ts, which is what the
 // playback driver imports — so keeping a roll ships it and deleting one unships
 // it, with no bake step in between. Commit the JSON + index.ts together.
 
@@ -55,6 +55,38 @@ export async function POST(req: Request) {
   const name = `take-${Date.now()}.json`;
   await fs.writeFile(path.join(DIR, name), JSON.stringify(body));
   return NextResponse.json({ saved: name, count: await writeIndex() });
+}
+
+// Write the hand-picked scattered tableau onto a kept take. index.ts is
+// untouched — the imports don't change, only the take's contents.
+export async function PATCH(req: Request) {
+  const blocked = devOnly();
+  if (blocked) return blocked;
+
+  const { file, retcon } = (await req.json()) as {
+    file?: string;
+    retcon?: number[][];
+  };
+  if (!file || !isTakeFile(file)) {
+    return NextResponse.json({ error: "bad file" }, { status: 400 });
+  }
+  if (
+    !Array.isArray(retcon) ||
+    retcon.length !== 4 ||
+    retcon.some((q) => !Array.isArray(q) || q.length !== 4)
+  ) {
+    return NextResponse.json({ error: "malformed retcon" }, { status: 400 });
+  }
+  const target = path.join(DIR, file);
+  let saved: { take: { retcon?: number[][] } };
+  try {
+    saved = JSON.parse(await fs.readFile(target, "utf8"));
+  } catch {
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+  saved.take.retcon = retcon;
+  await fs.writeFile(target, JSON.stringify(saved));
+  return NextResponse.json({ patched: file });
 }
 
 export async function DELETE(req: Request) {
