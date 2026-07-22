@@ -49,12 +49,13 @@ export function createPlayback(
   const pinned =
     !!override || (Number.isInteger(sim) && sim >= 1 && sim <= TAKES.length);
 
-  const takeIndex = pinned && !override ? sim - 1 : -1;
-  const take =
-    override ??
-    TAKES[
-      takeIndex >= 0 ? takeIndex : Math.floor(Math.random() * TAKES.length)
-    ];
+  // -1 for a panel replay, which plays a take that isn't in the baked set.
+  const takeIndex = override
+    ? -1
+    : pinned
+      ? sim - 1
+      : Math.floor(Math.random() * TAKES.length);
+  const take = override ?? TAKES[takeIndex];
   // Subtle per-load tempo variation (identity when pinned).
   const rate = pinned ? 1 : 0.94 + Math.random() * 0.12;
   const flightEnd = (take.n - 1) / take.hz / rate; // wall-clock end of the take
