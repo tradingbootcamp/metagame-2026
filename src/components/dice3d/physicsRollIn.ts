@@ -465,7 +465,9 @@ export class IntroController implements IntroDriver {
   // waiting out a page timeout.
   #crash(e: unknown) {
     if (this.#state !== "sim") return;
-    console.error("[roll-in] physics sim crashed; aligning out early", e);
+    // warn, not error: Next's dev overlay pops for console.error with an Error
+    // attached, turning this handled degrade into a scary red screen.
+    console.warn("[roll-in] physics sim crashed; aligning out early", e);
     this.#crashed = true;
     for (let i = 0; i < this.#bodies.length; i++) {
       this.#capturedPos[i].copy(this.#lastPos[i]);
