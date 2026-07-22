@@ -4,6 +4,7 @@ import {
   TAIL_S,
   sampleAlign,
   type IntroDriver,
+  type RollInTake,
 } from "./introDriver";
 import { TAKES } from "./rollInTakes";
 
@@ -23,12 +24,18 @@ const QA = new THREE.Quaternion();
 const QB = new THREE.Quaternion();
 const PA = new THREE.Vector3();
 
-export function createPlayback(opts: {
-  slots: number[];
-  restQuat: THREE.Quaternion;
-  onDone?: () => void;
-}): IntroDriver | null {
-  if (TAKES.length === 0) return null; // no baked takes — caller falls back to the live sim
+export function createPlayback(
+  opts: {
+    slots: number[];
+    restQuat: THREE.Quaternion;
+    onDone?: () => void;
+  },
+  // A take to play instead of one from the baked set — the dev panel passes
+  // the roll the live sim just produced so it can be re-watched before being
+  // kept. Played pinned (no jitter), so re-watching is exact.
+  override?: RollInTake,
+): IntroDriver | null {
+  if (!override && TAKES.length === 0) return null; // no baked takes — caller falls back to the live sim
 
   // ?sim=N (1-based) pins take N and zeroes the per-load jitter (rate 1, no
   // align stagger) so a given URL replays the identical roll every load —
@@ -39,10 +46,15 @@ export function createPlayback(opts: {
       ? new URLSearchParams(window.location.search).get("sim")
       : null;
   const sim = simRaw === null ? NaN : Number(simRaw);
-  const pinned = Number.isInteger(sim) && sim >= 1 && sim <= TAKES.length;
+  const pinned =
+    !!override || (Number.isInteger(sim) && sim >= 1 && sim <= TAKES.length);
 
-  const takeIndex = pinned ? sim - 1 : Math.floor(Math.random() * TAKES.length);
-  const take = TAKES[takeIndex];
+  const takeIndex = pinned && !override ? sim - 1 : -1;
+  const take =
+    override ??
+    TAKES[
+      takeIndex >= 0 ? takeIndex : Math.floor(Math.random() * TAKES.length)
+    ];
   // Subtle per-load tempo variation (identity when pinned).
   const rate = pinned ? 1 : 0.94 + Math.random() * 0.12;
   const flightEnd = (take.n - 1) / take.hz / rate; // wall-clock end of the take
@@ -55,7 +67,7 @@ export function createPlayback(opts: {
   console.log(
     "[dice roll-in]",
     JSON.stringify({
-      takeIndex,
+      takeIndex: override ? "replay" : takeIndex,
       rate: Math.round(rate * 1e3) / 1e3,
       alignDelay: alignDelay.map((d) => Math.round(d * 1e3) / 1e3),
     }),

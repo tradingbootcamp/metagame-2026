@@ -115,6 +115,19 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
     onRemount();
   };
 
+  // Re-watch the current roll. In live mode that means replaying the take the
+  // sim just produced (queued for the next mount) rather than throwing a new
+  // one — a fresh live roll would be different randomness, which is what made
+  // "replay" look non-deterministic. Badges/keep state survive.
+  const replay = () => {
+    if (mode === "live") {
+      if (!roll) return;
+      window.__replayTake = roll.take;
+    }
+    writeModeToUrl(mode, low);
+    onRemount();
+  };
+
   const keep = async () => {
     if (!roll || busy) return;
     setBusy(true);
@@ -154,8 +167,9 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
         ))}
       </select>
       <button
-        className="rounded bg-white/15 px-2 py-0.5 hover:bg-white/25"
-        onClick={() => switchTo(mode === "live" ? "live" : mode)}
+        className="rounded bg-white/15 px-2 py-0.5 hover:bg-white/25 disabled:opacity-40"
+        disabled={mode === "live" && !roll}
+        onClick={replay}
       >
         replay
       </button>

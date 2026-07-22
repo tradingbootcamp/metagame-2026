@@ -58,6 +58,9 @@ const ROW_WIDTH = (DICE.length - 1) * GAP + 1.6;
 declare global {
   interface Window {
     __rollInTake?: { take: RollInTake; meta: TakeMeta };
+    // Set by the dev panel to replay a specific take on the next mount (the
+    // roll the live sim just produced), then consumed here and cleared.
+    __replayTake?: RollInTake;
   }
 }
 function publishTake(take: RollInTake, meta: TakeMeta) {
@@ -102,6 +105,14 @@ function Scene({
   const [introDriver] = useState<IntroDriver | null>(() => {
     if (!intro) return null;
     const opts = { slots: positions, restQuat: QUAT.meta, onDone: onIntroDone };
+    // A queued dev-panel replay wins over both playback and the live sim.
+    const replay =
+      typeof window !== "undefined" ? window.__replayTake : undefined;
+    if (replay) {
+      delete window.__replayTake;
+      const driver = createPlayback(opts, replay);
+      if (driver) return driver;
+    }
     if (!record) {
       const playback = createPlayback(opts);
       if (playback) return playback;
