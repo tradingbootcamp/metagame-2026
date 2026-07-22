@@ -72,6 +72,20 @@ type LaunchProfile = {
   // first hits the floor, so it's large: the skip and roll cover the rest.
   undershoot: number;
   undershootJitter: number;
+  // Furthest left a die may touch down (low only). The leftmost slot sits only
+  // ~2.5 units from the launch point, so an unclamped undershoot puts die 0's
+  // touchdown behind the visible edge and asks it to cover ~1.7 units of floor
+  // to reach its slot — which it can't: once the skip's momentum is spent,
+  // static friction (μ·m·g ≈ 11) beats the steering force (clamped at 8) and
+  // the die sticks wherever it stopped, resting half out of frame. Stiffening
+  // the spring past friction would just make every die visibly glide, so cap
+  // the ask instead: near dice get a shorter roll, which is honest — they have
+  // less visible floor to roll across.
+  minTouchX?: number;
+  // Seconds of sim before capturing wherever things are. The thrown roll
+  // spends real time travelling on the floor, so it needs a longer leash than
+  // the lob or a quarter of the runs get cut off mid-roll.
+  simTimeout?: number;
   spin: number; // rad/s launch tumble; draws + [0, spinJitter]
   spinJitter: number;
 };
@@ -102,6 +116,8 @@ const PROFILES: Record<LaunchProfileName, LaunchProfile> = {
     throwVx: 9,
     undershoot: 1.3,
     undershootJitter: 1.0,
+    minTouchX: -2.3,
+    simTimeout: 4.3,
     spin: 7,
     spinJitter: 6,
   },
@@ -136,7 +152,7 @@ const TOUCH_Y = 0.55; // "has reached the floor" once the center first dips belo
 const REST_LIN = 0.18;
 const REST_ANG = 0.7;
 const REST_HOLD = 0.25;
-const SIM_TIMEOUT = 3.4; // hard cap; capture wherever things are and align out
+const SIM_TIMEOUT = 3.4; // hard cap (lob); low overrides via profile.simTimeout
 const STACK_Y = 0.8; // resting this high = parked on another die → nudge it off
 const MAX_NUDGES = 3;
 
@@ -267,11 +283,21 @@ export class IntroController implements IntroDriver {
       );
       this.#startQuat.push(new THREE.Quaternion().random());
       this.#delay.push((n - 1 - i) * LAUNCH_STAGGER + Math.random() * 0.06);
+      // Floor on where this die may touch down. Die 0 gets the absolute bound
+      // (it has no left neighbour, only the frame edge); every other die may
+      // not land left of its left neighbour's slot, which keeps the four
+      // landing zones ordered and stops two dice from being clamped onto the
+      // same patch of floor — that pileup is what stalls the settle.
+      const touchFloor =
+        i === 0 ? (prof.minTouchX ?? -Infinity) : opts.slots[i - 1] + 0.2;
       this.#targetX.push(
-        opts.slots[i] -
-          prof.undershoot -
-          Math.random() * prof.undershootJitter +
-          (Math.random() - 0.5) * 0.5,
+        Math.max(
+          opts.slots[i] -
+            prof.undershoot -
+            Math.random() * prof.undershootJitter +
+            (Math.random() - 0.5) * 0.5,
+          touchFloor,
+        ),
       );
       this.#targetZ.push((Math.random() - 0.5) * 0.5);
       this.#flightT.push(
@@ -509,7 +535,7 @@ export class IntroController implements IntroDriver {
       if (this.#restT[i] < REST_HOLD) allResting = false;
     }
 
-    if (this.#elapsed >= SIM_TIMEOUT) {
+    if (this.#elapsed >= (this.#profile.simTimeout ?? SIM_TIMEOUT)) {
       this.#timedOut = true;
       this.#capture();
       return;
