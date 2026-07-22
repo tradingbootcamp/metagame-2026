@@ -106,10 +106,13 @@ function Scene({
     if (!intro) return null;
     const opts = { slots: positions, restQuat: QUAT.meta, onDone: onIntroDone };
     // A queued dev-panel replay wins over both playback and the live sim.
+    // Deliberately NOT consumed here: StrictMode runs this initializer twice,
+    // so clearing it on read would leave the surviving mount playing a random
+    // take instead of the one just selected. The panel clears it when the mode
+    // changes, and a real page load starts with a fresh window anyway.
     const replay =
       typeof window !== "undefined" ? window.__replayTake : undefined;
     if (replay) {
-      delete window.__replayTake;
       const driver = createPlayback(opts, replay);
       if (driver) return driver;
     }

@@ -1,30 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { TAKES } from "./rollInTakes";
+import { useCallback, useEffect, useState } from "react";
 import type { RollInTake } from "./introDriver";
 import type { TakeMeta } from "./physicsRollIn";
 
-// Dev-only curation panel (Dice.tsx mounts it only in development): pick any
-// baked take from a dropdown, throw fresh live rolls without a page reload,
-// and keep a good roll — it's POSTed to /api/dev/keep-take and folded into the
-// baked set later. Mode changes rewrite the URL params the intro drivers
-// already read (?sim / ?record / ?launch) and remount Dice3D via onRemount, so
-// the intro paths themselves stay untouched.
+// Dev-only curation panel (Dice.tsx mounts it only in development): throw fresh
+// live rolls, re-watch the one just thrown, keep the good ones, and replay any
+// roll kept earlier. The dropdown lists the kept rolls in
+// scripts/curated-takes/ (served by /api/dev/keep-take) rather than the baked
+// set, so what you review is the source material the shipped takes come from.
+//
+// Playing an arbitrary take works through window.__replayTake: the panel queues
+// a take there and remounts Dice3D, which consumes it. Live mode is a URL param
+// the intro already reads (?record / ?launch), so mode changes rewrite those and
+// remount too — the intro paths themselves stay untouched.
 
-type Mode = "random" | "live" | number;
-
-function currentMode(): Mode {
-  const p = new URLSearchParams(window.location.search);
-  const sim = Number(p.get("sim"));
-  if (Number.isInteger(sim) && sim >= 1 && sim <= TAKES.length) return sim;
-  if (p.has("record")) return "live";
-  return "random";
-}
-
-function currentLow(): boolean {
-  return new URLSearchParams(window.location.search).get("launch") === "low";
-}
+type Mode = "live" | "baked" | { file: string };
+type Listed = {
+  name: string;
+  meta: TakeMeta;
+  restX: number[];
+  n: number;
+  hz: number;
+};
 
 function writeModeToUrl(mode: Mode, low: boolean) {
   const p = new URLSearchParams(window.location.search);
@@ -35,40 +33,56 @@ function writeModeToUrl(mode: Mode, low: boolean) {
     p.set("record", "1");
     if (low) p.set("launch", "low");
   }
-  if (typeof mode === "number") p.set("sim", String(mode));
   const q = p.toString();
   history.replaceState(null, "", q ? `?${q}` : window.location.pathname);
 }
 
-// The recorder's keep-criteria, replicated as review-time hints so a
-// pretty roll is visibly also a *legal* roll before it's kept.
+// Review-time mirror of the recorder's keep criteria (scripts/record-rollin.mjs)
+// so a roll that looks good can be checked for being legal before it's kept.
+const EDGE = 3.18; // visible canvas edge in local units, minus a hair
 const GAP_MIN = 1.0; // adjacent rest centers — protects the align slide
 const NEAR_MAX = 0.9; // |restX - slotX|
-const EDGE = 3.2; // visible canvas edge in local units
-const SETTLE_MAX = 3.0; // s of sim before the capture
 
 type Badge = { label: string; ok: boolean };
 
-function judge(take: RollInTake, meta: TakeMeta): Badge[] {
-  const lastI = take.n - 1;
-  const finalsX = take.dice.map((d) => d.p[lastI * 3]);
-  // Worst rotated visual reach in x across every keyframe: half-extent 0.44
-  // spread over the rotation's x-row L1 norm, plus the 0.06 bevel.
-  let maxReach = 0;
-  for (const d of take.dice) {
+// True x-reach of the beveled die at a pose: 0.44·Σ|basis.x| + 0.06, exact from
+// 0.5 face-on to ~0.822 corner-on.
+function halfExtentX(q: number[], o: number): number {
+  const x = q[o];
+  const y = q[o + 1];
+  const z = q[o + 2];
+  const w = q[o + 3];
+  return (
+    0.44 *
+      (Math.abs(1 - 2 * (y * y + z * z)) +
+        Math.abs(2 * (x * y - w * z)) +
+        Math.abs(2 * (x * z + w * y))) +
+    0.06
+  );
+}
+
+// Every die must be fully on camera from the moment it matters: clear of the
+// right edge once it has reached the floor, and clear of the left edge once it
+// has fully entered — the off-screen-left entry is by design, so measuring
+// every frame (as this check used to) marks every roll as failing.
+function onScreen(take: RollInTake): boolean {
+  for (const die of take.dice) {
+    let touched = false;
+    let entered = false;
     for (let k = 0; k < take.n; k++) {
-      const x = d.p[k * 3];
-      const qx = d.q[k * 4];
-      const qy = d.q[k * 4 + 1];
-      const qz = d.q[k * 4 + 2];
-      const qw = d.q[k * 4 + 3];
-      const row =
-        Math.abs(1 - 2 * (qy * qy + qz * qz)) +
-        Math.abs(2 * (qx * qy - qw * qz)) +
-        Math.abs(2 * (qx * qz + qw * qy));
-      maxReach = Math.max(maxReach, Math.abs(x) + 0.44 * row + 0.06);
+      const x = die.p[k * 3];
+      const h = halfExtentX(die.q, k * 4);
+      if (die.p[k * 3 + 1] < 0.55) touched = true;
+      if (touched && x + h > EDGE) return false;
+      if (x - h >= -EDGE) entered = true;
+      else if (entered) return false;
     }
+    if (!touched || !entered) return false;
   }
+  return true;
+}
+
+function judge(meta: TakeMeta, restX: number[], take: RollInTake): Badge[] {
   return [
     {
       label: "sim clean",
@@ -77,16 +91,24 @@ function judge(take: RollInTake, meta: TakeMeta): Badge[] {
     { label: "near slots", ok: meta.finalErr.every((e) => e <= NEAR_MAX) },
     {
       label: "in order",
-      ok: finalsX.every((x, i) => i === 0 || x - finalsX[i - 1] >= GAP_MIN),
+      ok: restX.every((x, i) => i === 0 || x - restX[i - 1] >= GAP_MIN),
     },
-    { label: "on screen", ok: maxReach <= EDGE },
-    { label: "settled", ok: meta.duration <= SETTLE_MAX },
+    { label: "on screen", ok: onScreen(take) },
   ];
 }
 
+const shortName = (f: string) => f.replace(/^take-|\.json$/g, "").slice(-6);
+
 export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
-  const [mode, setMode] = useState<Mode>(currentMode);
-  const [low, setLow] = useState<boolean>(currentLow);
+  const [mode, setMode] = useState<Mode>(() =>
+    new URLSearchParams(window.location.search).has("record")
+      ? "live"
+      : "baked",
+  );
+  const [low, setLow] = useState<boolean>(
+    () => new URLSearchParams(window.location.search).get("launch") === "low",
+  );
+  const [listed, setListed] = useState<Listed[]>([]);
   const [roll, setRoll] = useState<{
     take: RollInTake;
     meta: TakeMeta;
@@ -95,18 +117,57 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const refreshList = useCallback(
+    () =>
+      fetch("/api/dev/keep-take")
+        .then((r) => r.json() as Promise<{ takes?: Listed[] }>)
+        .then((body) => setListed(body.takes ?? []))
+        .catch(() => setListed([])),
+    [],
+  );
+  useEffect(() => {
+    void refreshList();
+  }, [refreshList]);
+
+  // The live sim publishes each finished take on window; pick it up for badges.
   useEffect(() => {
     const onTake = () => {
       const t = window.__rollInTake;
       if (!t) return;
-      setRoll({ ...t, badges: judge(t.take, t.meta) });
+      const restX = t.take.dice.map((d) => d.p[(t.take.n - 1) * 3]);
+      setRoll({ ...t, badges: judge(t.meta, restX, t.take) });
       setSaved(null);
     };
     window.addEventListener("roll-in-take", onTake);
     return () => window.removeEventListener("roll-in-take", onTake);
   }, []);
 
-  const switchTo = (m: Mode, l: boolean = low) => {
+  // Queue a take for the next mount and remount, so an arbitrary roll (one kept
+  // earlier, or the one just thrown) plays without a page reload.
+  const play = (take: RollInTake) => {
+    window.__replayTake = take;
+    onRemount();
+  };
+
+  const selectCurated = async (file: string) => {
+    setMode({ file });
+    setSaved(null);
+    writeModeToUrl({ file }, low);
+    try {
+      const res = await fetch(
+        `/api/dev/keep-take?file=${encodeURIComponent(file)}`,
+      );
+      const body = (await res.json()) as { take: RollInTake; meta: TakeMeta };
+      const restX = body.take.dice.map((d) => d.p[(body.take.n - 1) * 3]);
+      setRoll({ ...body, badges: judge(body.meta, restX, body.take) });
+      play(body.take);
+    } catch {
+      setRoll(null);
+    }
+  };
+
+  const switchTo = (m: "live" | "baked", l: boolean = low) => {
+    delete window.__replayTake; // stop replaying whatever was selected
     setMode(m);
     setLow(l);
     setRoll(null);
@@ -115,21 +176,15 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
     onRemount();
   };
 
-  // Re-watch the current roll. In live mode that means replaying the take the
-  // sim just produced (queued for the next mount) rather than throwing a new
-  // one — a fresh live roll would be different randomness, which is what made
-  // "replay" look non-deterministic. Badges/keep state survive.
+  // Re-watch whatever is loaded: the exact take for a curated or live roll,
+  // otherwise just a fresh mount of the random shipped set.
   const replay = () => {
-    if (mode === "live") {
-      if (!roll) return;
-      window.__replayTake = roll.take;
-    }
-    writeModeToUrl(mode, low);
-    onRemount();
+    if (roll) play(roll.take);
+    else onRemount();
   };
 
   const keep = async () => {
-    if (!roll || busy) return;
+    if (!roll || busy || mode !== "live") return;
     setBusy(true);
     try {
       const res = await fetch("/api/dev/keep-take", {
@@ -138,7 +193,8 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
         body: JSON.stringify({ take: roll.take, meta: roll.meta }),
       });
       const body = (await res.json()) as { saved?: string; count?: number };
-      setSaved(res.ok ? `saved (${body.count} kept)` : "save failed");
+      setSaved(res.ok ? `saved (${body.count})` : "save failed");
+      await refreshList();
     } catch {
       setSaved("save failed");
     } finally {
@@ -146,29 +202,33 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
     }
   };
 
+  const selectValue = typeof mode === "object" ? `file:${mode.file}` : mode;
+
   return (
     <div className="fixed bottom-3 left-3 z-50 flex flex-wrap items-center gap-2 rounded-lg bg-black/70 px-3 py-2 font-mono text-xs text-white shadow-lg">
       <select
         className="rounded bg-white/10 px-1 py-0.5"
-        value={typeof mode === "number" ? `take-${mode}` : mode}
+        value={selectValue}
         onChange={(e) => {
           const v = e.target.value;
-          switchTo(
-            v === "random" || v === "live" ? v : Number(v.replace("take-", "")),
-          );
+          if (v === "live" || v === "baked") switchTo(v);
+          else void selectCurated(v.slice("file:".length));
         }}
       >
-        <option value="random">random baked</option>
+        <option value="baked">shipped (random)</option>
         <option value="live">live roll</option>
-        {TAKES.map((_, i) => (
-          <option key={i} value={`take-${i + 1}`}>
-            sim {i + 1}
-          </option>
-        ))}
+        {listed.length > 0 && (
+          <optgroup label={`kept rolls (${listed.length})`}>
+            {listed.map((t, i) => (
+              <option key={t.name} value={`file:${t.name}`}>
+                {`#${i + 1} · ${shortName(t.name)} · ${t.meta.duration.toFixed(1)}s`}
+              </option>
+            ))}
+          </optgroup>
+        )}
       </select>
       <button
-        className="rounded bg-white/15 px-2 py-0.5 hover:bg-white/25 disabled:opacity-40"
-        disabled={mode === "live" && !roll}
+        className="rounded bg-white/15 px-2 py-0.5 hover:bg-white/25"
         onClick={replay}
       >
         replay
@@ -189,7 +249,7 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
           low
         </label>
       )}
-      {mode === "live" && roll && (
+      {roll && (
         <>
           {roll.badges.map((b) => (
             <span
@@ -199,13 +259,15 @@ export default function DiceDevPanel({ onRemount }: { onRemount: () => void }) {
               {b.ok ? "✓" : "✗"} {b.label}
             </span>
           ))}
-          <button
-            className="rounded bg-emerald-500/30 px-2 py-0.5 hover:bg-emerald-500/50 disabled:opacity-40"
-            disabled={busy || saved !== null}
-            onClick={keep}
-          >
-            {saved ?? "keep"}
-          </button>
+          {mode === "live" && (
+            <button
+              className="rounded bg-emerald-500/30 px-2 py-0.5 hover:bg-emerald-500/50 disabled:opacity-40"
+              disabled={busy || saved !== null}
+              onClick={keep}
+            >
+              {saved ?? "keep"}
+            </button>
+          )}
         </>
       )}
     </div>
