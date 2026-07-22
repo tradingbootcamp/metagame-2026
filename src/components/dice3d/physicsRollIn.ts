@@ -190,8 +190,9 @@ export class IntroController implements IntroDriver {
         ground,
       );
 
-      // Invisible containment just outside the canvas so an unlucky bounce
-      // can't send a die out of view. The right and z walls are always up; the
+      // Invisible containment with x-wall inner faces just *inside* the
+      // visible edge (±3.15 vs ~±3.2 — see BOUNDS) so an unlucky bounce can't
+      // send a die out of view. The right and z walls are always up; the
       // left wall starts disabled (the dice fly in across it) and is raised in
       // #step once every die has passed it.
       const wall = (x: number, y: number, z: number, hx: number, hz: number) =>

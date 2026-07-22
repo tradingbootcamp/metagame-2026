@@ -30,15 +30,19 @@ const PORT = Number(arg("port", 4600));
 const JOBS = Number(arg("jobs", 4));
 let url = arg("url", null);
 
-// --- bake-time META-out retcon --------------------------------------------
+// --- bake-time orientation retcon -------------------------------------------
 // A die's printed faces are fixed to its local axes (Die.tsx FACES): ±Z carry
-// the blue letter, ±X the orange, ±Y the pips — opposite faces are duplicates.
-// The body is a symmetric cube, so right-multiplying any cube rotation-group
-// element s into EVERY keyframe (q' = q·s) leaves the visible motion identical
-// and only relabels which printed face is where. We exploit that per die: pick
-// the s that best turns a blue face toward the camera (world +Z) at the take's
-// FINAL keyframe, so each die comes to rest already showing META-ish and the
-// align tail is a small square-up instead of an arbitrary reveal twist.
+// the blue letter, ±X the orange, ±Y the pips. The body is a symmetric cube,
+// so right-multiplying any cube rotation-group element s into EVERY keyframe
+// (q' = q·s) leaves the visible motion identical and only relabels which
+// printed face is where. Earlier bakes used that to force a blue face
+// camera-ward at rest; the align tail's slerp to the META pose does that
+// reveal on its own, so the retcon is now looser: each die draws s UNIFORMLY
+// at random so the scattered rest tableau keeps full orientation variety.
+// One hard rule survives: the 7-pip face (only die index 1 carries one, on
+// local −Y — Dice3D's tops are [2,0,2,6], bottoms 7−top) must never end
+// pointing at the camera, so any s that puts its world normal at
+// z > SEVEN_Z_MAX at the final keyframe is excluded from that die's draw.
 //
 // Quaternions are [x, y, z, w] flat arrays throughout.
 
@@ -92,45 +96,91 @@ const CUBE_GROUP = (() => {
 if (CUBE_GROUP.length !== 24)
   throw new Error(`cube group has ${CUBE_GROUP.length} elements, expected 24`);
 
-// Retcon one take in place. Per die: score each s by how camera-ward a blue
-// face ends up at the final keyframe — |world-Z of the retconned local Z axis|
-// (abs because ±Z are both blue) — tie-broken by pips toward world +Y the same
-// way. Opposite-face duplication makes several of the 24 tie exactly; any
-// argmax is fine. Returns the per-die blue-face·camera dot for logging.
+// Which dice carry a 7-pip face, and its local-space normal (die index → axis).
+const SEVEN_LOCAL = { 1: [0, -1, 0] };
+// A symmetry is excluded if it leaves the 7 face's world normal more
+// camera-ward than this at rest. The group maps the face to (near-)axis
+// directions, so values cluster around {0, ±0.9+}; 0.25 cleanly splits them.
+const SEVEN_Z_MAX = 0.25;
+
+// Retcon one take in place. Per die: draw s uniformly from the cube group —
+// minus, for a 7-carrying die, the symmetries that would point the 7 at the
+// camera (at most 3 of the 6 face directions can have z > 0.25, so at most 12
+// of 24 are excluded; the pool is never empty). Returns the per-die 7-face
+// world z at rest (null for dice with no 7) for logging.
 function retconTake(take) {
-  return take.dice.map((die) => {
+  return take.dice.map((die, i) => {
     const qFinal = die.q.slice((take.n - 1) * 4, take.n * 4);
-    let best = null;
-    let bestBlue = -Infinity;
-    let bestPip = -Infinity;
-    for (const s of CUBE_GROUP) {
-      const q = qMul(qFinal, s);
-      const blue = Math.abs(qRotate(q, [0, 0, 1])[2]);
-      const pip = Math.abs(qRotate(q, [0, 1, 0])[1]);
-      if (blue > bestBlue + 1e-9 || (blue > bestBlue - 1e-9 && pip > bestPip)) {
-        best = s;
-        bestBlue = blue;
-        bestPip = pip;
-      }
-    }
+    const seven = SEVEN_LOCAL[i];
+    const pool = seven
+      ? CUBE_GROUP.filter(
+          (s) => qRotate(qMul(qFinal, s), seven)[2] <= SEVEN_Z_MAX,
+        )
+      : CUBE_GROUP;
+    const s = pool[Math.floor(Math.random() * pool.length)];
     for (let k = 0; k < take.n; k++) {
-      const q = qMul(die.q.slice(k * 4, k * 4 + 4), best);
+      const q = qMul(die.q.slice(k * 4, k * 4 + 4), s);
       for (let c = 0; c < 4; c++) die.q[k * 4 + c] = Number(q[c].toFixed(4));
     }
-    return bestBlue;
+    return seven ? qRotate(qMul(qFinal, s), seven)[2] : null;
   });
 }
 
+// --- on-screen keep criterion -----------------------------------------------
+// The visible canvas edge is ~±3.2 in local units (introDriver.ts BOUNDS
+// comment); require a 0.1 margin at ±EDGE. A die's true x-reach at a keyframe:
+// the beveled body is the Minkowski sum of a 0.44-half-width cube and an
+// r=0.06 sphere (matching both the visual RoundedBox and the sim collider),
+// so its support along x is 0.44·Σ|basis.x| + 0.06 over the rotated local
+// basis — exact, from 0.5 face-on up to ~0.822 corner-on. The sim walls
+// already hard-bound colliders at ±3.15; this rejects the takes that press
+// against them. (Extent is invariant under the retcon — a cube symmetry only
+// permutes/signs the basis — so checking pre-retcon quaternions is exact.)
+const EDGE = 3.1;
+const halfExtentX = (q) =>
+  0.44 *
+    (Math.abs(qRotate(q, [1, 0, 0])[0]) +
+      Math.abs(qRotate(q, [0, 1, 0])[0]) +
+      Math.abs(qRotate(q, [0, 0, 1])[0])) +
+  0.06;
+
+// Every die must stay fully on camera from the moment it matters: clear of the
+// RIGHT edge from first floor contact on (the flight approaches from the left,
+// so the right edge is only reachable once landed/bouncing), and clear of the
+// LEFT edge from the moment the die has fully entered the frame — the
+// off-screen-left entry itself is by design. The final keyframe falls in both
+// windows, so the rest tableau sits inside ±EDGE. Returns the worst reach
+// toward each edge alongside the verdict so runs can log how close they came.
+function screenStats(take) {
+  let ok = true;
+  let maxRight = -Infinity; // worst landed x-reach toward the right edge
+  let minLeft = Infinity; // worst post-entry x-reach toward the left edge
+  for (const die of take.dice) {
+    let touched = false; // has reached the floor (TOUCH_Y in physicsRollIn.ts)
+    let entered = false; // has been fully inside the left edge
+    for (let k = 0; k < take.n; k++) {
+      const x = die.p[k * 3];
+      const h = halfExtentX(die.q.slice(k * 4, k * 4 + 4));
+      if (die.p[k * 3 + 1] < 0.55) touched = true;
+      if (touched) maxRight = Math.max(maxRight, x + h);
+      if (x - h >= -EDGE) entered = true;
+      if (entered) minLeft = Math.min(minLeft, x - h);
+    }
+    if (!touched || !entered) ok = false;
+  }
+  return { ok: ok && maxRight <= EDGE && minLeft >= -EDGE, maxRight, minLeft };
+}
+
 // A take is usable only if the sim settled on its own with every die resting
-// near its slot, nothing ever strayed toward the z walls, and the rest
-// positions stay in slot order with a safe gap — the align slide is a
-// straight kinematic lerp to the slots, so an order inversion (or a too-tight
-// pair) would sweep one die through another, the very artifact this replaces.
-// Kicked/tilted rest poses are deliberately kept: the retcon's dot-product
-// scoring works fine on a tilted die, and the align tail settles it the rest
-// of the way. (Fully stacked dice can't slip through — a stack triggers the
-// sim's nudge/timeout path, which the nudges/timedOut checks reject.)
-function usable(take, meta) {
+// near its slot, nothing ever strayed toward the z walls, every die stays
+// fully on camera per screenStats above, and the rest positions stay in slot
+// order with a safe gap — the align slide is a straight kinematic lerp to the
+// slots, so an order inversion (or a too-tight pair) would sweep one die
+// through another, the very artifact this replaces. Kicked/tilted rest poses
+// are deliberately kept — the align tail settles them the rest of the way.
+// (Fully stacked dice can't slip through — a stack triggers the sim's
+// nudge/timeout path, which the nudges/timedOut checks reject.)
+function usable(take, meta, screen) {
   const restX = take.dice.map((d) => d.p[(take.n - 1) * 3]);
   const ordered = restX.every((x, i) => i === 0 || x - restX[i - 1] >= 1.0);
   return (
@@ -139,7 +189,8 @@ function usable(take, meta) {
     meta.nudges === 0 &&
     meta.duration <= 3.0 &&
     meta.finalErr.every((e) => e <= 0.9) &&
-    meta.maxAbsZ <= 1.2
+    meta.maxAbsZ <= 1.2 &&
+    screen.ok
   );
 }
 // Among usable takes prefer tight landings, then quick settles.
@@ -190,16 +241,19 @@ async function worker() {
         },
       );
       const { take, meta } = await page.evaluate(() => window.__rollInTake);
-      const ok = usable(take, meta);
-      // Retcon usable takes so a blue face ends camera-ward (see above); the
-      // returned dots say how square-on each die's letter rests before the tail.
-      const blueDots = ok ? retconTake(take) : null;
+      const screen = screenStats(take);
+      const ok = usable(take, meta, screen);
+      // Retcon usable takes (uniform-random symmetry, 7-face rule — see
+      // above); the returned values log where die 1's 7 face ended up.
+      const sevenZ = ok ? retconTake(take) : null;
       console.log(
         `run ${run + 1}/${RUNS}: ${ok ? "keep?" : "reject"} ` +
           `dur=${meta.duration.toFixed(2)}s err=[${meta.finalErr.map((e) => e.toFixed(2)).join(",")}] ` +
-          `y=[${meta.finalY.map((y) => y.toFixed(2)).join(",")}] nudges=${meta.nudges}${meta.timedOut ? " TIMEOUT" : ""}` +
-          (blueDots
-            ? ` blue=[${blueDots.map((b) => b.toFixed(2)).join(",")}]`
+          `y=[${meta.finalY.map((y) => y.toFixed(2)).join(",")}] ` +
+          `ext=[${screen.minLeft.toFixed(2)},${screen.maxRight.toFixed(2)}] ` +
+          `nudges=${meta.nudges}${meta.timedOut ? " TIMEOUT" : ""}` +
+          (sevenZ
+            ? ` sevenZ=[${sevenZ.map((v) => (v === null ? "-" : v.toFixed(2))).join(",")}]`
             : ""),
       );
       if (ok) takes.push({ take, meta, score: score(meta) });
@@ -237,9 +291,11 @@ writeFileSync(
 // Baked roll-in takes — GENERATED, do not hand-edit.
 // Regenerate after tuning physicsRollIn.ts with: node scripts/record-rollin.mjs
 // (runs the live sim under ?record=1 a bunch of times, keeps the takes that
-// settle cleanly nearest their slots, and rewrites this file). Each die's
-// quaternion stream has a cube-symmetry retcon baked in so a blue META face
-// rests roughly camera-ward at the final keyframe; pin one with ?sim=N to review.
+// settle cleanly nearest their slots and fully on camera, and rewrites this
+// file). Each die's quaternion stream has a uniform-random cube-symmetry
+// retcon baked in — visually inert, keeps the rest tableau varied — with die
+// index 1's 7-pip face guaranteed to never face the camera at rest; pin a
+// take with ?sim=N to review.
 export const TAKES: RollInTake[] = [
   ${body},
 ];
