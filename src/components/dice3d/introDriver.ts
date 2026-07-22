@@ -42,11 +42,13 @@ export type RollInTake = {
 export const START_X = -4.4; // launches draw from START_X - [0, 0.8]
 export const START_Y = 2.4; // launches draw from START_Y + [0, 0.5]
 // The x walls sit at ±(x + 0.4) with 0.25 half-thickness (physicsRollIn.ts),
-// so their inner faces land at ±3.15 — just inside the ~±3.2 visible edge.
-// That hard-bounds every bounce/skid excursion on-camera; the recorder's
+// so their inner faces land at ±3.10, a 0.1 margin inside the ~±3.2 visible
+// edge: a hard wall-impact can transiently penetrate ~0.05–0.1 before the
+// solver pushes back (worst observed reach past the face was +0.095), so the
+// margin is what actually keeps every excursion on-camera. The recorder's
 // keep criterion (record-rollin.mjs) separately requires the landed portion
-// and rest tableau to stay inside ±3.1 so nothing even grazes the edge.
-export const BOUNDS = { left: -3.0, right: 3.0, halfDepth: 1.4 };
+// and rest tableau to stay inside ±3.1.
+export const BOUNDS = { left: -2.95, right: 2.95, halfDepth: 1.4 };
 
 // Rest-to-META tail. The settle detector already holds ~0.25s of stillness
 // before a take/sim ends, so the perceived beat matches the old 0.9s.

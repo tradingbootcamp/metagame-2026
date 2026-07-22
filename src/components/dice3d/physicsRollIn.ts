@@ -75,6 +75,25 @@ const MAX_NUDGES = 3;
 
 const RECORD_EVERY = 4; // sample recorded takes every 4th step = 30 Hz
 
+// True x-reach of the beveled die at pose q: support along x of the Minkowski
+// sum of the 0.44-half-width cube and the r=0.06 bevel sphere — 0.5 face-on up
+// to ~0.822 corner-on. (The recorder's on-screen keep criterion uses the same
+// formula; see scripts/record-rollin.mjs.)
+const REACH_V = new THREE.Vector3();
+const REACH_Q = new THREE.Quaternion();
+const REACH_AXES = [
+  new THREE.Vector3(1, 0, 0),
+  new THREE.Vector3(0, 1, 0),
+  new THREE.Vector3(0, 0, 1),
+];
+function xReach(q: { x: number; y: number; z: number; w: number }): number {
+  REACH_Q.set(q.x, q.y, q.z, q.w);
+  let s = 0;
+  for (const axis of REACH_AXES)
+    s += Math.abs(REACH_V.copy(axis).applyQuaternion(REACH_Q).x);
+  return 0.44 * s + 0.06;
+}
+
 // Rest diagnostics for the recording harness to score takes with.
 export type TakeMeta = {
   duration: number; // s from sim start to capture
@@ -208,12 +227,13 @@ export class IntroController implements IntroDriver {
         ground,
       );
 
-      // Invisible containment with x-wall inner faces just *inside* the
-      // visible edge (±3.15 vs ~±3.2 — see BOUNDS) so an unlucky bounce can't
-      // send a die out of view. The right and z walls are always up; the
-      // left wall doesn't exist yet (the dice fly in across its line) and is
-      // added in #step once every die has passed it — added, not enable-
-      // toggled, per the setEnabled broad-phase bug noted on #spawnDie.
+      // Invisible containment with x-wall inner faces *inside* the visible
+      // edge (±3.10 vs ~±3.2 — see the BOUNDS comment for why the margin is
+      // this wide) so an unlucky bounce can't send a die out of view. The
+      // right and z walls are always up; the left wall doesn't exist yet (the
+      // dice fly in across its line) and is added in #step once every die has
+      // cleared it — added, not enable-toggled, per the setEnabled
+      // broad-phase bug noted on #spawnDie.
       const wall = (x: number, y: number, z: number, hx: number, hz: number) =>
         world.createCollider(
           RAPIER.ColliderDesc.cuboid(hx, 3, hz)
@@ -352,11 +372,20 @@ export class IntroController implements IntroDriver {
       );
     }
 
-    // Raise the left wall once every die has flown past it, sealing the box.
+    // Raise the left wall once every die has fully cleared it, sealing the
+    // box. "Cleared" uses the die's true rotated reach (not a worst-case
+    // center threshold) so the wall goes up as early as geometry allows —
+    // waiting on worst-case corner reach let a die that settled just left of
+    // its slot keep the wall down for the whole take, leaving the left edge
+    // open to rest poses that hang off-screen. 0.03 spawn margin past the
+    // wall's inner face at BOUNDS.left - 0.15.
     if (
       !this.#leftWallRaised &&
       this.#launched.every(Boolean) &&
-      this.#bodies.every((b) => b!.translation().x > BOUNDS.left + 0.7)
+      this.#bodies.every((b) => {
+        const p = b!.translation();
+        return p.x - xReach(b!.rotation()) > BOUNDS.left - 0.12;
+      })
     ) {
       this.#raiseLeftWall?.();
       this.#leftWallRaised = true;

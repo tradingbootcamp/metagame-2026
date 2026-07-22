@@ -133,9 +133,10 @@ function retconTake(take) {
 // r=0.06 sphere (matching both the visual RoundedBox and the sim collider),
 // so its support along x is 0.44·Σ|basis.x| + 0.06 over the rotated local
 // basis — exact, from 0.5 face-on up to ~0.822 corner-on. The sim walls
-// already hard-bound colliders at ±3.15; this rejects the takes that press
-// against them. (Extent is invariant under the retcon — a cube symmetry only
-// permutes/signs the basis — so checking pre-retcon quaternions is exact.)
+// hard-bound colliders at ±3.10 inner faces (± transient impact penetration);
+// this rejects the takes that press against them. (Extent is invariant under
+// the retcon — a cube symmetry only permutes/signs the basis — so checking
+// pre-retcon quaternions is exact.)
 const EDGE = 3.1;
 const halfExtentX = (q) =>
   0.44 *
