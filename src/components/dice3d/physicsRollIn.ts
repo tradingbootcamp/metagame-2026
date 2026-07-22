@@ -114,6 +114,22 @@ type Options = {
   onTake?: (take: RollInTake, meta: TakeMeta) => void;
 };
 
+// One rapier load + init per page, shared by every controller. React dev
+// StrictMode constructs the sim twice per mount; two concurrent RAPIER.init()
+// calls instantiate the wasm module twice, and a World created against the
+// first instance ends up reading the second's memory — the source of the
+// intermittent "unsafe aliasing" / "memory access out of bounds" panics.
+// (Dynamic import keeps the wasm chunk off normal visits, as before.)
+let rapierReady: Promise<typeof import("@dimforge/rapier3d-compat")> | null =
+  null;
+function loadRapier() {
+  rapierReady ??= import("@dimforge/rapier3d-compat").then(async (R) => {
+    await R.init();
+    return R;
+  });
+  return rapierReady;
+}
+
 type State = "loading" | "sim" | "post" | "done" | "failed";
 
 export class IntroController implements IntroDriver {
@@ -204,10 +220,7 @@ export class IntroController implements IntroDriver {
 
   async #load() {
     try {
-      // Dynamic import so the rapier chunk (wasm inlined as base64) only ever
-      // downloads when this class is constructed — never on a normal visit.
-      const RAPIER = await import("@dimforge/rapier3d-compat");
-      await RAPIER.init();
+      const RAPIER = await loadRapier();
       if (this.#disposed) return;
 
       const world = new RAPIER.World({ x: 0, y: -GRAVITY, z: 0 });
