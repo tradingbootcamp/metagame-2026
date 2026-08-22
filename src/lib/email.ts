@@ -71,9 +71,10 @@ export function renderTicketConfirmationEmail(
       : ""
   }`;
 
-  const subject = `${test ? "TEST: " : ""}Your Metagame 2026 ticket is confirmed`;
+  const subject = `${test ? "TEST: " : ""}Metagame 2026 Ticket`;
 
   const html = `
+      <div style="display: none; max-height: 0; overflow: hidden;">You're coming to Metagame!</div>
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="text-align: center; margin: 24px 0;">
           <img src="${assetBase}/dice_logo.png" alt="METAGAME" width="360" style="max-width: 100%; height: auto;" />
