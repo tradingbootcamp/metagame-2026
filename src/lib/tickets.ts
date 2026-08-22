@@ -131,6 +131,24 @@ export function supporterChipUrl(chip: SupporterChip): string | null {
 }
 
 /**
+ * Tier label ("Standard" / "Supporter") for a Stripe Payment Link URL, matched
+ * against the links above (both modes). Undefined for an unknown link — e.g. one
+ * created in the dashboard outside this file.
+ */
+export function tierLabelForPaymentLinkUrl(
+  url: string | null | undefined,
+): string | undefined {
+  if (!url) return undefined;
+  for (const tier of ticketTiers) {
+    if (Object.values(tier.links).includes(url)) return tier.label;
+  }
+  for (const chip of supporterTier.chips) {
+    if (Object.values(chip.links).includes(url)) return supporterTier.label;
+  }
+  return undefined;
+}
+
+/**
  * Checkout URL for the active Stripe mode, with the early-bird promo code
  * prefilled. Returns null when no link is configured for this mode yet, so the
  * UI can hide the CTA rather than link somewhere dead.

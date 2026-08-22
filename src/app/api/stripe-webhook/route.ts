@@ -6,7 +6,9 @@ import {
   recordPurchase,
   type PurchaseStatus,
 } from "@/lib/airtable";
+import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
+import { tierLabelForPaymentLinkUrl } from "@/lib/tickets";
 
 // Signature verification needs the raw body + Node crypto — keep this off the edge.
 export const runtime = "nodejs";
@@ -122,6 +124,7 @@ export async function POST(request: Request) {
     // One retrieve with expands yields ticket type, receipt URL, and Stripe's fee/net.
     const full = await stripe.checkout.sessions.retrieve(session.id, {
       expand: [
+        "payment_link",
         "line_items.data.price.product",
         "payment_intent.latest_charge.balance_transaction",
         "discounts.promotion_code",
@@ -188,6 +191,37 @@ export async function POST(request: Request) {
       // coupon — either way it shouldn't count as a real sale.
       test: !event.livemode || isTestCoupon,
     });
+
+    // Confirmation email once the money is settled (or none was owed): card
+    // checkouts on `completed`, ACH on `async_payment_succeeded` — never for a
+    // still-Pending session. Failures are soft: the purchase is already recorded,
+    // so log + alert instead of a 500 (which would make Stripe retry the event).
+    const email = full.customer_details?.email;
+    if (status === "Paid" && email) {
+      try {
+        await sendTicketConfirmationEmail({
+          to: email,
+          purchaserName: full.customer_details?.name ?? undefined,
+          tierLabel:
+            tierLabelForPaymentLinkUrl(
+              expanded<Stripe.PaymentLink>(full.payment_link)?.url,
+            ) ??
+            ticketType ??
+            "Metagame 2026 ticket",
+          usdPaid:
+            full.amount_total != null ? full.amount_total / 100 : undefined,
+          stripePaymentId: paymentIntent?.id,
+          test: !event.livemode || isTestCoupon,
+        });
+      } catch (err) {
+        console.error("[stripe-webhook] confirmation email failed:", err);
+        await sendAdminErrorEmail(
+          `Ticket confirmation email failed for ${email} (session ${full.id}): ${err instanceof Error ? err.message : String(err)}`,
+        ).catch((adminErr) =>
+          console.error("[stripe-webhook] admin alert failed:", adminErr),
+        );
+      }
+    }
   } catch (err) {
     // 500 → Stripe retries; recordPurchase upserts, so a retry can't duplicate.
     console.error("[stripe-webhook] failed to record purchase:", err);

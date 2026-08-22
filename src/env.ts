@@ -37,6 +37,12 @@ const ENV_SPEC: EnvSpec[] = [
       "Promo code for the in-prod 99%-off test purchase; live purchases using it get flagged Test in Airtable.",
   },
   {
+    name: "RESEND_API_KEY",
+    required: false,
+    description:
+      "Resend API key — sends ticket-confirmation + admin-alert emails from the Stripe webhook. Without it email sends no-op with a warning.",
+  },
+  {
     name: "OPENNODE_KEY",
     required: false,
     description:
@@ -86,4 +92,5 @@ export const env = {
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   STRIPE_TEST_99_CODE: process.env.STRIPE_TEST_99_CODE,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
 } as const;
