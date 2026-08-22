@@ -12,18 +12,31 @@ const BOOT = String(Date.now()); // changes on each tsx-watch restart → browse
 
 const VARIANTS = {
   paid: {
+    to: "brian+test@metagame.games",
     purchaserName: "Brian",
     tierLabel: "Standard",
     usdPaid: 325,
-    stripePaymentId: "pi_EXAMPLE000000000000000000",
+    usdFull: 425,
+    discountCode: "EARLYBIRD",
+    receiptUrl:
+      "https://pay.stripe.com/receipts/payment/CAcQARoXChVhY2N0XzFRZVFkMUN0TzQ0M0VHM24o85Kk1AYyBje6uF01PzosFuW6Gl6shlxk8803XXwStlJ3OPQw4aJQaLVcl0X5XmA4B9KybbZRmQNQTd8",
   },
   supporter: {
+    to: "brian+test@metagame.games",
     purchaserName: "Brian",
     tierLabel: "Supporter",
     usdPaid: 650,
-    stripePaymentId: "pi_EXAMPLE000000000000000000",
+    receiptUrl:
+      "https://pay.stripe.com/receipts/payment/CAcQARoXChVhY2N0XzFRZVFkMUN0TzQ0M0VHM24o85Kk1AYyBje6uF01PzosFuW6Gl6shlxk8803XXwStlJ3OPQw4aJQaLVcl0X5XmA4B9KybbZRmQNQTd8",
   },
-  comped: { purchaserName: "Brian", tierLabel: "Standard", usdPaid: 0 },
+  comped: {
+    to: "brian+test@metagame.games",
+    purchaserName: "Brian",
+    tierLabel: "Standard",
+    usdPaid: 0,
+    usdFull: 425,
+    discountCode: "COMP-RICKI",
+  },
 };
 
 const MIME = {
@@ -57,7 +70,8 @@ createServer(async (req, res) => {
   const nav = Object.keys(VARIANTS)
     .map((v) => `<a href="/?variant=${v}" style="margin-right:12px">${v}</a>`)
     .join("");
-  res.writeHead(200, { "content-type": "text/html" }).end(`<!doctype html>
+  res.writeHead(200, { "content-type": "text/html; charset=utf-8" })
+    .end(`<!doctype html>
 <title>${subject}</title>
 <div style="background:#ddd;padding:8px 16px;font-family:monospace">
   ${nav} &nbsp;|&nbsp; subject: <b>${subject}</b>

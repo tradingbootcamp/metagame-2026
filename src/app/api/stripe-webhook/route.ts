@@ -210,7 +210,12 @@ export async function POST(request: Request) {
             "Metagame 2026 ticket",
           usdPaid:
             full.amount_total != null ? full.amount_total / 100 : undefined,
-          stripePaymentId: paymentIntent?.id,
+          usdFull:
+            full.amount_subtotal != null
+              ? full.amount_subtotal / 100
+              : undefined,
+          receiptUrl: charge?.receipt_url ?? undefined,
+          discountCode: couponCode,
           test: !event.livemode || isTestCoupon,
         });
       } catch (err) {
