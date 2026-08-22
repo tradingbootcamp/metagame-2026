@@ -26,7 +26,11 @@ const VARIANTS = {
   comped: { purchaserName: "Brian", tierLabel: "Standard", usdPaid: 0 },
 };
 
-const MIME = { ".png": "image/png", ".svg": "image/svg+xml", ".jpg": "image/jpeg" };
+const MIME = {
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".jpg": "image/jpeg",
+};
 
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
@@ -38,7 +42,9 @@ createServer(async (req, res) => {
   const ext = extname(url.pathname);
   if (MIME[ext]) {
     try {
-      const buf = await readFile(join(import.meta.dirname, "..", "public", url.pathname));
+      const buf = await readFile(
+        join(import.meta.dirname, "..", "public", url.pathname),
+      );
       res.writeHead(200, { "content-type": MIME[ext] }).end(buf);
     } catch {
       res.writeHead(404).end();
