@@ -153,7 +153,6 @@ export default function TicketsPanel({
         >
           Volunteer and Financial Assistance ticket details coming soon!{" "}
           <UpdatesButton
-            id="updates"
             className={`font-bold underline underline-offset-2 ${onDark ? "text-tan" : "text-meeple"}`}
           >
             Sign up for updates

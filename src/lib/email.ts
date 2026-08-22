@@ -87,6 +87,7 @@ export function renderTicketConfirmationEmail(
 
         <div style="text-align: center; margin: 32px 0 16px;">
           <img src="${assetBase}/images/arbor-tree.png" alt="Arbor" width="56" style="height: auto;" />
+          <p style="font-size: 12px; color: #888; margin: 8px 0 0;">&copy; 2026 Arbor</p>
         </div>
       </div>
     `;
@@ -114,6 +115,8 @@ Event Information
 Questions? Just reply to this email.
 
 See you at Metagame 2026!
+
+© 2026 Arbor
     `.trim();
 
   return { subject, html, text };
