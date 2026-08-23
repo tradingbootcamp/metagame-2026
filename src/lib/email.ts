@@ -27,7 +27,7 @@ export type TicketConfirmationEmail = {
   to: string;
   purchaserName?: string;
   tierLabel: string;
-  /** Dollars paid. 0 renders as a comped ticket. */
+  /** Dollars paid (0 for comps). */
   usdPaid?: number;
   /** Pre-discount price (struck through when it differs from usdPaid). */
   usdFull?: number;
@@ -58,7 +58,6 @@ export function renderTicketConfirmationEmail(
   }: TicketConfirmationEmail,
   assetBase: string = SITE,
 ) {
-  const comped = !usdPaid;
   const discounted = usdFull != null && usdFull > (usdPaid ?? 0);
 
   // Prefill the mailing-list form (modal opens via #updates; params must precede

@@ -10,6 +10,7 @@ import {
   verifyWebhookSignature,
 } from "@/lib/opennode";
 import { ticketCode } from "@/lib/ticket-code";
+import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
 
 // HMAC verification + the OpenNode key need Node crypto — keep this off the edge.
 export const runtime = "nodejs";
@@ -157,6 +158,32 @@ export async function POST(request: Request) {
     // 500 → OpenNode retries; recordPurchase upserts on ID, so a retry can't dupe.
     console.error("[opennode-webhook] failed to record purchase:", err);
     return NextResponse.json({ error: "Processing failed" }, { status: 500 });
+  }
+
+  // Confirmation email once settled. Soft-fail: the purchase is already
+  // recorded, so log + alert instead of a 500 (which would make OpenNode retry).
+  const email = meta.email ? String(meta.email) : undefined;
+  if (recordStatus === "Paid" && email) {
+    try {
+      await sendTicketConfirmationEmail({
+        to: email,
+        purchaserName: meta.name ? String(meta.name) : undefined,
+        tierLabel: meta.ticketLabel
+          ? String(meta.ticketLabel)
+          : "Metagame 2026 ticket",
+        usdPaid: meta.usd != null ? Number(meta.usd) : undefined,
+        discountCode: meta.discountCode ? String(meta.discountCode) : undefined,
+        ticketCode: ticketCode(charge.id),
+        test: meta.test === true || meta.test === "true",
+      });
+    } catch (err) {
+      console.error("[opennode-webhook] confirmation email failed:", err);
+      await sendAdminErrorEmail(
+        `Ticket confirmation email failed for ${email} (OpenNode ${charge.id}): ${err instanceof Error ? err.message : String(err)}`,
+      ).catch((adminErr) =>
+        console.error("[opennode-webhook] admin alert failed:", adminErr),
+      );
+    }
   }
 
   return NextResponse.json({ received: true });
