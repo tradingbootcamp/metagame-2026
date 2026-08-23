@@ -104,7 +104,7 @@ export function renderTicketConfirmationEmail(
           <p><strong>Type:</strong> ${tierLabel}</p>
           ${ticketCode ? `<p><strong>Ticket code:</strong> <span style="font-family: monospace; font-size: 15px;">${formatTicketCode(ticketCode)}</span></p>` : ""}
           <p><strong>Amount Paid:</strong> ${discounted ? `<span style="text-decoration: line-through; color: #999;">$${usdFull.toFixed(2)}</span> ` : ""}$${(usdPaid ?? 0).toFixed(2)}${discountCode && discounted ? ` (<strong>${discountCode}</strong>)` : ""}</p>
-          ${receiptUrl ? `<p><a href="${receiptUrl}">View your Stripe receipt</a></p>` : ""}
+          ${receiptUrl ? `<p><a href="${receiptUrl}">View your receipt</a></p>` : ""}
         </div>
 
         <div style="background-color: #f9fafb; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin: 20px 0;">

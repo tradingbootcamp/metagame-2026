@@ -173,6 +173,9 @@ export async function POST(request: Request) {
           : "Metagame 2026 ticket",
         usdPaid: meta.usd != null ? Number(meta.usd) : undefined,
         discountCode: meta.discountCode ? String(meta.discountCode) : undefined,
+        // No Stripe-style receipt on this rail; the settled hosted-checkout page
+        // shows the payment details and serves as one.
+        receiptUrl: getHostedCheckoutUrl(charge.id, charge),
         ticketCode: ticketCode(charge.id),
         test: meta.test === true || meta.test === "true",
       });
