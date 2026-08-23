@@ -171,7 +171,11 @@ export async function POST(request: Request) {
         tierLabel: meta.ticketLabel
           ? String(meta.ticketLabel)
           : "Metagame 2026 ticket",
-        usdPaid: meta.usd != null ? Number(meta.usd) : undefined,
+        btcPaid: btcAmount,
+        btcFull:
+          btcAmount != null && meta.btcAmountDiscounted != null
+            ? btcAmount + Number(meta.btcAmountDiscounted)
+            : undefined,
         discountCode: meta.discountCode ? String(meta.discountCode) : undefined,
         // No Stripe-style receipt on this rail; the settled hosted-checkout page
         // shows the payment details and serves as one.

@@ -27,10 +27,14 @@ export type TicketConfirmationEmail = {
   to: string;
   purchaserName?: string;
   tierLabel: string;
-  /** Dollars paid (0 for comps). */
+  /** Dollars paid (0 for comps). Ignored when btcPaid is set. */
   usdPaid?: number;
   /** Pre-discount price (struck through when it differs from usdPaid). */
   usdFull?: number;
+  /** Whole BTC paid — set on BTC purchases, which charge fixed BTC amounts. */
+  btcPaid?: number;
+  /** Pre-discount BTC price (struck through when it differs from btcPaid). */
+  btcFull?: number;
   /** Stripe-hosted receipt page (charge.receipt_url). */
   receiptUrl?: string;
   /** Promotion code redeemed at checkout. */
@@ -51,6 +55,8 @@ export function renderTicketConfirmationEmail(
     tierLabel,
     usdPaid,
     usdFull,
+    btcPaid,
+    btcFull,
     receiptUrl,
     discountCode,
     ticketCode,
@@ -58,7 +64,12 @@ export function renderTicketConfirmationEmail(
   }: TicketConfirmationEmail,
   assetBase: string = SITE,
 ) {
-  const discounted = usdFull != null && usdFull > (usdPaid ?? 0);
+  const isBtc = btcPaid != null;
+  const discounted = isBtc
+    ? btcFull != null && btcFull > btcPaid
+    : usdFull != null && usdFull > (usdPaid ?? 0);
+  const paid = isBtc ? `\u20BF${btcPaid}` : `$${(usdPaid ?? 0).toFixed(2)}`;
+  const full = isBtc ? `\u20BF${btcFull}` : `$${(usdFull ?? 0).toFixed(2)}`;
 
   // Prefill the mailing-list form (modal opens via #updates; params must precede
   // the hash). Signup stays an explicit submit — the link only fills the fields.
@@ -67,10 +78,9 @@ export function renderTicketConfirmationEmail(
     ...(purchaserName ? { name: purchaserName } : {}),
   }).toString();
   const mailingListUrl = `${SITE}/${prefill ? `?${prefill}` : ""}#updates`;
-  const paidLine = `Amount paid: $${(usdPaid ?? 0).toFixed(2)}${
+  const paidLine = `Amount paid: ${paid}${
     discounted
-      ? ` (was $${usdFull.toFixed(2)}` +
-        (discountCode ? `, code ${discountCode})` : ")")
+      ? ` (was ${full}` + (discountCode ? `, code ${discountCode})` : ")")
       : ""
   }`;
 
@@ -103,7 +113,7 @@ export function renderTicketConfirmationEmail(
           <p><strong>Email:</strong> ${to}</p>
           <p><strong>Type:</strong> ${tierLabel}</p>
           ${ticketCode ? `<p><strong>Ticket code:</strong> <span style="font-family: monospace; font-size: 15px;">${formatTicketCode(ticketCode)}</span></p>` : ""}
-          <p><strong>Amount Paid:</strong> ${discounted ? `<span style="text-decoration: line-through; color: #999;">$${usdFull.toFixed(2)}</span> ` : ""}$${(usdPaid ?? 0).toFixed(2)}${discountCode && discounted ? ` (<strong>${discountCode}</strong>)` : ""}</p>
+          <p><strong>Amount Paid:</strong> ${discounted ? `<span style="text-decoration: line-through; color: #999;">${full}</span> ` : ""}${paid}${discountCode && discounted ? ` (<strong>${discountCode}</strong>)` : ""}</p>
           ${receiptUrl ? `<p><a href="${receiptUrl}">View your receipt</a></p>` : ""}
         </div>
 

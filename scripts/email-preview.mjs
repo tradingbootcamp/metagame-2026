@@ -31,6 +31,17 @@ const VARIANTS = {
     receiptUrl:
       "https://pay.stripe.com/receipts/payment/CAcQARoXChVhY2N0XzFRZVFkMUN0TzQ0M0VHM24o85Kk1AYyBje6uF01PzosFuW6Gl6shlxk8803XXwStlJ3OPQw4aJQaLVcl0X5XmA4B9KybbZRmQNQTd8",
   },
+  btc: {
+    to: "brian+btctest@metagame.games",
+    purchaserName: "Brian BTC Test",
+    tierLabel: "Standard",
+    btcPaid: 0.005,
+    btcFull: 0.0065,
+    discountCode: "EARLYBIRD",
+    ticketCode: "DK5058",
+    receiptUrl:
+      "https://checkout.dev.opennode.com/ca86fc1a-2498-4bae-a55f-0a59c45d558d",
+  },
   comped: {
     to: "brian+test@metagame.games",
     purchaserName: "Brian",
