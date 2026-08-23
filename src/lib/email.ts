@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { env } from "@/env";
 import { SOCIAL_LINKS } from "@/lib/urls";
+import { formatTicketCode } from "@/lib/ticket-code";
 
 let cached: Resend | null = null;
 
@@ -34,6 +35,8 @@ export type TicketConfirmationEmail = {
   receiptUrl?: string;
   /** Promotion code redeemed at checkout. */
   discountCode?: string;
+  /** 6-char ticket code (dashless; rendered as XXX-XXX). */
+  ticketCode?: string;
   test?: boolean;
 };
 
@@ -50,6 +53,7 @@ export function renderTicketConfirmationEmail(
     usdFull,
     receiptUrl,
     discountCode,
+    ticketCode,
     test = false,
   }: TicketConfirmationEmail,
   assetBase: string = SITE,
@@ -99,6 +103,7 @@ export function renderTicketConfirmationEmail(
           <p><strong>Name:</strong> ${purchaserName || "—"}</p>
           <p><strong>Email:</strong> ${to}</p>
           <p><strong>Type:</strong> ${tierLabel}</p>
+          ${ticketCode ? `<p><strong>Ticket code:</strong> <span style="font-family: monospace; font-size: 15px;">${formatTicketCode(ticketCode)}</span></p>` : ""}
           <p><strong>Amount Paid:</strong> ${discounted ? `<span style="text-decoration: line-through; color: #999;">$${usdFull.toFixed(2)}</span> ` : ""}$${(usdPaid ?? 0).toFixed(2)}${discountCode && discounted ? ` (<strong>${discountCode}</strong>)` : ""}</p>
           ${receiptUrl ? `<p><a href="${receiptUrl}">View your Stripe receipt</a></p>` : ""}
         </div>
@@ -137,6 +142,7 @@ Ticket Details
 - Name: ${purchaserName || "—"}
 - Email: ${to}
 - Type: ${tierLabel}
+${ticketCode ? `- Ticket code: ${formatTicketCode(ticketCode)}` : ""}
 - ${paidLine}
 ${receiptUrl ? `- Receipt: ${receiptUrl}` : ""}
 

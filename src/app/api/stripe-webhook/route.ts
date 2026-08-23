@@ -219,6 +219,7 @@ export async function POST(request: Request) {
               : undefined,
           receiptUrl: charge?.receipt_url ?? undefined,
           discountCode: couponCode,
+          ticketCode: ticketCode(paymentIntent?.id ?? full.id),
           test: !event.livemode || isTestCoupon,
         });
       } catch (err) {

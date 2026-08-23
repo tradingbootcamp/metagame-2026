@@ -18,6 +18,7 @@ const VARIANTS = {
     usdPaid: 325,
     usdFull: 425,
     discountCode: "EARLYBIRD",
+    ticketCode: "T549ND",
     receiptUrl:
       "https://pay.stripe.com/receipts/payment/CAcQARoXChVhY2N0XzFRZVFkMUN0TzQ0M0VHM24o85Kk1AYyBje6uF01PzosFuW6Gl6shlxk8803XXwStlJ3OPQw4aJQaLVcl0X5XmA4B9KybbZRmQNQTd8",
   },
@@ -25,6 +26,7 @@ const VARIANTS = {
     to: "brian+test@metagame.games",
     purchaserName: "Brian",
     tierLabel: "Supporter",
+    ticketCode: "S9AGHG",
     usdPaid: 650,
     receiptUrl:
       "https://pay.stripe.com/receipts/payment/CAcQARoXChVhY2N0XzFRZVFkMUN0TzQ0M0VHM24o85Kk1AYyBje6uF01PzosFuW6Gl6shlxk8803XXwStlJ3OPQw4aJQaLVcl0X5XmA4B9KybbZRmQNQTd8",
