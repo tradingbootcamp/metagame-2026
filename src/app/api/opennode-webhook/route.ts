@@ -9,6 +9,7 @@ import {
   getHostedCheckoutUrl,
   verifyWebhookSignature,
 } from "@/lib/opennode";
+import { ticketCode } from "@/lib/ticket-code";
 
 // HMAC verification + the OpenNode key need Node crypto — keep this off the edge.
 export const runtime = "nodejs";
@@ -120,6 +121,8 @@ export async function POST(request: Request) {
   try {
     await recordPurchase({
       id: charge.id,
+      // Derived from the same id as the upsert key, so retries can't churn it.
+      ticketCode: ticketCode(charge.id),
       customerName: meta.name ? String(meta.name) : undefined,
       customerEmail: meta.email ? String(meta.email) : undefined,
       discordHandle: meta.discord ? String(meta.discord) : undefined,

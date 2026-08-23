@@ -8,6 +8,7 @@ import {
 } from "@/lib/airtable";
 import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
+import { ticketCode } from "@/lib/ticket-code";
 import { tierLabelForPaymentLinkUrl } from "@/lib/tickets";
 
 // Signature verification needs the raw body + Node crypto — keep this off the edge.
@@ -173,6 +174,8 @@ export async function POST(request: Request) {
     await recordPurchase({
       // Prefer the PaymentIntent id (the canonical payment) as the upsert key.
       id: paymentIntent?.id ?? full.id,
+      // Derived from the same id as the upsert key, so retries can't churn it.
+      ticketCode: ticketCode(paymentIntent?.id ?? full.id),
       customerName: full.customer_details?.name ?? undefined,
       customerEmail: full.customer_details?.email ?? undefined,
       amount: full.amount_total != null ? full.amount_total / 100 : undefined,

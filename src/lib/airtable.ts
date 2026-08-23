@@ -159,6 +159,7 @@ export type PurchaseRecord = {
   billingName?: string;
   billingEmail?: string;
   ticketType?: string;
+  ticketCode?: string; // deterministic per-purchase code (see lib/ticket-code.ts)
   couponCode?: string; // promotion code the buyer used, e.g. "EARLYBIRD"
   amountDiscount?: number; // dollars knocked off by the coupon
   btcAmountDiscounted?: number; // whole BTC knocked off by a BTC discount code
@@ -208,6 +209,7 @@ export async function recordPurchase(
   if (purchase.billingEmail)
     fields["Billing Details Email"] = purchase.billingEmail;
   if (purchase.ticketType) fields["Ticket Type"] = purchase.ticketType;
+  if (purchase.ticketCode) fields["Ticket Code"] = purchase.ticketCode;
   if (purchase.couponCode) fields["Coupon Code"] = purchase.couponCode;
   if (purchase.amountDiscount != null)
     fields["Amount Discounted"] = purchase.amountDiscount;

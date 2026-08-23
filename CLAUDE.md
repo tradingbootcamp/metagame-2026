@@ -33,6 +33,12 @@ it mirrors every Stripe promotion code (dashboard- or comp-tool-made) into the s
 `EARLYBIRD`, still is). The two `promotion_code.*` events must be enabled on the webhook endpoint in
 **both** test and live mode.
 
+## Ticket codes
+
+Per-purchase codes (`src/lib/ticket-code.ts`) are derived deterministically from the payment id,
+logged to the "Ticket Code" column by both purchase webhooks. They assume quantity is locked to 1
+on all payment links (purchase == ticket) — revisit if adjustable quantity is ever enabled in Stripe.
+
 ## Environment variables
 
 - **`.env.example`** is the committed source of truth — `cp .env.example .env.local` and fill in.
