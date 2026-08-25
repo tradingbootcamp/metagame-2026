@@ -92,10 +92,10 @@ function GridDay({
       <div className="min-w-fit">
         {/* Location header row (sticky on vertical scroll) */}
         <div
-          className="sticky top-0 z-30 grid bg-[#efe4c6]"
+          className="sticky top-0 z-30 grid bg-[#4096ff] text-white"
           style={{ gridTemplateColumns: gridCols }}
         >
-          <div className="sticky left-0 z-40 border-r border-b border-[#1b1530]/15 bg-[#efe4c6]" />
+          <div className="sticky left-0 z-40 border-r border-b border-[#1b1530]/15 bg-[#4096ff]" />
           {locations.map((loc) => (
             <div
               key={loc.id}
@@ -114,12 +114,12 @@ function GridDay({
               )}
               <div className="text-sm leading-tight font-bold">{loc.name}</div>
               {loc.campus_location && (
-                <div className="text-[11px] leading-tight text-[#1b1530]/55">
+                <div className="text-[11px] leading-tight text-white/75">
                   {loc.campus_location}
                 </div>
               )}
               {loc.capacity && (
-                <div className="text-[11px] leading-tight text-[#1b1530]/55">
+                <div className="text-[11px] leading-tight text-white/75">
                   Max {loc.capacity}
                 </div>
               )}
