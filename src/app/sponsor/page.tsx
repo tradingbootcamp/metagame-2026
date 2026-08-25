@@ -176,9 +176,9 @@ export default function SponsorPage() {
           </h1>
           <p className="mt-4 text-lg text-ink/75">
             Metagame is three days of talks, workshops, and games at Lighthaven
-            in Berkeley, November 6&ndash;8, 2026. Sponsors put their name in
-            front of a few hundred of the most curious, game-brained people we
-            know, and get to be in the room with them.
+            in Berkeley, November 6&ndash;8, 2026. Sponsors get their name in
+            front of the crowd and on our swag and marketing, plus session
+            slots, tickets, and more depending on tier.
           </p>
           <p className="mt-3 text-base text-ink/70">
             Four tiers below. Nothing here is set in stone. If you want
