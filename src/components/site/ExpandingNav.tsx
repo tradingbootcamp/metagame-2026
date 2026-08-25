@@ -16,6 +16,46 @@ const LINK_STAGGER_MS = 35;
 // Home is the logo itself, so it doesn't get a link.
 const LINKS = SECTIONS.filter((s) => s.id !== "home");
 
+// Backdrop outline: the die's isometric hexagon (pointy top/bottom, cos 30°
+// half-width) whose top and bottom vertices stretch into edges as the bar
+// widens — an octagon with half-hex ends that collapses back to a hexagon.
+const CORNER = 3;
+function backdropPath(w: number, h: number) {
+  const hx = h * 0.433;
+  const raw: [number, number][] = [
+    [hx, 0],
+    [w - hx, 0],
+    [w, h / 4],
+    [w, (3 * h) / 4],
+    [w - hx, h],
+    [hx, h],
+    [0, (3 * h) / 4],
+    [0, h / 4],
+  ];
+  // Collapsed, the two top (and two bottom) points coincide — drop the dupes
+  // so the corner rounding has real edges to work with.
+  const pts = raw.filter(
+    ([x, y], i) =>
+      i === 0 || Math.hypot(x - raw[i - 1][0], y - raw[i - 1][1]) > 0.5,
+  );
+  const unit = (dx: number, dy: number) => {
+    const len = Math.hypot(dx, dy);
+    return [dx / len, dy / len];
+  };
+  const f = (v: number) => +v.toFixed(2);
+  return (
+    pts
+      .map(([vx, vy], i) => {
+        const [px, py] = pts[(i + pts.length - 1) % pts.length];
+        const [nx, ny] = pts[(i + 1) % pts.length];
+        const [ux, uy] = unit(vx - px, vy - py);
+        const [wx, wy] = unit(nx - vx, ny - vy);
+        return `${i === 0 ? "M" : "L"}${f(vx - ux * CORNER)} ${f(vy - uy * CORNER)} Q${f(vx)} ${f(vy)} ${f(vx + wx * CORNER)} ${f(vy + wy * CORNER)}`;
+      })
+      .join(" ") + " Z"
+  );
+}
+
 export default function ExpandingNav() {
   const [expanded, setExpanded] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -23,15 +63,23 @@ export default function ExpandingNav() {
   // The link row's natural width, measured so `width` can transition to it —
   // `auto` doesn't animate.
   const [listWidth, setListWidth] = useState(0);
+  // Bar size, re-measured every frame the width transition runs so the
+  // clip-path stretches with it.
+  const [barSize, setBarSize] = useState<[number, number] | null>(null);
   const { active, goTo } = useSectionSpy();
 
   useLayoutEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const measure = () => setListWidth(el.scrollWidth);
+    const list = listRef.current;
+    const root = rootRef.current;
+    if (!list || !root) return;
+    const measure = () => {
+      setListWidth(list.scrollWidth);
+      setBarSize([root.offsetWidth, root.offsetHeight]);
+    };
     measure();
     const ro = new ResizeObserver(measure);
-    ro.observe(el);
+    ro.observe(list);
+    ro.observe(root);
     return () => ro.disconnect();
   }, []);
 
@@ -54,15 +102,14 @@ export default function ExpandingNav() {
   return (
     <div
       ref={rootRef}
-      // Backdrop is the die's own isometric hexagon, offset outward. As the
-      // bar widens the hexagon's top/bottom vertices stretch into edges (an
-      // octagon with fixed half-hex ends), so the width transition animates it.
       className="fixed top-3 left-3 z-40 flex h-(--bar-h) max-w-[calc(100vw-1.5rem)] items-center bg-navy [--bar-h:52px] [--nav-h:40px] sm:[--bar-h:60px] sm:[--nav-h:48px]"
       style={{
         // Half-width of a hexagon this tall (cos 30°).
         ["--hex" as string]: "calc(var(--bar-h) * 0.433)",
-        clipPath:
-          "polygon(var(--hex) 0, calc(100% - var(--hex)) 0, 100% 25%, 100% 75%, calc(100% - var(--hex)) 100%, var(--hex) 100%, 0 75%, 0 25%)",
+        clipPath: barSize
+          ? `path("${backdropPath(...barSize)}")`
+          : // Pre-measure fallback (SSR/first paint): same shape, square corners.
+            "polygon(var(--hex) 0, calc(100% - var(--hex)) 0, 100% 25%, 100% 75%, calc(100% - var(--hex)) 100%, var(--hex) 100%, 0 75%, 0 25%)",
       }}
     >
       <button
@@ -71,7 +118,10 @@ export default function ExpandingNav() {
         aria-expanded={expanded}
         aria-controls="expanding-nav-links"
         onClick={() => setExpanded((o) => !o)}
-        className="flex h-full w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset"
+        // Collapsed, the button is the hexagon (2·hex wide) with the die
+        // centered; expanded, it grows with the wordmark from that same left
+        // inset so the first die never shifts.
+        className="flex h-full min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[5px] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset"
       >
         <NavLogo expanded={expanded} className="h-(--nav-h)" />
       </button>
@@ -102,8 +152,8 @@ export default function ExpandingNav() {
                   aria-current={isActive ? "true" : undefined}
                   className={`relative cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium whitespace-nowrap transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:origin-left after:bg-brand-blue after:transition-transform after:duration-200 hover:text-cream hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
                     isActive
-                      ? "text-ink after:scale-x-100"
-                      : "text-ink/60 after:scale-x-0"
+                      ? "text-cream after:scale-x-100"
+                      : "text-cream/75 after:scale-x-0"
                   }`}
                   style={{
                     opacity: expanded ? 1 : 0,
