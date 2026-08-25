@@ -7,7 +7,6 @@ import BloodOnTheClocktowerDivider from "@/components/site/dividers/blood-on-the
 import CardSuitsDivider from "@/components/site/dividers/card-suits";
 import CatanDivider from "@/components/site/dividers/catan";
 import DiceDivider from "@/components/site/dividers/dice";
-import DungeonCrawlDivider from "@/components/site/dividers/dungeon-crawl";
 import MonopolyDivider from "@/components/site/dividers/monopoly";
 import PacmanDivider from "@/components/site/dividers/pacman";
 import SetCardDivider from "@/components/site/dividers/set-cards";
@@ -303,29 +302,6 @@ export default function Home() {
       </section>
 
       <BloodOnTheClocktowerDivider />
-
-      {/* night-market — compact teaser only; the full experience is its own route */}
-      <section id="night-market" className={`${SECTION} md:py-[88px]`}>
-        <div className="mx-auto max-w-[1180px] px-8">
-          <SectionHeading
-            eyebrow="What happens in the dark?"
-            title="The Night Market"
-          />
-          <p className="mt-3.5 mb-7 max-w-[560px] text-base text-ink/70">
-            When the sun goes down, a market rises. Friday, November 6th,
-            7&ndash;10pm — open to all, ticketed or not. Come see what is sold
-            in the dark.
-          </p>
-          <Link
-            href="/night-market"
-            className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-meeple underline underline-offset-2 hover:text-meeple-dark"
-          >
-            Enter the Night Market <span aria-hidden="true">&rarr;</span>
-          </Link>
-        </div>
-      </section>
-
-      <DungeonCrawlDivider />
 
       {/* Mailing list */}
       <section id="mailing-list" className={`${SECTION} md:py-[72px]`}>
