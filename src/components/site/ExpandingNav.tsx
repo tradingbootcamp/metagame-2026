@@ -23,7 +23,10 @@ const UNFOLD_MS = 800;
 // Mobile's sideways phase is quicker and eases out; the drop-down phase that
 // follows keeps the desktop timing.
 const MOBILE_SIDEWAYS_MS = 450;
-// The drop-down opens at the desktop pace but snaps shut quicker.
+// The drop-down phase: no ease-out so it doesn't drag at the bottom; the
+// words are revealed as it passes them. Collapses quicker still.
+const MOBILE_DROP_MS = 650;
+const MOBILE_DROP_EASE = "cubic-bezier(0.4,0,0.8,0.9)";
 const MOBILE_COLLAPSE_MS = 500;
 const MOBILE_SIDEWAYS_EASE = "cubic-bezier(0.22,1,0.36,1)";
 const LINK_STAGGER_MS = 50;
@@ -274,7 +277,7 @@ export default function ExpandingNav() {
             : {
                 height: dropDown ? "calc(100dvh - 1.5rem)" : "var(--bar-h)",
                 // Second phase on open, first on close.
-                transition: `height ${dropDown ? UNFOLD_MS : MOBILE_COLLAPSE_MS}ms ${EASE} ${dropDown ? sidewaysMs : 0}ms`,
+                transition: `height ${dropDown ? MOBILE_DROP_MS : MOBILE_COLLAPSE_MS}ms ${dropDown ? MOBILE_DROP_EASE : EASE} ${dropDown ? sidewaysMs : 0}ms`,
                 // Swiping the open menu shouldn't scroll the page under it.
                 touchAction: dropDown ? "none" : undefined,
                 overscrollBehavior: "contain",
@@ -415,7 +418,7 @@ export default function ExpandingNav() {
                       ["opacity 1000ms ease", "color 200ms ease"],
                       dropDown
                         ? sidewaysMs +
-                            ((i + 0.5) / LINKS.length) * UNFOLD_MS * 0.8
+                            ((i + 0.5) / LINKS.length) * MOBILE_DROP_MS * 0.8
                         : MOBILE_COLLAPSE_MS,
                     ),
                   }}
