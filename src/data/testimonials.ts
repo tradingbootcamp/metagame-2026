@@ -3,7 +3,7 @@ export type Testimonial = {
   name: string;
 };
 
-// Empty hides the section and drops its SideRail entry (see components/site/sections.ts).
+// Empty hides the section and drops its nav entry (see components/site/sections.ts).
 // Repopulate to bring both back — the 2025 quotes are kept below.
 export const TESTIMONIALS: readonly Testimonial[] = [];
 

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SECTIONS } from "./sections";
 
-// Shared by every nav variant (desktop rail + both mobile treatments) so
+// Shared by the nav's desktop and mobile treatments so
 // scroll-spy and smooth-scroll behaviour can't drift between them.
 export function useSectionSpy() {
   const [active, setActive] = useState<string>(SECTIONS[0].id);

@@ -12,7 +12,7 @@ import { TESTIMONIALS } from "@/data/testimonials";
 import Mg2Die from "./Mg2Die";
 import RubberDuck from "./RubberDuck";
 
-// Single source of truth shared by the one-pager sections and the SideRail, so
+// Single source of truth shared by the one-pager sections and the nav, so
 // their ids/labels/icons can never drift. Section wrappers use `id`; the rail
 // uses `id` for scroll-spy + smooth-scroll and `label` on hover.
 type IconProps = { size?: number; strokeWidth?: number; className?: string };
