@@ -54,7 +54,7 @@ export default function ExpandingNav() {
   return (
     <div
       ref={rootRef}
-      className="fixed top-3 left-3 z-40 flex max-w-[calc(100vw-1.5rem)] items-center rounded-full border border-ink/10 bg-background/85 p-1 shadow-[0_2px_10px_rgba(23,48,89,0.12)] backdrop-blur-sm"
+      className="fixed top-3 left-3 z-40 flex max-w-[calc(100vw-1.5rem)] items-center rounded-xl border border-ink/10 bg-background/85 p-1 shadow-[0_2px_10px_rgba(23,48,89,0.12)] backdrop-blur-sm"
     >
       <button
         type="button"
@@ -62,7 +62,7 @@ export default function ExpandingNav() {
         aria-expanded={expanded}
         aria-controls="expanding-nav-links"
         onClick={() => setExpanded((o) => !o)}
-        className="shrink-0 cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+        className="shrink-0 cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
       >
         <NavLogo
           expanded={expanded}
