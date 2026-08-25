@@ -96,8 +96,7 @@ export default function ExpandingNav() {
   const [rowWidth, setRowWidth] = useState(0);
   const [columnWidth, setColumnWidth] = useState(0);
   const { active, goTo } = useSectionSpy();
-  // Underlines grow from the side you arrived from: left→right scrolling down
-  // the page, right→left scrolling back up.
+  // Scrolling down, underlines sweep left→right (in and out); up, right→left.
   const [prevActive, setPrevActive] = useState(active);
   const [fromLeft, setFromLeft] = useState(true);
   if (active !== prevActive) {
@@ -177,7 +176,12 @@ export default function ExpandingNav() {
       isActive
         ? "text-cream after:scale-x-100"
         : "text-cream/75 after:scale-x-0"
-    } ${fromLeft ? "after:origin-left" : "after:origin-right"}`;
+    } ${
+      // Incoming underline grows from the side you came from; the outgoing
+      // one collapses toward the side you're heading to, so the pair reads
+      // as one sweep in the scroll direction.
+      isActive === fromLeft ? "after:origin-left" : "after:origin-right"
+    }`;
 
   const dropDown = !desktop && expanded;
 
