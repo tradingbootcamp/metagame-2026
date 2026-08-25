@@ -217,12 +217,11 @@ export default function ExpandingNav() {
     };
   }, [expanded, setOpen]);
 
+  // Mobile has no hover, so no swell there.
   const unfold = desktop ? expanded : dieOpen;
   const sidewaysMs = desktop ? UNFOLD_MS : MOBILE_SIDEWAYS_MS;
   const sidewaysEase = desktop ? EASE : MOBILE_SIDEWAYS_EASE;
-  // Desktop swells a touch on hover/open; mobile (no hover) swells more on
-  // open, so the black dice get visible navy around the whole wordmark.
-  const grow = desktop ? (hovered || expanded ? 6 : 0) : dieOpen ? 12 : 0;
+  const grow = desktop && (hovered || expanded);
 
   const linkClass = (isActive: boolean) =>
     `relative cursor-pointer rounded-md px-2 py-2 text-2xl font-medium whitespace-nowrap md:py-1.5 md:text-xl transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:bg-brand-blue after:transition-transform after:duration-200 hover:text-cream hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
@@ -250,8 +249,8 @@ export default function ExpandingNav() {
       // then fades it in fast. (Breakpoint via CSS so desktop never blinks.)
       className={`fixed z-40 flex items-start transition-opacity duration-200 [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px] ${introDone ? "" : "max-md:pointer-events-none max-md:opacity-0"}`}
       style={{
-        ["--grow" as string]: `${grow}px`,
-        transition: `--grow ${desktop ? 350 : sidewaysMs}ms ${desktop ? "cubic-bezier(0.45,0,0.55,1)" : sidewaysEase}`,
+        ["--grow" as string]: grow ? "6px" : "0px",
+        transition: "--grow 350ms cubic-bezier(0.45,0,0.55,1)",
         // Half-width of a hexagon this tall (cos 30°).
         ["--hex" as string]: "calc(var(--bar-h) * 0.433)",
         top: "calc(0.75rem - var(--grow) / 2)",
@@ -272,9 +271,7 @@ export default function ExpandingNav() {
           ...(desktop
             ? undefined
             : {
-                height: dropDown
-                  ? "calc(100dvh - 1.5rem + var(--grow))"
-                  : "var(--bar-h)",
+                height: dropDown ? "calc(100dvh - 1.5rem)" : "var(--bar-h)",
                 // Second phase on open, first on close.
                 transition: `height ${dropDown ? UNFOLD_MS : MOBILE_COLLAPSE_MS}ms ${EASE} ${dropDown ? sidewaysMs : 0}ms`,
                 // Swiping the open menu shouldn't scroll the page under it.
@@ -295,9 +292,10 @@ export default function ExpandingNav() {
           // inset so the first die never shifts.
           // Mobile mirrors the left inset on the right while unfolded so the
           // box is symmetric about the wordmark — always-on it would hold the
-          // collapsed hexagon open. Only padding-right transitions: the left
-          // inset must follow --grow exactly, or the die lags the backdrop.
-          className={`flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset md:pr-0 ${unfold ? "pr-[calc(5px+var(--grow)/2)]" : "pr-0"}`}
+          // collapsed hexagon open.
+          className={`flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset md:pr-0 ${unfold ? "pr-[5px]" : "pr-0"}`}
+          // padding-right only: the left inset must follow --grow exactly, or
+          // the die lags behind the swelling backdrop.
           style={{
             transition: `padding-right ${sidewaysMs}ms ${sidewaysEase}`,
           }}
@@ -395,7 +393,7 @@ export default function ExpandingNav() {
             transition: `width ${sidewaysMs}ms ${sidewaysEase} ${dropDown ? 0 : MOBILE_COLLAPSE_MS}ms`,
           }}
         >
-          <ul className="flex h-[calc(100dvh-1.5rem-var(--bar-h))] w-max flex-col items-start justify-around pb-[calc(var(--bar-h)/4)] pl-2">
+          <ul className="flex h-[calc(100dvh-1.5rem-var(--bar-h))] w-max flex-col items-start justify-around pb-[calc(var(--bar-h)/4)] pl-1">
             {LINKS.map(({ id, label }, i) => (
               <li key={id}>
                 <button
