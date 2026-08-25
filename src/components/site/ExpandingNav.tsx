@@ -358,7 +358,11 @@ export default function ExpandingNav() {
                     // Links ripple out left→right on open and fold back
                     // right→left on close, trailing the wordmark's dice.
                     transition: withDelay(
-                      [`opacity 300ms ease`, `transform 450ms ${EASE}`],
+                      [
+                        `opacity 300ms ease`,
+                        `transform 450ms ${EASE}`,
+                        "color 200ms ease",
+                      ],
                       unfold
                         ? 200 + i * LINK_STAGGER_MS
                         : (LINKS.length - 1 - i) * LINK_STAGGER_MS * 0.5,
@@ -407,7 +411,7 @@ export default function ExpandingNav() {
                     // it; on close the shrinking box hides them, so they only
                     // fade once it's down.
                     transition: withDelay(
-                      ["opacity 200ms ease"],
+                      ["opacity 200ms ease", "color 200ms ease"],
                       dropDown
                         ? sidewaysMs +
                             ((i + 0.5) / LINKS.length) * UNFOLD_MS * 0.8
