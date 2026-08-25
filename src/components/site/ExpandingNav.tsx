@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { NavLogo, Pips, TopIcon } from "./LogoDice";
 import { SECTIONS } from "./sections";
 import { useMediaQuery } from "./useMediaQuery";
@@ -71,6 +77,10 @@ function backdropPath(w: number, h: number, hexH: number) {
 export default function ExpandingNav() {
   const desktop = useMediaQuery("(min-width: 768px)");
   const [expanded, setExpanded] = useState(false);
+  // Mobile opens sideways then down, and closes down then sideways — so the
+  // die's own unfold state lags `expanded` on close by one phase.
+  const [dieOpen, setDieOpen] = useState(false);
+  const foldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hovered, setHovered] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -114,13 +124,29 @@ export default function ExpandingNav() {
     return () => ro.disconnect();
   }, []);
 
+  const setOpen = useCallback(
+    (open: boolean) => {
+      setExpanded(open);
+      if (foldTimer.current) clearTimeout(foldTimer.current);
+      if (open || desktop) setDieOpen(open);
+      else foldTimer.current = setTimeout(() => setDieOpen(false), UNFOLD_MS);
+    },
+    [desktop],
+  );
+  useEffect(
+    () => () => {
+      if (foldTimer.current) clearTimeout(foldTimer.current);
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!expanded) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setExpanded(false);
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setExpanded(false);
+      if (e.key === "Escape") setOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -128,10 +154,10 @@ export default function ExpandingNav() {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [expanded]);
+  }, [expanded, setOpen]);
 
   // Mobile has no hover, so no swell there.
-  const unfold = expanded;
+  const unfold = desktop ? expanded : dieOpen;
   const grow = desktop && (hovered || expanded);
 
   const linkClass = (isActive: boolean) =>
@@ -176,7 +202,8 @@ export default function ExpandingNav() {
             ? undefined
             : {
                 height: dropDown ? "calc(100dvh - 1.5rem)" : "var(--bar-h)",
-                transition: `height ${UNFOLD_MS}ms ${EASE}`,
+                // Second phase on open, first on close.
+                transition: `height ${UNFOLD_MS}ms ${EASE} ${dropDown ? UNFOLD_MS : 0}ms`,
               }),
         }}
       >
@@ -186,11 +213,14 @@ export default function ExpandingNav() {
           aria-label={expanded ? "Close navigation" : "Open navigation"}
           aria-expanded={expanded}
           aria-controls="expanding-nav-links"
-          onClick={() => setExpanded((o) => !o)}
+          onClick={() => setOpen(!expanded)}
           // Collapsed, the button is the hexagon (2·hex wide) with the die
           // centered; expanded, it grows with the wordmark from that same left
           // inset so the first die never shifts.
-          className="flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pr-(--hex) pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset md:pr-0"
+          // Mobile only pads the right while unfolded (so the wordmark clears
+          // the hex cap) — always-on it would hold the hexagon open.
+          className={`flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset md:pr-0 ${unfold ? "pr-(--hex)" : "pr-0"}`}
+          style={{ transition: `padding ${UNFOLD_MS}ms ${EASE}` }}
         >
           <NavLogo
             expanded={unfold}
@@ -270,7 +300,9 @@ export default function ExpandingNav() {
           className="min-h-0 flex-1 overflow-hidden md:hidden"
           style={{
             width: dropDown ? columnWidth : 0,
-            transition: `width ${UNFOLD_MS}ms ${EASE}`,
+            // Sideways phase: with the wordmark on open, after the height
+            // has collapsed on close.
+            transition: `width ${UNFOLD_MS}ms ${EASE} ${dropDown ? 0 : UNFOLD_MS}ms`,
           }}
         >
           <ul
@@ -284,7 +316,7 @@ export default function ExpandingNav() {
                   tabIndex={dropDown ? 0 : -1}
                   onClick={() => {
                     goTo(id);
-                    setExpanded(false);
+                    setOpen(false);
                   }}
                   aria-current={active === id ? "true" : undefined}
                   className={linkClass(active === id)}
@@ -292,7 +324,7 @@ export default function ExpandingNav() {
                     opacity: dropDown ? 1 : 0,
                     transition: "opacity 200ms ease, color 200ms ease",
                     transitionDelay: dropDown
-                      ? `${100 + i * LINK_STAGGER_MS * 0.6}ms`
+                      ? `${UNFOLD_MS + 100 + i * LINK_STAGGER_MS * 0.6}ms`
                       : "0ms",
                   }}
                 >
