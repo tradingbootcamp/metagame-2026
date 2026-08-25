@@ -181,8 +181,15 @@ export default function SponsorPage() {
             slots, tickets, and more depending on tier.
           </p>
           <p className="mt-3 text-base text-ink/70">
-            Four tiers below. Nothing here is set in stone. If you want
-            something that isn&rsquo;t on the list, tell us.
+            Tiers are not set in stone. If you want something not on the list or
+            have other questions, please reach out to{" "}
+            <a
+              href={MAILTO}
+              className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
+            >
+              {CONTACT}
+            </a>{" "}
+            to discuss.
           </p>
           <a
             href="#donate"
