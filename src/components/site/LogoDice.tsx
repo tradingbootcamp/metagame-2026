@@ -103,11 +103,31 @@ const HEX = VERTS.map(([vx, vy], i) => {
 
 const PITCH = 2 * H + 90; // die width + gap, matching the mock's spacing
 
-// Nav logo viewBox height and the aspect ratios of its two states (full
-// wordmark vs. single die), so the wrapper can animate width from --nav-h.
-const NAV_VB_H = 2 * S + 64;
-const NAV_AR_FULL = (3 * PITCH + 2 * H + 64) / NAV_VB_H;
-const NAV_AR_ONE = (2 * H + 64) / NAV_VB_H;
+// Nav logo viewBox and the aspect ratios of its two states (full wordmark vs.
+// single die), so the wrapper can animate width from --nav-h. Padding widens
+// when the drop shadow needs canvas.
+function navGeometry(pad: number) {
+  const vbH = 2 * S + 2 * pad;
+  return {
+    viewBox: `${-H - pad} ${-S - pad} ${3 * PITCH + 2 * H + 2 * pad} ${vbH}`,
+    arFull: (3 * PITCH + 2 * H + 2 * pad) / vbH,
+    arOne: (2 * H + 2 * pad) / vbH,
+  };
+}
+
+function DropShadow({ id }: { id: string }) {
+  return (
+    <filter id={id} x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow
+        dx="0"
+        dy={SHADOW_DY}
+        stdDeviation={SHADOW_BLUR}
+        floodColor="var(--ld-shadow, #fff)"
+        floodOpacity={SHADOW_OPACITY}
+      />
+    </filter>
+  );
+}
 
 function Letter({
   glyph,
@@ -225,30 +245,40 @@ export function LogoDie({
 // own right face here so the "G" can crossfade to "E" as dice 1–3 pop in.
 export function NavLogo({
   expanded,
+  shadow = false,
   className,
   style,
 }: {
   expanded: boolean;
+  shadow?: boolean;
   className?: string;
   style?: CSSProperties;
 }) {
+  const shadowId = useId();
+  const { viewBox, arFull, arOne } = navGeometry(shadow ? SHADOW_PAD : 32);
+  const filter = shadow ? `url(#${shadowId})` : undefined;
   return (
     <span
       className={`block overflow-hidden ${className ?? ""}`}
       style={{
         height: "var(--nav-h)",
-        width: `calc(var(--nav-h) * ${expanded ? NAV_AR_FULL : NAV_AR_ONE})`,
+        width: `calc(var(--nav-h) * ${expanded ? arFull : arOne})`,
         transition: "width 460ms cubic-bezier(0.22,1,0.36,1)",
         ...style,
       }}
     >
       <svg
-        viewBox={`${-H - 32} ${-S - 32} ${3 * PITCH + 2 * H + 64} ${2 * S + 64}`}
+        viewBox={viewBox}
         className="block h-full w-auto"
         role="img"
         aria-label="Metagame"
       >
-        <g>
+        {shadow && (
+          <defs>
+            <DropShadow id={shadowId} />
+          </defs>
+        )}
+        <g filter={filter}>
           <Die left="m" right="e" pips={2} highlight renderRight={false} />
           <g transform={`${RIGHT_MATRIX} ${INSET_RIGHT}`}>
             <g
@@ -279,7 +309,7 @@ export function NavLogo({
           </g>
         </g>
         {[1, 2, 3].map((i) => (
-          <g key={i} transform={`translate(${i * PITCH} 0)`}>
+          <g key={i} transform={`translate(${i * PITCH} 0)`} filter={filter}>
             <g
               style={{
                 opacity: expanded ? 1 : 0,
@@ -329,15 +359,7 @@ export default function LogoDice({
     >
       {shadow && (
         <defs>
-          <filter id={shadowId} x="-20%" y="-20%" width="140%" height="150%">
-            <feDropShadow
-              dx="0"
-              dy={SHADOW_DY}
-              stdDeviation={SHADOW_BLUR}
-              floodColor="var(--ld-shadow, #fff)"
-              floodOpacity={SHADOW_OPACITY}
-            />
-          </filter>
+          <DropShadow id={shadowId} />
         </defs>
       )}
       {DICE.map((die, i) => (

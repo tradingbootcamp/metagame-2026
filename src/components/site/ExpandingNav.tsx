@@ -54,7 +54,7 @@ export default function ExpandingNav() {
   return (
     <div
       ref={rootRef}
-      className="fixed top-3 left-3 z-40 flex max-w-[calc(100vw-1.5rem)] items-center rounded-xl border border-ink/10 bg-background/85 p-1 shadow-[0_2px_10px_rgba(23,48,89,0.12)] backdrop-blur-sm"
+      className="fixed top-3 left-3 z-40 flex max-w-[calc(100vw-1.5rem)] items-center rounded-xl border border-line-dark bg-navy/95 p-1 shadow-[0_2px_10px_rgba(23,48,89,0.25)] backdrop-blur-sm"
     >
       <button
         type="button"
@@ -66,6 +66,7 @@ export default function ExpandingNav() {
       >
         <NavLogo
           expanded={expanded}
+          shadow
           className="[--nav-h:40px] sm:[--nav-h:48px]"
         />
       </button>
@@ -91,7 +92,7 @@ export default function ExpandingNav() {
                   tabIndex={expanded ? 0 : -1}
                   onClick={() => goTo(id)}
                   aria-current={isActive ? "true" : undefined}
-                  className={`relative cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium whitespace-nowrap transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:origin-left after:bg-brand-blue after:transition-transform after:duration-200 hover:text-ink hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
+                  className={`relative cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium whitespace-nowrap transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:origin-left after:bg-brand-blue after:transition-transform after:duration-200 hover:text-cream hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
                     isActive
                       ? "text-ink after:scale-x-100"
                       : "text-ink/60 after:scale-x-0"
