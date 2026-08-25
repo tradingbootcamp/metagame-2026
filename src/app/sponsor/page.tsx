@@ -191,11 +191,10 @@ export default function SponsorPage() {
                 <p className="mt-1 font-space-mono text-[15px] tracking-[0.12em] uppercase opacity-85">
                   {t.cost}
                 </p>
-                {t.limit && (
-                  <p className="mt-1 text-xs font-semibold tracking-[0.06em] uppercase opacity-80">
-                    {t.limit}
-                  </p>
-                )}
+                {/* Always rendered so the four headers stay the same height. */}
+                <p className="mt-1 text-xs font-semibold tracking-[0.06em] uppercase opacity-80">
+                  {t.limit ?? "\u00a0"}
+                </p>
               </div>
               <p className="flex-1 px-5 py-4 text-[15px] text-ink/75">
                 {t.blurb}
@@ -207,12 +206,12 @@ export default function SponsorPage() {
         <section className="mt-14">
           <p className={`${EYEBROW} mb-4 text-meeple`}>What&rsquo;s included</p>
           <div className="overflow-x-auto rounded-xl border border-line bg-white">
-            <table className="w-full min-w-[640px] border-collapse text-center text-[15px]">
+            <table className="w-full min-w-[640px] table-fixed border-collapse text-center text-[15px]">
               <thead>
                 <tr>
                   <th
                     scope="col"
-                    className="sticky left-0 z-[1] w-[220px] min-w-[160px] bg-[#f5f4f2] px-4 py-4 text-left font-space-mono text-[13px] tracking-[0.18em] text-ink/70 uppercase"
+                    className="sticky left-0 z-[1] w-[28%] min-w-[160px] bg-[#f5f4f2] px-4 py-4 text-left font-space-mono text-[13px] tracking-[0.18em] text-ink/70 uppercase"
                   >
                     Benefit
                   </th>
@@ -228,11 +227,9 @@ export default function SponsorPage() {
                       <span className="mt-1 block font-space-mono text-[13px] tracking-[0.12em] uppercase opacity-85">
                         {t.cost}
                       </span>
-                      {t.limit && (
-                        <span className="mt-0.5 block text-[11px] font-semibold tracking-[0.06em] uppercase opacity-75">
-                          {t.limit}
-                        </span>
-                      )}
+                      <span className="mt-0.5 block text-[11px] font-semibold tracking-[0.06em] uppercase opacity-75">
+                        {t.limit ?? "\u00a0"}
+                      </span>
                     </th>
                   ))}
                 </tr>
