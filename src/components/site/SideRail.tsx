@@ -201,11 +201,11 @@ export default function SideRail({ overlay = false, onClose }: SideRailProps) {
                 <Icon
                   size={22}
                   strokeWidth={isActive ? 2.4 : 2}
-                  // Resting: muted gray blending into the beige. Active: full ink
+                  // Resting: muted gray blending into the beige. Active: navy
                   // and enlarged, legible even when the rail isn't hovered.
                   className={`shrink-0 transition-colors duration-200 ${
                     isActive
-                      ? "scale-110 text-ink"
+                      ? "scale-110 text-navy"
                       : "text-ink/35 group-hover:text-ink"
                   }`}
                 />
