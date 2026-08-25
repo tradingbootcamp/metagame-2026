@@ -135,7 +135,7 @@ export default function ExpandingNav() {
   const grow = desktop && (hovered || expanded);
 
   const linkClass = (isActive: boolean) =>
-    `relative cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium whitespace-nowrap transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:bg-brand-blue after:transition-transform after:duration-200 hover:text-cream hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
+    `relative cursor-pointer rounded-md px-2 py-2 text-lg font-medium whitespace-nowrap md:py-1.5 md:text-sm transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:bg-brand-blue after:transition-transform after:duration-200 hover:text-cream hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
       isActive
         ? "text-cream after:scale-x-100"
         : "text-cream/75 after:scale-x-0"
@@ -190,7 +190,7 @@ export default function ExpandingNav() {
           // Collapsed, the button is the hexagon (2·hex wide) with the die
           // centered; expanded, it grows with the wordmark from that same left
           // inset so the first die never shifts.
-          className="flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset"
+          className="flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pr-(--hex) pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset md:pr-0"
         >
           <NavLogo
             expanded={unfold}
@@ -275,7 +275,7 @@ export default function ExpandingNav() {
         >
           <ul
             ref={columnRef}
-            className="flex h-full w-max flex-col items-start justify-around pr-4 pb-[calc(var(--bar-h)/4)]"
+            className="flex h-full w-max flex-col items-start justify-around pr-(--hex) pb-[calc(var(--bar-h)/4)] pl-1"
           >
             {LINKS.map(({ id, label }, i) => (
               <li key={id}>
