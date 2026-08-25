@@ -68,6 +68,15 @@ export default function ExpandingNav() {
   // clip-path stretches with it.
   const [barSize, setBarSize] = useState<[number, number] | null>(null);
   const { active, goTo } = useSectionSpy();
+  // Underlines grow from the side you arrived from: left→right scrolling down
+  // the page, right→left scrolling back up.
+  const [prevActive, setPrevActive] = useState(active);
+  const [fromLeft, setFromLeft] = useState(true);
+  if (active !== prevActive) {
+    const idx = (id: string) => SECTIONS.findIndex((s) => s.id === id);
+    setFromLeft(idx(active) > idx(prevActive));
+    setPrevActive(active);
+  }
 
   useLayoutEffect(() => {
     const list = listRef.current;
@@ -163,11 +172,11 @@ export default function ExpandingNav() {
                   tabIndex={expanded ? 0 : -1}
                   onClick={() => goTo(id)}
                   aria-current={isActive ? "true" : undefined}
-                  className={`relative cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium whitespace-nowrap transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:origin-left after:bg-brand-blue after:transition-transform after:duration-200 hover:text-cream hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
+                  className={`relative cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium whitespace-nowrap transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:bg-brand-blue after:transition-transform after:duration-200 hover:text-cream hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
                     isActive
                       ? "text-cream after:scale-x-100"
                       : "text-cream/75 after:scale-x-0"
-                  }`}
+                  } ${fromLeft ? "after:origin-left" : "after:origin-right"}`}
                   style={{
                     opacity: expanded ? 1 : 0,
                     transform: expanded ? "translateX(0)" : "translateX(-12px)",
