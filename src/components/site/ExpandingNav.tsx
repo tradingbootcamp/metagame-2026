@@ -192,7 +192,7 @@ export default function ExpandingNav() {
       className="fixed z-40 flex items-start [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px]"
       style={{
         ["--grow" as string]: grow ? "6px" : "0px",
-        transition: "--grow 300ms ease-out",
+        transition: "--grow 550ms ease-out",
         // Half-width of a hexagon this tall (cos 30°).
         ["--hex" as string]: "calc(var(--bar-h) * 0.433)",
         top: "calc(0.75rem - var(--grow) / 2)",
