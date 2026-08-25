@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { NavLogo, Pips, TopIcon } from "./LogoDice";
 import { SECTIONS } from "./sections";
@@ -97,8 +98,30 @@ function registerGrow() {
   }
 }
 
+// True once the hero dice have rolled in and spelled META (see Dice3D). A
+// backstop timer covers pages without the dice.
+const INTRO_FALLBACK_MS = 8000;
+function useDiceIntroDone() {
+  return useSyncExternalStore(
+    (onChange) => {
+      window.addEventListener("dice-intro-done", onChange);
+      const cap = setTimeout(() => {
+        window.__diceIntroDone = true;
+        onChange();
+      }, INTRO_FALLBACK_MS);
+      return () => {
+        window.removeEventListener("dice-intro-done", onChange);
+        clearTimeout(cap);
+      };
+    },
+    () => window.__diceIntroDone === true,
+    () => false,
+  );
+}
+
 export default function ExpandingNav() {
   const desktop = useMediaQuery("(min-width: 768px)");
+  const introDone = useDiceIntroDone();
   useEffect(registerGrow, []);
   const [expanded, setExpanded] = useState(false);
   // Mobile opens sideways then down, and closes down then sideways — so the
@@ -217,7 +240,9 @@ export default function ExpandingNav() {
       // The backdrop's margin around the die grows a touch on hover; the open
       // bar keeps that grown size. Offsetting top/left by half keeps the die
       // fixed in place while the hexagon swells around it.
-      className="fixed z-40 flex items-start [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px]"
+      // Mobile holds the trigger back until the hero dice have said META,
+      // then fades it in fast. (Breakpoint via CSS so desktop never blinks.)
+      className={`fixed z-40 flex items-start transition-opacity duration-200 [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px] ${introDone ? "" : "max-md:pointer-events-none max-md:opacity-0"}`}
       style={{
         ["--grow" as string]: grow ? "6px" : "0px",
         transition: "--grow 350ms cubic-bezier(0.45,0,0.55,1)",
