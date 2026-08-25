@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FaArrowLeft, FaCheck, FaEnvelope } from "react-icons/fa";
+import {
+  FaArrowDown,
+  FaArrowLeft,
+  FaCheck,
+  FaEnvelope,
+  FaExternalLinkAlt,
+} from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { EYEBROW, HEADING } from "@/components/site/styles";
 
@@ -11,6 +17,7 @@ export const metadata: Metadata = {
 };
 
 const CONTACT = "team@metagame.games";
+const MANIFUND_URL = "https://manifund.org/projects/metagame-2026";
 
 type TierId = "headline" | "platinum" | "gold" | "silver";
 
@@ -162,7 +169,7 @@ export default function SponsorPage() {
 
         <header className="mt-6 max-w-[720px]">
           <p className={`${EYEBROW} mb-2.5 text-meeple`}>
-            Want to be part of it?
+            Want to help make the magic happen?
           </p>
           <h1 className={`${HEADING} text-[clamp(32px,5vw,52px)] text-navy`}>
             Sponsor Metagame 2026
@@ -177,6 +184,12 @@ export default function SponsorPage() {
             Four tiers below. Nothing here is set in stone. If you want
             something that isn&rsquo;t on the list, tell us.
           </p>
+          <a
+            href="#donate"
+            className="mt-4 inline-flex items-center gap-2 text-[15px] font-semibold text-navy underline underline-offset-4 transition hover:text-meeple"
+          >
+            Prefer to donate? <FaArrowDown size={12} aria-hidden />
+          </a>
         </header>
 
         <section className="mt-12">
@@ -245,6 +258,27 @@ export default function SponsorPage() {
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section
+          id="donate"
+          className="mt-14 scroll-mt-16 rounded-xl border border-line bg-white px-6 py-7 sm:px-8"
+        >
+          <h2 className={`${HEADING} text-[clamp(22px,3vw,28px)] text-navy`}>
+            Prefer to donate?
+          </h2>
+          <p className="mt-3 max-w-[640px] text-base text-ink/75">
+            Metagame accepts tax-deductible donations through Manifund, a
+            501(c)(3) that fiscally sponsors our project. Gifts, including from
+            a donor-advised fund, go to Manifund and are earmarked for Metagame.
+            Donors get our thanks and their name on the site, but no tickets or
+            other benefits, which is what keeps the gift deductible.
+          </p>
+          <Button asChild variant="navy" size="lg" className="mt-5">
+            <a href={MANIFUND_URL} target="_blank" rel="noopener noreferrer">
+              Donate on Manifund <FaExternalLinkAlt size={12} aria-hidden />
+            </a>
+          </Button>
         </section>
 
         <section className="mt-14 rounded-xl bg-navy px-6 py-8 text-cream sm:px-10">
