@@ -9,7 +9,7 @@ import { useSectionSpy } from "./useSectionSpy";
 // the die into the full METAGAME wordmark while the section links slide out
 // horizontally from behind it, sharing the wordmark's easing so the two read
 // as one motion.
-const EASE = "cubic-bezier(0.22,1,0.36,1)";
+const EASE = "cubic-bezier(0.65,0,0.35,1)";
 const UNFOLD_MS = 800;
 const LINK_STAGGER_MS = 50;
 

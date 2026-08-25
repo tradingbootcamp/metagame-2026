@@ -243,7 +243,7 @@ export function NavLogo({
       style={{
         height: "var(--nav-h)",
         width: `calc(var(--nav-h) * ${expanded ? NAV_AR_FULL : NAV_AR_ONE})`,
-        transition: `width ${durationMs}ms cubic-bezier(0.22,1,0.36,1)`,
+        transition: `width ${durationMs}ms cubic-bezier(0.65,0,0.35,1)`,
         ...style,
       }}
     >
@@ -291,7 +291,7 @@ export function NavLogo({
                 transform: expanded ? "scale(1)" : "scale(0.5)",
                 transformBox: "fill-box",
                 transformOrigin: "center",
-                transition: `opacity ${ms(200)} ease, transform ${ms(240)} cubic-bezier(0.22,1,0.36,1)`,
+                transition: `opacity ${ms(200)} ease, transform ${ms(240)} cubic-bezier(0.65,0,0.35,1)`,
                 transitionDelay: expanded ? ms(i * 80) : ms((3 - i) * 40),
               }}
             >
