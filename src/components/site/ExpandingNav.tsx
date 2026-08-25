@@ -290,14 +290,14 @@ export default function ExpandingNav() {
           // Collapsed, the button is the hexagon (2·hex wide) with the die
           // centered; expanded, it grows with the wordmark from that same left
           // inset so the first die never shifts.
-          // Mobile mirrors the left inset on the right while unfolded so the
-          // box is symmetric about the wordmark — always-on it would hold the
-          // collapsed hexagon open.
-          className={`flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset md:pr-0 ${unfold ? "pr-[5px]" : "pr-0"}`}
-          // padding-right only: the left inset must follow --grow exactly, or
-          // the die lags behind the swelling backdrop.
+          // Mobile, unfolded: a wider symmetric inset (the black dice need
+          // visible navy around them), which the die slides into. Collapsed
+          // (and desktop) keep the 5px that centres the die in the hexagon.
+          className={`flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset md:pr-0 md:pl-[calc(5px+var(--grow)/2)] ${unfold ? "px-3" : "pr-0 pl-[5px]"}`}
+          // Desktop transitions padding-right only: its left inset must follow
+          // --grow exactly, or the die lags behind the swelling backdrop.
           style={{
-            transition: `padding-right ${sidewaysMs}ms ${sidewaysEase}`,
+            transition: `${desktop ? "padding-right" : "padding"} ${sidewaysMs}ms ${sidewaysEase}`,
           }}
         >
           <NavLogo
@@ -393,7 +393,7 @@ export default function ExpandingNav() {
             transition: `width ${sidewaysMs}ms ${sidewaysEase} ${dropDown ? 0 : MOBILE_COLLAPSE_MS}ms`,
           }}
         >
-          <ul className="flex h-[calc(100dvh-1.5rem-var(--bar-h))] w-max flex-col items-start justify-around pb-[calc(var(--bar-h)/4)] pl-1">
+          <ul className="flex h-[calc(100dvh-1.5rem-var(--bar-h))] w-max flex-col items-start justify-around pb-[calc(var(--bar-h)/4)] pl-2">
             {LINKS.map(({ id, label }, i) => (
               <li key={id}>
                 <button
