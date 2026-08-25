@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { NavLogo } from "./LogoDice";
+import { NavLogo, Pips, TopIcon } from "./LogoDice";
 import { SECTIONS } from "./sections";
 import { useMediaQuery } from "./useMediaQuery";
 import { useSectionSpy } from "./useSectionSpy";
@@ -176,6 +176,25 @@ export default function ExpandingNav() {
             expanded={unfold}
             durationMs={UNFOLD_MS}
             className="h-(--nav-h)"
+            // Top face shows where you are: the section's icon, crossfading
+            // as scroll-spy moves; Home keeps the die's own 2 pips.
+            top={SECTIONS.map(({ id, icon: Icon }) => (
+              <g
+                key={id}
+                style={{
+                  opacity: active === id ? 1 : 0,
+                  transition: "opacity 250ms ease",
+                }}
+              >
+                {id === "home" ? (
+                  <Pips pips={2} />
+                ) : (
+                  <TopIcon>
+                    <Icon size={24} strokeWidth={2} />
+                  </TopIcon>
+                )}
+              </g>
+            ))}
           />
         </button>
         {/* Desktop: links slide out to the right inside the stretching bar.

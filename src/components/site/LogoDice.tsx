@@ -1,4 +1,4 @@
-import { useId, type CSSProperties } from "react";
+import { useId, type CSSProperties, type ReactNode } from "react";
 import { letterPaths } from "@/lib/dice-letter-paths";
 
 // Parametric SVG rebuild of the METAGAME dice wordmark (images/logo.png in the
@@ -134,16 +134,41 @@ function Letter({
   );
 }
 
+// The pips of a top face, in its 512×512 local space.
+export function Pips({ pips }: { pips: number }) {
+  return (PIP_LAYOUTS[pips] ?? []).map(([x, y]) => (
+    <circle key={`${x}-${y}`} cx={x} cy={y} r={42} fill="var(--ld-pip, #fff)" />
+  ));
+}
+
+// Drops a 24×24 stroke icon (lucide-style, currentColor) onto a top face,
+// centred and sized to sit inside the pip area. The face transform shears it
+// onto the isometric plane like anything else drawn there.
+export function TopIcon({ children }: { children: ReactNode }) {
+  const size = 320;
+  return (
+    <g
+      transform={`translate(${(S - size) / 2} ${(S - size) / 2}) scale(${size / 24})`}
+      color="var(--ld-pip, #fff)"
+    >
+      {children}
+    </g>
+  );
+}
+
 function Die({
   left,
   right,
   pips,
+  top,
   highlight,
   renderRight = true,
 }: {
   left: string;
   right: string;
   pips: number;
+  // Replaces the pips on the top face.
+  top?: ReactNode;
   highlight: boolean;
   renderRight?: boolean;
 }) {
@@ -158,15 +183,7 @@ function Die({
       />
       <g transform={`${TOP_MATRIX} ${INSET_TOP}`}>
         <rect width={S} height={S} rx={48} fill="var(--ld-top, #232323)" />
-        {(PIP_LAYOUTS[pips] ?? []).map(([x, y]) => (
-          <circle
-            key={`${x}-${y}`}
-            cx={x}
-            cy={y}
-            r={42}
-            fill="var(--ld-pip, #fff)"
-          />
-        ))}
+        {top ?? <Pips pips={pips} />}
       </g>
       <g transform={`${LEFT_MATRIX} ${INSET_LEFT}`}>
         <Letter
@@ -226,12 +243,15 @@ export function LogoDie({
 export function NavLogo({
   expanded,
   durationMs = 460,
+  top,
   className,
   style,
 }: {
   expanded: boolean;
   // Overall unfold time; the per-die stagger and crossfade scale with it.
   durationMs?: number;
+  // Replaces the first die's pips (see Die).
+  top?: ReactNode;
   className?: string;
   style?: CSSProperties;
 }) {
@@ -257,7 +277,14 @@ export function NavLogo({
         aria-label="Metagame"
       >
         <g>
-          <Die left="m" right="e" pips={2} highlight renderRight={false} />
+          <Die
+            left="m"
+            right="e"
+            pips={2}
+            top={top}
+            highlight
+            renderRight={false}
+          />
           <g transform={`${RIGHT_MATRIX} ${INSET_RIGHT}`}>
             <g
               style={{
