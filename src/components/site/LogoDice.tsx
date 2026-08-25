@@ -226,12 +226,14 @@ export function LogoDie({
 export function NavLogo({
   expanded,
   durationMs = 460,
+  easing = "cubic-bezier(0.65,0,0.35,1)",
   className,
   style,
 }: {
   expanded: boolean;
   // Overall unfold time; the per-die stagger and crossfade scale with it.
   durationMs?: number;
+  easing?: string;
   className?: string;
   style?: CSSProperties;
 }) {
@@ -243,7 +245,7 @@ export function NavLogo({
       style={{
         height: "var(--nav-h)",
         width: `calc(var(--nav-h) * ${expanded ? NAV_AR_FULL : NAV_AR_ONE})`,
-        transition: `width ${durationMs}ms cubic-bezier(0.65,0,0.35,1)`,
+        transition: `width ${durationMs}ms ${easing}`,
         ...style,
       }}
     >
@@ -291,7 +293,7 @@ export function NavLogo({
                 transform: expanded ? "scale(1)" : "scale(0.5)",
                 transformBox: "fill-box",
                 transformOrigin: "center",
-                transition: `opacity ${ms(200)} ease, transform ${ms(240)} cubic-bezier(0.65,0,0.35,1)`,
+                transition: `opacity ${ms(200)} ease, transform ${ms(240)} ${easing}`,
                 transitionDelay: expanded ? ms(i * 80) : ms((3 - i) * 80),
               }}
             >
