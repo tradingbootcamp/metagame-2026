@@ -265,7 +265,7 @@ export default function SponsorPage() {
           className="mt-14 scroll-mt-16 rounded-xl border border-line bg-white px-6 py-7 sm:px-8"
         >
           <h2 className={`${HEADING} text-[clamp(22px,3vw,28px)] text-navy`}>
-            Prefer to donate?
+            Tax-deductible support
           </h2>
           <p className="mt-3 max-w-[640px] text-base text-ink/75">
             Metagame accepts tax-deductible donations through Manifund, a
