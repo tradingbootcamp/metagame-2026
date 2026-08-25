@@ -54,7 +54,14 @@ function backdropPath(w: number, h: number, hexH: number) {
         const [nx, ny] = pts[(i + 1) % pts.length];
         const [ux, uy] = unit(vx - px, vy - py);
         const [wx, wy] = unit(nx - vx, ny - vy);
-        return `${i === 0 ? "M" : "L"}${f(vx - ux * CORNER)} ${f(vy - uy * CORNER)} Q${f(vx)} ${f(vy)} ${f(vx + wx * CORNER)} ${f(vy + wy * CORNER)}`;
+        // Mid-transition an edge can be shorter than the rounding; cap so the
+        // curve never overshoots the vertex.
+        const r = Math.min(
+          CORNER,
+          Math.hypot(vx - px, vy - py) / 2,
+          Math.hypot(nx - vx, ny - vy) / 2,
+        );
+        return `${i === 0 ? "M" : "L"}${f(vx - ux * r)} ${f(vy - uy * r)} Q${f(vx)} ${f(vy)} ${f(vx + wx * r)} ${f(vy + wy * r)}`;
       })
       .join(" ") + " Z"
   );
@@ -143,9 +150,10 @@ export default function ExpandingNav() {
       // The backdrop's margin around the die grows a touch on hover; the open
       // bar keeps that grown size. Offsetting top/left by half keeps the die
       // fixed in place while the hexagon swells around it.
-      className="fixed z-40 flex items-start transition-[top,left] duration-300 ease-out [--bar-h:calc(52px+var(--grow))] [--nav-h:40px] md:[--bar-h:calc(60px+var(--grow))] md:[--nav-h:48px]"
+      className="fixed z-40 flex items-start [--bar-h:calc(52px+var(--grow))] [--nav-h:40px] md:[--bar-h:calc(60px+var(--grow))] md:[--nav-h:48px]"
       style={{
         ["--grow" as string]: grow ? "6px" : "0px",
+        transition: "--grow 300ms ease-out",
         // Half-width of a hexagon this tall (cos 30°).
         ["--hex" as string]: "calc(var(--bar-h) * 0.433)",
         top: "calc(0.75rem - var(--grow) / 2)",
@@ -186,7 +194,7 @@ export default function ExpandingNav() {
           // Collapsed, the button is the hexagon (2·hex wide) with the die
           // centered; expanded, it grows with the wordmark from that same left
           // inset so the first die never shifts.
-          className="flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] transition-[min-width,padding] duration-300 ease-out outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset"
+          className="flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset"
         >
           <NavLogo
             expanded={unfold}
