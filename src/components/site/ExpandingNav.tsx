@@ -183,7 +183,7 @@ export default function ExpandingNav() {
       // The backdrop's margin around the die grows a touch on hover; the open
       // bar keeps that grown size. Offsetting top/left by half keeps the die
       // fixed in place while the hexagon swells around it.
-      className="fixed z-40 flex items-start [--bar-h:calc(52px+var(--grow))] [--nav-h:40px] md:[--bar-h:calc(60px+var(--grow))] md:[--nav-h:48px]"
+      className="fixed z-40 flex items-start [--bar-h:calc(60px+var(--grow))] [--nav-h:48px] md:[--bar-h:calc(68px+var(--grow))] md:[--nav-h:56px]"
       style={{
         ["--grow" as string]: grow ? "6px" : "0px",
         transition: "--grow 300ms ease-out",
@@ -229,7 +229,11 @@ export default function ExpandingNav() {
           // Mobile only pads the right while unfolded (so the wordmark clears
           // the hex cap) — always-on it would hold the hexagon open.
           className={`flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset md:pr-0 ${unfold ? "pr-(--hex)" : "pr-0"}`}
-          style={{ transition: `padding ${sidewaysMs}ms ${sidewaysEase}` }}
+          // padding-right only: the left inset must follow --grow exactly, or
+          // the die lags behind the swelling backdrop.
+          style={{
+            transition: `padding-right ${sidewaysMs}ms ${sidewaysEase}`,
+          }}
         >
           <NavLogo
             expanded={unfold}
