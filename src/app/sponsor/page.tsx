@@ -39,8 +39,7 @@ const TIERS: {
     name: "Platinum",
     cost: "$60k",
     limit: "3 available",
-    blurb:
-      "Premium session and night-market booth, custom swag, and a big block of tickets.",
+    blurb: "A premium session slot, custom swag, and a big block of tickets.",
     head: "bg-navy text-cream",
     cell: "bg-sky/35",
   },
@@ -48,8 +47,7 @@ const TIERS: {
     id: "gold",
     name: "Gold",
     cost: "$30k",
-    blurb:
-      "A session slot, a premium booth at the night market, and tickets for your team.",
+    blurb: "A session slot and tickets for your team.",
     head: "bg-tan text-navy",
     cell: "bg-peach/35",
   },
@@ -57,8 +55,7 @@ const TIERS: {
     id: "silver",
     name: "Silver",
     cost: "$15k",
-    blurb:
-      "Your logo on everything, a night-market booth, and a couple of tickets.",
+    blurb: "Your logo on everything and a couple of tickets.",
     head: "bg-ink/70 text-cream",
     cell: "bg-ink/[0.04]",
   },
@@ -92,15 +89,6 @@ const BENEFITS: { label: string; cells: Record<TierId, Cell> }[] = [
   {
     label: "Speak at the opening session",
     cells: { headline: true, platinum: false, gold: false, silver: false },
-  },
-  {
-    label: "Night market booth",
-    cells: {
-      headline: "Premium booth",
-      platinum: "Premium booth",
-      gold: "Premium booth",
-      silver: true,
-    },
   },
   {
     label: "“Guest of Honor” tickets",
@@ -180,10 +168,10 @@ export default function SponsorPage() {
             Sponsor Metagame 2026
           </h1>
           <p className="mt-4 text-lg text-ink/75">
-            Metagame is three days of talks, workshops, games, and megagames at
-            Lighthaven in Berkeley, November 6&ndash;8, 2026. Sponsors put their
-            name in front of a few hundred of the most curious, game-brained
-            people we know &mdash; and get to be in the room with them.
+            Metagame is three days of talks, workshops, and games at Lighthaven
+            in Berkeley, November 6&ndash;8, 2026. Sponsors put their name in
+            front of a few hundred of the most curious, game-brained people we
+            know &mdash; and get to be in the room with them.
           </p>
           <p className="mt-3 text-base text-ink/70">
             Four tiers below. Nothing here is set in stone &mdash; if you want
@@ -199,10 +187,10 @@ export default function SponsorPage() {
               className="flex flex-col overflow-hidden rounded-xl border border-line bg-white"
             >
               <div className={`px-5 py-4 ${t.head}`}>
-                <p className="font-space-mono text-[13px] tracking-[0.18em] uppercase opacity-85">
-                  {t.name}
+                <p className={`${HEADING} text-[30px]`}>{t.name}</p>
+                <p className="mt-1 font-space-mono text-[15px] tracking-[0.12em] uppercase opacity-85">
+                  {t.cost}
                 </p>
-                <p className={`${HEADING} mt-1 text-[30px]`}>{t.cost}</p>
                 {t.limit && (
                   <p className="mt-1 text-xs font-semibold tracking-[0.06em] uppercase opacity-80">
                     {t.limit}
@@ -234,10 +222,10 @@ export default function SponsorPage() {
                       scope="col"
                       className={`px-3 py-4 ${t.head}`}
                     >
-                      <span className="block font-space-mono text-[13px] tracking-[0.18em] uppercase opacity-85">
+                      <span className={`${HEADING} block text-[22px]`}>
                         {t.name}
                       </span>
-                      <span className={`${HEADING} mt-1 block text-[22px]`}>
+                      <span className="mt-1 block font-space-mono text-[13px] tracking-[0.12em] uppercase opacity-85">
                         {t.cost}
                       </span>
                       {t.limit && (
