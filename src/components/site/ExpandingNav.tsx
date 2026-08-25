@@ -80,8 +80,26 @@ function backdropPath(w: number, h: number, hexH: number) {
   );
 }
 
+// --grow is registered as a real <length> so the hover swell can transition
+// the variable itself and every size derived from it moves in lockstep.
+// Done from JS: the CSS build minifies an @property's `0px` to `0`, which is
+// invalid for <length> and silently drops the whole rule.
+function registerGrow() {
+  try {
+    CSS.registerProperty({
+      name: "--grow",
+      syntax: "<length>",
+      inherits: true,
+      initialValue: "0px",
+    });
+  } catch {
+    // Already registered (HMR / second mount).
+  }
+}
+
 export default function ExpandingNav() {
   const desktop = useMediaQuery("(min-width: 768px)");
+  useEffect(registerGrow, []);
   const [expanded, setExpanded] = useState(false);
   // Mobile opens sideways then down, and closes down then sideways — so the
   // die's own unfold state lags `expanded` on close by one phase.
