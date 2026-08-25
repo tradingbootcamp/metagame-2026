@@ -13,8 +13,8 @@ import Mg2Die from "./Mg2Die";
 import RubberDuck from "./RubberDuck";
 
 // Single source of truth shared by the one-pager sections and the nav, so
-// their ids/labels/icons can never drift. Section wrappers use `id`; the rail
-// uses `id` for scroll-spy + smooth-scroll and `label` on hover.
+// their ids/labels/icons can never drift. Section wrappers use `id`; the nav
+// uses `id` for scroll-spy + smooth-scroll and `label` for the links.
 type IconProps = { size?: number; strokeWidth?: number; className?: string };
 export type Section = {
   id: string;
@@ -35,7 +35,7 @@ const ALL_SECTIONS: readonly Section[] = [
   { id: "faq", label: "FAQ", icon: MessageCircleQuestion },
 ] as const;
 
-// Testimonials renders only when it has quotes, so the rail has to drop in step
+// Testimonials renders only when it has quotes, so the nav has to drop in step
 // with it — otherwise the entry scrolls to an id that isn't on the page.
 export const SECTIONS: readonly Section[] = ALL_SECTIONS.filter(
   (s) => s.id !== "testimonials" || TESTIMONIALS.length > 0,
