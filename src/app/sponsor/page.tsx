@@ -7,7 +7,7 @@ import { EYEBROW, HEADING } from "@/components/site/styles";
 export const metadata: Metadata = {
   title: "Sponsor — Metagame 2026",
   description:
-    "Sponsorship tiers for Metagame 2026 — Headline, Platinum, Gold, and Silver packages. Nov 6-8, 2026 at Lighthaven, Berkeley.",
+    "Sponsorship tiers for Metagame 2026: Headline, Platinum, Gold, and Silver packages. Nov 6-8, 2026 at Lighthaven, Berkeley.",
 };
 
 const CONTACT = "team@metagame.games";
@@ -171,40 +171,15 @@ export default function SponsorPage() {
             Metagame is three days of talks, workshops, and games at Lighthaven
             in Berkeley, November 6&ndash;8, 2026. Sponsors put their name in
             front of a few hundred of the most curious, game-brained people we
-            know &mdash; and get to be in the room with them.
+            know, and get to be in the room with them.
           </p>
           <p className="mt-3 text-base text-ink/70">
-            Four tiers below. Nothing here is set in stone &mdash; if you want
+            Four tiers below. Nothing here is set in stone. If you want
             something that isn&rsquo;t on the list, tell us.
           </p>
         </header>
 
-        {/* Tier cards — the at-a-glance version of the table below. */}
-        <section className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {TIERS.map((t) => (
-            <div
-              key={t.id}
-              className="flex flex-col overflow-hidden rounded-xl border border-line bg-white"
-            >
-              <div className={`px-5 py-4 ${t.head}`}>
-                <p className={`${HEADING} text-[30px]`}>{t.name}</p>
-                <p className="mt-1 font-space-mono text-[15px] tracking-[0.12em] uppercase opacity-85">
-                  {t.cost}
-                </p>
-                {/* Always rendered so the four headers stay the same height. */}
-                <p className="mt-1 text-xs font-semibold tracking-[0.06em] uppercase opacity-80">
-                  {t.limit ?? "\u00a0"}
-                </p>
-              </div>
-              <p className="flex-1 px-5 py-4 text-[15px] text-ink/75">
-                {t.blurb}
-              </p>
-            </div>
-          ))}
-        </section>
-
-        <section className="mt-14">
-          <p className={`${EYEBROW} mb-4 text-meeple`}>What&rsquo;s included</p>
+        <section className="mt-12">
           <div className="overflow-x-auto rounded-xl border border-line bg-white">
             <table className="w-full min-w-[640px] table-fixed border-collapse text-center text-[15px]">
               <thead>
@@ -235,6 +210,23 @@ export default function SponsorPage() {
                 </tr>
               </thead>
               <tbody>
+                {/* Blurb row: the one-line pitch per tier, ahead of the checklist. */}
+                <tr className="border-t border-line">
+                  <th
+                    scope="row"
+                    className="sticky left-0 z-[1] bg-white px-4 py-3.5 text-left font-semibold text-ink"
+                  >
+                    At a glance
+                  </th>
+                  {TIERS.map((t) => (
+                    <td
+                      key={t.id}
+                      className={`px-3 py-3.5 text-left text-[13.5px] leading-snug text-ink/75 ${t.cell}`}
+                    >
+                      {t.blurb}
+                    </td>
+                  ))}
+                </tr>
                 {BENEFITS.map((b) => (
                   <tr key={b.label} className="border-t border-line">
                     <th
