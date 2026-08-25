@@ -54,7 +54,16 @@ export default function ExpandingNav() {
   return (
     <div
       ref={rootRef}
-      className="fixed top-3 left-3 z-40 flex max-w-[calc(100vw-1.5rem)] items-center rounded-xl border border-line-dark bg-navy/95 p-1 shadow-[0_2px_10px_rgba(23,48,89,0.25)] backdrop-blur-sm"
+      // Backdrop is the die's own isometric hexagon, offset outward. As the
+      // bar widens the hexagon's top/bottom vertices stretch into edges (an
+      // octagon with fixed half-hex ends), so the width transition animates it.
+      className="fixed top-3 left-3 z-40 flex h-(--bar-h) max-w-[calc(100vw-1.5rem)] items-center bg-navy [--bar-h:52px] [--nav-h:40px] sm:[--bar-h:60px] sm:[--nav-h:48px]"
+      style={{
+        // Half-width of a hexagon this tall (cos 30°).
+        ["--hex" as string]: "calc(var(--bar-h) * 0.433)",
+        clipPath:
+          "polygon(var(--hex) 0, calc(100% - var(--hex)) 0, 100% 25%, 100% 75%, calc(100% - var(--hex)) 100%, var(--hex) 100%, 0 75%, 0 25%)",
+      }}
     >
       <button
         type="button"
@@ -62,13 +71,9 @@ export default function ExpandingNav() {
         aria-expanded={expanded}
         aria-controls="expanding-nav-links"
         onClick={() => setExpanded((o) => !o)}
-        className="shrink-0 cursor-pointer rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+        className="flex h-full w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset"
       >
-        <NavLogo
-          expanded={expanded}
-          shadow
-          className="[--nav-h:40px] sm:[--nav-h:48px]"
-        />
+        <NavLogo expanded={expanded} className="h-(--nav-h)" />
       </button>
       <nav
         id="expanding-nav-links"
@@ -82,7 +87,10 @@ export default function ExpandingNav() {
           transition: `width ${UNFOLD_MS}ms ${EASE}`,
         }}
       >
-        <ul ref={listRef} className="flex w-max items-center gap-1 pr-2 pl-3">
+        <ul
+          ref={listRef}
+          className="flex w-max items-center gap-1 pr-(--hex) pl-1"
+        >
           {LINKS.map(({ id, label }, i) => {
             const isActive = active === id;
             return (
