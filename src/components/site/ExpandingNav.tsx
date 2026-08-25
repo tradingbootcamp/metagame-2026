@@ -18,20 +18,23 @@ const LINK_STAGGER_MS = 50;
 const LINKS = SECTIONS.filter((s) => s.id !== "home");
 
 // Backdrop outline: the die's isometric hexagon (pointy top/bottom, cos 30°
-// half-width) whose top and bottom vertices stretch into edges as the bar
-// widens — an octagon with half-hex ends that collapses back to a hexagon.
+// half-width, sized from the die row height `hex`) whose vertices stretch into
+// edges as the box grows — sideways into the desktop bar, downward into the
+// mobile menu — an octagon with hex-angled corners that collapses back to the
+// hexagon.
 const CORNER = 3;
-function backdropPath(w: number, h: number) {
-  const hx = h * 0.433;
+function backdropPath(w: number, h: number, hexH: number) {
+  const hx = hexH * 0.433;
+  const q = hexH / 4;
   const raw: [number, number][] = [
     [hx, 0],
     [w - hx, 0],
-    [w, h / 4],
-    [w, (3 * h) / 4],
+    [w, q],
+    [w, h - q],
     [w - hx, h],
     [hx, h],
-    [0, (3 * h) / 4],
-    [0, h / 4],
+    [0, h - q],
+    [0, q],
   ];
   // Collapsed, the two top (and two bottom) points coincide — drop the dupes
   // so the corner rounding has real edges to work with.
@@ -63,15 +66,16 @@ export default function ExpandingNav() {
   const [hovered, setHovered] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const dieRef = useRef<HTMLButtonElement>(null);
   const rowRef = useRef<HTMLUListElement>(null);
   const columnRef = useRef<HTMLUListElement>(null);
   // Natural sizes of the two link lists, measured so `width`/`height` can
   // transition to them — `auto` doesn't animate.
   const [rowWidth, setRowWidth] = useState(0);
-  const [columnHeight, setColumnHeight] = useState(0);
-  // Backdrop box size, re-measured every frame the width transition runs so
-  // the clip-path stretches with it.
-  const [boxSize, setBoxSize] = useState<[number, number] | null>(null);
+  const [column, setColumn] = useState<[number, number]>([0, 0]);
+  // Backdrop box size (+ the die row height that fixes the hex geometry),
+  // re-measured every frame a size transition runs so the clip-path follows.
+  const [box, setBox] = useState<[number, number, number] | null>(null);
   const { active, goTo } = useSectionSpy();
   // Underlines grow from the side you arrived from: left→right scrolling down
   // the page, right→left scrolling back up.
@@ -85,19 +89,20 @@ export default function ExpandingNav() {
 
   useLayoutEffect(() => {
     const row = rowRef.current;
-    const column = columnRef.current;
-    const box = boxRef.current;
-    if (!row || !column || !box) return;
+    const col = columnRef.current;
+    const boxEl = boxRef.current;
+    const die = dieRef.current;
+    if (!row || !col || !boxEl || !die) return;
     const measure = () => {
       setRowWidth(row.scrollWidth);
-      setColumnHeight(column.scrollHeight);
-      setBoxSize([box.offsetWidth, box.offsetHeight]);
+      setColumn([col.scrollWidth, col.scrollHeight]);
+      setBox([boxEl.offsetWidth, boxEl.offsetHeight, die.offsetHeight]);
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(row);
-    ro.observe(column);
-    ro.observe(box);
+    ro.observe(col);
+    ro.observe(boxEl);
     return () => ro.disconnect();
   }, []);
 
@@ -121,18 +126,14 @@ export default function ExpandingNav() {
   const unfold = desktop && expanded;
   const grow = desktop && (hovered || expanded);
 
-  const linkClass = (isActive: boolean, light: boolean) =>
-    `relative cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium whitespace-nowrap transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:bg-brand-blue after:transition-transform after:duration-200 hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
-      isActive ? "after:scale-x-100" : "after:scale-x-0"
-    } ${
-      light
-        ? isActive
-          ? "text-cream"
-          : "text-cream/75 hover:text-cream"
-        : isActive
-          ? "text-navy"
-          : "text-navy/75 hover:text-navy"
+  const linkClass = (isActive: boolean) =>
+    `relative cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium whitespace-nowrap transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:bg-brand-blue after:transition-transform after:duration-200 hover:text-cream hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
+      isActive
+        ? "text-cream after:scale-x-100"
+        : "text-cream/75 after:scale-x-0"
     } ${fromLeft ? "after:origin-left" : "after:origin-right"}`;
+
+  const dropDown = !desktop && expanded;
 
   return (
     <div
@@ -142,7 +143,7 @@ export default function ExpandingNav() {
       // The backdrop's margin around the die grows a touch on hover; the open
       // bar keeps that grown size. Offsetting top/left by half keeps the die
       // fixed in place while the hexagon swells around it.
-      className="fixed z-40 max-w-[calc(100vw-1.5rem)] transition-[top,left] duration-300 ease-out [--bar-h:calc(52px+var(--grow))] [--nav-h:40px] md:[--bar-h:calc(60px+var(--grow))] md:[--nav-h:48px]"
+      className="fixed z-40 flex items-start transition-[top,left] duration-300 ease-out [--bar-h:calc(52px+var(--grow))] [--nav-h:40px] md:[--bar-h:calc(60px+var(--grow))] md:[--nav-h:48px]"
       style={{
         ["--grow" as string]: grow ? "6px" : "0px",
         // Half-width of a hexagon this tall (cos 30°).
@@ -151,17 +152,32 @@ export default function ExpandingNav() {
         left: "calc(0.75rem - var(--grow) / 2)",
       }}
     >
+      {/* Desktop: a row (die + links) whose width follows its content. Mobile:
+          a column whose box is sized explicitly — the collapsed hexagon, or
+          just big enough for the link list — so both edges transition. */}
       <div
         ref={boxRef}
-        className="flex h-(--bar-h) max-w-[calc(100vw-1.5rem)] items-center bg-navy transition-[height] duration-300 ease-out"
+        className="flex max-w-[calc(100vw-1.5rem)] flex-col items-start bg-navy md:h-(--bar-h) md:flex-row md:items-center"
         style={{
-          clipPath: boxSize
-            ? `path("${backdropPath(...boxSize)}")`
+          clipPath: box
+            ? `path("${backdropPath(...box)}")`
             : // Pre-measure fallback (SSR/first paint): same shape, square corners.
               "polygon(var(--hex) 0, calc(100% - var(--hex)) 0, 100% 25%, 100% 75%, calc(100% - var(--hex)) 100%, var(--hex) 100%, 0 75%, 0 25%)",
+          ...(desktop
+            ? undefined
+            : {
+                width: dropDown
+                  ? `max(calc(2 * var(--hex)), ${column[0]}px)`
+                  : "calc(2 * var(--hex))",
+                height: dropDown
+                  ? `calc(var(--bar-h) + ${column[1]}px)`
+                  : "var(--bar-h)",
+                transition: `width ${UNFOLD_MS / 2}ms ${EASE}, height ${UNFOLD_MS / 2}ms ${EASE}`,
+              }),
         }}
       >
         <button
+          ref={dieRef}
           type="button"
           aria-label={expanded ? "Close navigation" : "Open navigation"}
           aria-expanded={expanded}
@@ -170,7 +186,7 @@ export default function ExpandingNav() {
           // Collapsed, the button is the hexagon (2·hex wide) with the die
           // centered; expanded, it grows with the wordmark from that same left
           // inset so the first die never shifts.
-          className="flex h-full min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] transition-[min-width,padding] duration-300 ease-out outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset"
+          className="flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] transition-[min-width,padding] duration-300 ease-out outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset"
         >
           <NavLogo
             expanded={unfold}
@@ -221,7 +237,7 @@ export default function ExpandingNav() {
                   tabIndex={unfold ? 0 : -1}
                   onClick={() => goTo(id)}
                   aria-current={active === id ? "true" : undefined}
-                  className={linkClass(active === id, true)}
+                  className={linkClass(active === id)}
                   style={{
                     opacity: unfold ? 1 : 0,
                     transform: unfold ? "translateX(0)" : "translateX(-12px)",
@@ -239,45 +255,44 @@ export default function ExpandingNav() {
             ))}
           </ul>
         </nav>
-      </div>
-      {/* Mobile: links drop down under the untouched hexagon. Picking one
-          closes the menu, since it's covering content. */}
-      <nav
-        aria-label="Section navigation"
-        aria-hidden={desktop || !expanded}
-        className="overflow-hidden md:hidden"
-        style={{
-          height: !desktop && expanded ? columnHeight : 0,
-          transition: `height ${UNFOLD_MS / 2}ms ${EASE}`,
-        }}
-      >
-        <ul ref={columnRef} className="flex flex-col items-start pt-1">
-          {LINKS.map(({ id, label }, i) => (
-            <li key={id}>
-              <button
-                type="button"
-                tabIndex={!desktop && expanded ? 0 : -1}
-                onClick={() => {
-                  goTo(id);
-                  setExpanded(false);
-                }}
-                aria-current={active === id ? "true" : undefined}
-                className={linkClass(active === id, false)}
-                style={{
-                  opacity: !desktop && expanded ? 1 : 0,
-                  transition: "opacity 200ms ease, color 200ms ease",
-                  transitionDelay:
-                    !desktop && expanded
-                      ? `${i * LINK_STAGGER_MS * 0.6}ms`
+        {/* Mobile: links stack under the die inside the box as it grows down.
+            Picking one closes the menu, since it's covering content. Padding
+            keeps the text clear of the hex-cut corners. */}
+        <nav
+          aria-label="Section navigation"
+          aria-hidden={!dropDown}
+          className="md:hidden"
+        >
+          <ul
+            ref={columnRef}
+            className="flex w-max flex-col items-start pr-(--hex) pb-[calc(var(--bar-h)/4)] pl-(--hex)"
+          >
+            {LINKS.map(({ id, label }, i) => (
+              <li key={id}>
+                <button
+                  type="button"
+                  tabIndex={dropDown ? 0 : -1}
+                  onClick={() => {
+                    goTo(id);
+                    setExpanded(false);
+                  }}
+                  aria-current={active === id ? "true" : undefined}
+                  className={linkClass(active === id)}
+                  style={{
+                    opacity: dropDown ? 1 : 0,
+                    transition: "opacity 200ms ease, color 200ms ease",
+                    transitionDelay: dropDown
+                      ? `${100 + i * LINK_STAGGER_MS * 0.6}ms`
                       : "0ms",
-                }}
-              >
-                {label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
+                  }}
+                >
+                  {label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
     </div>
   );
 }
