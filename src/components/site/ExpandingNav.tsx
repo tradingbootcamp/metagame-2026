@@ -22,6 +22,8 @@ const UNFOLD_MS = 800;
 // Mobile's sideways phase is quicker and eases out; the drop-down phase that
 // follows keeps the desktop timing.
 const MOBILE_SIDEWAYS_MS = 450;
+// The drop-down opens at the desktop pace but snaps shut quicker.
+const MOBILE_COLLAPSE_MS = 500;
 const MOBILE_SIDEWAYS_EASE = "cubic-bezier(0.22,1,0.36,1)";
 const LINK_STAGGER_MS = 50;
 
@@ -138,7 +140,11 @@ export default function ExpandingNav() {
       setExpanded(open);
       if (foldTimer.current) clearTimeout(foldTimer.current);
       if (open || desktop) setDieOpen(open);
-      else foldTimer.current = setTimeout(() => setDieOpen(false), UNFOLD_MS);
+      else
+        foldTimer.current = setTimeout(
+          () => setDieOpen(false),
+          MOBILE_COLLAPSE_MS,
+        );
     },
     [desktop],
   );
@@ -219,7 +225,7 @@ export default function ExpandingNav() {
             : {
                 height: dropDown ? "calc(100dvh - 1.5rem)" : "var(--bar-h)",
                 // Second phase on open, first on close.
-                transition: `height ${UNFOLD_MS}ms ${EASE} ${dropDown ? sidewaysMs : 0}ms`,
+                transition: `height ${dropDown ? UNFOLD_MS : MOBILE_COLLAPSE_MS}ms ${EASE} ${dropDown ? sidewaysMs : 0}ms`,
                 // Swiping the open menu shouldn't scroll the page under it.
                 touchAction: dropDown ? "none" : undefined,
                 overscrollBehavior: "contain",
@@ -329,7 +335,7 @@ export default function ExpandingNav() {
             width: dropDown ? columnWidth : 0,
             // Sideways phase: with the wordmark on open, after the height
             // has collapsed on close.
-            transition: `width ${sidewaysMs}ms ${sidewaysEase} ${dropDown ? 0 : UNFOLD_MS}ms`,
+            transition: `width ${sidewaysMs}ms ${sidewaysEase} ${dropDown ? 0 : MOBILE_COLLAPSE_MS}ms`,
           }}
         >
           <ul
@@ -355,7 +361,7 @@ export default function ExpandingNav() {
                     // fade once it's down.
                     transitionDelay: dropDown
                       ? `${sidewaysMs + ((i + 0.5) / LINKS.length) * UNFOLD_MS * 0.8}ms`
-                      : `${UNFOLD_MS}ms`,
+                      : `${MOBILE_COLLAPSE_MS}ms`,
                   }}
                 >
                   {label}
