@@ -9,11 +9,7 @@ import { useSectionSpy } from "./useSectionSpy";
 // the die into the full METAGAME wordmark while the section links slide out
 // horizontally from behind it, sharing the wordmark's easing so the two read
 // as one motion.
-// TEMP demo switch: ?navEase=out swaps in the old ease-out curve. Remove.
-const EASES = {
-  inout: "cubic-bezier(0.65,0,0.35,1)",
-  out: "cubic-bezier(0.22,1,0.36,1)",
-};
+const EASE = "cubic-bezier(0.65,0,0.35,1)";
 const UNFOLD_MS = 800;
 const LINK_STAGGER_MS = 50;
 
@@ -63,13 +59,6 @@ function backdropPath(w: number, h: number) {
 export default function ExpandingNav() {
   const [expanded, setExpanded] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const [ease, setEase] = useState<keyof typeof EASES>("inout");
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("navEase") === "out")
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- temp demo switch
-      setEase("out");
-  }, []);
-  const EASE = EASES[ease];
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   // The link row's natural width, measured so `width` can transition to it —
@@ -146,7 +135,6 @@ export default function ExpandingNav() {
         <NavLogo
           expanded={expanded}
           durationMs={UNFOLD_MS}
-          easing={EASE}
           className="h-(--nav-h)"
         />
       </button>
