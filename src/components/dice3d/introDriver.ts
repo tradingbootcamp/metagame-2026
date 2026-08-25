@@ -55,7 +55,7 @@ export const BOUNDS = { left: -2.95, right: 2.95, halfDepth: 1.4 };
 
 // Rest-to-META tail. The settle detector already holds ~0.25s of stillness
 // before a take/sim ends, so the perceived beat matches the old 0.9s.
-export const BEAT = 0.45; // s at rest in the scattered pose before aligning
+export const BEAT = 0.4; // s at rest in the scattered pose before aligning
 export const ALIGN = 0.55; // s to ease into the META pose
 export const ALIGN_JITTER = 0.12; // max extra per-die delay so the row doesn't move as one
 

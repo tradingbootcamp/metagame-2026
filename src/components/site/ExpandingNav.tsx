@@ -252,7 +252,7 @@ export default function ExpandingNav() {
         ["--grow" as string]: grow ? "6px" : "0px",
         // (opacity here too — an inline `transition` replaces any class one.)
         transition:
-          "--grow 350ms cubic-bezier(0.45,0,0.55,1), opacity 200ms ease",
+          "--grow 350ms cubic-bezier(0.45,0,0.55,1), opacity 350ms ease",
         // Half-width of a hexagon this tall (cos 30°).
         ["--hex" as string]: "calc(var(--bar-h) * 0.433)",
         top: "calc(0.75rem - var(--grow) / 2)",
@@ -413,7 +413,7 @@ export default function ExpandingNav() {
                     // it; on close the shrinking box hides them, so they only
                     // fade once it's down.
                     transition: withDelay(
-                      ["opacity 200ms ease", "color 200ms ease"],
+                      ["opacity 350ms ease", "color 200ms ease"],
                       dropDown
                         ? sidewaysMs +
                             ((i + 0.5) / LINKS.length) * UNFOLD_MS * 0.8
