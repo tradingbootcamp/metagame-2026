@@ -9,7 +9,8 @@ import { useSectionSpy } from "./useSectionSpy";
 // Collapsed, this is just the single MG die in the corner. Desktop: clicking it
 // unfolds the die into the full METAGAME wordmark while the section links slide
 // out horizontally from behind it, sharing the wordmark's easing so the two
-// read as one motion. Mobile: the die stays put and the links drop down below.
+// read as one motion. Mobile: same unfold, but the links stack down a
+// full-height column instead.
 const EASE = "cubic-bezier(0.65,0,0.35,1)";
 const UNFOLD_MS = 800;
 const LINK_STAGGER_MS = 50;
@@ -79,7 +80,7 @@ export default function ExpandingNav() {
   // Natural sizes of the two link lists, measured so `width`/`height` can
   // transition to them — `auto` doesn't animate.
   const [rowWidth, setRowWidth] = useState(0);
-  const [column, setColumn] = useState<[number, number]>([0, 0]);
+  const [columnWidth, setColumnWidth] = useState(0);
   // Backdrop box size (+ the die row height that fixes the hex geometry),
   // re-measured every frame a size transition runs so the clip-path follows.
   const [box, setBox] = useState<[number, number, number] | null>(null);
@@ -102,7 +103,7 @@ export default function ExpandingNav() {
     if (!row || !col || !boxEl || !die) return;
     const measure = () => {
       setRowWidth(row.scrollWidth);
-      setColumn([col.scrollWidth, col.scrollHeight]);
+      setColumnWidth(col.scrollWidth);
       setBox([boxEl.offsetWidth, boxEl.offsetHeight, die.offsetHeight]);
     };
     measure();
@@ -129,8 +130,8 @@ export default function ExpandingNav() {
     };
   }, [expanded]);
 
-  // Mobile keeps the hexagon exactly as it rests: no wordmark, no swell.
-  const unfold = desktop && expanded;
+  // Mobile has no hover, so no swell there.
+  const unfold = expanded;
   const grow = desktop && (hovered || expanded);
 
   const linkClass = (isActive: boolean) =>
@@ -161,8 +162,8 @@ export default function ExpandingNav() {
       }}
     >
       {/* Desktop: a row (die + links) whose width follows its content. Mobile:
-          a column whose box is sized explicitly — the collapsed hexagon, or
-          just big enough for the link list — so both edges transition. */}
+          a column — width still content-driven (wordmark or widest link),
+          height explicit so it can transition to the full screen. */}
       <div
         ref={boxRef}
         className="flex max-w-[calc(100vw-1.5rem)] flex-col items-start bg-navy md:h-(--bar-h) md:flex-row md:items-center"
@@ -174,13 +175,8 @@ export default function ExpandingNav() {
           ...(desktop
             ? undefined
             : {
-                width: dropDown
-                  ? `max(calc(2 * var(--hex)), ${column[0]}px)`
-                  : "calc(2 * var(--hex))",
-                height: dropDown
-                  ? `calc(var(--bar-h) + ${column[1]}px)`
-                  : "var(--bar-h)",
-                transition: `width ${UNFOLD_MS / 2}ms ${EASE}, height ${UNFOLD_MS / 2}ms ${EASE}`,
+                height: dropDown ? "calc(100dvh - 1.5rem)" : "var(--bar-h)",
+                transition: `height ${UNFOLD_MS}ms ${EASE}`,
               }),
         }}
       >
@@ -264,17 +260,22 @@ export default function ExpandingNav() {
             ))}
           </ul>
         </nav>
-        {/* Mobile: links stack under the die inside the box as it grows down.
-            Picking one closes the menu, since it's covering content. Padding
-            keeps the text clear of the hex-cut corners. */}
+        {/* Mobile: links stack under the die, spread down the full-height box,
+            flush with the die's left edge. Width 0 while closed so the widest
+            label can't prop the hexagon open. Picking one closes the menu,
+            since it's covering content. Bottom padding clears the hex cap. */}
         <nav
           aria-label="Section navigation"
           aria-hidden={!dropDown}
-          className="md:hidden"
+          className="min-h-0 flex-1 overflow-hidden md:hidden"
+          style={{
+            width: dropDown ? columnWidth : 0,
+            transition: `width ${UNFOLD_MS}ms ${EASE}`,
+          }}
         >
           <ul
             ref={columnRef}
-            className="flex w-max flex-col items-start pr-(--hex) pb-[calc(var(--bar-h)/4)] pl-(--hex)"
+            className="flex h-full w-max flex-col items-start justify-around pr-4 pb-[calc(var(--bar-h)/4)]"
           >
             {LINKS.map(({ id, label }, i) => (
               <li key={id}>
