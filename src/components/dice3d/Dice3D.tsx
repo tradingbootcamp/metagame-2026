@@ -72,9 +72,6 @@ declare global {
     // Set by the dev panel to replay a specific take on the next mount (the
     // roll the live sim just produced), then consumed here and cleared.
     __replayTake?: RollInTake;
-    // Latched once the roll-in has landed on META (or there was no intro), with
-    // a "dice-intro-done" window event for anything mounted and waiting.
-    __diceIntroDone?: boolean;
   }
 }
 function publishTake(take: RollInTake, meta: TakeMeta) {
@@ -293,12 +290,6 @@ export default function Dice3D() {
     const cap = setTimeout(() => setIntroOver(true), INTRO_CAP_MS);
     return () => clearTimeout(cap);
   }, [intro, introOver]);
-
-  useEffect(() => {
-    if (!introOver) return;
-    window.__diceIntroDone = true;
-    window.dispatchEvent(new Event("dice-intro-done"));
-  }, [introOver]);
 
   useEffect(() => {
     // A pinned ?phase= or reduced-motion start holds still; only the default

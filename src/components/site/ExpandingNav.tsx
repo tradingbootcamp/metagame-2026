@@ -103,30 +103,31 @@ function registerGrow() {
   }
 }
 
-// True once the hero dice have rolled in and spelled META (see Dice3D). A
-// backstop timer covers pages without the dice.
-const INTRO_FALLBACK_MS = 8000;
-function useDiceIntroDone() {
+// The trigger stays out of the way on a fresh load and fades in once you've
+// scrolled at all; it never hides again.
+const REVEAL_SCROLL_PX = 40;
+let scrolledOnce = false;
+function useScrolledOnce() {
   return useSyncExternalStore(
     (onChange) => {
-      window.addEventListener("dice-intro-done", onChange);
-      const cap = setTimeout(() => {
-        window.__diceIntroDone = true;
-        onChange();
-      }, INTRO_FALLBACK_MS);
-      return () => {
-        window.removeEventListener("dice-intro-done", onChange);
-        clearTimeout(cap);
+      const check = () => {
+        if (!scrolledOnce && window.scrollY > REVEAL_SCROLL_PX) {
+          scrolledOnce = true;
+          onChange();
+        }
       };
+      check();
+      window.addEventListener("scroll", check, { passive: true });
+      return () => window.removeEventListener("scroll", check);
     },
-    () => window.__diceIntroDone === true,
+    () => scrolledOnce,
     () => false,
   );
 }
 
 export default function ExpandingNav() {
   const desktop = useMediaQuery("(min-width: 768px)");
-  const introDone = useDiceIntroDone();
+  const revealed = useScrolledOnce();
   useEffect(registerGrow, []);
   const [expanded, setExpanded] = useState(false);
   // Mobile opens sideways then down, and closes down then sideways — so the
@@ -245,14 +246,12 @@ export default function ExpandingNav() {
       // The backdrop's margin around the die grows a touch on hover; the open
       // bar keeps that grown size. Offsetting top/left by half keeps the die
       // fixed in place while the hexagon swells around it.
-      // Mobile holds the trigger back until the hero dice have said META,
-      // then fades it in fast. (Breakpoint via CSS so desktop never blinks.)
-      className={`fixed z-40 flex items-start [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px] ${introDone ? "" : "max-md:pointer-events-none max-md:opacity-0"}`}
+      className={`fixed z-40 flex items-start [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px] ${revealed ? "" : "pointer-events-none opacity-0"}`}
       style={{
         ["--grow" as string]: grow ? "6px" : "0px",
         // (opacity here too — an inline `transition` replaces any class one.)
         transition:
-          "--grow 350ms cubic-bezier(0.45,0,0.55,1), opacity 350ms ease",
+          "--grow 350ms cubic-bezier(0.45,0,0.55,1), opacity 1000ms ease",
         // Half-width of a hexagon this tall (cos 30°).
         ["--hex" as string]: "calc(var(--bar-h) * 0.433)",
         top: "calc(0.75rem - var(--grow) / 2)",
@@ -413,7 +412,7 @@ export default function ExpandingNav() {
                     // it; on close the shrinking box hides them, so they only
                     // fade once it's down.
                     transition: withDelay(
-                      ["opacity 350ms ease", "color 200ms ease"],
+                      ["opacity 1000ms ease", "color 200ms ease"],
                       dropDown
                         ? sidewaysMs +
                             ((i + 0.5) / LINKS.length) * UNFOLD_MS * 0.8
