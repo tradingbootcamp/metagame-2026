@@ -112,12 +112,11 @@ export const SPIN_LABELS = ["↑", "→", "↓", "←"];
 // their labels.
 function faceLabels(i: number): string[] {
   const d = DICE[i];
-  const glyph = (s: string) => s.replace("_CANTED", "");
   return [
-    `blue ${glyph(d.front)} f`,
-    `blue ${glyph(d.front)} b`,
-    `orange ${glyph(d.right)} r`,
-    `orange ${glyph(d.right)} l`,
+    `blue ${d.front} f`,
+    `blue ${d.front} b`,
+    `orange ${d.right} r`,
+    `orange ${d.right} l`,
     `pips ${d.top}`,
     `pips ${7 - d.top}`,
   ];

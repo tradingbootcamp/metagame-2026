@@ -2,7 +2,7 @@
   <!-- M — rounded square minus two bottom-open slots -->
   <path fill="currentColor" fill-rule="evenodd" d="
     M0 22Q0 0 22 0L490 0Q512 0 512 22L512 490Q512 512 490 512L22 512Q0 512 0 490Z
-    M154 153H177V512H154Z
-    M333 153H358V512H333Z
+    M152 154H178V512H152Z
+    M334 154H360V512H334Z
   "/>
 </svg>

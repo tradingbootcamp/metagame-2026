@@ -23,11 +23,11 @@ const STATIC_LETTERS: StaticLetters[] = [
   },
   {
     front: { letter: "T", color: "blue" },
-    right: { letter: "A_CANTED", color: "blue" },
+    right: { letter: "A", color: "blue" },
   },
   {
     front: { letter: "G", color: "orange" },
-    right: { letter: "A_CANTED", color: "orange" },
+    right: { letter: "A", color: "orange" },
   },
   {
     front: { letter: "M", color: "orange" },

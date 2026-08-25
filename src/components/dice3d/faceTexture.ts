@@ -1,9 +1,10 @@
 import * as THREE from "three";
+import { letterSvg } from "@/lib/dice-letter-paths";
 
 // Design tokens (mirror DiceHero / the CSS dice)
 export const COLORS = {
-  blue: "#2b9bf0",
-  orange: "#eaa35a",
+  blue: "#1ea1ff",
+  orange: "#ffab3f",
   dark: "#222227",
   ink: "#141417",
   white: "#ffffff",
@@ -38,12 +39,28 @@ function toTexture(canvas: HTMLCanvasElement): THREE.CanvasTexture {
   return tex;
 }
 
-// Letter face rasterized from /public/dice-letters/<letter>.svg — the SVGs are
-// the source of truth for the shapes; the code never parses them. The glyph
-// rasterizes black (currentColor has no cascade in an <img>), then a source-in
-// fill repaints every opaque pixel in the die color while preserving alpha, so
-// the counters stay transparent for the panel material's alphaTest keying.
+// Letter face rasterized from the shared LETTER_PATHS glyph (same shapes as the
+// LogoDice wordmark). The glyph rasterizes black, then a source-in fill repaints
+// every opaque pixel in the die color while preserving alpha, so the counters
+// stay transparent for the panel material's alphaTest keying.
 // Async like any image load: the face starts blank and pops in onload.
+// Highlight: a white copy of the glyph offset up-and-outward behind the colored
+// one (mirrored per face so the implied light is consistent across the cube
+// edge), peeking through the cutouts — same illusion as the LogoDice wordmark.
+const LETTER_HIGHLIGHT = false;
+// Cutout width / corner radius for the 3D faces (the wordmark uses 52 / 48).
+const GLYPH = { slot: 40, r: 48 };
+const HI = 8;
+
+function tintedGlyph(img: HTMLImageElement, fill: string): HTMLCanvasElement {
+  const [c, cx] = makeCanvas();
+  cx.drawImage(img, HI, HI, TEX - 2 * HI, TEX - 2 * HI);
+  cx.globalCompositeOperation = "source-in";
+  cx.fillStyle = fill;
+  cx.fillRect(0, 0, TEX, TEX);
+  return c;
+}
+
 export function letterTexture(
   letter: string,
   color: "blue" | "orange",
@@ -51,12 +68,18 @@ export function letterTexture(
   const [canvas, ctx] = makeCanvas();
   const tex = toTexture(canvas);
   const img = new Image();
-  img.src = `/dice-letters/${letter.toLowerCase()}.svg`;
+  const url = URL.createObjectURL(
+    new Blob([letterSvg(letter, GLYPH)], { type: "image/svg+xml" }),
+  );
+  img.src = url;
   img.onload = () => {
-    ctx.drawImage(img, 0, 0, TEX, TEX); // browser rasterizes the vector at TEX
-    ctx.globalCompositeOperation = "source-in";
-    ctx.fillStyle = COLORS[color];
-    ctx.fillRect(0, 0, TEX, TEX);
+    URL.revokeObjectURL(url);
+    // browser rasterizes the vector at TEX; inset by HI so the offset copy fits
+    if (LETTER_HIGHLIGHT) {
+      const dx = color === "blue" ? HI : -HI;
+      ctx.drawImage(tintedGlyph(img, COLORS.white), dx, -HI);
+    }
+    ctx.drawImage(tintedGlyph(img, COLORS[color]), 0, 0);
     tex.needsUpdate = true;
   };
   return tex;

@@ -16,9 +16,9 @@ export type DieData = {
 // blue front spells META, orange right spells GAME, dark tops show 2026 in pips
 export const DICE: DieData[] = [
   { front: "M", right: "G", top: 2 },
-  { front: "E", right: "A_CANTED", top: 0 },
+  { front: "E", right: "A", top: 0 },
   { front: "T", right: "M", top: 2 },
-  { front: "A_CANTED", right: "E", top: 6 },
+  { front: "A", right: "E", top: 6 },
 ];
 
 export type Phase = "meta" | "game" | "year" | "static";

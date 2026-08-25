@@ -1,9 +1,12 @@
+import { notFound } from "next/navigation";
 import LogoDice from "@/components/site/LogoDice";
 
 export const metadata = { title: "LogoDice scratch", robots: { index: false } };
 
 // Scratch page for eyeballing the SVG logo rebuild against the mock's PNG.
+// Dev-only: 404s in production builds.
 export default function LogoDicePage() {
+  if (process.env.NODE_ENV === "production") notFound();
   return (
     <main className="min-h-screen">
       <section className="bg-white p-8">
@@ -17,10 +20,11 @@ export default function LogoDicePage() {
       </section>
       <section className="bg-neutral-900 p-8">
         <p className="mb-2 font-mono text-sm text-neutral-400">on dark</p>
-        <LogoDice
-          className="w-full max-w-4xl"
-          style={{ "--ld-ink": "#000" } as never}
-        />
+        <LogoDice highlight className="w-full max-w-4xl" />
+        <p className="mt-8 mb-2 font-mono text-sm text-neutral-400">
+          on dark + drop shadow
+        </p>
+        <LogoDice highlight shadow className="w-full max-w-4xl" />
       </section>
       <section className="bg-white p-8">
         <p className="mb-2 font-mono text-sm text-neutral-500">highlight off</p>
@@ -34,7 +38,6 @@ export default function LogoDicePage() {
             {
               "--ld-left": "#7c3aed",
               "--ld-right": "#fbbf24",
-              "--ld-top": "#1e1b4b",
               "--ld-hi": "#fde68a",
             } as never
           }

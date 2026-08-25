@@ -1,4 +1,5 @@
-import type { CSSProperties } from "react";
+import { useId, type CSSProperties } from "react";
+import { letterPaths } from "@/lib/dice-letter-paths";
 
 // Parametric SVG rebuild of the METAGAME dice wordmark (images/logo.png in the
 // mock). Each die is a true-isometric cube: the side "faces" are the dice-letter
@@ -7,23 +8,7 @@ import type { CSSProperties } from "react";
 // highlight in the drawing. `highlight` toggles that illusion off.
 // Recolor via CSS vars: --ld-top, --ld-left, --ld-right, --ld-ink, --ld-pip, --ld-hi.
 
-// Glyphs derived from public/dice-letters/*.svg (canonical for the 3D dice).
-// M/G/E cutouts are rebuilt from SLOT about the originals' centers — the
-// originals' 26-unit slots read too thin at wordmark size (the PNG uses ~38).
-const SLOT = 52;
-// Exterior corner radius of the glyphs (originals use 22); the A's canted
-// sides need the tangent point pushed along the slant (unit vector AX, AY).
-const R = 48;
-const AX = 0.0779;
-const AY = 0.997;
-const SQ = `M0 ${R}Q0 0 ${R} 0L${512 - R} 0Q512 0 512 ${R}L512 ${512 - R}Q512 512 ${512 - R} 512L${R} 512Q0 512 0 ${512 - R}Z`;
-const LETTER_PATHS: Record<string, string> = {
-  m: `${SQ} M${165.5 - SLOT / 2} 153H${165.5 + SLOT / 2}V512H${165.5 - SLOT / 2}Z M${345.5 - SLOT / 2} 153H${345.5 + SLOT / 2}V512H${345.5 - SLOT / 2}Z`,
-  g: `${SQ} M${164 - SLOT / 2} ${165 - SLOT / 2}H512V${165 + SLOT / 2}H${164 + SLOT / 2}V${345 - SLOT / 2}H357V${345 + SLOT / 2}H${164 - SLOT / 2}Z`,
-  e: `${SQ} M154 ${165 - SLOT / 2}H512V${165 + SLOT / 2}H154Z M154 ${347 - SLOT / 2}H512V${347 + SLOT / 2}H154Z`,
-  t: `M${R} 0H${512 - R}A${R} ${R} 0 0 1 512 ${R}V153H333V512H177V153H0V${R}A${R} ${R} 0 0 1 ${R} 0Z`,
-  a: `M${(40 - AX * R).toFixed(1)} ${(AY * R).toFixed(1)}Q40 0 ${40 + R} 0L${472 - R} 0Q472 0 ${(472 + AX * R).toFixed(1)} ${(AY * R).toFixed(1)}L${(512 - AX * R).toFixed(1)} ${(512 - AY * R).toFixed(1)}Q512 512 ${512 - R} 512L${R} 512Q0 512 ${(AX * R).toFixed(1)} ${(512 - AY * R).toFixed(1)}Z M181.9 155L331.1 155L337.5 237L175.5 237Z M172.4 276L340.6 276L359 512L154 512Z`,
-};
+const LETTER_PATHS = letterPaths({ slot: 52, r: 48 });
 
 // Reading order M-E-T-A-G-A-M-E across the dice; left faces stay blue and
 // right faces orange, so the letters alternate color in reading order.
@@ -64,16 +49,29 @@ const RIGHT_MATRIX = `matrix(${K} -0.5 0 1 0 0)`;
 // Each face insets independently from its exterior (silhouette) edges and its
 // interior (shared-channel) edges, so rim thickness and channel width are
 // separate knobs. Which local edges are which differs per face.
+// The shared vertical edge is foreshortened by cos30 on screen, so M_SIDE is
+// set so 2·M_SIDE·cos30 ≈ the exterior rim (44 stroke + M_EXT) and the black
+// channel between the two letters reads as wide as the rim around them.
 const M_EXT = 10;
 const M_INT = 17;
+const M_SIDE = 30;
+const M_TOP = 34; // top face's two interior edges, so it sits clear of the letters
 const KF = (512 - M_INT - M_EXT) / 512;
-const INSET_TOP = `translate(${M_INT} ${M_EXT}) scale(${KF})`;
-const INSET_LEFT = `translate(${M_EXT} ${M_INT}) scale(${KF})`;
-const INSET_RIGHT = `translate(${M_INT} ${M_INT}) scale(${KF})`;
+const KX = (512 - M_SIDE - M_EXT) / 512;
+const KT = (512 - M_TOP - M_EXT) / 512;
+const INSET_TOP = `translate(${M_TOP} ${M_EXT}) scale(${KT})`;
+const INSET_LEFT = `translate(${M_EXT} ${M_INT}) scale(${KX} ${KF})`;
+const INSET_RIGHT = `translate(${M_SIDE} ${M_INT}) scale(${KX} ${KF})`;
 
 // Highlight copies mirror horizontally between the two faces so the implied
 // light comes from one consistent direction across the cube edge.
 const HI = 8;
+
+// Optional drop shadow under each die (face units), for dice on dark grounds.
+const SHADOW_DY = 28;
+const SHADOW_BLUR = 22;
+const SHADOW_OPACITY = 0.35;
+const SHADOW_PAD = SHADOW_DY + 3 * SHADOW_BLUR + 32;
 const HI_LEFT = `translate(${HI} ${-HI})`;
 const HI_RIGHT = `translate(${-HI} ${-HI})`;
 
@@ -159,7 +157,7 @@ function Die({
         strokeLinejoin="round"
       />
       <g transform={`${TOP_MATRIX} ${INSET_TOP}`}>
-        <rect width={S} height={S} rx={48} fill="var(--ld-top, #363636)" />
+        <rect width={S} height={S} rx={48} fill="var(--ld-top, #232323)" />
         {(PIP_LAYOUTS[pips] ?? []).map(([x, y]) => (
           <circle
             key={`${x}-${y}`}
@@ -173,7 +171,7 @@ function Die({
       <g transform={`${LEFT_MATRIX} ${INSET_LEFT}`}>
         <Letter
           glyph={left}
-          fill="var(--ld-left, #1CA1FF)"
+          fill="var(--ld-left, #1EA1FF)"
           hiOffset={highlight ? HI_LEFT : null}
         />
       </g>
@@ -181,7 +179,7 @@ function Die({
         <g transform={`${RIGHT_MATRIX} ${INSET_RIGHT}`}>
           <Letter
             glyph={right}
-            fill="var(--ld-right, #EDB068)"
+            fill="var(--ld-right, #FFAB3F)"
             hiOffset={highlight ? HI_RIGHT : null}
           />
         </g>
@@ -262,7 +260,7 @@ export function NavLogo({
             >
               <Letter
                 glyph="g"
-                fill="var(--ld-right, #EDB068)"
+                fill="var(--ld-right, #FFAB3F)"
                 hiOffset={HI_RIGHT}
               />
             </g>
@@ -274,7 +272,7 @@ export function NavLogo({
             >
               <Letter
                 glyph="e"
-                fill="var(--ld-right, #EDB068)"
+                fill="var(--ld-right, #FFAB3F)"
                 hiOffset={HI_RIGHT}
               />
             </g>
@@ -311,21 +309,43 @@ export default function LogoDice({
   className,
   style,
   highlight = false,
+  shadow = false,
 }: {
   className?: string;
   style?: CSSProperties;
   highlight?: boolean;
+  shadow?: boolean;
 }) {
+  const shadowId = useId();
+  // The blurred shadow reaches well past the silhouette; give it canvas.
+  const pad = shadow ? SHADOW_PAD : 32;
   return (
     <svg
-      viewBox={`${-H - 32} ${-S - 32} ${3 * PITCH + 2 * H + 64} ${2 * S + 64}`}
+      viewBox={`${-H - pad} ${-S - pad} ${3 * PITCH + 2 * H + 2 * pad} ${2 * S + 2 * pad}`}
       className={className}
       style={style}
       role="img"
       aria-label="Metagame"
     >
+      {shadow && (
+        <defs>
+          <filter id={shadowId} x="-20%" y="-20%" width="140%" height="150%">
+            <feDropShadow
+              dx="0"
+              dy={SHADOW_DY}
+              stdDeviation={SHADOW_BLUR}
+              floodColor="var(--ld-shadow, #fff)"
+              floodOpacity={SHADOW_OPACITY}
+            />
+          </filter>
+        </defs>
+      )}
       {DICE.map((die, i) => (
-        <g key={i} transform={`translate(${i * PITCH} 0)`}>
+        <g
+          key={i}
+          transform={`translate(${i * PITCH} 0)`}
+          filter={shadow ? `url(#${shadowId})` : undefined}
+        >
           <Die {...die} highlight={highlight} />
         </g>
       ))}
