@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ExpandingNav from "./ExpandingNav";
 import MobileNavCorner from "./MobileNavCorner";
 import SideRail from "./SideRail";
 
@@ -29,6 +30,7 @@ export default function SiteShell({
 
   return (
     <>
+      <ExpandingNav />
       <MobileNavCorner onOpenMenu={() => setMenuOpen(true)} />
       <SideRail overlay={menuOpen} onClose={() => setMenuOpen(false)} />
       {/* The rail is fixed-position, so this padding only keeps content from
