@@ -58,6 +58,7 @@ function backdropPath(w: number, h: number) {
 
 export default function ExpandingNav() {
   const [expanded, setExpanded] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   // The link row's natural width, measured so `width` can transition to it —
@@ -102,8 +103,16 @@ export default function ExpandingNav() {
   return (
     <div
       ref={rootRef}
-      className="fixed top-3 left-3 z-40 flex h-(--bar-h) max-w-[calc(100vw-1.5rem)] items-center bg-navy [--bar-h:52px] [--nav-h:40px] sm:[--bar-h:60px] sm:[--nav-h:48px]"
+      onPointerEnter={() => setHovered(true)}
+      onPointerLeave={() => setHovered(false)}
+      // The backdrop's margin around the die grows a touch on hover; the open
+      // bar keeps that grown size. Offsetting top/left by half keeps the die
+      // fixed in place while the hexagon swells around it.
+      className="fixed z-40 flex h-(--bar-h) max-w-[calc(100vw-1.5rem)] items-center bg-navy transition-[height,top,left] duration-300 ease-out [--bar-h:calc(52px+var(--grow))] [--nav-h:40px] sm:[--bar-h:calc(60px+var(--grow))] sm:[--nav-h:48px]"
       style={{
+        ["--grow" as string]: hovered || expanded ? "6px" : "0px",
+        top: "calc(0.75rem - var(--grow) / 2)",
+        left: "calc(0.75rem - var(--grow) / 2)",
         // Half-width of a hexagon this tall (cos 30°).
         ["--hex" as string]: "calc(var(--bar-h) * 0.433)",
         clipPath: barSize
@@ -121,7 +130,7 @@ export default function ExpandingNav() {
         // Collapsed, the button is the hexagon (2·hex wide) with the die
         // centered; expanded, it grows with the wordmark from that same left
         // inset so the first die never shifts.
-        className="flex h-full min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[5px] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset"
+        className="flex h-full min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] transition-[min-width,padding] duration-300 ease-out outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset"
       >
         <NavLogo
           expanded={expanded}
