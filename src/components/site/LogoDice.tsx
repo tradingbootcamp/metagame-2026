@@ -292,7 +292,7 @@ export function NavLogo({
                 transformBox: "fill-box",
                 transformOrigin: "center",
                 transition: `opacity ${ms(200)} ease, transform ${ms(240)} cubic-bezier(0.65,0,0.35,1)`,
-                transitionDelay: expanded ? ms(i * 80) : ms((3 - i) * 40),
+                transitionDelay: expanded ? ms(i * 80) : ms((3 - i) * 80),
               }}
             >
               <Die
