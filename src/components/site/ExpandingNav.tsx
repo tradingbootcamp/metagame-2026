@@ -110,11 +110,12 @@ export default function ExpandingNav() {
   const boxRef = useRef<HTMLDivElement>(null);
   const dieRef = useRef<HTMLButtonElement>(null);
   const rowRef = useRef<HTMLUListElement>(null);
-  const columnRef = useRef<HTMLUListElement>(null);
   // Natural sizes of the two link lists, measured so `width`/`height` can
   // transition to them — `auto` doesn't animate.
   const [rowWidth, setRowWidth] = useState(0);
-  const [columnWidth, setColumnWidth] = useState(0);
+  // Mobile column is exactly as wide as the die button (wordmark + its rim),
+  // so the box stays symmetric about the logo; labels are narrower anyway.
+  const [dieWidth, setDieWidth] = useState(0);
   const { active, goTo } = useSectionSpy();
   // Scrolling down, underlines sweep left→right (in and out); up, right→left.
   const [prevActive, setPrevActive] = useState(active);
@@ -127,13 +128,12 @@ export default function ExpandingNav() {
 
   useLayoutEffect(() => {
     const row = rowRef.current;
-    const col = columnRef.current;
     const boxEl = boxRef.current;
     const die = dieRef.current;
-    if (!row || !col || !boxEl || !die) return;
+    if (!row || !boxEl || !die) return;
     const measure = () => {
       setRowWidth(row.scrollWidth);
-      setColumnWidth(col.scrollWidth);
+      setDieWidth(die.offsetWidth);
       // The clip-path must match the box on the very frame it's painted —
       // a React state round-trip lags a frame, and while the box shrinks a
       // stale (larger) clip lets its square bottom edge show. So write it
@@ -148,7 +148,7 @@ export default function ExpandingNav() {
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(row);
-    ro.observe(col);
+    ro.observe(die);
     ro.observe(boxEl);
     return () => ro.disconnect();
   }, []);
@@ -260,9 +260,10 @@ export default function ExpandingNav() {
           // Collapsed, the button is the hexagon (2·hex wide) with the die
           // centered; expanded, it grows with the wordmark from that same left
           // inset so the first die never shifts.
-          // Mobile only pads the right while unfolded (so the wordmark clears
-          // the hex cap) — always-on it would hold the hexagon open.
-          className={`flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset md:pr-0 ${unfold ? "pr-(--hex)" : "pr-0"}`}
+          // Mobile mirrors the left inset on the right while unfolded so the
+          // box is symmetric about the wordmark — always-on it would hold the
+          // collapsed hexagon open.
+          className={`flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset md:pr-0 ${unfold ? "pr-[5px]" : "pr-0"}`}
           // padding-right only: the left inset must follow --grow exactly, or
           // the die lags behind the swelling backdrop.
           style={{
@@ -350,16 +351,13 @@ export default function ExpandingNav() {
           aria-hidden={!dropDown}
           className="min-h-0 flex-1 overflow-hidden md:hidden"
           style={{
-            width: dropDown ? columnWidth : 0,
+            width: dropDown ? dieWidth : 0,
             // Sideways phase: with the wordmark on open, after the height
             // has collapsed on close.
             transition: `width ${sidewaysMs}ms ${sidewaysEase} ${dropDown ? 0 : MOBILE_COLLAPSE_MS}ms`,
           }}
         >
-          <ul
-            ref={columnRef}
-            className="flex h-[calc(100dvh-1.5rem-var(--bar-h))] w-max flex-col items-start justify-around pr-(--hex) pb-[calc(var(--bar-h)/4)] pl-1"
-          >
+          <ul className="flex h-[calc(100dvh-1.5rem-var(--bar-h))] w-max flex-col items-start justify-around pb-[calc(var(--bar-h)/4)] pl-1">
             {LINKS.map(({ id, label }, i) => (
               <li key={id}>
                 <button
