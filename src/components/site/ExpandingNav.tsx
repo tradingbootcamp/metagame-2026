@@ -95,9 +95,6 @@ export default function ExpandingNav() {
   // transition to them — `auto` doesn't animate.
   const [rowWidth, setRowWidth] = useState(0);
   const [columnWidth, setColumnWidth] = useState(0);
-  // Backdrop box size (+ the die row height that fixes the hex geometry),
-  // re-measured every frame a size transition runs so the clip-path follows.
-  const [box, setBox] = useState<[number, number, number] | null>(null);
   const { active, goTo } = useSectionSpy();
   // Underlines grow from the side you arrived from: left→right scrolling down
   // the page, right→left scrolling back up.
@@ -118,7 +115,16 @@ export default function ExpandingNav() {
     const measure = () => {
       setRowWidth(row.scrollWidth);
       setColumnWidth(col.scrollWidth);
-      setBox([boxEl.offsetWidth, boxEl.offsetHeight, die.offsetHeight]);
+      // The clip-path must match the box on the very frame it's painted —
+      // a React state round-trip lags a frame, and while the box shrinks a
+      // stale (larger) clip lets its square bottom edge show. So write it
+      // straight to the element from the observer callback, which runs
+      // after layout and before paint.
+      boxEl.style.clipPath = `path("${backdropPath(
+        boxEl.offsetWidth,
+        boxEl.offsetHeight,
+        die.offsetHeight,
+      )}")`;
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -183,7 +189,7 @@ export default function ExpandingNav() {
       // The backdrop's margin around the die grows a touch on hover; the open
       // bar keeps that grown size. Offsetting top/left by half keeps the die
       // fixed in place while the hexagon swells around it.
-      className="fixed z-40 flex items-start [--bar-h:calc(60px+var(--grow))] [--nav-h:48px] md:[--bar-h:calc(68px+var(--grow))] md:[--nav-h:56px]"
+      className="fixed z-40 flex items-start [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px]"
       style={{
         ["--grow" as string]: grow ? "6px" : "0px",
         transition: "--grow 300ms ease-out",
@@ -200,10 +206,10 @@ export default function ExpandingNav() {
         ref={boxRef}
         className="flex max-w-[calc(100vw-1.5rem)] flex-col items-start bg-navy md:h-(--bar-h) md:flex-row md:items-center"
         style={{
-          clipPath: box
-            ? `path("${backdropPath(...box)}")`
-            : // Pre-measure fallback (SSR/first paint): same shape, square corners.
-              "polygon(var(--hex) 0, calc(100% - var(--hex)) 0, 100% 25%, 100% 75%, calc(100% - var(--hex)) 100%, var(--hex) 100%, 0 75%, 0 25%)",
+          // Pre-measure fallback (SSR/first paint) — the observer replaces it
+          // with the rounded path.
+          clipPath:
+            "polygon(var(--hex) 0, calc(100% - var(--hex)) 0, 100% 25%, 100% 75%, calc(100% - var(--hex)) 100%, var(--hex) 100%, 0 75%, 0 25%)",
           ...(desktop
             ? undefined
             : {
@@ -305,9 +311,12 @@ export default function ExpandingNav() {
           </ul>
         </nav>
         {/* Mobile: links stack under the die, spread down the full-height box,
-            flush with the die's left edge. Width 0 while closed so the widest
-            label can't prop the hexagon open. Picking one closes the menu,
-            since it's covering content. Bottom padding clears the hex cap. */}
+            flush with the die's left edge. The list is already its final
+            height while the box grows, so the words hold position and roll
+            into view one by one as the box reaches them. Width 0 while closed
+            so the widest label can't prop the hexagon open. Picking one closes
+            the menu, since it's covering content. Bottom padding clears the
+            hex cap. */}
         <nav
           aria-label="Section navigation"
           aria-hidden={!dropDown}
@@ -321,7 +330,7 @@ export default function ExpandingNav() {
         >
           <ul
             ref={columnRef}
-            className="flex h-full w-max flex-col items-start justify-around pr-(--hex) pb-[calc(var(--bar-h)/4)] pl-1"
+            className="flex h-[calc(100dvh-1.5rem-var(--bar-h))] w-max flex-col items-start justify-around pr-(--hex) pb-[calc(var(--bar-h)/4)] pl-1"
           >
             {LINKS.map(({ id, label }, i) => (
               <li key={id}>
@@ -337,9 +346,12 @@ export default function ExpandingNav() {
                   style={{
                     opacity: dropDown ? 1 : 0,
                     transition: "opacity 200ms ease, color 200ms ease",
+                    // Fade each word in around when the growing box uncovers
+                    // it; on close the shrinking box hides them, so they only
+                    // fade once it's down.
                     transitionDelay: dropDown
-                      ? `${sidewaysMs + 100 + i * LINK_STAGGER_MS * 0.6}ms`
-                      : "0ms",
+                      ? `${sidewaysMs + ((i + 0.5) / LINKS.length) * UNFOLD_MS * 0.8}ms`
+                      : `${UNFOLD_MS}ms`,
                   }}
                 >
                   {label}
