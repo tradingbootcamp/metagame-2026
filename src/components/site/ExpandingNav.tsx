@@ -193,12 +193,13 @@ export default function ExpandingNav() {
             durationMs={UNFOLD_MS}
             className="h-(--nav-h)"
             // Top face shows where you are: the section's icon, crossfading
-            // as scroll-spy moves; Home keeps the die's own 2 pips.
+            // as scroll-spy moves. Home, and the unfolded wordmark (where the
+            // "2" is part of METAGAME 2026), keep the die's own 2 pips.
             top={SECTIONS.map(({ id, icon: Icon }) => (
               <g
                 key={id}
                 style={{
-                  opacity: active === id ? 1 : 0,
+                  opacity: (unfold ? "home" : active) === id ? 1 : 0,
                   transition: "opacity 250ms ease",
                 }}
               >
