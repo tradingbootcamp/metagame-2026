@@ -291,8 +291,7 @@ export function NavLogo({
             <g
               style={{
                 opacity: expanded ? 0 : 1,
-                transition: `opacity ${ms(200)} ease`,
-                transitionDelay: expanded ? "0ms" : ms(LAST_DIE_FOLDED),
+                transition: `opacity ${ms(200)} ease ${expanded ? "0ms" : ms(LAST_DIE_FOLDED)}`,
               }}
             >
               <Letter
@@ -304,8 +303,7 @@ export function NavLogo({
             <g
               style={{
                 opacity: expanded ? 1 : 0,
-                transition: `opacity ${ms(200)} ease`,
-                transitionDelay: expanded ? "0ms" : ms(LAST_DIE_FOLDED),
+                transition: `opacity ${ms(200)} ease ${expanded ? "0ms" : ms(LAST_DIE_FOLDED)}`,
               }}
             >
               <Letter
@@ -324,8 +322,14 @@ export function NavLogo({
                 transform: expanded ? "scale(1)" : "scale(0.5)",
                 transformBox: "fill-box",
                 transformOrigin: "center",
-                transition: `opacity ${ms(200)} ease, transform ${ms(240)} ${easing}`,
-                transitionDelay: expanded ? ms(i * 80) : ms((3 - i) * 80),
+                transition: [
+                  `opacity ${ms(200)} ease`,
+                  `transform ${ms(240)} ${easing}`,
+                ]
+                  .map(
+                    (t) => `${t} ${expanded ? ms(i * 80) : ms((3 - i) * 80)}`,
+                  )
+                  .join(", "),
               }}
             >
               <Die
