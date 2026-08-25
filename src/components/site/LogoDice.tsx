@@ -225,20 +225,25 @@ export function LogoDie({
 // own right face here so the "G" can crossfade to "E" as dice 1–3 pop in.
 export function NavLogo({
   expanded,
+  durationMs = 460,
   className,
   style,
 }: {
   expanded: boolean;
+  // Overall unfold time; the per-die stagger and crossfade scale with it.
+  durationMs?: number;
   className?: string;
   style?: CSSProperties;
 }) {
+  const k = durationMs / 460;
+  const ms = (base: number) => `${Math.round(base * k)}ms`;
   return (
     <span
       className={`block overflow-hidden ${className ?? ""}`}
       style={{
         height: "var(--nav-h)",
         width: `calc(var(--nav-h) * ${expanded ? NAV_AR_FULL : NAV_AR_ONE})`,
-        transition: "width 460ms cubic-bezier(0.22,1,0.36,1)",
+        transition: `width ${durationMs}ms cubic-bezier(0.22,1,0.36,1)`,
         ...style,
       }}
     >
@@ -254,8 +259,8 @@ export function NavLogo({
             <g
               style={{
                 opacity: expanded ? 0 : 1,
-                transition: "opacity 200ms ease",
-                transitionDelay: expanded ? "0ms" : "120ms",
+                transition: `opacity ${ms(200)} ease`,
+                transitionDelay: expanded ? "0ms" : ms(120),
               }}
             >
               <Letter
@@ -267,7 +272,7 @@ export function NavLogo({
             <g
               style={{
                 opacity: expanded ? 1 : 0,
-                transition: "opacity 200ms ease",
+                transition: `opacity ${ms(200)} ease`,
               }}
             >
               <Letter
@@ -286,9 +291,8 @@ export function NavLogo({
                 transform: expanded ? "scale(1)" : "scale(0.5)",
                 transformBox: "fill-box",
                 transformOrigin: "center",
-                transition:
-                  "opacity 200ms ease, transform 240ms cubic-bezier(0.22,1,0.36,1)",
-                transitionDelay: expanded ? `${i * 80}ms` : `${(3 - i) * 40}ms`,
+                transition: `opacity ${ms(200)} ease, transform ${ms(240)} cubic-bezier(0.22,1,0.36,1)`,
+                transitionDelay: expanded ? ms(i * 80) : ms((3 - i) * 40),
               }}
             >
               <Die

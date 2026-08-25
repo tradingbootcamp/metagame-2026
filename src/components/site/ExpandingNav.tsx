@@ -10,8 +10,8 @@ import { useSectionSpy } from "./useSectionSpy";
 // horizontally from behind it, sharing the wordmark's easing so the two read
 // as one motion.
 const EASE = "cubic-bezier(0.22,1,0.36,1)";
-const UNFOLD_MS = 460;
-const LINK_STAGGER_MS = 35;
+const UNFOLD_MS = 800;
+const LINK_STAGGER_MS = 50;
 
 // Home is the logo itself, so it doesn't get a link.
 const LINKS = SECTIONS.filter((s) => s.id !== "home");
@@ -123,7 +123,11 @@ export default function ExpandingNav() {
         // inset so the first die never shifts.
         className="flex h-full min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[5px] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset"
       >
-        <NavLogo expanded={expanded} className="h-(--nav-h)" />
+        <NavLogo
+          expanded={expanded}
+          durationMs={UNFOLD_MS}
+          className="h-(--nav-h)"
+        />
       </button>
       <nav
         id="expanding-nav-links"
@@ -158,11 +162,11 @@ export default function ExpandingNav() {
                   style={{
                     opacity: expanded ? 1 : 0,
                     transform: expanded ? "translateX(0)" : "translateX(-12px)",
-                    transition: `opacity 200ms ease, transform 300ms ${EASE}, color 200ms ease`,
+                    transition: `opacity 300ms ease, transform 450ms ${EASE}, color 200ms ease`,
                     // Links ripple out left→right on open and fold back
                     // right→left on close, trailing the wordmark's dice.
                     transitionDelay: expanded
-                      ? `${120 + i * LINK_STAGGER_MS}ms`
+                      ? `${200 + i * LINK_STAGGER_MS}ms`
                       : `${(LINKS.length - 1 - i) * LINK_STAGGER_MS * 0.5}ms`,
                   }}
                 >
