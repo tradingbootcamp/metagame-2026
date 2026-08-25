@@ -247,10 +247,12 @@ export default function ExpandingNav() {
       // fixed in place while the hexagon swells around it.
       // Mobile holds the trigger back until the hero dice have said META,
       // then fades it in fast. (Breakpoint via CSS so desktop never blinks.)
-      className={`fixed z-40 flex items-start transition-opacity duration-200 [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px] ${introDone ? "" : "max-md:pointer-events-none max-md:opacity-0"}`}
+      className={`fixed z-40 flex items-start [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px] ${introDone ? "" : "max-md:pointer-events-none max-md:opacity-0"}`}
       style={{
         ["--grow" as string]: grow ? "6px" : "0px",
-        transition: "--grow 350ms cubic-bezier(0.45,0,0.55,1)",
+        // (opacity here too — an inline `transition` replaces any class one.)
+        transition:
+          "--grow 350ms cubic-bezier(0.45,0,0.55,1), opacity 200ms ease",
         // Half-width of a hexagon this tall (cos 30°).
         ["--hex" as string]: "calc(var(--bar-h) * 0.433)",
         top: "calc(0.75rem - var(--grow) / 2)",
