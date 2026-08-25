@@ -269,10 +269,9 @@ export default function SponsorPage() {
           </h2>
           <p className="mt-3 max-w-[640px] text-base text-ink/75">
             Metagame accepts tax-deductible donations through Manifund, a
-            501(c)(3) that fiscally sponsors our project. Gifts, including from
-            a donor-advised fund, go to Manifund and are earmarked for Metagame.
-            Donors get our thanks and their name on the site, but no tickets or
-            other benefits, which is what keeps the gift deductible.
+            501(c)(3) that fiscally sponsors our project. Donors get our thanks
+            and their name featured, but cannot get comped tickets or other
+            direct material benefits, because laws.
           </p>
           <Button asChild variant="navy" size="lg" className="mt-5">
             <a href={MANIFUND_URL} target="_blank" rel="noopener noreferrer">
