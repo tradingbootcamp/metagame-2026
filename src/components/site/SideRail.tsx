@@ -201,12 +201,14 @@ export default function SideRail({ overlay = false, onClose }: SideRailProps) {
                 <Icon
                   size={22}
                   strokeWidth={isActive ? 2.4 : 2}
-                  // Resting: muted gray blending into the beige. Active: navy
-                  // and enlarged, legible even when the rail isn't hovered.
-                  className={`shrink-0 transition-colors duration-200 ${
+                  // Resting: muted gray blending into the beige. Active: navy,
+                  // enlarged, and tint-filled (a solid fill would swallow the
+                  // icons' interior lines). CSS fill overrides the icons' own
+                  // fill="none" attribute.
+                  className={`shrink-0 transition-[color,fill] duration-200 ${
                     isActive
-                      ? "scale-110 text-navy"
-                      : "text-ink/35 group-hover:text-ink"
+                      ? "scale-110 fill-navy/15 text-navy"
+                      : "fill-transparent text-ink/35 group-hover:text-ink"
                   }`}
                 />
                 {/* Home (the MG2 die) is self-evident as the top item — no label.
