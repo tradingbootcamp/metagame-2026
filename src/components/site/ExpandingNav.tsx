@@ -19,6 +19,10 @@ import { useSectionSpy } from "./useSectionSpy";
 // full-height column instead.
 const EASE = "cubic-bezier(0.65,0,0.35,1)";
 const UNFOLD_MS = 800;
+// Mobile's sideways phase is quicker and eases out; the drop-down phase that
+// follows keeps the desktop timing.
+const MOBILE_SIDEWAYS_MS = 450;
+const MOBILE_SIDEWAYS_EASE = "cubic-bezier(0.22,1,0.36,1)";
 const LINK_STAGGER_MS = 50;
 
 // Home is the logo itself, so it doesn't get a link.
@@ -158,6 +162,8 @@ export default function ExpandingNav() {
 
   // Mobile has no hover, so no swell there.
   const unfold = desktop ? expanded : dieOpen;
+  const sidewaysMs = desktop ? UNFOLD_MS : MOBILE_SIDEWAYS_MS;
+  const sidewaysEase = desktop ? EASE : MOBILE_SIDEWAYS_EASE;
   const grow = desktop && (hovered || expanded);
 
   const linkClass = (isActive: boolean) =>
@@ -203,7 +209,10 @@ export default function ExpandingNav() {
             : {
                 height: dropDown ? "calc(100dvh - 1.5rem)" : "var(--bar-h)",
                 // Second phase on open, first on close.
-                transition: `height ${UNFOLD_MS}ms ${EASE} ${dropDown ? UNFOLD_MS : 0}ms`,
+                transition: `height ${UNFOLD_MS}ms ${EASE} ${dropDown ? sidewaysMs : 0}ms`,
+                // Swiping the open menu shouldn't scroll the page under it.
+                touchAction: dropDown ? "none" : undefined,
+                overscrollBehavior: "contain",
               }),
         }}
       >
@@ -220,11 +229,12 @@ export default function ExpandingNav() {
           // Mobile only pads the right while unfolded (so the wordmark clears
           // the hex cap) — always-on it would hold the hexagon open.
           className={`flex h-(--bar-h) min-w-[calc(2*var(--hex))] shrink-0 cursor-pointer items-center pl-[calc(5px+var(--grow)/2)] outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-inset md:pr-0 ${unfold ? "pr-(--hex)" : "pr-0"}`}
-          style={{ transition: `padding ${UNFOLD_MS}ms ${EASE}` }}
+          style={{ transition: `padding ${sidewaysMs}ms ${sidewaysEase}` }}
         >
           <NavLogo
             expanded={unfold}
-            durationMs={UNFOLD_MS}
+            durationMs={sidewaysMs}
+            easing={sidewaysEase}
             className="h-(--nav-h)"
             // Top face shows where you are: the section's icon, crossfading
             // as scroll-spy moves. Home, and the unfolded wordmark (where the
@@ -302,7 +312,7 @@ export default function ExpandingNav() {
             width: dropDown ? columnWidth : 0,
             // Sideways phase: with the wordmark on open, after the height
             // has collapsed on close.
-            transition: `width ${UNFOLD_MS}ms ${EASE} ${dropDown ? 0 : UNFOLD_MS}ms`,
+            transition: `width ${sidewaysMs}ms ${sidewaysEase} ${dropDown ? 0 : UNFOLD_MS}ms`,
           }}
         >
           <ul
@@ -324,7 +334,7 @@ export default function ExpandingNav() {
                     opacity: dropDown ? 1 : 0,
                     transition: "opacity 200ms ease, color 200ms ease",
                     transitionDelay: dropDown
-                      ? `${UNFOLD_MS + 100 + i * LINK_STAGGER_MS * 0.6}ms`
+                      ? `${sidewaysMs + 100 + i * LINK_STAGGER_MS * 0.6}ms`
                       : "0ms",
                   }}
                 >
