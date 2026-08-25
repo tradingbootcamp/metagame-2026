@@ -88,7 +88,7 @@ function GridDay({
   return (
     /* Column + time widths are CSS vars so phones get narrower columns (more
        venues visible at once) than wider screens. */
-    <div className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-[#f4ecd2] [--col-w:104px] [--time-w:44px] sm:[--col-w:120px] sm:[--time-w:56px]">
+    <div className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--col-w:104px] [--time-w:44px] sm:[--col-w:120px] sm:[--time-w:56px]">
       <div className="min-w-fit">
         {/* Location header row (sticky on vertical scroll) */}
         <div
@@ -132,7 +132,7 @@ function GridDay({
           {day.slots.map((slotStart) => (
             <div key={slotStart} className="contents">
               <div
-                className="sticky left-0 z-20 flex justify-center border-r border-b border-[#1b1530]/15 bg-[#f4ecd2] pt-1 text-[11px] text-[#1b1530]/55"
+                className="sticky left-0 z-20 flex justify-center border-r border-b border-[#1b1530]/15 bg-background pt-1 text-[11px] text-[#1b1530]/55"
                 style={{ height: SLOT_PX }}
               >
                 {slotLabel(slotStart)}
@@ -208,7 +208,7 @@ function SessionRow({ session, onOpen }: { session: Session; onOpen: OpenFn }) {
 
 function ListDay({ day, onOpen }: { day: Day; onOpen: OpenFn }) {
   return (
-    <ol className="divide-y divide-[#1b1530]/10 border-[1.5px] border-[#1b1530]/15 bg-[#f4ecd2]">
+    <ol className="divide-y divide-[#1b1530]/10 border-[1.5px] border-[#1b1530]/15 bg-background">
       {day.sessions.map((s) => (
         <SessionRow key={s.id} session={s} onOpen={onOpen} />
       ))}
