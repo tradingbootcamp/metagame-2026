@@ -239,6 +239,9 @@ export function NavLogo({
 }) {
   const k = durationMs / 460;
   const ms = (base: number) => `${Math.round(base * k)}ms`;
+  // On close the E→G swap waits for die 1 (the last to fold: 2·80 delay +
+  // 240 transform) so the wordmark reads as collapsing back into the MG die.
+  const LAST_DIE_FOLDED = 2 * 80 + 240;
   return (
     <span
       className={`block overflow-hidden ${className ?? ""}`}
@@ -262,7 +265,7 @@ export function NavLogo({
               style={{
                 opacity: expanded ? 0 : 1,
                 transition: `opacity ${ms(200)} ease`,
-                transitionDelay: expanded ? "0ms" : ms(120),
+                transitionDelay: expanded ? "0ms" : ms(LAST_DIE_FOLDED),
               }}
             >
               <Letter
@@ -275,6 +278,7 @@ export function NavLogo({
               style={{
                 opacity: expanded ? 1 : 0,
                 transition: `opacity ${ms(200)} ease`,
+                transitionDelay: expanded ? "0ms" : ms(LAST_DIE_FOLDED),
               }}
             >
               <Letter

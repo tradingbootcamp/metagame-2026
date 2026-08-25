@@ -65,6 +65,7 @@ export default function ExpandingNav() {
   const [hovered, setHovered] = useState(false);
   const [ease, setEase] = useState<keyof typeof EASES>("inout");
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- temp demo switch
     if (new URLSearchParams(window.location.search).get("navEase") === "out")
       setEase("out");
   }, []);
