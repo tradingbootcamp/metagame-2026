@@ -7,6 +7,7 @@ import {
   FaEnvelope,
   FaExternalLinkAlt,
   FaFilePdf,
+  FaRegCalendarAlt,
 } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { EYEBROW, HEADING } from "@/components/site/styles";
@@ -20,6 +21,7 @@ export const metadata: Metadata = {
 const CONTACT = "team@metagame.games";
 const MANIFUND_URL = "https://manifund.org/projects/metagame-2026";
 // TODO: drop the real prospectus PDF into public/ at this path.
+const CALL_URL = "https://savvycal.com/arbor-staff/ricki?d=30";
 const PROSPECTUS_URL = "/metagame-2026-sponsor-prospectus.pdf";
 
 const PATRON_EXAMPLES = [
@@ -366,6 +368,15 @@ export default function SponsorPage() {
             >
               {CONTACT}
             </a>{" "}
+            or{" "}
+            <a
+              href={CALL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
+            >
+              schedule a call
+            </a>{" "}
             for more information.
           </p>
         </section>
@@ -395,15 +406,22 @@ export default function SponsorPage() {
             Interested?
           </h2>
           <p className="mt-3 max-w-[560px] text-base text-cream/80">
-            Email us and we&rsquo;ll set up a call. Happy to mix and match
-            benefits, talk about in-kind sponsorship, or hear an idea we
-            haven&rsquo;t thought of.
+            Email the team or schedule a call. Happy to mix and match benefits,
+            talk about in-kind sponsorship, or hear an idea we haven&rsquo;t
+            thought of.
           </p>
-          <Button asChild size="lg" className="mt-6">
-            <a href={MAILTO}>
-              <FaEnvelope aria-hidden /> {CONTACT}
-            </a>
-          </Button>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Button asChild size="lg">
+              <a href={MAILTO}>
+                <FaEnvelope aria-hidden /> {CONTACT}
+              </a>
+            </Button>
+            <Button asChild variant="ghost" size="lg">
+              <a href={CALL_URL} target="_blank" rel="noopener noreferrer">
+                <FaRegCalendarAlt aria-hidden /> Schedule a call
+              </a>
+            </Button>
+          </div>
         </section>
       </div>
     </main>
