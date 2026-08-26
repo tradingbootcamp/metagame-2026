@@ -262,6 +262,8 @@ export type DiscountCodeRecord = {
   redeemed?: number; // mirror of the promo's times_redeemed (Stripe stays source of truth)
   email?: string;
   label?: string;
+  purpose?: string; // comp category from the comp tool (Purpose single-select; typecast adds new options)
+  notes?: string; // operator's free-text note from the comp tool (Comp Notes)
 };
 
 /**
@@ -300,6 +302,8 @@ export async function recordDiscountCode(
   // Only set Email/Label when present so a repeat event can't blank an existing value.
   if (record.email) fields.Email = record.email;
   if (record.label) fields.Label = record.label;
+  if (record.purpose) fields.Purpose = record.purpose;
+  if (record.notes) fields["Comp Notes"] = record.notes;
 
   const res = await fetch(
     `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.discountCodesTableId)}`,

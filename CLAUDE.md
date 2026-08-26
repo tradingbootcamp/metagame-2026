@@ -28,7 +28,8 @@ written as its equivalent `BTC Off`). These replace the old `Discount Type`/`Val
 **stripe-webhook** (`src/app/api/stripe-webhook/route.ts`)
 is the sole writer of `Method=Stripe` rows: on `promotion_code.created` / `promotion_code.updated`
 it mirrors every Stripe promotion code (dashboard- or comp-tool-made) into the same table via
-`recordDiscountCode()`, so one table covers both rails. `lookupDiscountCode` excludes
+`recordDiscountCode()`, so one table covers both rails. Comp-tool codes also carry `metadata.purpose` /
+`metadata.notes`, mirrored into the `Purpose` (single-select, typecast) and `Comp Notes` columns. `lookupDiscountCode` excludes
 `Method=Stripe` rows — they're logged, never honored as BTC discounts (blank `Method`, e.g. legacy
 `EARLYBIRD`, still is). The two `promotion_code.*` events must be enabled on the webhook endpoint in
 **both** test and live mode.
