@@ -201,6 +201,11 @@ export default function SponsorPage() {
             attendees come through personal networks in the Bay Area&rsquo;s
             game design, puzzle, and AI communities.
           </p>
+          <Button asChild variant="navy" className="mt-5">
+            <a href={PROSPECTUS_URL} target="_blank" rel="noopener noreferrer">
+              <FaFilePdf aria-hidden /> Download the prospectus (PDF)
+            </a>
+          </Button>
         </header>
 
         <section className="mt-10 grid gap-8 md:grid-cols-2">
