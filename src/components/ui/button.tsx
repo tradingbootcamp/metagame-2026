@@ -7,12 +7,6 @@ import { cn } from "@/lib/utils";
 // The site button, themed onto the Metagame palette. Roboto is baked in as the
 // label font, so every button gets it. Pass `asChild` to render an <a> (or any
 // element) instead of a <button> while keeping the styling.
-//
-// Hover variants translate the button; the transparent ::after stretches back
-// over the vacated footprint so a pointer sitting at the trailing edge stays
-// inside the hitbox instead of toggling hover (and the animation) every frame.
-// The offsets are translate distance + border width, since an absolute ::after
-// is placed against the padding box, not the border box.
 const buttonVariants = cva(
   "relative inline-flex shrink-0 items-center justify-center gap-2 font-roboto font-semibold whitespace-nowrap transition-[transform,background,border-color,box-shadow] duration-150 outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/60 disabled:pointer-events-none disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:shrink-0 after:absolute after:inset-0",
   {
