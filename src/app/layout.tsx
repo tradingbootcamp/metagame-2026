@@ -52,6 +52,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      // Lets Next suspend the CSS smooth scroll during route changes so a new
+      // page lands at the top instead of animating up from the old scroll spot.
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={`${bebasNeue.variable} ${spaceGrotesk.variable} ${inter.variable} ${spaceMono.variable} ${roboto.variable} h-full antialiased`}
     >
