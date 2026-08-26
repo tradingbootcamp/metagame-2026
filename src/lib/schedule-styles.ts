@@ -11,9 +11,9 @@ interface Swatch {
 }
 
 export const CATEGORY_STYLES: Record<Category, Swatch> = {
-  talk: { background: "#9dc6f3", borderColor: "#2f7fd9" },
+  talk: { background: "#f4c3d6", borderColor: "#d16c98" },
   workshop: { background: "#f4b26b", borderColor: "#d46a12" },
-  game: { background: "#f4c3d6", borderColor: "#d16c98" },
+  game: { background: "#9dc6f3", borderColor: "#2f7fd9" },
   other: { background: "#c6cdad", borderColor: "#848e6c" },
 };
 
