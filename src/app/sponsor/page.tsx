@@ -6,6 +6,7 @@ import {
   FaCheck,
   FaEnvelope,
   FaExternalLinkAlt,
+  FaFilePdf,
 } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { EYEBROW, HEADING } from "@/components/site/styles";
@@ -18,6 +19,16 @@ export const metadata: Metadata = {
 
 const CONTACT = "team@metagame.games";
 const MANIFUND_URL = "https://manifund.org/projects/metagame-2026";
+// TODO: drop the real prospectus PDF into public/ at this path.
+const PROSPECTUS_URL = "/metagame-2026-sponsor-prospectus.pdf";
+
+const PATRON_EXAMPLES = [
+  "Funding and running a flagship game or megagame experience at the conference",
+  "Hosting a private dinner, after-party, or exclusive event for a subset of attendees",
+  "Sponsoring or creating an event",
+  "Funding a charitable component (prize pool, auction, donation match)",
+  "Playtesting an original game design",
+];
 
 const ATTENDEES = [
   "Professional game designers and developers",
@@ -225,15 +236,16 @@ export default function SponsorPage() {
 
         <div className="mt-10 max-w-[720px]">
           <p className="text-base text-ink/70">
-            Tiers are not set in stone. If you want something not on the list or
-            have other questions, please reach out to{" "}
+            All packages are flexible. If what you&rsquo;re looking for
+            isn&rsquo;t described here,{" "}
             <a
               href={MAILTO}
               className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
             >
-              {CONTACT}
-            </a>{" "}
-            to discuss.
+              reach out anyway
+            </a>
+            . We&rsquo;d rather build something that works for both of us than
+            lose a good partner over a mismatch with a templated tier.
           </p>
           <a
             href="#donate"
@@ -309,6 +321,48 @@ export default function SponsorPage() {
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="mt-14 rounded-xl border border-line bg-white px-6 py-7 sm:px-8">
+          <p className={`${EYEBROW} mb-2.5 text-meeple`}>Patron sponsorship</p>
+          <h2 className={`${HEADING} text-[clamp(22px,3vw,28px)] text-navy`}>
+            Starting at $4,096
+          </h2>
+          <p className="mt-1 text-[15px] text-ink/60">
+            Structured around what you want to create.
+          </p>
+          <p className="mt-4 max-w-[680px] text-base text-ink/75">
+            The Patron track exists for people who want Metagame to exist, to be
+            excellent, and ideally to have their fingerprints on it. Patrons
+            tell us what they want to bring to the conference, and we work with
+            them to make it happen. Patron benefits scale with the level of
+            contribution.
+          </p>
+          <p className="mt-4 text-[15px] font-semibold text-ink">
+            What patronage can look like:
+          </p>
+          <ul className="mt-2 flex flex-col gap-1.5 text-[15px] text-ink/80">
+            {PATRON_EXAMPLES.map((x) => (
+              <li key={x} className="flex gap-2.5">
+                <span
+                  aria-hidden
+                  className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-meeple"
+                />
+                {x}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 max-w-[680px] text-base text-ink/75">
+            Patronage is flexible, and can be tailored to whatever you have in
+            mind. Contact{" "}
+            <a
+              href={MAILTO}
+              className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
+            >
+              {CONTACT}
+            </a>{" "}
+            for more information.
+          </p>
         </section>
 
         <section
