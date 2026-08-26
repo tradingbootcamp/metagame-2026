@@ -11,6 +11,7 @@ import MonopolyDivider from "@/components/site/dividers/monopoly";
 import PacmanDivider from "@/components/site/dividers/pacman";
 import SetCardDivider from "@/components/site/dividers/set-cards";
 import { GLYPH, SHADOW } from "@/components/site/dividers/sizing";
+import FaqItem from "@/components/site/FaqItem";
 import SectionHeading from "@/components/site/SectionHeading";
 import SiteHero from "@/components/site/SiteHero";
 import {
@@ -380,21 +381,14 @@ export default function Home() {
 
           <div className="flex max-w-[820px] flex-col gap-3.5">
             {FAQS.map(({ id, open, question, answer }) => (
-              <details
+              <FaqItem
                 key={question}
                 id={id}
-                open={open}
-                className="group overflow-hidden rounded-[14px] border border-navy/[0.22] bg-sky transition-[box-shadow,border-color] duration-[180ms] open:border-navy open:shadow-[0_6px_24px_rgba(23,48,89,0.12)]"
+                defaultOpen={open}
+                question={question}
               >
-                <summary
-                  className={`${HEADING} flex cursor-pointer list-none items-center justify-between gap-[18px] px-6 py-5 text-lg text-navy after:flex after:h-7 after:w-7 after:flex-none after:items-center after:justify-center after:rounded-full after:bg-white/55 after:font-space-mono after:text-lg after:font-normal after:text-navy after:transition-[background,color] after:duration-[180ms] after:content-['+'] group-open:after:bg-navy group-open:after:text-white group-open:after:content-['−'] hover:after:bg-navy hover:after:text-white [&::-webkit-details-marker]:hidden`}
-                >
-                  {question}
-                </summary>
-                <div className="max-w-[660px] px-6 pb-[22px] text-[15.5px] text-ink/75">
-                  {answer}
-                </div>
-              </details>
+                {answer}
+              </FaqItem>
             ))}
           </div>
 
