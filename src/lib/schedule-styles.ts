@@ -13,8 +13,8 @@ interface Swatch {
 export const CATEGORY_STYLES: Record<Category, Swatch> = {
   talk: { background: "#9dc6f3", borderColor: "#2f7fd9" },
   workshop: { background: "#f4b26b", borderColor: "#d46a12" },
-  game: { background: "#e6d7f8", borderColor: "#a688e0" },
-  other: { background: "#d0d5bd", borderColor: "#8e977a" },
+  game: { background: "#f4c3d6", borderColor: "#d16c98" },
+  other: { background: "#c6cdad", borderColor: "#848e6c" },
 };
 
 const KIDS_STYLE: Swatch = { background: "#fce985", borderColor: "#d8ba1a" };
