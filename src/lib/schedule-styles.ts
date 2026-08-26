@@ -1,5 +1,7 @@
-// Category colors for the last-year schedule, re-tuned from the 2025 site's
-// pastels to sit on the 2026 cream background. Blocks keep dark-purple text.
+// Category colors for the last-year schedule on the 2026 cream background.
+// Blocks keep dark-purple text. Hues sit on the blue↔orange axis and step in
+// lightness so every pair stays distinct under red-green colorblindness;
+// keep min ΔE ≳ 12 in protan/deutan simulation when retuning.
 import type { CSSProperties } from "react";
 import type { Category, Session } from "@/lib/last-year-schedule";
 
@@ -9,13 +11,13 @@ interface Swatch {
 }
 
 export const CATEGORY_STYLES: Record<Category, Swatch> = {
-  talk: { background: "#cfe3f7", borderColor: "#8bbce6" },
-  workshop: { background: "#f6dcc0", borderColor: "#e0a869" },
-  game: { background: "#d3e8cd", borderColor: "#8bbd83" },
-  other: { background: "#e7ddc6", borderColor: "#c8bc9b" },
+  talk: { background: "#9dc6f3", borderColor: "#2f7fd9" },
+  workshop: { background: "#f4b26b", borderColor: "#d46a12" },
+  game: { background: "#e6d7f8", borderColor: "#a688e0" },
+  other: { background: "#d0d5bd", borderColor: "#8e977a" },
 };
 
-const KIDS_STYLE: Swatch = { background: "#f6ecbd", borderColor: "#dcc555" };
+const KIDS_STYLE: Swatch = { background: "#fce985", borderColor: "#d8ba1a" };
 
 // Megagames run continuously — the striped fill echoes the 2025 site, recolored
 // to the 2026 orange + a soft violet.
