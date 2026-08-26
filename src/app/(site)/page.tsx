@@ -217,7 +217,10 @@ export default function Home() {
       <section id="schedule" className={`${SECTION} md:pt-14 md:pb-[88px]`}>
         <div className="mx-auto flex max-w-[1180px] flex-col gap-8 px-8">
           <div className="max-w-[820px]">
-            <SectionHeading eyebrow="What's going on?" title="Schedule" />
+            <SectionHeading
+              eyebrow="What's going on?"
+              title="Schedule (2025)"
+            />
             <p className="mt-3.5 text-base text-ink/70">
               The 2026 schedule is still coming together. In the meantime, here
               is the complete program from Metagame 2025: talks, workshops,
