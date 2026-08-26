@@ -20,7 +20,6 @@ export const metadata: Metadata = {
 
 const CONTACT = "team@metagame.games";
 const MANIFUND_URL = "https://manifund.org/projects/metagame-2026";
-// TODO: drop the real prospectus PDF into public/ at this path.
 const CALL_URL = "https://savvycal.com/arbor-staff/ricki?d=30";
 const PROSPECTUS_URL = "/metagame-2026-sponsor-prospectus.pdf";
 
@@ -199,9 +198,9 @@ export default function SponsorPage() {
           <p className="mt-4 text-lg text-ink/75">
             Metagame is three days of talks, workshops, and games at Lighthaven
             in Berkeley, November 6&ndash;8, 2026. It&rsquo;s a bespoke
-            conference, by design, for high-performing problem solvers:
-            attendees come through personal networks in the Bay Area&rsquo;s
-            game design, puzzle, and AI communities.
+            conference for high-performing problem solvers: attendees come
+            through personal networks in the Bay Area&rsquo;s game design,
+            puzzle, and AI communities.
           </p>
           <Button asChild variant="navy" className="mt-5">
             <a href={PROSPECTUS_URL} target="_blank" rel="noopener noreferrer">
