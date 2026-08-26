@@ -369,6 +369,27 @@ export default function Home() {
 
       <CardSuitsDivider />
 
+      {/* sponsorship — a one-line pointer to the /sponsor page */}
+      <section id="sponsorship" className={`${SECTION} md:py-[72px]`}>
+        <div className="mx-auto max-w-[1180px] px-8">
+          <SectionHeading
+            eyebrow="Want to help make the magic happen?"
+            title="Sponsorship"
+            className="mb-6"
+          />
+          <p className="max-w-[620px] text-lg text-ink/75">
+            Want to partner with us and help make Metagame financially
+            sustainable? Take a look at our{" "}
+            <Link href="/sponsor" className={FAQ_BODY_LINK}>
+              sponsorship packages
+            </Link>{" "}
+            &rarr;
+          </p>
+        </div>
+      </section>
+
+      <CatanDivider />
+
       {/* faq */}
       <section id="faq" className={`${SECTION} md:pt-14 md:pb-[88px]`}>
         <div className="mx-auto max-w-[1180px] px-8">
@@ -409,8 +430,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <CatanDivider />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import {
   CalendarDays,
+  Handshake,
   Mail,
   MessageCircleQuestion,
   MessageSquareQuote,
@@ -32,6 +33,7 @@ const ALL_SECTIONS: readonly Section[] = [
   { id: "mailing-list", label: "Mailing List", icon: Mail },
   { id: "testimonials", label: "Testimonials", icon: MessageSquareQuote },
   { id: "tickets", label: "Tickets", icon: Ticket },
+  { id: "sponsorship", label: "Sponsorship", icon: Handshake },
   { id: "faq", label: "FAQ", icon: MessageCircleQuestion },
 ] as const;
 
