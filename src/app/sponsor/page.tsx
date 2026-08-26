@@ -19,6 +19,15 @@ export const metadata: Metadata = {
 const CONTACT = "team@metagame.games";
 const MANIFUND_URL = "https://manifund.org/projects/metagame-2026";
 
+const ATTENDEES = [
+  "Professional game designers and developers",
+  "Escape room and immersive experience creators",
+  "Puzzle enthusiasts, crossword constructors, and ARG veterans",
+  "AI researchers, founders, and tech-adjacent professionals",
+  "Rationalist and EA community members",
+  "Strategy gamers, tabletop RPG players, and competitive puzzle solvers",
+];
+
 type TierId = "headline" | "platinum" | "gold" | "silver";
 
 const TIERS: {
@@ -176,11 +185,46 @@ export default function SponsorPage() {
           </h1>
           <p className="mt-4 text-lg text-ink/75">
             Metagame is three days of talks, workshops, and games at Lighthaven
-            in Berkeley, November 6&ndash;8, 2026. Sponsors get their name in
-            front of the crowd and on our swag and marketing, plus session
-            slots, tickets, and more depending on tier.
+            in Berkeley, November 6&ndash;8, 2026. It&rsquo;s a bespoke
+            conference, by design, for high-performing problem solvers:
+            attendees come through personal networks in the Bay Area&rsquo;s
+            game design, puzzle, and AI communities.
           </p>
-          <p className="mt-3 text-base text-ink/70">
+        </header>
+
+        <section className="mt-10 grid gap-8 md:grid-cols-2">
+          <div>
+            <p className={`${EYEBROW} mb-3 text-meeple`}>Who attends?</p>
+            <ul className="flex flex-col gap-1.5 text-[15px] text-ink/80">
+              {ATTENDEES.map((a) => (
+                <li key={a} className="flex gap-2.5">
+                  <span
+                    aria-hidden
+                    className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-meeple"
+                  />
+                  {a}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className={`${EYEBROW} mb-3 text-meeple`}>Why sponsor?</p>
+            <p className="text-[15px] text-ink/80">
+              Metagame&rsquo;s attendees are disproportionately technically
+              sophisticated, intellectually curious, and professionally
+              accomplished. One of our 2025 sponsors hired at least one
+              successful full-time employee out of the crowd.
+            </p>
+            <p className="mt-3 text-[15px] text-ink/80">
+              Sponsors get their name in front of that crowd and on our swag and
+              marketing, plus session slots, tickets, and more depending on
+              tier.
+            </p>
+          </div>
+        </section>
+
+        <div className="mt-10 max-w-[720px]">
+          <p className="text-base text-ink/70">
             Tiers are not set in stone. If you want something not on the list or
             have other questions, please reach out to{" "}
             <a
@@ -197,7 +241,7 @@ export default function SponsorPage() {
           >
             Prefer to donate? <FaArrowDown size={12} aria-hidden />
           </a>
-        </header>
+        </div>
 
         <section className="mt-12">
           <div className="overflow-x-auto rounded-xl border border-line bg-white">
