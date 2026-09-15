@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { FaBitcoin } from "react-icons/fa";
 import { supporterTier, supporterChipUrl } from "@/v2/lib/tickets";
@@ -16,9 +17,12 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/v2/components/ui/dialog";
+import { TEAM_EMAIL } from "@/v2/lib/links";
 import { HEADING } from "../styles";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const LINK = "underline transition-colors hover:text-tan";
 
 // Defensive client-side guard: never navigate to a non-OpenNode host even if the
 // API response is tampered with. The server already validates, this is belt-and-suspenders.
@@ -186,14 +190,15 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
               &ge;&#8383;{floor.btc}. There may be benefits/perks for
               Supporters, but we haven&rsquo;t decided if/what those might be
               yet. If you&rsquo;re interested in a more formal sponsorship,
-              reach out to{" "}
-              <a
-                href="mailto:team@metagame.games"
-                className="underline transition-colors hover:text-tan"
-              >
-                team@metagame.games
-              </a>
-              .
+              check out the{" "}
+              <Link href="/sponsor" className={LINK}>
+                sponsor prospectus
+              </Link>{" "}
+              &mdash; and email{" "}
+              <a href={`mailto:${TEAM_EMAIL}`} className={LINK}>
+                {TEAM_EMAIL}
+              </a>{" "}
+              if you&rsquo;re interested or have questions.
             </p>
             <div className="flex flex-col gap-1">
               <label className="font-space-mono text-xs tracking-wide text-cream/60 uppercase">
@@ -260,14 +265,15 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
               page.
             </p>
             <p className="text-sm text-cream/75">
-              Interested in a formal sponsorship? Reach out to{" "}
-              <a
-                href="mailto:team@metagame.games"
-                className="underline transition-colors hover:text-tan"
-              >
-                team@metagame.games
-              </a>
-              !
+              Interested in a formal sponsorship? Check out the{" "}
+              <Link href="/sponsor" className={LINK}>
+                sponsor prospectus
+              </Link>{" "}
+              &mdash; and email{" "}
+              <a href={`mailto:${TEAM_EMAIL}`} className={LINK}>
+                {TEAM_EMAIL}
+              </a>{" "}
+              if you&rsquo;re interested or have questions.
             </p>
             <Button
               type="button"
