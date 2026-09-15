@@ -7,7 +7,6 @@ import {
   Mail,
   MapPin,
   MessageCircleQuestion,
-  PartyPopper,
   Puzzle,
   Ticket,
   UserRound,
@@ -15,6 +14,7 @@ import {
 } from "lucide-react";
 import RubberDuck from "../RubberDuck";
 import Mg2Die from "./Mg2Die";
+import PartyPopperRight from "./PartyPopperRight";
 
 // The nav's pages, in order. Home is the logo itself (no link); the rest
 // unfold from it. The active page's icon shows on the die's top face.
@@ -56,7 +56,7 @@ export const HOME_SECTIONS: readonly { id: string; icon: NavIcon }[] = [
   { id: "speakers", icon: UserRound },
   { id: "get-involved", icon: HeartHandshake },
   { id: "venue", icon: MapPin },
-  { id: "highlights", icon: PartyPopper },
+  { id: "highlights", icon: PartyPopperRight },
   { id: "tickets", icon: Ticket },
   { id: "sponsors", icon: Award },
   { id: "faq", icon: MessageCircleQuestion },
