@@ -32,9 +32,9 @@ export async function lookupDiscountCode(
   const { AIRTABLE_API_KEY } = env;
   if (!AIRTABLE_API_KEY) return { status: "none" };
 
-  // Uppercase + strip to [A-Z0-9-]. This both normalizes to the stored form and
+  // Uppercase + strip to [A-Z0-9_-]. This both normalizes to the stored form and
   // neutralizes filterByFormula injection (no quotes/parens survive sanitizing).
-  const safe = code.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  const safe = code.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
   if (!safe) return { status: "none" };
 
   // Method=Stripe rows live in this table for logging only (mirrored by the
@@ -147,7 +147,7 @@ export async function countCodeRedemptions(code: string): Promise<number> {
 
   // Same sanitizing as lookupDiscountCode: normalize to the stored form and
   // neutralize filterByFormula injection.
-  const safe = code.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  const safe = code.toUpperCase().replace(/[^A-Z0-9_-]/g, "");
   if (!safe) return 0;
 
   const formula = `AND(UPPER({Coupon Code})='${safe}',{Payment Method}='BTC',{Status}!='Failed')`;
