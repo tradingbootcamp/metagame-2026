@@ -23,7 +23,6 @@ env:
   # VERCEL_TOKEN is the credential.
   VERCEL_ORG_ID: team_xZ04n0kgLIeWN2bNut9vNgyC
   VERCEL_PROJECT_ID: prj_dZK9DZ5ExKSLnDLZZkK2vtKURLRx
-  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   HEAD_REF: ${{ github.event.pull_request.head.ref }}
   HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 
@@ -39,6 +38,8 @@ jobs:
       # Without this the CLI fails later with `You defined "--token",
       # but it's missing a value`, which doesn't point at the repo secret.
       - name: Check for the Vercel token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
             echo "::error::VERCEL_TOKEN repo secret is not set."
@@ -65,10 +66,16 @@ jobs:
         run: npm install --global vercel@59.5.0
 
       - name: Pull project settings and preview env
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel pull --yes --environment=preview --git-branch="$HEAD_REF" --token="$VERCEL_TOKEN"
 
+      # Runs the branch's own install scripts and config, so this is the step
+      # where repo code executes. VERCEL_TOKEN is deliberately absent here:
+      # `vercel build` only needs the settings `vercel pull` wrote to .vercel/,
+      # and keeping the token out means a malicious postinstall can't read it.
       - name: Build
-        run: vercel build --token="$VERCEL_TOKEN"
+        run: vercel build
 
       - name: Deploy
         id: deploy
@@ -87,6 +94,7 @@ jobs:
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
 
       # Replaces the Vercel bot's PR comment, which only appears for Git

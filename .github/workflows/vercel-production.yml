@@ -25,7 +25,6 @@ env:
   # VERCEL_TOKEN is the credential.
   VERCEL_ORG_ID: team_xZ04n0kgLIeWN2bNut9vNgyC
   VERCEL_PROJECT_ID: prj_dZK9DZ5ExKSLnDLZZkK2vtKURLRx
-  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
   BRANCH: ${{ github.ref_name }}
   SHA: ${{ github.sha }}
 
@@ -35,6 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check for the Vercel token
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
             echo "::error::VERCEL_TOKEN repo secret is not set."
@@ -56,12 +57,20 @@ jobs:
         run: npm install --global vercel@59.5.0
 
       - name: Pull project settings and production env
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
+      # Runs the branch's own install scripts and config, so this is the step
+      # where repo code executes. VERCEL_TOKEN is deliberately absent here:
+      # `vercel build` only needs the settings `vercel pull` wrote to .vercel/,
+      # and keeping the token out means a malicious postinstall can't read it.
       - name: Build
-        run: vercel build --prod --token="$VERCEL_TOKEN"
+        run: vercel build --prod
 
       - name: Deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         # `shell: bash` for pipefail — the default `bash -e` takes the pipeline's
         # status from `tail`, so a failed deploy would pass the step.
         shell: bash
