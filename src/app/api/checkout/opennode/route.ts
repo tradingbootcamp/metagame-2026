@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getTicket, supporterTier } from "@/lib/tickets";
 import { countCodeRedemptions, lookupDiscountCode } from "@/lib/discount-codes";
+import { isEarlyBirdActive } from "@/lib/early-bird";
 import { createCharge, getHostedCheckoutUrl } from "@/lib/opennode";
 
 export const runtime = "nodejs";
@@ -110,8 +111,10 @@ export async function POST(request: Request) {
     btc = valid?.btcPrice ?? ticket.prices.full.btc;
     btcAmountDiscounted = valid ? ticket.prices.full.btc - btc : 0;
     // usd is the advertised dollar amount stored as the Airtable `Amount`; the
-    // discount only drives the BTC charge, so usd stays anchored to the promo price.
-    usd = ticket.prices.earlyBird.usd;
+    // discount only drives the BTC charge, so usd stays anchored to the advertised price.
+    usd = isEarlyBirdActive()
+      ? ticket.prices.earlyBird.usd
+      : ticket.prices.full.usd;
     ticketIdOut = ticket.id;
     ticketLabel = ticket.label;
     appliedCode = valid?.code ?? "";

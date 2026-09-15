@@ -165,6 +165,3 @@ export function ticketUrl(tier: TicketTier): string | null {
 export function fullPriceTicketUrl(tier: TicketTier): string | null {
   return tier.links[stripeMode] || null;
 }
-
-// Last day the early-bird price applies.
-export const EARLY_BIRD_DEADLINE = "September 24";

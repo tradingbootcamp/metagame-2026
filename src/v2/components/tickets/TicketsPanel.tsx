@@ -5,12 +5,12 @@ import BtcModal from "@/v2/components/tickets/BtcModal";
 import SupporterModal from "@/v2/components/tickets/SupporterModal";
 import { Button } from "@/v2/components/ui/button";
 import {
-  EARLY_BIRD_DEADLINE,
   fullPriceTicketUrl,
   getTicket,
   supporterTier,
   ticketUrl,
 } from "@/v2/lib/tickets";
+import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { FINANCIAL_AID_FORM_URL, VOLUNTEER_FORM_URL } from "@/v2/lib/links";
 import {
   subscribeCurrency,
@@ -35,11 +35,17 @@ const TILE_NOTE =
 // driven by the shared currency store, with the supporter/BTC flows stacking on
 // top. Renders bare inner content — the navy panel box comes from the modal's
 // DialogContent or the section wrapper.
+const subscribeNever = () => () => {};
+
 export default function TicketsPanel({
   showHeading = true,
   surface = "dark",
   align = "center",
+  earlyBird,
 }: {
+  // Whether early-bird was live when the page rendered; the client re-checks its
+  // own clock after hydration so a cached page still flips at the deadline.
+  earlyBird: boolean;
   // Centred in the modal; the left-aligned tickets section ranges everything left.
   align?: "center" | "start";
   // The modal shows its own "Tickets" heading; the one-pager section supplies a
@@ -51,6 +57,11 @@ export default function TicketsPanel({
 }) {
   const onDark = surface === "dark";
   const start = align === "start";
+  const earlyBirdActive = useSyncExternalStore(
+    subscribeNever,
+    isEarlyBirdActive,
+    () => earlyBird,
+  );
   const standard = getTicket("standard");
   const earlyBirdHref = standard ? ticketUrl(standard) : null;
   const standardHref = standard ? fullPriceTicketUrl(standard) : null;
@@ -112,6 +123,7 @@ export default function TicketsPanel({
         className={`flex flex-wrap items-stretch gap-[18px] max-[460px]:*:w-full ${start ? "justify-start" : "justify-center"}`}
       >
         {standard &&
+          earlyBirdActive &&
           (isBtc ? (
             <Button
               type="button"

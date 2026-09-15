@@ -33,9 +33,12 @@ import {
   TEAM_EMAIL,
   VOLUNTEER_FORM_URL,
 } from "@/v2/lib/links";
-import { EARLY_BIRD_DEADLINE } from "@/v2/lib/tickets";
+import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import lighthavenMap from "../../../public/images/lighthaven.png";
 import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
+
+// Re-render hourly so the early-bird gate flips at the deadline without a deploy.
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Metagame — Nov 6-8, 2026",
@@ -174,6 +177,7 @@ const FAQS: {
 ];
 
 export default function Home() {
+  const earlyBird = isEarlyBirdActive();
   return (
     <>
       {/* Section ids are deep-link anchors (/#faq); the nav links to pages. */}
@@ -386,12 +390,17 @@ export default function Home() {
         <div className={CONTAINER}>
           <SectionHeading eyebrow="Ready to play?" title="Tickets" />
           <p className={`${PROSE} mb-7 max-w-[600px]`}>
-            One ticket covers all three days. Early-bird pricing ends{" "}
-            {EARLY_BIRD_DEADLINE}.
+            One ticket covers all three days.
+            {earlyBird && <> Early-bird pricing ends {EARLY_BIRD_DEADLINE}.</>}
           </p>
           {/* The panel renders bare toggle + tiles; the column/gap is ours. */}
           <div className="flex max-w-[700px] flex-col items-start gap-6">
-            <TicketsPanel showHeading={false} surface="light" align="start" />
+            <TicketsPanel
+              showHeading={false}
+              surface="light"
+              align="start"
+              earlyBird={earlyBird}
+            />
           </div>
         </div>
       </section>

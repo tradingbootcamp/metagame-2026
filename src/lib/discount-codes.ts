@@ -1,10 +1,11 @@
 import { env } from "@/env";
 import { airtableConfig } from "@/lib/airtable-config";
+import { isEarlyBirdActive } from "@/lib/early-bird";
 import { ticketTiers } from "@/lib/tickets";
 
+const STANDARD = ticketTiers.find((t) => t.id === "standard");
 // Full BTC price of the standard ticket; discounts are resolved relative to it.
-const FULL_BTC =
-  ticketTiers.find((t) => t.id === "standard")?.prices.full.btc ?? 0.0065;
+const FULL_BTC = STANDARD?.prices.full.btc ?? 0.0065;
 
 export type DiscountLookup =
   | {
@@ -36,6 +37,12 @@ export async function lookupDiscountCode(
   // neutralizes filterByFormula injection (no quotes/parens survive sanitizing).
   const safe = code.toUpperCase().replace(/[^A-Z0-9-]/g, "");
   if (!safe) return { status: "none" };
+
+  // The advertised early-bird code expires with the promo, like its Stripe twin;
+  // the Airtable row stays as-is.
+  if (safe === STANDARD?.promoCode && !isEarlyBirdActive()) {
+    return { status: "none" };
+  }
 
   // Method=Stripe rows live in this table for logging only (mirrored by the
   // stripe-webhook) and must never be honored as BTC discounts; blank Method
