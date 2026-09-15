@@ -30,6 +30,7 @@ const MOBILE_DROP_EASE = "cubic-bezier(0.4,0,0.8,0.9)";
 const MOBILE_COLLAPSE_MS = 500;
 const MOBILE_SIDEWAYS_EASE = "cubic-bezier(0.22,1,0.36,1)";
 const LINK_STAGGER_MS = 50;
+const AUTO_OPEN_DELAY_MS = 2000;
 
 // Per-item delays folded into the shorthand (React warns when `transition`
 // and `transitionDelay` are set together).
@@ -217,13 +218,21 @@ export default function ExpandingNav() {
     if (!desktop || active !== "home" || nudged) return;
     const hero = document.getElementById("home");
     if (!hero) return;
+    // A beat after the hero leaves, so it reads as a reaction, not a jolt.
+    let timer: ReturnType<typeof setTimeout> | null = null;
     const io = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting || entry.boundingClientRect.top > 0) return;
-      setNudged(true);
-      setOpen(true);
+      io.disconnect();
+      timer = setTimeout(() => {
+        setNudged(true);
+        setOpen(true);
+      }, AUTO_OPEN_DELAY_MS);
     });
     io.observe(hero);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      if (timer) clearTimeout(timer);
+    };
   }, [desktop, active, nudged, setOpen]);
 
   useEffect(() => {
