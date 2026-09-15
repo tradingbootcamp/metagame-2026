@@ -6,7 +6,7 @@ import BloodOnTheClocktowerDivider from "@/v2/components/dividers/blood-on-the-c
 import CardSuitsDivider from "@/v2/components/dividers/card-suits";
 import CatanDivider from "@/v2/components/dividers/catan";
 import ChessDivider from "@/v2/components/dividers/chess";
-import DungeonCrawlDivider from "@/v2/components/dividers/dungeon-crawl";
+import DiceDivider from "@/v2/components/dividers/dice";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
 import FaqItem from "@/v2/components/FaqItem";
@@ -322,7 +322,7 @@ export default function Home() {
         </div>
       </section>
 
-      <DungeonCrawlDivider />
+      <DiceDivider />
 
       {/* venue */}
       <section id="venue" className={`${SECTION} md:py-14`}>
