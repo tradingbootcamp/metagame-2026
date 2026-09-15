@@ -9,8 +9,9 @@ import {
 } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_LINKS } from "./links";
+import { HOME_SECTIONS, NAV_LINKS } from "./links";
 import { NavLogo, Pips, TopIcon } from "./LogoDice";
+import { useHomeSection } from "./useHomeSection";
 import { useMediaQuery } from "./useMediaQuery";
 
 // Collapsed, this is just the single MG die in the corner. Desktop: clicking it
@@ -39,14 +40,25 @@ const withDelay = (parts: string[], delayMs: number) =>
 
 // Which nav entry the current route belongs to: null for pages not in the
 // nav (/credits, /thanks, …), which get the Home link but no "current" mark.
-function useActiveLink(): string | null {
+// On "/" the hash sections (tickets, get-involved) take over from Home as
+// scroll-spy reaches them.
+function useActiveLink(section: string | null): string | null {
   const pathname = usePathname();
-  if (pathname === "/") return "home";
+  if (pathname === "/") {
+    return NAV_LINKS.some((l) => l.id === section) ? section : "home";
+  }
   return (
     NAV_LINKS.find((l) => l.id !== "home" && pathname.startsWith(l.href))?.id ??
     null
   );
 }
+
+// Everything the die's top face can show: nav pages plus the one-pager's
+// sections, deduped where a section is also a nav link.
+const TOP_FACES = [
+  ...NAV_LINKS,
+  ...HOME_SECTIONS.filter((s) => !NAV_LINKS.some((l) => l.id === s.id)),
+].map(({ id, icon }) => ({ id, icon }));
 
 // Backdrop outline: the die's isometric hexagon (pointy top/bottom, cos 30°
 // half-width, sized from the die row height `hex`) whose vertices stretch into
@@ -117,14 +129,17 @@ function registerGrow() {
 
 export default function ExpandingNav() {
   const desktop = useMediaQuery("(min-width: 768px)");
-  const active = useActiveLink();
+  const section = useHomeSection();
+  const active = useActiveLink(section);
+  const onHome = usePathname() === "/";
   const links = NAV_LINKS;
-  // The die's top face: the current page's icon, or home's pips off-nav.
-  const topIcon = active ?? "home";
+  // The die's top face: on "/" the section under the viewport centre, else
+  // the current page's icon, or home's pips off-nav.
+  const topIcon = section ?? active ?? "home";
   // Home while already on "/" (or "/#tickets"): Next would treat it as a
   // no-op, so scroll to the top ourselves.
   const onLinkClick = (id: string) => (e: React.MouseEvent) => {
-    if (id === "home" && active === "home") {
+    if (id === "home" && onHome) {
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: "smooth" });
       if (window.location.hash) history.replaceState(null, "", "/");
@@ -215,7 +230,7 @@ export default function ExpandingNav() {
   // so first-time visitors see there's a nav. Mobile's menu covers the page,
   // so it never opens itself.
   useEffect(() => {
-    if (!desktop || active !== "home" || nudged) return;
+    if (!desktop || !onHome || nudged) return;
     const hero = document.getElementById("home");
     if (!hero) return;
     // A beat after the hero leaves, so it reads as a reaction, not a jolt.
@@ -233,7 +248,7 @@ export default function ExpandingNav() {
       io.disconnect();
       if (timer) clearTimeout(timer);
     };
-  }, [desktop, active, nudged, setOpen]);
+  }, [desktop, onHome, nudged, setOpen]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -350,10 +365,11 @@ export default function ExpandingNav() {
             durationMs={sidewaysMs}
             easing={sidewaysEase}
             className="h-(--nav-h)"
-            // Top face shows where you are: the page's icon, crossfading on
-            // navigation. Home, and the unfolded wordmark (where the "2" is
-            // part of METAGAME 2026), keep the die's own 2 pips.
-            top={NAV_LINKS.map(({ id, icon: Icon }) => (
+            // Top face shows where you are: the page's icon (or, on the
+            // one-pager, the section's), crossfading as you navigate or
+            // scroll. Home, and the unfolded wordmark (where the "2" is part
+            // of METAGAME 2026), keep the die's own 2 pips.
+            top={TOP_FACES.map(({ id, icon: Icon }) => (
               <g
                 key={id}
                 style={{
