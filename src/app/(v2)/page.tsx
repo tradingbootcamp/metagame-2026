@@ -439,7 +439,7 @@ export default function Home() {
       <section id="sponsors" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
           <SectionHeading eyebrow="With gratitude" title="Our sponsors" />
-          <div className="mt-10 flex flex-col gap-10">
+          <div className="mt-10 flex flex-col items-center gap-10">
             {[
               { label: "Gold", sponsors: GOLD_SPONSORS, logo: "h-24 md:h-32" },
               {
@@ -448,9 +448,9 @@ export default function Home() {
                 logo: "h-16 md:h-[84px]",
               },
             ].map(({ label, sponsors, logo }) => (
-              <div key={label} className="flex flex-col gap-4">
+              <div key={label} className="flex flex-col items-center gap-4">
                 <p className={`${EYEBROW} text-sm text-ink/50`}>{label}</p>
-                <div className="flex flex-wrap items-center gap-x-12 gap-y-6">
+                <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
                   {sponsors.map((s) => (
                     <a
                       key={s.name}
@@ -470,7 +470,7 @@ export default function Home() {
               </div>
             ))}
           </div>
-          <div className="mt-14">
+          <div className="mt-14 text-center">
             <h3 className="font-grotesk text-xl font-semibold text-navy">
               Interested in helping make Metagame 2026 happen?
             </h3>
