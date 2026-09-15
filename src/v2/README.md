@@ -37,20 +37,20 @@ To add a page to the nav: add an entry to `components/nav/links.ts`.
 ## Hero puzzle (`puzzle/`)
 
 On load one of seven games is picked at random and its crop of the library
-photo becomes the hero backdrop (`/images/puzzle/library_<game>.jpg`). Each section divider is
+photo becomes the hero backdrop (`/images/puzzle/library_<game>.webp`). Each section divider is
 one game (`components/dividers/*/index.tsx` passes `game=` to `DividerRow`).
 Clicking the current game's divider earns a hollow star, then a filled one on
 a second find, and picks a new game; a wrong divider shakes and wipes every
-star. Seven filled stars → `library_win.jpg`.
+star. Seven filled stars → `library_win.webp`.
 
 - `puzzle/store.ts` — in-memory state (a reload re-rolls), `guess()`, and
   `applyGame()` which sets the `--puzzle-image` CSS variable `HeroBackdrop`
   reads.
 - `puzzle/boot.ts` — inline script in the layout that makes the pick before
   first paint, so only the chosen image loads. Falls back to catan.
-- The images are committed in `public/images/puzzle/` as 2560px JPEGs
-  (`library_<game>.jpg` for chess, cards, set, dnd, botct, catan, monopoly,
-  plus `library_win.jpg`). To change one, export the new photoshop at that
+- The images are committed in `public/images/puzzle/` as 2560px WebPs (`cwebp -q 70`)
+  (`library_<game>.webp` for chess, cards, set, dnd, botct, catan, monopoly,
+  plus `library_win.webp`). To change one, export the new photoshop at that
   size and name and drop it in.
 
 ## Stage: sprites, easter eggs, physics (`stage/`) — parked
