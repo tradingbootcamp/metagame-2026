@@ -1,10 +1,5 @@
 @AGENTS.md
 
-# Metagame 2026 site
-
-Next.js 16 (App Router, `src/`) + Tailwind v4 + TypeScript, pnpm. Standalone repo
-`tradingbootcamp/metagame-2026`; the 2025 site at `../metagame_2025` is reference only.
-
 ## Worktrees
 
 Always work in a worktree, never in this checkout directly, even for a one-line fix.
