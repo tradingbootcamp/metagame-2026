@@ -273,7 +273,7 @@ export default function ExpandingNav() {
   const grow = desktop && (hovered || expanded);
 
   const linkClass = (isActive: boolean) =>
-    `relative cursor-pointer rounded-md px-2 py-2 text-2xl font-medium whitespace-nowrap md:py-1.5 md:text-xl transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:bg-brand-blue after:transition-transform after:duration-200 hover:text-cream hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
+    `relative inline-block cursor-pointer rounded-md px-2 py-2 text-2xl font-medium whitespace-nowrap md:py-1.5 md:text-xl transition-colors duration-200 outline-none after:absolute after:inset-x-2 after:bottom-0.5 after:h-0.5 after:bg-brand-blue after:transition-transform after:duration-200 hover:text-cream hover:after:scale-x-100 focus-visible:ring-2 focus-visible:ring-brand-blue ${
       isActive
         ? "text-cream after:scale-x-100"
         : "text-cream/75 after:scale-x-0"
