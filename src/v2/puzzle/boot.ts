@@ -8,4 +8,4 @@ import { FALLBACK_GAME, GAMES } from "./store";
 // strips every attribute off <html> if it ever client-renders the root (a
 // failed hydration), so the DOM stamp alone isn't reliable — BootSync
 // re-applies it from the global. Keep it ES5-ish and tiny — it's not bundled.
-export const PUZZLE_BOOT_SCRIPT = `(function(){var G=${JSON.stringify(GAMES)},g=${JSON.stringify(FALLBACK_GAME)};try{g=G[Math.floor(Math.random()*G.length)]}catch(e){}self.__puzzleGame=g;var el=document.documentElement;el.dataset.game=g;el.style.setProperty("--puzzle-image","url(/images/puzzle/library_"+g+".jpg)")})();`;
+export const PUZZLE_BOOT_SCRIPT = `(function(){var G=${JSON.stringify(GAMES)},g=${JSON.stringify(FALLBACK_GAME)};try{g=G[Math.floor(Math.random()*G.length)]}catch(e){}self.__puzzleGame=g;var el=document.documentElement;el.dataset.game=g;var u="/images/puzzle/library_"+g+".jpg";el.style.setProperty("--puzzle-image","url("+u+")");var l=document.createElement("link");l.rel="preload";l.as="image";l.setAttribute("fetchpriority","high");l.href=u;document.head.appendChild(l)})();`;
