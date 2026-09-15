@@ -34,6 +34,14 @@ it mirrors every Stripe promotion code (dashboard- or comp-tool-made) into the s
 `EARLYBIRD`, still is). The two `promotion_code.*` events must be enabled on the webhook endpoint in
 **both** test and live mode.
 
+## Issue tracking (Linear)
+
+Work is tracked in Linear (Metagame team). Attach a PR by using the Linear-provided branch name or
+putting the issue ID in the PR title; in the body only `Fixes META-###` attaches (bare IDs and `Ref`
+don't, and `Ref` blocks the on-merge status move). A linked PR moves the issue to In Progress on open
+and In Review on merge. In Review means "finished, pending human review" — issues move to Done by hand
+in meetings, so never mark an issue Done yourself.
+
 ## Environment variables
 
 - **`.env.example`** is the committed source of truth — `cp .env.example .env.local` and fill in.
