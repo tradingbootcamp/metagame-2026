@@ -136,7 +136,10 @@ export default function ExpandingNav() {
   const [dieOpen, setDieOpen] = useState(false);
   const foldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hovered, setHovered] = useState(false);
+  // Until the die is first clicked, a ring pulses out from it as a hint.
+  const [nudged, setNudged] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const pulseRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const dieRef = useRef<HTMLButtonElement>(null);
   const rowRef = useRef<HTMLUListElement>(null);
@@ -169,11 +172,13 @@ export default function ExpandingNav() {
       // stale (larger) clip lets its square bottom edge show. So write it
       // straight to the element from the observer callback, which runs
       // after layout and before paint.
-      boxEl.style.clipPath = `path("${backdropPath(
+      const clip = `path("${backdropPath(
         boxEl.offsetWidth,
         boxEl.offsetHeight,
         die.offsetHeight,
       )}")`;
+      boxEl.style.clipPath = clip;
+      if (pulseRef.current) pulseRef.current.style.clipPath = clip;
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -260,6 +265,13 @@ export default function ExpandingNav() {
         left: "calc(0.75rem - var(--grow) / 2)",
       }}
     >
+      {nudged || (
+        <div
+          ref={pulseRef}
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-brand-blue opacity-0 motion-safe:animate-nav-pulse"
+        />
+      )}
       {/* Desktop: a row (die + links) whose width follows its content. Mobile:
           a column — width still content-driven (wordmark or widest link),
           height explicit so it can transition to the full screen. */}
@@ -289,7 +301,10 @@ export default function ExpandingNav() {
           aria-label={expanded ? "Close navigation" : "Open navigation"}
           aria-expanded={expanded}
           aria-controls="expanding-nav-links"
-          onClick={() => setOpen(!expanded)}
+          onClick={() => {
+            setNudged(true);
+            setOpen(!expanded);
+          }}
           // Collapsed, the button is the hexagon (2·hex wide) with the die
           // centered; expanded, it grows with the wordmark from that same left
           // inset so the first die never shifts.
