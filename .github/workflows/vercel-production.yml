@@ -1,0 +1,76 @@
+name: Vercel Production
+
+# Production counterpart to vercel-preview.yml, for the same reason: Vercel's
+# Git integration only builds a commit whose author holds a paid seat, and that
+# check applies to production too — a squash merge keeps the contributor as
+# author. Deploying under VERCEL_TOKEN attributes it to the token owner instead.
+on:
+  push:
+    branches: [main]
+  # Manual full deploy of main — also the way to ship a change that lives only
+  # in Vercel project settings (env vars, domains).
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize so two merges landing together leave production on the later
+# commit; cancelling mid-run could strand it on the older build.
+concurrency:
+  group: vercel-production
+  cancel-in-progress: false
+
+env:
+  # Not secrets: the org and project ids grant nothing on their own —
+  # VERCEL_TOKEN is the credential.
+  VERCEL_ORG_ID: team_xZ04n0kgLIeWN2bNut9vNgyC
+  VERCEL_PROJECT_ID: prj_dZK9DZ5ExKSLnDLZZkK2vtKURLRx
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  BRANCH: ${{ github.ref_name }}
+  SHA: ${{ github.sha }}
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for the Vercel token
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN repo secret is not set."
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          version: 10
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: "pnpm"
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@59.5.0
+
+      - name: Pull project settings and production env
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy
+        # `shell: bash` for pipefail — the default `bash -e` takes the pipeline's
+        # status from `tail`, so a failed deploy would pass the step.
+        shell: bash
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN" \
+            --meta githubCommitRef="$BRANCH" \
+            --meta githubCommitSha="$SHA" | tail -n1)
+          if [ -z "$url" ]; then
+            echo "::error::vercel deploy produced no URL"
+            exit 1
+          fi
+          echo "Deployed → $url" >> "$GITHUB_STEP_SUMMARY"
