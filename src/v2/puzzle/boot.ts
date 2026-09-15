@@ -1,4 +1,4 @@
-import { FALLBACK_GAME, GAMES } from "./store";
+import { FALLBACK_GAME, GAMES, IMAGE_EXT, IMAGE_PREFIX } from "./store";
 
 // Inline <script> in the root layout's <head>: runs synchronously on every
 // page load, so the backdrop's CSS variable is set before first paint and
@@ -8,4 +8,9 @@ import { FALLBACK_GAME, GAMES } from "./store";
 // strips every attribute off <html> if it ever client-renders the root (a
 // failed hydration), so the DOM stamp alone isn't reliable — BootSync
 // re-applies it from the global. Keep it ES5-ish and tiny — it's not bundled.
-export const PUZZLE_BOOT_SCRIPT = `(function(){var G=${JSON.stringify(GAMES)},g=${JSON.stringify(FALLBACK_GAME)};try{g=G[Math.floor(Math.random()*G.length)]}catch(e){}self.__puzzleGame=g;var el=document.documentElement;el.dataset.game=g;el.style.setProperty("--puzzle-image","url(/images/puzzle/library_"+g+".jpg)")})();`;
+//
+// It also appends a <link rel=preload> for the pick: a CSS background image
+// isn't fetched until the hero is laid out, after fonts and scripts, so
+// without this the backdrop paints white for a beat. Only the boot script
+// can do it — the server doesn't know the pick.
+export const PUZZLE_BOOT_SCRIPT = `(function(){var G=${JSON.stringify(GAMES)},g=${JSON.stringify(FALLBACK_GAME)};try{g=G[Math.floor(Math.random()*G.length)]}catch(e){}self.__puzzleGame=g;var u=${JSON.stringify(IMAGE_PREFIX)}+g+${JSON.stringify(IMAGE_EXT)};var el=document.documentElement;el.dataset.game=g;el.style.setProperty("--puzzle-image","url("+u+")");var l=document.createElement("link");l.rel="preload";l.as="image";l.setAttribute("fetchpriority","high");l.href=u;document.head.appendChild(l)})();`;

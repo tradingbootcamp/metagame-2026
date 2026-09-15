@@ -28,7 +28,9 @@ export type PuzzleState = { stars: Record<Game, Stars>; current: Current };
 // Boot script failed / JS off: the boot script and the store agree on this.
 export const FALLBACK_GAME: Game = "catan";
 
-export const imageFor = (g: Current) => `/images/puzzle/library_${g}.jpg`;
+export const IMAGE_PREFIX = "/images/puzzle/library_";
+export const IMAGE_EXT = ".webp";
+export const imageFor = (g: Current) => `${IMAGE_PREFIX}${g}${IMAGE_EXT}`;
 
 const zeroStars = (): Record<Game, Stars> =>
   Object.fromEntries(GAMES.map((g) => [g, 0])) as Record<Game, Stars>;
