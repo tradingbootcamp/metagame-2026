@@ -77,6 +77,9 @@ export async function POST(request: Request) {
         active: promo.active,
         test: !event.livemode,
         maxUses: promo.max_redemptions ?? null,
+        expiresAt: promo.expires_at
+          ? new Date(promo.expires_at * 1000).toISOString()
+          : null,
         percentOff,
         usdOff,
         redeemed: promo.times_redeemed ?? 0,

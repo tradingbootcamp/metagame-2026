@@ -24,7 +24,8 @@ expressed in per-unit columns — exactly one populated per row: `Percent Off` (
 `USD Off` (currency), or `BTC Off` (whole BTC subtracted from the full 0.0065; a fixed BTC price is
 written as its equivalent `BTC Off`). These replace the old `Discount Type`/`Value` pair.
 `lookupDiscountCode()` (`src/lib/discount-codes.ts`) reads `BTC Off` / `Percent Off` (gated by
-`Method`), falling back to the legacy `Discount Type`/`Value` switch for un-migrated rows. The
+`Method`), falling back to the legacy `Discount Type`/`Value` switch for un-migrated rows, and
+refuses a row once its `Expires` instant has passed (blank = never). The
 **stripe-webhook** (`src/app/api/stripe-webhook/route.ts`)
 is the sole writer of `Method=Stripe` rows: on `promotion_code.created` / `promotion_code.updated`
 it mirrors every Stripe promotion code (dashboard- or comp-tool-made) into the same table via

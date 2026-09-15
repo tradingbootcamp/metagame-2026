@@ -257,6 +257,7 @@ export type DiscountCodeRecord = {
   active: boolean;
   test: boolean; // true for test-mode (sandbox) codes — checks the Test box
   maxUses: number | null; // redemption cap; null clears the field (uncapped)
+  expiresAt: string | null; // ISO instant the code stops working; null clears (never)
   percentOff?: number; // e.g. 100 = 100% off
   usdOff?: number; // dollars off (Airtable currency field)
   redeemed?: number; // mirror of the promo's times_redeemed (Stripe stays source of truth)
@@ -292,6 +293,7 @@ export async function recordDiscountCode(
     Test: record.test,
     // Explicit null clears a stale cap when the promo is uncapped (omitting would keep it).
     "Max Uses": record.maxUses,
+    Expires: record.expiresAt,
     // Marker must NOT contain "comp-tool" — the comp tool keys its own rows off that substring.
     Notes: "Stripe promo (stripe-webhook)",
   };
