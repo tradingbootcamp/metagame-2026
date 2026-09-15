@@ -7,5 +7,5 @@ Use Claude Code's built-in worktree flow.
 
 ## Code comments
 
-Minimal. A short note for a non-obvious *why* is fine; don't narrate the change
+Minimal. A short note for a non-obvious _why_ is fine; don't narrate the change
 itself or let a comment grow into a PR report.
