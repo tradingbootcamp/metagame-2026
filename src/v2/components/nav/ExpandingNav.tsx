@@ -136,7 +136,8 @@ export default function ExpandingNav() {
   const [dieOpen, setDieOpen] = useState(false);
   const foldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hovered, setHovered] = useState(false);
-  // Until the die is first clicked, a ring pulses out from it as a hint.
+  // Until the die is first clicked (or the bar opens itself), a ring pulses
+  // out from it as a hint.
   const [nudged, setNudged] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const pulseRef = useRef<HTMLDivElement>(null);
@@ -207,6 +208,23 @@ export default function ExpandingNav() {
     },
     [],
   );
+
+  // Home, desktop: once the hero has scrolled off the top, unfold the bar
+  // unprompted (once per load, and only if the die hasn't been touched yet)
+  // so first-time visitors see there's a nav. Mobile's menu covers the page,
+  // so it never opens itself.
+  useEffect(() => {
+    if (!desktop || active !== "home" || nudged) return;
+    const hero = document.getElementById("home");
+    if (!hero) return;
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting || entry.boundingClientRect.top > 0) return;
+      setNudged(true);
+      setOpen(true);
+    });
+    io.observe(hero);
+    return () => io.disconnect();
+  }, [desktop, active, nudged, setOpen]);
 
   useEffect(() => {
     if (!expanded) return;
