@@ -74,7 +74,11 @@ jobs:
       # where repo code executes. VERCEL_TOKEN is deliberately absent here:
       # `vercel build` only needs the settings `vercel pull` wrote to .vercel/,
       # and keeping the token out means a malicious postinstall can't read it.
+      # AIRTABLE_API_KEY is Sensitive on Vercel, which `vercel pull` won't
+      # download, so the build gets it from a repo secret instead.
       - name: Build
+        env:
+          AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
         run: vercel build
 
       - name: Deploy
