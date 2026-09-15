@@ -22,6 +22,20 @@ export type GameIcon = {
   className?: string;
 };
 
+export function IconGlyph({ icon }: { icon: GameIcon }) {
+  return (
+    <svg
+      viewBox={icon.viewBox}
+      aria-hidden
+      className={`${icon.className ?? GLYPH} ${SHADOW}`}
+    >
+      {(icon.paths ?? [icon.d ?? ""]).map((d, i) => (
+        <path key={i} d={d} fill={CHARCOAL} fillRule={icon.fillRule} />
+      ))}
+    </svg>
+  );
+}
+
 export default function IconDivider({
   icons,
   game,
@@ -32,16 +46,7 @@ export default function IconDivider({
   return (
     <DividerRow game={game}>
       {icons.map((ic) => (
-        <svg
-          key={ic.name}
-          viewBox={ic.viewBox}
-          aria-hidden
-          className={`${ic.className ?? GLYPH} ${SHADOW}`}
-        >
-          {(ic.paths ?? [ic.d ?? ""]).map((d, i) => (
-            <path key={i} d={d} fill={CHARCOAL} fillRule={ic.fillRule} />
-          ))}
-        </svg>
+        <IconGlyph key={ic.name} icon={ic} />
       ))}
     </DividerRow>
   );

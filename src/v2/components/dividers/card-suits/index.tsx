@@ -15,7 +15,7 @@ const CENTER = 256;
 const TARGET_W = 150;
 const TARGET_H = 210;
 
-function SuitCard({ name, d, cx, cy, w, h }: Suit) {
+export function SuitCard({ name, d, cx, cy, w, h }: Suit) {
   const maskId = `suit-${name}`;
   const scale = Math.min(TARGET_W / w, TARGET_H / h);
   const transform = `translate(${CENTER} ${CENTER}) scale(${scale}) translate(${-cx} ${-cy})`;
