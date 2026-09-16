@@ -420,53 +420,48 @@ export default function Home() {
       <section id="megagame" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-            <div>
+            <div className="max-w-[600px]">
               <SectionHeading
                 eyebrow="Want to build something?"
                 title="The Megagame"
               />
-              <p className={`${PROSE} max-w-[600px]`}>
+              <div className="mt-3.5 space-y-3 text-base text-ink/70">
+                <p>
+                  The game begins when you step through the gate, and runs all
+                  weekend. One part puzzle hunt, one part game gauntlet, one
+                  part interlocking story.
+                </p>
+                <p>
+                  The Megagame is threaded through the rest of Metagame, many
+                  puzzles and games making up larger games and larger puzzles.
+                  Anyone can play it, and anyone can create it. We want puzzles!
+                  We want games! We want cryptic hints added to your session!
+                  More details in the proposal form.
+                </p>
+              </div>
+              <Button asChild variant="default" className="mt-6 w-fit">
+                <a
+                  href={MEGAGAME_PROPOSAL_FORM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Build part of the Megagame{" "}
+                  <span aria-hidden="true">&rarr;</span>
+                </a>
+              </Button>
+            </div>
+            <figure className="w-full max-w-[560px]">
+              <Image
+                src={megagameChess}
+                alt="Giant orange and blue chess pieces, a knight in front"
+                className="h-auto w-full"
+                sizes="(min-width: 1024px) 560px, 100vw"
+              />
+              <figcaption className="mt-3 text-base text-ink/70">
                 A puzzle and game made of smaller puzzles and games. Made
                 by&hellip; you?
-              </p>
-              <div className="mt-10 flex flex-col rounded-2xl border border-navy/[0.16] bg-white p-7 shadow-[0_8px_24px_rgba(23,48,89,0.08)]">
-                <h3 className={`${HEADING} text-2xl text-navy`}>
-                  Build Part of the Megagame
-                </h3>
-                <div className="mt-3 flex-1 space-y-3 text-[15px] text-ink/70">
-                  <p>
-                    The game begins when you step through the gate, and runs all
-                    weekend. One part puzzle hunt, one part game gauntlet, one
-                    part interlocking story.
-                  </p>
-                  <p>
-                    The Megagame is threaded through the rest of Metagame, many
-                    puzzles and games making up larger games and larger puzzles.
-                    Anyone can play it, and anyone can create it. We want
-                    puzzles! We want games! We want cryptic hints added to your
-                    session! Share designs, share ideas, or share our
-                    inspiration: themes, details, and specifics in our proposal
-                    form. Show us what you&apos;ve got!
-                  </p>
-                </div>
-                <Button asChild variant="default" className="mt-6 w-fit">
-                  <a
-                    href={MEGAGAME_PROPOSAL_FORM_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Propose a piece of the Megagame{" "}
-                    <span aria-hidden="true">&rarr;</span>
-                  </a>
-                </Button>
-              </div>
-            </div>
-            <Image
-              src={megagameChess}
-              alt="Giant orange and blue chess pieces, a knight in front"
-              className="h-auto w-full max-w-[560px] rounded-2xl shadow-[0_8px_24px_rgba(23,48,89,0.08)] lg:sticky lg:top-24"
-              sizes="(min-width: 1024px) 560px, 100vw"
-            />
+              </figcaption>
+            </figure>
           </div>
         </div>
       </section>
