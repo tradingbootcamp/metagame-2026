@@ -68,17 +68,6 @@ const FAQS: {
 }[] = [
   {
     id: "first-faq",
-    question: "What is Metagame?",
-    answer: (
-      <>
-        Metagame is a three-day convention for people who enjoy playing,
-        designing, and thinking about games. It combines talks, workshops, board
-        and video games, puzzles, LARPs, playtests, and an optional
-        convention-wide megagame.
-      </>
-    ),
-  },
-  {
     question: "Where is Metagame happening?",
     answer: (
       <>
