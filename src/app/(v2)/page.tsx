@@ -401,14 +401,11 @@ export default function Home() {
           <div className="mt-8 flex flex-wrap gap-4">
             <Button asChild variant="default">
               <a href={RFP_FORM_URL} target="_blank" rel="noopener noreferrer">
-                Propose a session <span aria-hidden="true">&rarr;</span>
+                Propose a session
               </a>
             </Button>
             <Button asChild variant="navy">
-              <Link href="/last-year">
-                See the full 2025 schedule{" "}
-                <span aria-hidden="true">&rarr;</span>
-              </Link>
+              <Link href="/last-year">See the full 2025 schedule</Link>
             </Button>
           </div>
         </div>

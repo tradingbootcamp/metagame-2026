@@ -15,7 +15,11 @@ export default function Highlights2025() {
           <Image
             src={g.photo}
             alt={g.alt}
-            className={`h-full w-full object-cover ${i % 2 ? "md:order-2" : ""}`}
+            className={`h-full w-full object-cover ${
+              i % 2
+                ? "md:order-2 md:[mask-image:linear-gradient(to_right,transparent,black_30%)]"
+                : "md:[mask-image:linear-gradient(to_left,transparent,black_30%)]"
+            }`}
             sizes="(min-width: 768px) 560px, 100vw"
           />
           <div className="self-center px-0 py-8 md:px-10 md:py-10">
