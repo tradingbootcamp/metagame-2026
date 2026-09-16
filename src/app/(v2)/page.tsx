@@ -175,16 +175,16 @@ const FAQS: {
     question: "May I bring or demonstrate my own game?",
     answer: (
       <>
-        We would love that! Please{" "}
+        Please do! Fill out our proposal form{" "}
         <a
           href={RFP_FORM_URL}
           target="_blank"
           rel="noopener noreferrer"
           className={BODY_LINK}
         >
-          fill out the form here
-        </a>
-        !
+          here
+        </a>{" "}
+        to run a game, event, or session.
       </>
     ),
   },
