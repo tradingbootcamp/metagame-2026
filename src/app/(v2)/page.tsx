@@ -68,6 +68,10 @@ const FAQS: {
 }[] = [
   {
     id: "first-faq",
+    question: "When is Metagame?",
+    answer: <>It begins at 2pm Friday, Nov 6. It will run to 9:00pm, Nov 8.</>,
+  },
+  {
     question: "Where is Metagame happening?",
     answer: (
       <>
@@ -109,10 +113,6 @@ const FAQS: {
         .
       </>
     ),
-  },
-  {
-    question: "When is Metagame?",
-    answer: <>It begins at 2pm Friday, Nov 6. It will run to 9:00pm, Nov 8.</>,
   },
   {
     question: "Are meals included?",
