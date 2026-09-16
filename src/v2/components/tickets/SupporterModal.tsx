@@ -17,7 +17,6 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/v2/components/ui/dialog";
-import { TEAM_EMAIL } from "@/v2/lib/links";
 import { HEADING } from "../styles";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -150,7 +149,7 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
             type="button"
             aria-pressed={active}
             onClick={() => pickChip(i)}
-            className={`rounded-lg border-[1.5px] px-4 py-2 font-space-mono text-base tracking-[0.04em] transition-colors ${
+            className={`rounded-lg border-[1.5px] px-3 py-2 font-space-mono text-sm tracking-[0.04em] transition-colors sm:px-4 sm:text-base ${
               active
                 ? "border-tan bg-tan font-bold text-navy"
                 : "border-cream/30 text-cream hover:border-tan"
@@ -171,7 +170,7 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
             className={`${HEADING} flex items-center gap-2 text-[clamp(24px,6vw,30px)]`}
           >
             {isBtc && <FaBitcoin aria-hidden className="text-tan" />}
-            Supporter tier
+            Supporter Tickets
           </DialogTitle>
           <DialogDescription className="sr-only">
             Support Metagame 2026 with a supporter-tier ticket.
@@ -190,15 +189,11 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
               &ge;&#8383;{floor.btc}. There may be benefits/perks for
               Supporters, but we haven&rsquo;t decided if/what those might be
               yet. If you&rsquo;re interested in a more formal sponsorship,
-              check out the{" "}
+              check out our{" "}
               <Link href="/sponsor" className={LINK}>
-                sponsor prospectus
-              </Link>{" "}
-              &mdash; and email{" "}
-              <a href={`mailto:${TEAM_EMAIL}`} className={LINK}>
-                {TEAM_EMAIL}
-              </a>{" "}
-              if you&rsquo;re interested or have questions.
+                sponsorship packages
+              </Link>
+              .
             </p>
             <div className="flex flex-col gap-1">
               <label className="font-space-mono text-xs tracking-wide text-cream/60 uppercase">
@@ -265,15 +260,11 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
               page.
             </p>
             <p className="text-sm text-cream/75">
-              Interested in a formal sponsorship? Check out the{" "}
+              Interested in a formal sponsorship? Check out our{" "}
               <Link href="/sponsor" className={LINK}>
-                sponsor prospectus
-              </Link>{" "}
-              &mdash; and email{" "}
-              <a href={`mailto:${TEAM_EMAIL}`} className={LINK}>
-                {TEAM_EMAIL}
-              </a>{" "}
-              if you&rsquo;re interested or have questions.
+                sponsorship packages
+              </Link>
+              .
             </p>
             <Button
               type="button"

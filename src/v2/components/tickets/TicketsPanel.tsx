@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import BtcModal from "@/v2/components/tickets/BtcModal";
 import SupporterModal from "@/v2/components/tickets/SupporterModal";
@@ -67,7 +68,16 @@ export default function TicketsPanel({
   const standardHref = standard ? fullPriceTicketUrl(standard) : null;
   const [supporterOpen, setSupporterOpen] = useState(false);
   // /#supporter deep-links into the modal (e.g. from /sponsor); the tile's id
-  // gives the browser its scroll target.
+  // gives the browser its scroll target. Closing drops the hash so a repeat
+  // click on the same link changes the URL again and reopens it.
+  const router = useRouter();
+  const pathname = usePathname();
+  const closeSupporter = () => {
+    setSupporterOpen(false);
+    if (window.location.hash === "#supporter") {
+      router.replace(pathname, { scroll: false });
+    }
+  };
   useEffect(() => {
     const check = () => {
       if (window.location.hash === "#supporter") setSupporterOpen(true);
@@ -214,7 +224,7 @@ export default function TicketsPanel({
           onClick={() => setSupporterOpen(true)}
           className={`${TILE} scroll-mt-24`}
         >
-          <span className={TILE_LABEL}>Supporter tier</span>
+          <span className={TILE_LABEL}>Supporter</span>
           <span className={`${HEADING} text-[30px] leading-none text-tan`}>
             {isBtc ? (
               <>&#8383;{supporterTier.floor.btc}+</>
@@ -252,9 +262,7 @@ export default function TicketsPanel({
           </span>
         </div>
       </div>
-      {supporterOpen && (
-        <SupporterModal onClose={() => setSupporterOpen(false)} />
-      )}
+      {supporterOpen && <SupporterModal onClose={closeSupporter} />}
       {btcOpen && standard && (
         <BtcModal
           ticket={standard}
