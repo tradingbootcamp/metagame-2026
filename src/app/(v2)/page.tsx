@@ -42,7 +42,6 @@ import {
   VOLUNTEER_FORM_URL,
 } from "@/v2/lib/links";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
-import lighthavenMap from "../../../public/images/lighthaven.png";
 import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
 import megagameChess from "../../../public/images/megagame-chess.jpg";
 
@@ -81,9 +80,9 @@ const FAQS: {
         <br />
         2740 Telegraph Ave, Berkeley, CA 94705
         <Image
-          src={lighthavenMap}
+          src={lighthavenCutout}
           alt="Map of the Lighthaven campus"
-          className="mt-4 h-auto w-full max-w-[560px] rounded-lg"
+          className="mt-4 h-auto w-full max-w-[560px]"
         />
       </>
     ),
