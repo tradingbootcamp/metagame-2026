@@ -225,7 +225,7 @@ export default function TicketsPanel({
               rel="noopener noreferrer"
               className={`font-bold underline underline-offset-2 ${onDark ? "text-tan" : "text-meeple"}`}
             >
-              Apply to volunteer <span aria-hidden="true">&rarr;</span>
+              Apply to volunteer
             </a>
           </span>
           <span>
@@ -236,7 +236,7 @@ export default function TicketsPanel({
               rel="noopener noreferrer"
               className={`font-bold underline underline-offset-2 ${onDark ? "text-tan" : "text-meeple"}`}
             >
-              Apply for financial aid <span aria-hidden="true">&rarr;</span>
+              Apply for financial aid
             </a>
           </span>
         </div>

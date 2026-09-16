@@ -49,7 +49,7 @@ export default function TeamPage() {
       </p>
       <Button asChild variant="navy" size="lg" className="mt-6 text-lg">
         <a href={JOIN_TEAM_FORM_URL} target="_blank" rel="noopener noreferrer">
-          Get involved <span aria-hidden="true">&rarr;</span>
+          Get involved
         </a>
       </Button>
     </ContentPage>

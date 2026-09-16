@@ -317,12 +317,10 @@ export default function Home() {
                 <Button asChild variant="default" className="mt-6 w-fit">
                   {external ? (
                     <a href={href} target="_blank" rel="noopener noreferrer">
-                      {cta} <span aria-hidden="true">&rarr;</span>
+                      {cta}
                     </a>
                   ) : (
-                    <Link href={href}>
-                      {cta} <span aria-hidden="true">&rarr;</span>
-                    </Link>
+                    <Link href={href}>{cta}</Link>
                   )}
                 </Button>
               </div>
@@ -367,7 +365,7 @@ export default function Home() {
               </p>
               <Button asChild variant="navy" className="mt-5">
                 <a href={HOUSING_URL} target="_blank" rel="noopener noreferrer">
-                  Book your rooms <span aria-hidden="true">&rarr;</span>
+                  Book your rooms
                 </a>
               </Button>
             </div>
@@ -442,8 +440,7 @@ export default function Home() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Build part of the Megagame{" "}
-                  <span aria-hidden="true">&rarr;</span>
+                  Build part of the Megagame
                 </a>
               </Button>
             </div>
@@ -534,9 +531,7 @@ export default function Home() {
               Interested in helping make Metagame 2026 happen?
             </h3>
             <Button asChild variant="navy" size="lg" className="mt-5 text-lg">
-              <Link href="/sponsor">
-                Sponsor Metagame <span aria-hidden="true">&rarr;</span>
-              </Link>
+              <Link href="/sponsor">Sponsor Metagame</Link>
             </Button>
           </div>
         </div>

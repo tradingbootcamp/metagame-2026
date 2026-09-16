@@ -36,7 +36,7 @@ export default function ChildcarePage() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              Register your children <span aria-hidden="true">&rarr;</span>
+              Register your children
             </a>
           </Button>
           <p className="mt-5">

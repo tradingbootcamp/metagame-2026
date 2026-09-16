@@ -91,14 +91,14 @@ export default function KeyDates() {
                       rel="noopener noreferrer"
                       className="underline underline-offset-2"
                     >
-                      {d.cta} <span aria-hidden="true">&rarr;</span>
+                      {d.cta}
                     </a>
                   ) : (
                     <Link
                       href={d.href}
                       className="underline underline-offset-2"
                     >
-                      {d.cta} <span aria-hidden="true">&rarr;</span>
+                      {d.cta}
                     </Link>
                   )}
                 </p>
