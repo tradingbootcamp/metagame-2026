@@ -10,7 +10,7 @@ type Stop = KeyDate & { today?: boolean; next?: boolean };
 
 // A trunk segment, centred on the column edge that meets the trunk.
 const TRUNK =
-  "absolute top-[12px] bottom-0 w-[3px] group-[.left]:right-0 group-[.left]:translate-x-1/2 group-[.right]:left-0 group-[.right]:-translate-x-1/2";
+  "absolute bottom-0 w-[3px] group-[.left]:right-0 group-[.left]:translate-x-1/2 group-[.right]:left-0 group-[.right]:-translate-x-1/2";
 
 // Same drawing as the announcement email's "Key dates": a vertical trunk with
 // each stop hanging off it on a short tick, its date in a boxed mono label.
@@ -52,7 +52,14 @@ export default function KeyDates() {
             style={{ gridRow: `${i + 1} / span 2` }}
           >
             {(milestone < 0 || i < milestone) && (
-              <span aria-hidden className={`${TRUNK} bg-rail`} />
+              <span aria-hidden className={`${TRUNK} top-[12px] bg-rail`} />
+            )}
+            {/* Ends the dashed tail at this stop's tick. */}
+            {milestone >= 0 && i > milestone && (
+              <span
+                aria-hidden
+                className={`${TRUNK} top-[14px] w-[5px] bg-background`}
+              />
             )}
             {i === milestone && (
               <>
@@ -62,7 +69,7 @@ export default function KeyDates() {
                 />
                 <span
                   aria-hidden
-                  className={`${TRUNK} bg-[repeating-linear-gradient(to_bottom,var(--color-rail)_0_6px,transparent_6px_12px)]`}
+                  className={`${TRUNK} top-[12px] bg-[repeating-linear-gradient(to_bottom,var(--color-rail)_0_6px,transparent_6px_12px)]`}
                 />
                 <span
                   aria-hidden
