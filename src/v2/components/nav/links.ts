@@ -33,7 +33,7 @@ export const NAV_LINKS: readonly NavLink[] = [
   {
     id: "key-dates",
     label: "Key Dates",
-    href: "/key-dates",
+    href: "/#key-dates",
     icon: CalendarDays,
   },
   { id: "last-year", label: "Last Year", href: "/last-year", icon: History },
@@ -50,7 +50,8 @@ export const NAV_LINKS: readonly NavLink[] = [
 
 // The one-pager's sections, in page order, keyed by their `id`. On "/" the
 // die's top face follows scroll-spy through these; the ones that are also nav
-// links (tickets, get-involved) share the link's icon and light the link up.
+// links (tickets, key-dates, get-involved) share the link's icon and light the
+// link up.
 export const HOME_SECTIONS: readonly { id: string; icon: NavIcon }[] = [
   { id: "about", icon: Puzzle },
   { id: "speakers", icon: UserRound },
@@ -60,5 +61,6 @@ export const HOME_SECTIONS: readonly { id: string; icon: NavIcon }[] = [
   { id: "tickets", icon: Ticket },
   { id: "sponsors", icon: Award },
   { id: "faq", icon: MessageCircleQuestion },
+  { id: "key-dates", icon: CalendarDays },
   { id: "stay-in-the-loop", icon: Mail },
 ] as const;

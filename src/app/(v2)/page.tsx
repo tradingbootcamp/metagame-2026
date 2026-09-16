@@ -13,6 +13,7 @@ import PacmanDivider from "@/v2/components/dividers/pacman";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
 import FaqItem from "@/v2/components/FaqItem";
 import Highlights2025 from "@/v2/components/Highlights2025";
+import KeyDates from "@/v2/components/KeyDates";
 import PersonCard from "@/v2/components/PersonCard";
 import SectionHeading from "@/v2/components/SectionHeading";
 import SignupForm from "@/v2/components/signup/SignupForm";
@@ -42,7 +43,8 @@ import lighthavenMap from "../../../public/images/lighthaven.png";
 import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
 import megagameChess from "../../../public/images/megagame-chess.jpg";
 
-// Re-render hourly so the early-bird gate flips at the deadline without a deploy.
+// Re-render hourly so the early-bird gate flips at the deadline and the key
+// dates' "Today" stop advances without a deploy.
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
@@ -568,6 +570,18 @@ export default function Home() {
               </a>
               .
             </p>
+          </div>
+        </div>
+      </section>
+
+      <DungeonCrawlDivider />
+
+      {/* key dates */}
+      <section id="key-dates" className={`${SECTION} md:py-14`}>
+        <div className={CONTAINER}>
+          <SectionHeading eyebrow="When is what?" title="Key dates" />
+          <div className="mt-10">
+            <KeyDates />
           </div>
         </div>
       </section>

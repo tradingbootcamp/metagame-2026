@@ -64,6 +64,13 @@ export const KEY_DATES: KeyDate[] = [
     cta: "Submit a proposal",
   },
   {
+    label: "Oct 10",
+    title: "Megagame proposals due",
+    endsAt: endOfDay(10, 10),
+    href: RFP_FORM_URL,
+    cta: "Submit a proposal",
+  },
+  {
     label: "Oct 15",
     title: "Childcare registration due",
     endsAt: endOfDay(10, 15),

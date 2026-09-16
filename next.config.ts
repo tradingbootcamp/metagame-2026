@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
       ],
     },
   ],
+  // Key dates used to be its own page.
+  redirects: async () => [
+    { source: "/key-dates", destination: "/#key-dates", permanent: true },
+  ],
   // Let LAN devices (phones) load /_next dev assets; without this the Network URL serves HTML but never hydrates.
   allowedDevOrigins: ["10.*.*.*", "192.168.*.*", "157.230.177.203"],
 };
