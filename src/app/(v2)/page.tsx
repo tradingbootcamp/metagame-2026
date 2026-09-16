@@ -7,6 +7,7 @@ import CardSuitsDivider from "@/v2/components/dividers/card-suits";
 import CatanDivider from "@/v2/components/dividers/catan";
 import ChessDivider from "@/v2/components/dividers/chess";
 import DiceDivider from "@/v2/components/dividers/dice";
+import DungeonCrawlDivider from "@/v2/components/dividers/dungeon-crawl";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
 import PacmanDivider from "@/v2/components/dividers/pacman";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
@@ -31,6 +32,7 @@ import { SPEAKERS } from "@/v2/data/speakers";
 import {
   HOUSING_URL,
   LIGHTHAVEN_URL,
+  MEGAGAME_PROPOSAL_FORM_URL,
   RFP_FORM_URL,
   TEAM_EMAIL,
   VOLUNTEER_FORM_URL,
@@ -406,6 +408,57 @@ export default function Home() {
                 See the full 2025 schedule{" "}
                 <span aria-hidden="true">&rarr;</span>
               </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <DungeonCrawlDivider />
+
+      {/* the megagame */}
+      <section id="megagame" className={`${SECTION} md:py-14`}>
+        <div className={CONTAINER}>
+          <SectionHeading
+            eyebrow="Want to build something?"
+            title="The Megagame"
+          />
+          <p className={`${PROSE} max-w-[600px]`}>
+            An immersive experience, a puzzle hunt, a tree of games, and a
+            voyage.
+          </p>
+          <p className={`${PROSE} max-w-[600px]`}>
+            A puzzle and game made of smaller puzzles and games. Made by&hellip;
+            you?
+          </p>
+          <div className="mt-10 flex flex-col rounded-2xl border border-navy/[0.16] bg-white p-7 shadow-[0_8px_24px_rgba(23,48,89,0.08)]">
+            <h3 className={`${HEADING} text-2xl text-navy`}>
+              Build Part of the Megagame
+            </h3>
+            <div className="mt-3 flex-1 space-y-3 text-[15px] text-ink/70">
+              <p>
+                The game begins when you step through the gate, and runs all
+                weekend. One part puzzle hunt, one part game gauntlet, one part
+                interlocking story.
+              </p>
+              <p>
+                The Megagame is threaded through the rest of Metagame, many
+                puzzles and games making up larger games and larger puzzles.
+                Anyone can play it, and anyone can create it. We want puzzles!
+                We want games! We want cryptic hints added to your session!
+                Share designs, share ideas, or share our inspiration: themes,
+                details, and specifics in our proposal form. Show us what
+                you&apos;ve got!
+              </p>
+            </div>
+            <Button asChild variant="default" className="mt-6 w-fit">
+              <a
+                href={MEGAGAME_PROPOSAL_FORM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Propose a piece of the Megagame{" "}
+                <span aria-hidden="true">&rarr;</span>
+              </a>
             </Button>
           </div>
         </div>

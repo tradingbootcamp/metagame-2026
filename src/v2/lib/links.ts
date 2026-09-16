@@ -4,6 +4,10 @@
 export const RFP_FORM_URL =
   "https://airtable.com/appROpPV6XUP4CSqX/pagVuzTEXODlUwoi0/form";
 
+// "Propose a piece of the Megagame" form. Points at the general RFP form until
+// the dedicated Airtable form exists.
+export const MEGAGAME_PROPOSAL_FORM_URL = RFP_FORM_URL;
+
 // Volunteer sign-up Airtable form.
 export const VOLUNTEER_FORM_URL =
   "https://airtable.com/appROpPV6XUP4CSqX/pag6QeXN6XYI1SwYf/form";
