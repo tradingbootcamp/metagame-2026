@@ -58,9 +58,9 @@ export default function KeyDates() {
           <li
             key={d.label}
             // The ::before is the tick.
-            className={`relative [grid-row:var(--row)] pb-6 pl-7 before:absolute before:top-[12px] before:h-0.5 before:w-7 before:bg-rail last:pb-0 md:[grid-row:var(--row-md)] md:pb-2 md:pl-0 md:before:w-4 ${
+            className={`relative [grid-row:var(--row)] pb-6 pl-7 before:absolute before:top-[12px] before:left-0 before:h-0.5 before:w-7 before:bg-rail last:pb-0 md:[grid-row:var(--row-md)] md:pb-2 md:pl-0 md:before:w-4 ${
               left
-                ? "md:col-start-1 md:pr-4 md:text-right md:before:right-0"
+                ? "md:col-start-1 md:pr-4 md:text-right md:before:right-0 md:before:left-auto"
                 : "md:col-start-2 md:pl-4 md:before:left-0"
             }`}
             style={
