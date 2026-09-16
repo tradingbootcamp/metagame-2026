@@ -441,31 +441,38 @@ export default function Home() {
           <SectionHeading eyebrow="With gratitude" title="Our sponsors" />
           <div className="mt-10 flex flex-col items-center gap-10">
             {[
-              { label: "Gold", sponsors: GOLD_SPONSORS, logo: "h-24 md:h-32" },
+              { label: "Gold", sponsors: GOLD_SPONSORS, logo: "h-28 md:h-40" },
               {
                 label: "Patron",
                 sponsors: PATRON_SPONSORS,
-                logo: "h-16 md:h-[84px]",
+                logo: "h-14 md:h-[72px]",
               },
             ].map(({ label, sponsors, logo }) => (
               <div key={label} className="flex flex-col items-center gap-4">
                 <p className={`${EYEBROW} text-sm text-ink/50`}>{label}</p>
                 <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
-                  {sponsors.map((s) => (
-                    <a
-                      key={s.name}
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="transition-opacity hover:opacity-75"
-                    >
+                  {sponsors.map((s) => {
+                    const img = (
                       <Image
                         src={s.logo}
                         alt={`${s.name} logo`}
-                        className={`w-auto ${logo}`}
+                        className={`w-auto ${s.logoClass ?? logo}`}
                       />
-                    </a>
-                  ))}
+                    );
+                    return s.url ? (
+                      <a
+                        key={s.name}
+                        href={s.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="transition-opacity hover:opacity-75"
+                      >
+                        {img}
+                      </a>
+                    ) : (
+                      <span key={s.name}>{img}</span>
+                    );
+                  })}
                 </div>
               </div>
             ))}
