@@ -201,14 +201,6 @@ const FAQS: {
       </>
     ),
   },
-  {
-    question: "What about…?",
-    answer: (
-      <>
-        Have more questions? Email <AnagramEmail className={BODY_LINK} />.
-      </>
-    ),
-  },
 ];
 
 export default function Home() {
@@ -593,6 +585,8 @@ export default function Home() {
               height roughly matches the collapsed list, and stays put (sticky)
               as answers open; on phones it follows the list. */}
           <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start">
+            {/* Contact line lives in the list column so it hugs the questions
+                rather than dropping below the (taller) photo. */}
             <div>
               <div className="divide-y divide-line border-y border-line">
                 {FAQS.map(({ id, open, question, answer }) => (
@@ -606,6 +600,10 @@ export default function Home() {
                   </FaqItem>
                 ))}
               </div>
+              <p className="mt-6 max-w-[620px] text-ink/70">
+                Have more questions? Email{" "}
+                <AnagramEmail className={BODY_LINK} />.
+              </p>
             </div>
             <CrypticsLightbox className="block lg:sticky lg:top-24" />
           </div>
