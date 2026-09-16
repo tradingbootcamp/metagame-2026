@@ -28,6 +28,11 @@ export function upcomingKeyDates(now = Date.now()): KeyDate[] {
   return KEY_DATES.filter((d) => now < d.endsAt);
 }
 
+/** Whole days from now until the entry passes; 0 for today. */
+export function daysUntil(endsAt: number, now = Date.now()): number {
+  return Math.max(0, Math.floor((endsAt - now) / 86_400_000));
+}
+
 /** Today's date in Lighthaven's time zone, e.g. "Sep 15". */
 export function todayLabel(now = Date.now()): string {
   return new Intl.DateTimeFormat("en-US", {
