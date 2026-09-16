@@ -24,7 +24,9 @@ export default function ContentPage({
         <h1 className={`${HEADING} text-[clamp(34px,5vw,56px)] text-navy`}>
           {title}
         </h1>
-        {intro && <div className="mt-4 text-lg text-ink/70">{intro}</div>}
+        {intro && (
+          <div className="mt-4 text-base text-ink/70 md:text-lg">{intro}</div>
+        )}
       </header>
       {children}
     </div>

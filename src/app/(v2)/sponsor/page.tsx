@@ -21,6 +21,7 @@ const TIERS: {
   blurb: string;
   head: string;
   cell: string;
+  mark: string;
 }[] = [
   {
     id: "headline",
@@ -30,7 +31,8 @@ const TIERS: {
     blurb:
       "All the lower tiers' benefits, plus top billing as our \u201cBrought to you by\u201d sponsor and a hand in the creative direction.",
     head: "bg-meeple text-white",
-    cell: "bg-salmon/10",
+    cell: "bg-meeple/10",
+    mark: "text-meeple",
   },
   {
     id: "platinum",
@@ -41,6 +43,7 @@ const TIERS: {
       "All the lower tiers' benefits, plus a premium branded session, custom swag, and more tickets.",
     head: "bg-navy text-cream",
     cell: "bg-sky/35",
+    mark: "text-brand-blue",
   },
   {
     id: "gold",
@@ -50,6 +53,7 @@ const TIERS: {
       "All the lower tiers' benefits, plus a main room talk and a Guest of Honor ticket.",
     head: "bg-tan text-navy",
     cell: "bg-peach/35",
+    mark: "text-tan",
   },
   {
     id: "silver",
@@ -59,26 +63,35 @@ const TIERS: {
       "All the Patron benefits, plus your logo on everything, a booth, and a couple of tickets.",
     head: "bg-ink/70 text-cream",
     cell: "bg-ink/[0.04]",
+    mark: "text-ink/60",
   },
   {
     id: "patron",
     name: "Patron",
     cost: "$2k+",
     blurb: "Credit on our website and our gratitude.",
-    head: "bg-cream text-navy",
-    cell: "bg-white",
+    head: "bg-moss text-white",
+    cell: "bg-moss/12",
+    mark: "text-moss",
   },
 ];
 
 // true = check; string = check with a qualifier, or a bare count; false = not
 // included.
 type Cell = boolean | string;
-const BENEFITS: { label: string; cells: Record<TierId, Cell> }[] = [
+// cardLabels: per-tier rewording for the stacked card view, where a row can
+// say what it means instead of carrying a qualifier under a check.
+const BENEFITS: {
+  label: string;
+  cells: Record<TierId, Cell>;
+  cardLabels?: Partial<Record<TierId, string>>;
+}[] = [
   {
     label: "Name/logo placement on website, swag & marketing",
+    cardLabels: { patron: "Name/logo placement on website" },
     cells: {
-      headline: "Special",
-      platinum: "Special",
+      headline: true,
+      platinum: true,
       gold: true,
       silver: true,
       patron: "Website",
@@ -105,7 +118,7 @@ const BENEFITS: { label: string; cells: Record<TierId, Cell> }[] = [
     },
   },
   {
-    label: "Attendee careers database*",
+    label: "Attendee careers database***",
     cells: {
       headline: true,
       platinum: true,
@@ -155,7 +168,7 @@ const BENEFITS: { label: string; cells: Record<TierId, Cell> }[] = [
     },
   },
   {
-    label: "Creative direction***",
+    label: "Creative direction*",
     cells: {
       headline: true,
       platinum: false,
@@ -170,7 +183,17 @@ function isCount(v: Cell): v is string {
   return typeof v === "string" && /^\d+$/.test(v);
 }
 
-function BenefitCell({ value }: { value: Cell }) {
+// Lowest tier (Patron up) offering exactly this value — checks and counts are
+// colored by the tier where that benefit first appears.
+function introducedAt(benefit: (typeof BENEFITS)[number], value: Cell) {
+  return [...TIERS].reverse().find((t) => benefit.cells[t.id] === value);
+}
+
+function markClass(benefit: (typeof BENEFITS)[number], value: Cell): string {
+  return introducedAt(benefit, value)?.mark ?? "text-meeple";
+}
+
+function BenefitCell({ value, mark }: { value: Cell; mark: string }) {
   if (value === false) {
     return (
       <span aria-label="Not included" className="text-ink/30">
@@ -179,17 +202,80 @@ function BenefitCell({ value }: { value: Cell }) {
     );
   }
   if (isCount(value)) {
-    return <span className="text-[17px] font-bold text-navy">{value}</span>;
+    return <span className={`text-[17px] font-bold ${mark}`}>{value}</span>;
   }
   return (
     <span className="inline-flex flex-col items-center gap-1">
-      <FaCheck aria-label="Included" className="text-meeple" size={14} />
+      <FaCheck aria-label="Included" className={mark} size={14} />
       {typeof value === "string" && (
         <span className="text-xs leading-tight font-semibold text-ink/70">
           {value}
         </span>
       )}
     </span>
+  );
+}
+
+function TierCard({ tier }: { tier: (typeof TIERS)[number] }) {
+  // Perks unique to this tier first, then inherited ones, highest tier down.
+  const rank = (b: (typeof BENEFITS)[number]) =>
+    TIERS.findIndex((t) => t.id === introducedAt(b, b.cells[tier.id])?.id);
+  const rows = BENEFITS.filter((b) => b.cells[tier.id] !== false).sort(
+    (a, b) => rank(a) - rank(b),
+  );
+  return (
+    <article className="overflow-hidden rounded-xl border border-line bg-white">
+      <header className={`px-5 py-4 ${tier.head}`}>
+        <div className="flex items-baseline justify-between gap-3">
+          <span className={`${HEADING} text-[24px]`}>{tier.name}</span>
+          <span className="font-space-mono text-[13px] tracking-[0.12em] uppercase opacity-85">
+            {tier.cost}
+          </span>
+        </div>
+        {tier.limit && (
+          <span className="mt-0.5 block text-[11px] font-semibold tracking-[0.06em] uppercase opacity-75">
+            {tier.limit}
+          </span>
+        )}
+      </header>
+      <p
+        className={`px-5 py-3.5 text-[14px] leading-snug text-ink/75 ${tier.cell}`}
+      >
+        {tier.blurb}
+      </p>
+      <ul className="divide-y divide-line px-5">
+        {rows.map((b) => {
+          const v = b.cells[tier.id];
+          const mark = markClass(b, v);
+          const label = b.cardLabels?.[tier.id];
+          return (
+            <li
+              key={b.label}
+              className="flex items-baseline justify-between gap-4 py-2.5 text-[15px]"
+            >
+              <span className="flex items-baseline gap-2.5 text-ink">
+                <FaCheck
+                  aria-label="Included"
+                  className={`relative top-[1px] shrink-0 ${mark}`}
+                  size={13}
+                />
+                <span>
+                  {isCount(v) && (
+                    <span className={`font-bold ${mark}`}>{v} </span>
+                  )}
+                  {label ?? b.label}
+                </span>
+              </span>
+              {!label && typeof v === "string" && !isCount(v) && (
+                <span className={`shrink-0 text-[13px] font-bold ${mark}`}>
+                  {v}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </article>
   );
 }
 
@@ -210,17 +296,6 @@ export default function SponsorPage() {
             Sponsor Interest Form
           </a>
           .
-          <span className="mt-3 block text-base text-ink/60">
-            If you want to support Metagame for a smaller amount than these
-            tiers, you can buy a{" "}
-            <Link
-              href="/#supporter"
-              className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
-            >
-              Supporter tier ticket
-            </Link>
-            .
-          </span>
         </>
       }
       wide
@@ -233,7 +308,12 @@ export default function SponsorPage() {
       </a>
 
       <section className="mt-8">
-        <div className="overflow-x-auto rounded-xl border border-line bg-white">
+        <div className="flex flex-col gap-5 md:hidden">
+          {TIERS.map((t) => (
+            <TierCard key={t.id} tier={t} />
+          ))}
+        </div>
+        <div className="hidden overflow-x-auto rounded-xl border border-line bg-white md:block">
           <table className="w-full min-w-[760px] table-fixed border-collapse text-center text-[15px]">
             <thead>
               <tr>
@@ -285,7 +365,10 @@ export default function SponsorPage() {
                   </th>
                   {TIERS.map((t) => (
                     <td key={t.id} className={`px-3 py-3.5 ${t.cell}`}>
-                      <BenefitCell value={b.cells[t.id]} />
+                      <BenefitCell
+                        value={b.cells[t.id]}
+                        mark={markClass(b, b.cells[t.id])}
+                      />
                     </td>
                   ))}
                 </tr>
@@ -293,18 +376,30 @@ export default function SponsorPage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-3 text-sm text-ink/55">
-          *Opt-in per attendee
+        <p className="mt-3 text-xs text-ink/55">
+          *We&rsquo;ll talk.
           <br />
           **VIP badge, a ticket to the VIP dinner, a room on site, and 20 points
           <br />
-          ***We&rsquo;ll talk.
+          ***Opt-in per attendee
         </p>
       </section>
 
+      <p className="mt-10 text-base text-ink/60">
+        If you want to support Metagame for a smaller amount than these tiers,
+        you can buy a{" "}
+        <Link
+          href="/#supporter"
+          className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
+        >
+          Supporter tier ticket
+        </Link>
+        .
+      </p>
+
       <section
         id="donate"
-        className="mt-14 scroll-mt-16 rounded-xl border border-line bg-white px-6 py-7 sm:px-8"
+        className="mt-6 scroll-mt-16 rounded-xl border border-line bg-white px-6 py-7 sm:px-8"
       >
         <h2 className={`${HEADING} text-[clamp(22px,3vw,28px)] text-navy`}>
           Tax-deductible support
