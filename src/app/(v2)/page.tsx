@@ -234,6 +234,17 @@ export default function Home() {
           <p className="mt-8 text-base text-ink/70">
             And many more coming soon&hellip;
           </p>
+          <p className="mt-2 text-base text-ink/70">
+            Want to speak or run a session?{" "}
+            <a
+              href={RFP_FORM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={NEWSLETTER_LINK}
+            >
+              Submit a proposal &rarr;
+            </a>
+          </p>
         </div>
       </section>
 
@@ -290,7 +301,7 @@ export default function Home() {
                 title: "Sponsor Metagame",
                 body: (
                   <>
-                    Put your name on the weekend. Sponsor tiers can include:
+                    Put your name on the weekend. Sponsor benefits include:
                     <ul className="mt-2 list-disc pl-5">
                       <li>Logo placement on the site, swag, and marketing</li>
                       <li>A booth at the night market / career fair</li>

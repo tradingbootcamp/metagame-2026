@@ -16,7 +16,7 @@ export default function SiteHero() {
     <section className="relative isolate flex min-h-dvh flex-col items-center px-8 pt-[12vh] pb-8 text-center">
       <HeroBackdrop />
       <Dice />
-      <div className="mt-4 flex max-w-[52ch] flex-col items-center rounded-2xl border border-navy/10 bg-cream/85 px-7 py-5 shadow-[0_8px_24px_rgba(23,48,89,0.12)] backdrop-blur-sm">
+      <div className="mt-4 flex max-w-[52ch] flex-col items-center rounded-2xl border border-navy/10 bg-cream/85 px-7 py-5 shadow-[0_8px_24px_rgba(23,48,89,0.12)] backdrop-blur-sm md:mt-10">
         {/* Always two deliberate lines: the joined one-liner is wider than
             this card ever gets, so it would overflow or wrap raggedly. */}
         <p className={`${EYEBROW} text-lg text-meeple md:text-xl`}>

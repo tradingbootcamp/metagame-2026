@@ -49,16 +49,13 @@ export default function LastYearPage() {
       <LastYearSchedule />
 
       <div className="mt-16 border-t border-line pt-10">
-        <p className="mb-4 max-w-[640px] text-base text-ink/70">
-          The 2025 site is still up, speakers and all.
-        </p>
         <Button asChild variant="navy">
           <a
             href={LAST_YEAR_SITE_URL}
             target="_blank"
             rel="noopener noreferrer"
           >
-            Visit 2025.metagame.games <span aria-hidden="true">&#8599;</span>
+            2025.metagame.games <span aria-hidden="true">&#8599;</span>
           </a>
         </Button>
       </div>
