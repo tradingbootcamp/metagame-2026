@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import BtcModal from "@/v2/components/tickets/BtcModal";
 import SupporterModal from "@/v2/components/tickets/SupporterModal";
 import { Button } from "@/v2/components/ui/button";
@@ -66,6 +66,16 @@ export default function TicketsPanel({
   const earlyBirdHref = standard ? ticketUrl(standard) : null;
   const standardHref = standard ? fullPriceTicketUrl(standard) : null;
   const [supporterOpen, setSupporterOpen] = useState(false);
+  // /#supporter deep-links into the modal (e.g. from /sponsor); the tile's id
+  // gives the browser its scroll target.
+  useEffect(() => {
+    const check = () => {
+      if (window.location.hash === "#supporter") setSupporterOpen(true);
+    };
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+  }, []);
   // Which tile opened the BTC modal decides whether the promo code is prefilled.
   const [btcOpen, setBtcOpen] = useState<"early-bird" | "standard" | null>(
     null,
@@ -200,8 +210,9 @@ export default function TicketsPanel({
         <Button
           type="button"
           variant="raised"
+          id="supporter"
           onClick={() => setSupporterOpen(true)}
-          className={TILE}
+          className={`${TILE} scroll-mt-24`}
         >
           <span className={TILE_LABEL}>Supporter tier</span>
           <span className={`${HEADING} text-[30px] leading-none text-tan`}>
