@@ -38,5 +38,9 @@ export const HOUSING_URL =
 export const MANIFUND_URL = "https://manifund.org/projects/metagame-2026";
 
 export const LIGHTHAVEN_URL = "https://lighthaven.space/";
+
+// Google search for hotels near the venue, linked from the FAQ.
+export const HOTELS_SEARCH_URL =
+  "https://www.google.com/search?q=hotels+near+lighthaven+in+berkeley&ie=UTF-8";
 export const LAST_YEAR_SITE_URL = "https://2025.metagame.games";
 export const TEAM_EMAIL = "team@metagame.games";

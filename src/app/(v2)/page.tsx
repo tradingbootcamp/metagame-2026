@@ -33,6 +33,7 @@ import { CAROUSEL } from "@/v2/data/carousel";
 import { GOLD_SPONSORS, PATRON_SPONSORS } from "@/v2/data/sponsors";
 import { SPEAKERS } from "@/v2/data/speakers";
 import {
+  HOTELS_SEARCH_URL,
   HOUSING_URL,
   LIGHTHAVEN_URL,
   MEGAGAME_PROPOSAL_FORM_URL,
@@ -70,32 +71,15 @@ const FAQS: {
     question: "What is Metagame?",
     answer: (
       <>
-        To be frank with you, it is hard to describe. Metagame has many of the
-        typical trappings of a board game convention: gaming spaces, designers
-        talking about their projects, as well games requiring more organization,
-        such as Blood on the Clocktower. But it&apos;s a little weirder, too.
-        <br />
-        <br />
-        Last year, the entire con was one large game. Players discovered their
-        team by solving a puzzle on their swag, and spent three days competing
-        against one another while still playing the other games.
-        <br />
-        <br />
-        Attendees who took the escape room design course created their own
-        escape room from scratch and ran it.
-        <br />
-        <br />
-        A guest started a secret, second convention-wide game that staff only
-        learned of in the closing hours. At one point, there were people
-        knife-fighting with tasers.
-        <br />
-        <br />
-        Come see what happens in 2026.
+        Metagame is a three-day convention for people who enjoy playing,
+        designing, and thinking about games. It combines talks, workshops, board
+        and video games, puzzles, LARPs, playtests, and an optional
+        convention-wide megagame.
       </>
     ),
   },
   {
-    question: "Where will it be?",
+    question: "Where is Metagame happening?",
     answer: (
       <>
         <a href={LIGHTHAVEN_URL} className={BODY_LINK}>
@@ -112,7 +96,7 @@ const FAQS: {
     ),
   },
   {
-    question: "Where can I stay?",
+    question: "Is lodging available?",
     answer: (
       <>
         On-site housing at Lighthaven is now available.{" "}
@@ -124,6 +108,15 @@ const FAQS: {
         >
           Book a room here
         </a>
+        . There are also plenty of{" "}
+        <a
+          href={HOTELS_SEARCH_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={BODY_LINK}
+        >
+          hotels available in and around Berkeley
+        </a>
         .
       </>
     ),
@@ -133,15 +126,22 @@ const FAQS: {
     answer: <>It begins at 2pm Friday, Nov 6. It will run to 9:00pm, Nov 8.</>,
   },
   {
-    question: "What is the refund policy?",
+    question: "Are meals included?",
     answer: (
       <>
-        You may exchange your tickets for as much money as you paid for them
-        until sunset in Berkeley on October 6th. After the sun has set, you must
-        contact us.
-        <br />
-        <br />
-        Bitcoin is ethereal and complicated to refund.
+        Snacks and beverages will be available for the taking. Food trucks will
+        also be on-site with meals available for purchase.
+      </>
+    ),
+  },
+  {
+    question: "Are tickets refundable?",
+    answer: (
+      <>
+        You may request a ticket refund at the price you paid until 6PM Pacific
+        on October 6th. After that, we will process on a case-by-case basis.
+        Refunds will be processed in dollars, not Bitcoin (even if you paid in
+        Bitcoin originally).
       </>
     ),
   },
@@ -154,15 +154,6 @@ const FAQS: {
           {TEAM_EMAIL}
         </a>{" "}
         if you&apos;d like to transfer your ticket to someone else.
-      </>
-    ),
-  },
-  {
-    question: "What will I eat?",
-    answer: (
-      <>
-        Snacks and beverages will be available for the taking. Food trucks will
-        also be on-site with meals available for purchase.
       </>
     ),
   },
@@ -180,6 +171,43 @@ const FAQS: {
           reach out
         </a>
         .
+      </>
+    ),
+  },
+  {
+    question: "Is parking available?",
+    answer: (
+      <>
+        There is very limited parking available and only directly in front of
+        Lighthaven. We request attendees avoid parking on the streets in the
+        surrounding two blocks, as this may upset our neighbors.
+      </>
+    ),
+  },
+  {
+    question: "May I bring or demonstrate my own game?",
+    answer: (
+      <>
+        We would love that! Please{" "}
+        <a
+          href={RFP_FORM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={BODY_LINK}
+        >
+          fill out the form here
+        </a>
+        !
+      </>
+    ),
+  },
+  {
+    question: "Is the venue accessible?",
+    answer: (
+      <>
+        The venue is largely handicap-accessible, although some rooms and
+        buildings require traversing stairs, so certain rooms and side sessions
+        may be difficult to access depending on ambulatory ability.
       </>
     ),
   },
