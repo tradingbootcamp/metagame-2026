@@ -93,7 +93,7 @@ export default function KeyDates() {
             <p
               className={`${HEADING} mt-1.5 text-[17px] text-balance ${
                 d.aside
-                  ? "font-medium text-ink/50 italic"
+                  ? "text-[15px] font-medium text-ink/50 italic"
                   : d.milestone
                     ? "text-xl text-meeple"
                     : "text-navy"
