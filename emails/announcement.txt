@@ -144,3 +144,5 @@ EO Physical Return Address, 86-90 Paul Street, London EC2A 4NE, United Kingdom
 
 You received this email because you subscribed to our list. You can
 unsubscribe at any time: {{UnsubscribeURL}}
+
+Powered by EmailOctopus: {{RewardsURL}}
