@@ -4,12 +4,13 @@ import { useEffect, useRef } from "react";
 import { TEAM_EMAIL } from "@/v2/lib/links";
 import { cn } from "@/v2/lib/utils";
 
-// team@metagame.games, where "team" and "meta" are anagrams. Hovering either
-// word sends each letter arcing across the @ to the slot of the same letter
-// in the other word, spinning once on the way; meanwhile the cursor repels
-// nearby letters, so they dance away from it until it leaves and they settle.
-// The swapped result reads identically, so once everything is at rest the
-// transforms are dropped and the next hover starts a fresh swap.
+// team@metagame.games, where "team" and "meta" are anagrams. While the cursor
+// is over the address it repels nearby letters of the two words, so they
+// dance away from it until it leaves and they settle. Entering team@meta
+// also sends each letter arcing across the @ to the slot of the same letter
+// in the other word, spinning once on the way. The swapped result reads
+// identically, so once everything is at rest the transforms are dropped and
+// the next hover starts fresh.
 const A = "team";
 const B = "meta";
 const REST = "game.games";
@@ -30,11 +31,11 @@ const ease = (p: number) =>
 
 type Letter = {
   el: HTMLElement;
-  // Where the letter is (translate + rotate), chasing `target` each frame.
+  // Where the letter is (translate + rotate), chasing its target each frame.
   x: number;
   y: number;
   r: number;
-  // Flight to the partner slot, set when a swap starts.
+  // Flight to the partner slot; zero until a swap starts.
   dx: number;
   arc: number;
   spin: number;
@@ -43,11 +44,11 @@ type Letter = {
 export default function AnagramEmail({ className }: { className?: string }) {
   const aRef = useRef<HTMLSpanElement>(null);
   const bRef = useRef<HTMLSpanElement>(null);
+  // Empty while at rest with transforms clear.
   const letters = useRef<Letter[]>([]);
   const cursor = useRef<{ x: number; y: number } | null>(null);
-  // null: at rest, transforms clear. Otherwise the swap's start time; the
-  // flight is over once FLIGHT_MS have passed, but letters keep reacting to
-  // the cursor until it leaves.
+  // The current swap's start time, or null when none has been triggered
+  // since the letters last settled.
   const flightStart = useRef<number | null>(null);
   const frame = useRef<number | null>(null);
 
@@ -59,9 +60,9 @@ export default function AnagramEmail({ className }: { className?: string }) {
 
   function tick(now: number) {
     frame.current = null;
+    if (letters.current.length === 0) return;
     const start = flightStart.current;
-    if (start === null) return;
-    const p = Math.min(1, (now - start) / FLIGHT_MS);
+    const p = start === null ? 1 : Math.min(1, (now - start) / FLIGHT_MS);
     const e = ease(p);
     const c = cursor.current;
     let settled = p >= 1 && !c;
@@ -104,41 +105,44 @@ export default function AnagramEmail({ className }: { className?: string }) {
   }
 
   function ensureLoop() {
-    if (frame.current === null && flightStart.current !== null)
+    if (frame.current === null && letters.current.length > 0)
       frame.current = requestAnimationFrame(tick);
   }
 
-  function start() {
-    if (flightStart.current !== null) return;
+  // Wake the letters (no flight yet) so the cursor can push them around.
+  function wake() {
+    if (letters.current.length > 0) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const a = aRef.current?.querySelectorAll<HTMLElement>("[data-letter]");
     const b = bRef.current?.querySelectorAll<HTMLElement>("[data-letter]");
     if (!a || !b || a.length !== 4 || b.length !== 4) return;
-
-    // Transforms are clear here, so these are the resting slots.
-    const make = (el: HTMLElement, to: HTMLElement, i: number): Letter => {
+    letters.current = [...a, ...b].map((el) => {
       el.style.willChange = "transform";
-      return {
-        el,
-        x: 0,
-        y: 0,
-        r: 0,
-        dx: to.getBoundingClientRect().left - el.getBoundingClientRect().left,
-        // Alternate arc side and spin direction so crossing letters miss.
-        arc: i % 2 ? -16 : 12,
-        spin: i % 2 ? -360 : 360,
-      };
-    };
-    letters.current = [
-      ...[...a].map((el, i) => make(el, b[toB[i]], i)),
-      ...[...b].map((el, i) => make(el, a[toA[i]], i + 1)),
-    ];
+      return { el, x: 0, y: 0, r: 0, dx: 0, arc: 0, spin: 0 };
+    });
+    ensureLoop();
+  }
+
+  function swap() {
+    wake();
+    if (flightStart.current !== null || letters.current.length === 0) return;
+    const ls = letters.current;
+    // Resting slot of a letter: where it is now, minus its current push.
+    const rest = (l: Letter) => l.el.getBoundingClientRect().left - l.x;
+    ls.forEach((l, i) => {
+      const to = i < 4 ? ls[4 + toB[i]] : ls[toA[i - 4]];
+      l.dx = rest(to) - rest(l);
+      // Alternate arc side and spin direction so crossing letters miss.
+      const odd = (i < 4 ? i : i + 1) % 2;
+      l.arc = odd ? -16 : 12;
+      l.spin = odd ? -360 : 360;
+    });
     flightStart.current = performance.now();
     ensureLoop();
   }
 
   const word = (text: string, ref: React.RefObject<HTMLSpanElement | null>) => (
-    <span ref={ref} onMouseEnter={start}>
+    <span ref={ref}>
       {[...text].map((ch, i) => (
         // inline-block so transforms apply.
         <span key={i} data-letter className="inline-block">
@@ -154,6 +158,7 @@ export default function AnagramEmail({ className }: { className?: string }) {
     <a
       href={`mailto:${TEAM_EMAIL}`}
       aria-label={TEAM_EMAIL}
+      onMouseEnter={wake}
       onMouseMove={(e) => {
         cursor.current = { x: e.clientX, y: e.clientY };
         ensureLoop();
@@ -167,7 +172,9 @@ export default function AnagramEmail({ className }: { className?: string }) {
         "relative inline-block whitespace-nowrap no-underline after:absolute after:inset-x-0 after:bottom-[3px] after:h-px after:bg-current",
       )}
     >
-      {word(A, aRef)}@{word(B, bRef)}
+      <span onMouseEnter={swap}>
+        {word(A, aRef)}@{word(B, bRef)}
+      </span>
       {REST}
     </a>
   );
