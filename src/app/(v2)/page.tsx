@@ -165,9 +165,9 @@ const FAQS: {
     question: "Is parking available?",
     answer: (
       <>
-        There is very limited parking available and only directly in front of
-        Lighthaven. We request attendees avoid parking on the streets in the
-        surrounding two blocks, as this may upset our neighbors.
+        There is very limited street parking available by Lighthaven. We request
+        attendees avoid parking on the streets in the surrounding two blocks, as
+        this may upset our neighbors.
       </>
     ),
   },
