@@ -34,6 +34,7 @@
   --color-sky: #cee1ff;
   --color-peach: #ffd8a5;
   --color-line: rgba(27, 27, 27, 0.12);
+  --color-rail: #e3d9d4; /* solid, so crossing rules don't stack */
   --color-line-dark: rgba(246, 239, 227, 0.14);
 
   /* shadcn semantic tokens, mapped onto the bespoke palette above so shadcn

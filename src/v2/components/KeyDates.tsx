@@ -15,9 +15,10 @@ type Stop = KeyDate & { day: number; today?: boolean; next?: boolean };
 // they all hang to the right of a trunk down the left edge. The first stop is
 // today; passed deadlines drop off, and the next one up takes the meeple accent.
 //
-// Spacing is roughly proportional to time: one grid row per day with a minimum
-// height, each stop starting on its day's row and spanning to the next stop
-// that could collide with it (the next one on its own side from md, since the
+// Spacing is roughly proportional to time: one grid row per day (gaps longer
+// than MAX_GAP days are shortened to it) with a minimum height, each stop
+// starting on its day's row and spanning to the next stop that could collide
+// with it (the next one on its own side from md, since the
 // sides are separate columns). Rows only grow past the minimum when a stop's
 // text needs the room.
 export default function KeyDates() {
@@ -41,7 +42,7 @@ export default function KeyDates() {
   return (
     // The ol's ::before is the trunk.
     <ol
-      className="relative mx-auto grid max-w-[760px] [--day:8px] before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-navy/15 md:grid-cols-2 md:[--day:9px] md:before:left-1/2 md:before:-translate-x-1/2"
+      className="relative mx-auto grid max-w-[760px] [--day:10px] before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-rail md:grid-cols-2 md:[--day:12px] md:before:left-1/2 md:before:-translate-x-1/2"
       style={{
         gridTemplateRows: `repeat(${lastDay + 1}, minmax(var(--day), auto))`,
       }}
@@ -57,7 +58,7 @@ export default function KeyDates() {
           <li
             key={d.label}
             // The ::before is the tick.
-            className={`relative [grid-row:var(--row)] pb-6 pl-7 before:absolute before:top-[12px] before:h-0.5 before:w-7 before:bg-navy/15 last:pb-0 md:[grid-row:var(--row-md)] md:pb-2 md:pl-0 md:before:w-4 ${
+            className={`relative [grid-row:var(--row)] pb-6 pl-7 before:absolute before:top-[12px] before:h-0.5 before:w-7 before:bg-rail last:pb-0 md:[grid-row:var(--row-md)] md:pb-2 md:pl-0 md:before:w-4 ${
               left
                 ? "md:col-start-1 md:pr-4 md:text-right md:before:right-0"
                 : "md:col-start-2 md:pl-4 md:before:left-0"
@@ -70,7 +71,7 @@ export default function KeyDates() {
             }
           >
             <p
-              className={`inline-block border-2 border-navy/15 px-2 py-px font-space-mono text-[13px] font-bold tracking-[0.08em] uppercase ${
+              className={`inline-block border-2 border-rail px-2 py-px font-space-mono text-[13px] font-bold tracking-[0.08em] uppercase ${
                 d.today
                   ? "border-navy bg-navy text-cream"
                   : accent
