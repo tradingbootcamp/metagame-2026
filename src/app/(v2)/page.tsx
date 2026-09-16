@@ -350,9 +350,9 @@ export default function Home() {
                 <p>
                   The Megagame is threaded through the rest of Metagame, with
                   many puzzles and games making up larger games and larger
-                  puzzles. Anyone can play it, and anyone can create it. We want
-                  puzzles! We want games! We want cryptic hints added to your
-                  session! More details in the proposal form.
+                  puzzles. Anyone can play it, and anyone can help create it. We
+                  want puzzles! We want games! We want cryptic hints added to
+                  your session! More details in the proposal form.
                 </p>
               </div>
               <Button asChild variant="default" className="mt-6 w-fit">
