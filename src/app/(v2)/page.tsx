@@ -128,8 +128,6 @@ const FAQS: {
       <>
         You may request a ticket refund at the price you paid until 6PM Pacific
         on October 6th. After that, we will process on a case-by-case basis.
-        Refunds will be processed in dollars, not Bitcoin (even if you paid in
-        Bitcoin originally).
       </>
     ),
   },
@@ -149,8 +147,9 @@ const FAQS: {
     question: "Can I bring my kids?",
     answer: (
       <>
-        There will be childcare and some children&apos;s programming available
-        during the day! See the{" "}
+        Yes! Children under 13 get free admission, and we will have free
+        childcare and some children&apos;s programming available during the day.
+        See the{" "}
         <Link href="/childcare" className={BODY_LINK}>
           childcare page
         </Link>{" "}
