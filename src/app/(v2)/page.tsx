@@ -396,7 +396,7 @@ export default function Home() {
             title="Highlights from 2025"
           />
           <Highlights2025 />
-          <div className="mt-8 flex flex-wrap gap-4">
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Button asChild variant="default">
               <a href={RFP_FORM_URL} target="_blank" rel="noopener noreferrer">
                 Propose a session
