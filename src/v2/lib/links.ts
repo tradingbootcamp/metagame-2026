@@ -21,6 +21,10 @@ export const CHILD_REGISTRATION_FORM_URL =
 export const JOIN_TEAM_FORM_URL =
   "https://airtable.com/appROpPV6XUP4CSqX/pagtwwDizijHH6FkB/form";
 
+// Sponsor interest Airtable form, linked from the /sponsor page.
+export const SPONSOR_FORM_URL =
+  "https://airtable.com/appROpPV6XUP4CSqX/pagDpfFbBkxzzdvl7/form";
+
 // Financial aid application Airtable form, linked from the tickets panel.
 export const FINANCIAL_AID_FORM_URL =
   "https://airtable.com/appROpPV6XUP4CSqX/pagNpxewXARLObldc/form";
@@ -29,6 +33,9 @@ export const FINANCIAL_AID_FORM_URL =
 // tickets are on sale.
 export const HOUSING_URL =
   "https://www.havenbookings.space/events/metagame-2026/login?password=goofy-pouch-wake-buddy";
+
+// Manifund fiscal-sponsorship page for tax-deductible donations.
+export const MANIFUND_URL = "https://manifund.org/projects/metagame-2026";
 
 export const LIGHTHAVEN_URL = "https://lighthaven.space/";
 export const LAST_YEAR_SITE_URL = "https://2025.metagame.games";
