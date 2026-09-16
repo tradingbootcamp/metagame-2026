@@ -192,9 +192,12 @@ const FAQS: {
     question: "Is the venue accessible?",
     answer: (
       <>
-        The venue is largely handicap-accessible, although some rooms and
-        buildings require traversing stairs, so certain rooms and side sessions
-        may be difficult to access depending on ambulatory ability.
+        Some parts of the campus are easier to navigate than others. If
+        accessibility is an issue for you, reach out to{" "}
+        <a href={`mailto:${TEAM_EMAIL}`} className={BODY_LINK}>
+          {TEAM_EMAIL}
+        </a>{" "}
+        so we can figure out how to make it work.
       </>
     ),
   },
