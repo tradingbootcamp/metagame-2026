@@ -337,7 +337,8 @@ export default function Home() {
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
             <div className="max-w-[600px]">
               <SectionHeading
-                eyebrow="Want to build something?"
+                eyebrow="Want to be a part of something bigger?"
+                eyebrowClassName="text-lg"
                 title="The Megagame"
               />
               <div className="mt-3.5 space-y-3 text-base text-ink/70">
