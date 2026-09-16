@@ -1,13 +1,16 @@
 import Link from "next/link";
 import {
-  daysUntil,
   todayLabel,
   upcomingKeyDates,
   type KeyDate,
 } from "@/v2/data/key-dates";
 import { HEADING } from "./styles";
 
-type Stop = KeyDate & { day: number; today?: boolean; next?: boolean };
+type Stop = KeyDate & { today?: boolean; next?: boolean };
+
+// A trunk segment, centred on the column edge that meets the trunk.
+const TRUNK =
+  "absolute top-[12px] bottom-0 w-[3px] group-[.left]:right-0 group-[.left]:translate-x-1/2 group-[.right]:left-0 group-[.right]:-translate-x-1/2";
 
 // Same drawing as the announcement email's "Key dates": a vertical trunk with
 // each stop hanging off it on a short tick, its date in a boxed mono label.
@@ -15,42 +18,25 @@ type Stop = KeyDate & { day: number; today?: boolean; next?: boolean };
 // they all hang to the right of a trunk down the left edge. The first stop is
 // today; passed deadlines drop off, and the next one up takes the meeple accent.
 //
-// Spacing is roughly proportional to time: one grid row per day (gaps longer
-// than MAX_GAP days are shortened to it) with a minimum height, each stop
-// starting on its day's row and spanning to the next stop that could collide
-// with it (the next one on its own side from md, since the
-// sides are separate columns). Rows only grow past the minimum when a stop's
-// text needs the room.
+// Each stop starts one grid row after the previous and spans two, so the
+// sides interleave: a stop begins level with the middle of the one across
+// from it.
 export default function KeyDates() {
   const upcoming = upcomingKeyDates();
   const stops: Stop[] = [
-    {
-      label: "Today",
-      title: todayLabel(),
-      endsAt: Infinity,
-      day: 0,
-      today: true,
-    },
-    ...upcoming.map((d, i) => ({
-      ...d,
-      day: daysUntil(d.endsAt),
-      next: i === 0,
-    })),
+    { label: "Today", title: todayLabel(), endsAt: Infinity, today: true },
+    ...upcoming.map((d, i) => ({ ...d, next: i === 0 })),
   ];
-  const lastDay = stops[stops.length - 1].day;
+
+  const milestone = stops.findIndex((d) => d.milestone);
 
   return (
-    // The ol's ::before is the trunk.
-    <ol
-      className="relative mx-auto grid max-w-[760px] [--day:10px] before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-rail md:grid-cols-2 md:[--day:12px] md:before:left-1/2 md:before:-translate-x-1/2"
-      style={{
-        gridTemplateRows: `repeat(${lastDay + 1}, minmax(var(--day), auto))`,
-      }}
-    >
+    // The ol's ::after is the bulb at the top of the trunk; each stop draws
+    // the trunk from its own tick down to its bottom, so the trunk can end
+    // in a second bulb at the con and fade out as dashes to the stop after.
+    <ol className="relative mx-auto grid max-w-[760px] grid-cols-2 gap-y-5 after:absolute after:top-1 after:left-1/2 after:size-4 after:-translate-x-1/2 after:rounded-full after:border-[3px] after:border-rail after:bg-background">
       {stops.map((d, i) => {
         const left = i % 2 === 0;
-        const spanTo = (j: number) =>
-          Math.max(1, (stops[j]?.day ?? lastDay + 1) - d.day);
         const accent = d.next || d.milestone;
         const external = d.href?.startsWith("http");
 
@@ -58,18 +44,34 @@ export default function KeyDates() {
           <li
             key={d.label}
             // The ::before is the tick.
-            className={`relative [grid-row:var(--row)] pb-6 pl-7 before:absolute before:top-[12px] before:left-0 before:h-0.5 before:w-7 before:bg-rail last:pb-0 md:[grid-row:var(--row-md)] md:pb-2 md:pl-0 md:before:w-4 ${
+            className={`group relative pb-2 pl-0 before:absolute before:top-[12px] before:left-0 before:h-0.5 before:w-4 before:bg-rail last:pb-0 ${
               left
-                ? "md:col-start-1 md:pr-4 md:text-right md:before:right-0 md:before:left-auto"
-                : "md:col-start-2 md:pl-4 md:before:left-0"
+                ? "left col-start-1 pr-4 text-right before:right-0 before:left-auto"
+                : "right col-start-2 pl-4 before:left-0"
             }`}
-            style={
-              {
-                "--row": `${d.day + 1} / span ${spanTo(i + 1)}`,
-                "--row-md": `${d.day + 1} / span ${spanTo(i + 2)}`,
-              } as React.CSSProperties
-            }
+            style={{ gridRow: `${i + 1} / span 2` }}
           >
+            {(milestone < 0 || i < milestone) && (
+              <span aria-hidden className={`${TRUNK} bg-rail`} />
+            )}
+            {i === milestone && (
+              <>
+                <span
+                  aria-hidden
+                  className={`${TRUNK} w-[5px] bg-background`}
+                />
+                <span
+                  aria-hidden
+                  className={`${TRUNK} bg-[repeating-linear-gradient(to_bottom,var(--color-rail)_0_6px,transparent_6px_12px)] [mask-image:linear-gradient(to_bottom,black,transparent)]`}
+                />
+                <span
+                  aria-hidden
+                  className={`absolute top-1 size-4 rounded-full border-[3px] border-rail bg-background ${
+                    left ? "right-0 translate-x-1/2" : "left-0 -translate-x-1/2"
+                  }`}
+                />
+              </>
+            )}
             <p
               className={`inline-block border-2 border-rail px-2 py-px font-space-mono text-[13px] font-bold tracking-[0.08em] uppercase ${
                 d.today
