@@ -16,8 +16,10 @@ type Stop = KeyDate & { day: number; today?: boolean; next?: boolean };
 // today; passed deadlines drop off, and the next one up takes the meeple accent.
 //
 // Spacing is roughly proportional to time: one grid row per day with a minimum
-// height, each stop starting on its day's row and spanning to the next stop.
-// A row only grows past the minimum when a stop's text needs the room.
+// height, each stop starting on its day's row and spanning to the next stop
+// that could collide with it (the next one on its own side from md, since the
+// sides are separate columns). Rows only grow past the minimum when a stop's
+// text needs the room.
 export default function KeyDates() {
   const upcoming = upcomingKeyDates();
   const stops: Stop[] = [
@@ -39,14 +41,15 @@ export default function KeyDates() {
   return (
     // The ol's ::before is the trunk.
     <ol
-      className="relative mx-auto grid max-w-[760px] [--day:10px] before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-navy/15 md:grid-cols-2 md:[--day:14px] md:before:left-1/2 md:before:-translate-x-1/2"
+      className="relative mx-auto grid max-w-[760px] [--day:8px] before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-navy/15 md:grid-cols-2 md:[--day:9px] md:before:left-1/2 md:before:-translate-x-1/2"
       style={{
         gridTemplateRows: `repeat(${lastDay + 1}, minmax(var(--day), auto))`,
       }}
     >
       {stops.map((d, i) => {
         const left = i % 2 === 0;
-        const span = Math.max(1, (stops[i + 1]?.day ?? lastDay + 1) - d.day);
+        const spanTo = (j: number) =>
+          Math.max(1, (stops[j]?.day ?? lastDay + 1) - d.day);
         const accent = d.next || d.milestone;
         const external = d.href?.startsWith("http");
 
@@ -54,12 +57,17 @@ export default function KeyDates() {
           <li
             key={d.label}
             // The ::before is the tick.
-            className={`relative pb-6 pl-7 before:absolute before:top-[12px] before:h-0.5 before:w-7 before:bg-navy/15 last:pb-0 md:pb-2 md:pl-0 md:before:w-4 ${
+            className={`relative [grid-row:var(--row)] pb-6 pl-7 before:absolute before:top-[12px] before:h-0.5 before:w-7 before:bg-navy/15 last:pb-0 md:[grid-row:var(--row-md)] md:pb-2 md:pl-0 md:before:w-4 ${
               left
                 ? "md:col-start-1 md:pr-4 md:text-right md:before:right-0"
                 : "md:col-start-2 md:pl-4 md:before:left-0"
             }`}
-            style={{ gridRow: `${d.day + 1} / span ${span}` }}
+            style={
+              {
+                "--row": `${d.day + 1} / span ${spanTo(i + 1)}`,
+                "--row-md": `${d.day + 1} / span ${spanTo(i + 2)}`,
+              } as React.CSSProperties
+            }
           >
             <p
               className={`inline-block border-2 border-navy/15 px-2 py-px font-space-mono text-[13px] font-bold tracking-[0.08em] uppercase ${
