@@ -457,7 +457,7 @@ export default function Home() {
                 className="h-auto w-full"
                 sizes="(min-width: 1024px) 560px, 100vw"
               />
-              <figcaption className="mt-3 text-base text-ink/70">
+              <figcaption className="mt-3 text-sm text-ink/70 italic">
                 A puzzle and game made of smaller puzzles and games. Made
                 by&hellip; you?
               </figcaption>
