@@ -33,7 +33,7 @@ export default function KeyDates() {
   return (
     // The ol's ::after is the bulb at the top of the trunk; each stop draws
     // the trunk from its own tick down to its bottom, so the trunk can end
-    // in a second bulb at the con and fade out as dashes to the stop after.
+    // in a second bulb at the con and continue as dashes to the stop after.
     <ol className="relative mx-auto grid max-w-[760px] grid-cols-2 gap-y-5 after:absolute after:top-1 after:left-1/2 after:size-4 after:-translate-x-1/2 after:rounded-full after:border-[3px] after:border-rail after:bg-background">
       {stops.map((d, i) => {
         const left = i % 2 === 0;
@@ -62,7 +62,7 @@ export default function KeyDates() {
                 />
                 <span
                   aria-hidden
-                  className={`${TRUNK} bg-[repeating-linear-gradient(to_bottom,var(--color-rail)_0_6px,transparent_6px_12px)] [mask-image:linear-gradient(to_bottom,black,transparent)]`}
+                  className={`${TRUNK} bg-[repeating-linear-gradient(to_bottom,var(--color-rail)_0_6px,transparent_6px_12px)]`}
                 />
                 <span
                   aria-hidden
