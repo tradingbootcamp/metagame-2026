@@ -28,6 +28,7 @@ export const PATRON_SPONSORS: Sponsor[] = [
   { name: "Manifund", url: "https://manifund.org", logo: manifund },
   {
     name: "Outside the Asylum",
+    url: "https://outsidetheasylum.blog/",
     logo: outsideTheAsylum,
     logoClass: "h-10 md:h-12",
   },
