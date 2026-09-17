@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { TEAM_EMAIL } from "@/v2/lib/links";
 import { cn } from "@/v2/lib/utils";
+import { useContact } from "./contact/ContactProvider";
 
 // team@metagame.games, where "team" and "meta" are anagrams. While the cursor
 // is over the address it repels nearby letters of the two words, so they
@@ -42,6 +43,7 @@ type Letter = {
 };
 
 export default function AnagramEmail({ className }: { className?: string }) {
+  const openContact = useContact();
   const aRef = useRef<HTMLSpanElement>(null);
   const bRef = useRef<HTMLSpanElement>(null);
   // Empty while at rest with transforms clear.
@@ -155,9 +157,10 @@ export default function AnagramEmail({ className }: { className?: string }) {
   return (
     // The underline is a static rule under the whole address (text-decoration
     // wouldn't reach the inline-block letters, and would fly with them).
-    <a
-      href={`mailto:${TEAM_EMAIL}`}
-      aria-label={TEAM_EMAIL}
+    <button
+      type="button"
+      onClick={() => openContact()}
+      aria-label={`Contact ${TEAM_EMAIL}`}
       onMouseEnter={wake}
       onMouseMove={(e) => {
         cursor.current = { x: e.clientX, y: e.clientY };
@@ -169,13 +172,13 @@ export default function AnagramEmail({ className }: { className?: string }) {
       }}
       className={cn(
         className,
-        "relative inline-block whitespace-nowrap no-underline after:absolute after:inset-x-0 after:bottom-[3px] after:h-px after:bg-current",
+        "relative inline-block cursor-pointer whitespace-nowrap no-underline after:absolute after:inset-x-0 after:bottom-[3px] after:h-px after:bg-current",
       )}
     >
       <span onMouseEnter={swap}>
         {word(A, aRef)}@{word(B, bRef)}
       </span>
       {REST}
-    </a>
+    </button>
   );
 }

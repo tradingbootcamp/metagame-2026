@@ -5,7 +5,8 @@ import { HEADING } from "@/v2/components/styles";
 import Testimonials from "@/v2/components/Testimonials";
 import { Button } from "@/v2/components/ui/button";
 import { CHILDCARE_TESTIMONIALS } from "@/v2/data/childcare-testimonials";
-import { CHILD_REGISTRATION_FORM_URL, TEAM_EMAIL } from "@/v2/lib/links";
+import ContactLink from "@/v2/components/contact/ContactLink";
+import { CHILD_REGISTRATION_FORM_URL } from "@/v2/lib/links";
 
 export const metadata: Metadata = {
   title: "Childcare — Metagame 2026",
@@ -51,13 +52,13 @@ export default function ChildcarePage() {
             might look like.
           </p>
           <p className="mt-3">
-            Questions or particular needs? Email{" "}
-            <a
-              href={`mailto:${TEAM_EMAIL}`}
+            Questions or particular needs?{" "}
+            <ContactLink
+              subject="Childcare"
               className="font-semibold text-navy underline underline-offset-2"
             >
-              {TEAM_EMAIL}
-            </a>
+              Get in touch
+            </ContactLink>
             .
           </p>
         </>

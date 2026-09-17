@@ -1,3 +1,4 @@
+import ContactProvider from "@/v2/components/contact/ContactProvider";
 import SiteFooter from "@/v2/components/SiteFooter";
 import SiteShell from "@/v2/components/SiteShell";
 
@@ -13,8 +14,10 @@ export default function SiteLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="flex min-h-dvh flex-col bg-background font-[family-name:var(--font-inter)] leading-[1.55] text-ink">
-      <SiteShell>{children}</SiteShell>
-      <SiteFooter />
+      <ContactProvider>
+        <SiteShell>{children}</SiteShell>
+        <SiteFooter />
+      </ContactProvider>
     </div>
   );
 }

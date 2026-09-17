@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FaDiscord, FaEnvelope } from "react-icons/fa";
-import { TEAM_EMAIL } from "@/v2/lib/links";
+import ContactLink from "./contact/ContactLink";
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { NAV_LINKS } from "./nav/links";
 
@@ -13,10 +13,10 @@ export default function SiteFooter() {
       <div className="mx-auto max-w-[1180px] px-8 max-[760px]:px-6">
         <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
           <div className="flex flex-wrap items-center gap-x-7 gap-y-3">
-            <a href={`mailto:${TEAM_EMAIL}`} className={CONTACT}>
+            <ContactLink className={CONTACT}>
               <FaEnvelope aria-hidden />
-              {TEAM_EMAIL}
-            </a>
+              Contact us
+            </ContactLink>
             <a
               href={SOCIAL_LINKS.DISCORD}
               target="_blank"

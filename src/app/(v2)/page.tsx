@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import AnagramEmail from "@/v2/components/AnagramEmail";
 import Carousel from "@/v2/components/Carousel";
+import ContactLink from "@/v2/components/contact/ContactLink";
 import CrypticsLightbox from "@/v2/components/CrypticsLightbox";
 import BloodOnTheClocktowerDivider from "@/v2/components/dividers/blood-on-the-clocktower";
 import CardSuitsDivider from "@/v2/components/dividers/card-suits";
@@ -38,7 +39,6 @@ import {
   LIGHTHAVEN_URL,
   MEGAGAME_PROPOSAL_FORM_URL,
   RFP_FORM_URL,
-  TEAM_EMAIL,
   VOLUNTEER_FORM_URL,
 } from "@/v2/lib/links";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
@@ -137,10 +137,10 @@ const FAQS: {
     question: "Can I transfer my ticket?",
     answer: (
       <>
-        Yes, as long as your ticket wasn&apos;t a special personal comp. Email{" "}
-        <a href={`mailto:${TEAM_EMAIL}`} className={BODY_LINK}>
-          {TEAM_EMAIL}
-        </a>{" "}
+        Yes, as long as your ticket wasn&apos;t a special personal comp.{" "}
+        <ContactLink subject="Ticket transfer" className={BODY_LINK}>
+          Contact us
+        </ContactLink>{" "}
         if you&apos;d like to transfer your ticket to someone else.
       </>
     ),
@@ -156,9 +156,9 @@ const FAQS: {
           childcare page
         </Link>{" "}
         for more. If you have particular questions or concerns feel free to{" "}
-        <a href={`mailto:${TEAM_EMAIL}`} className={BODY_LINK}>
+        <ContactLink subject="Childcare" className={BODY_LINK}>
           reach out
-        </a>
+        </ContactLink>
         .
       </>
     ),
@@ -195,10 +195,10 @@ const FAQS: {
     answer: (
       <>
         Some parts of the campus are easier to navigate than others. If
-        accessibility is an issue for you, reach out to{" "}
-        <a href={`mailto:${TEAM_EMAIL}`} className={BODY_LINK}>
-          {TEAM_EMAIL}
-        </a>{" "}
+        accessibility is an issue for you,{" "}
+        <ContactLink subject="Accessibility" className={BODY_LINK}>
+          reach out
+        </ContactLink>{" "}
         so we can figure out how to make it work.
       </>
     ),

@@ -210,3 +210,52 @@ export async function sendAdminErrorEmail(errorMessage: string) {
     html: `<p>An error occurred: ${errorMessage}</p>`,
   });
 }
+
+const escapeHtml = (s: string) =>
+  s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+export type ContactMessage = {
+  /** Recipient — the caller has already checked it against the allowed set. */
+  to: string;
+  name: string;
+  email: string;
+  subject?: string;
+  message: string;
+};
+
+/** Site contact form → team inbox, reply-to the sender. Resolves false when Resend isn't configured. */
+export async function sendContactEmail({
+  to,
+  name,
+  email,
+  subject,
+  message,
+}: ContactMessage): Promise<boolean> {
+  const resend = getResend();
+  if (!resend) {
+    console.warn(
+      `[email] Resend not configured — contact message not sent:\n${JSON.stringify({ to, name, email, subject, message }, null, 2)}`,
+    );
+    return false;
+  }
+  const line = subject?.trim() || "Website contact form";
+  const { error } = await resend.emails.send({
+    from: "Metagame Contact Form <tickets@metagame.games>",
+    to: [to],
+    replyTo: [email],
+    subject: `[Contact] ${line}`,
+    html: `
+      <p><strong>From:</strong> ${escapeHtml(name)} &lt;${escapeHtml(email)}&gt;</p>
+      <p><strong>Subject:</strong> ${escapeHtml(line)}</p>
+      <hr />
+      <p style="white-space: pre-wrap;">${escapeHtml(message)}</p>
+    `,
+    text: `From: ${name} <${email}>\nSubject: ${line}\n\n${message}`,
+  });
+  if (error) throw new Error(error.message);
+  return true;
+}

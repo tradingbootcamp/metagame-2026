@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FaEnvelope } from "react-icons/fa";
 import ContentPage from "@/v2/components/ContentPage";
+import ContactLink from "@/v2/components/contact/ContactLink";
 import { Button } from "@/v2/components/ui/button";
 
 // OpenNode charge lifecycle, narrowed to what we surface here.
@@ -39,6 +40,7 @@ function phaseFor(status: string | null): Phase {
 
 export default function BitcoinCheckoutPage() {
   const params = useParams<{ orderId: string }>();
+  const orderSubject = `Bitcoin order ${params.orderId}`;
   const search = useSearchParams();
   const orderId = params.orderId;
 
@@ -142,13 +144,13 @@ export default function BitcoinCheckoutPage() {
             <p>
               We received a partial payment that didn&rsquo;t cover the full
               ticket price. Please don&rsquo;t send more without contacting us
-              first — email{" "}
-              <a
-                href="mailto:team@metagame.games"
+              first —{" "}
+              <ContactLink
+                subject={orderSubject}
                 className="font-semibold text-navy underline underline-offset-2"
               >
-                team@metagame.games
-              </a>{" "}
+                contact us
+              </ContactLink>{" "}
               and we&rsquo;ll sort it out.
             </p>
           </div>
@@ -157,13 +159,13 @@ export default function BitcoinCheckoutPage() {
         {phase === "refunded" && (
           <div className="flex flex-col items-start gap-3">
             <p>
-              This payment was refunded. If that wasn&rsquo;t expected, email{" "}
-              <a
-                href="mailto:team@metagame.games"
+              This payment was refunded. If that wasn&rsquo;t expected,{" "}
+              <ContactLink
+                subject={orderSubject}
                 className="font-semibold text-navy underline underline-offset-2"
               >
-                team@metagame.games
-              </a>{" "}
+                contact us
+              </ContactLink>{" "}
               and we&rsquo;ll help.
             </p>
           </div>
@@ -185,13 +187,13 @@ export default function BitcoinCheckoutPage() {
 
         <span className="text-sm">
           Questions?
-          <a
-            href="mailto:team@metagame.games"
+          <ContactLink
+            subject={orderSubject}
             className="ml-2 inline-flex items-center gap-1 font-semibold text-navy underline underline-offset-2"
           >
             <FaEnvelope size={12} aria-hidden className="translate-y-[1px]" />
-            team@metagame.games
-          </a>
+            Contact us
+          </ContactLink>
         </span>
       </div>
     </ContentPage>

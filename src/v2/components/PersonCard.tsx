@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { Person } from "@/v2/data/team";
+import ContactLink from "./contact/ContactLink";
 import { HEADING } from "./styles";
 
 const initials = (name: string) =>
@@ -61,12 +62,12 @@ export default function PersonCard({
           )}
         </p>
         {email && !compact && (
-          <a
-            href={`mailto:${email}`}
+          <ContactLink
+            to={email}
             className="mt-2 inline-block text-sm font-semibold text-navy underline underline-offset-2 hover:text-meeple"
           >
             {email}
-          </a>
+          </ContactLink>
         )}
       </div>
     </div>
