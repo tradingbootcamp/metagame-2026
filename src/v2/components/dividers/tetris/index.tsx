@@ -3,6 +3,7 @@
 import { useState } from "react";
 import DividerRow from "../DividerRow";
 import { SHADOW } from "../sizing";
+import { trackClick } from "../track";
 import { CELL, PIECES, render, type Cell } from "./icons";
 
 const CHARCOAL = "#4d4d4d";
@@ -33,7 +34,10 @@ function Piece({
         transform: `rotate(${deg}deg)`,
       }}
       className={`${SHADOW} transition-transform duration-300 ease-out`}
-      onClick={() => setDeg(deg + 90)}
+      onClick={() => {
+        setDeg(deg + 90);
+        trackClick("tetris");
+      }}
     >
       {paths.map((d, i) => (
         <path key={i} d={d} fill={CHARCOAL} />

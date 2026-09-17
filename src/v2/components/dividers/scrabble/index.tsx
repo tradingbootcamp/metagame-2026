@@ -19,7 +19,7 @@ import Crab from "./Crab";
 import Acid, { ACID_MS, rollTrip, type Trip } from "./Acid";
 import Sudo, { SUDO_MS } from "./Sudo";
 import Weather, { rollShower, showerMs, type Shower } from "./Weather";
-import { trackCast, type Via } from "./track";
+import { trackEgg, type Via } from "../track";
 import { wobble } from "./wobble";
 import WordEntry from "./WordEntry";
 import {
@@ -1023,7 +1023,7 @@ export default function ScrabbleDivider({
     const word = next.map((t) => t.letter).join("");
     const spell = SPELLS[word];
     if (spell) {
-      trackCast(word, via);
+      trackEgg({ egg: "scrabble", event: "cast", word, via });
       cast(spell);
     }
   };

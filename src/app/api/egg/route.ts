@@ -1,30 +1,44 @@
-import { recordEggCast } from "@/lib/airtable";
+import { recordEgg } from "@/lib/airtable";
 import { SPELLS } from "@/v2/components/dividers/scrabble/effects";
+import type { EggEvent } from "@/v2/components/dividers/track";
 
-// Counts easter-egg casts on the scrabble divider (see track.ts). The client
+// Anything else is dropped: this is a public endpoint writing to our base.
+const parse = (body: Record<string, unknown>): EggEvent | null => {
+  const { egg, event, word, via, clicks } = body;
+  if (egg === "scrabble" && event === "cast")
+    return typeof word === "string" &&
+      Object.hasOwn(SPELLS, word) &&
+      (via === "click" || via === "type")
+      ? { egg, event, word, via }
+      : null;
+  if ((egg === "tetris" || egg === "chess") && event === "clicks")
+    return Number.isInteger(clicks) &&
+      (clicks as number) > 0 &&
+      (clicks as number) < 1e6
+      ? { egg, event, clicks: clicks as number }
+      : null;
+  if (egg === "chess" && event === "castle") return { egg, event };
+  return null;
+};
+
+// Counts easter eggs found on the dividers (see dividers/track.ts). The client
 // fires and forgets, so this never reports failure back: a lost row is fine, a
-// console error on someone's page is not. Input is whitelisted because this is
-// a public endpoint writing to our base.
+// console error on someone's page is not.
 export async function POST(request: Request) {
-  let body: { word?: unknown; via?: unknown; visit?: unknown };
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return new Response(null, { status: 204 });
   }
 
-  const { word, via, visit } = body;
-  if (
-    typeof word === "string" &&
-    Object.hasOwn(SPELLS, word) &&
-    (via === "click" || via === "type") &&
-    typeof visit === "string" &&
-    /^[a-z0-9]{1,12}$/.test(visit)
-  ) {
+  const found = body && typeof body === "object" ? parse(body) : null;
+  const visit = body?.visit;
+  if (found && typeof visit === "string" && /^[a-z0-9]{1,12}$/.test(visit)) {
     try {
-      await recordEggCast({ word, via, visit });
+      await recordEgg(found, visit);
     } catch (err) {
-      console.error("[egg] failed to record cast:", err);
+      console.error("[egg] failed to record:", err);
     }
   }
   return new Response(null, { status: 204 });

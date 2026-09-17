@@ -3,6 +3,7 @@
 import { useState } from "react";
 import DividerRow from "../DividerRow";
 import { IconGlyph } from "../IconDivider";
+import { trackClick, trackEgg } from "../track";
 import { ICONS } from "./icons";
 
 // One square: a piece's width plus DividerRow's 22px gap.
@@ -49,7 +50,10 @@ function Piece({
         }}
       >
         <span
-          onClick={onClick}
+          onClick={() => {
+            trackClick("chess");
+            onClick();
+          }}
           onAnimationEnd={onShakeEnd}
           className={`pointer-events-auto block ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
         >
@@ -75,8 +79,10 @@ export default function CastlingDivider() {
       setCastled(false);
       setBishop(false);
       setKnight(false);
-    } else if (bishop && knight) setCastled(true);
-    else setShaking(true);
+    } else if (bishop && knight) {
+      setCastled(true);
+      trackEgg({ egg: "chess", event: "castle" });
+    } else setShaking(true);
   };
 
   return (
