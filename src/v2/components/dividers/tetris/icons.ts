@@ -3,17 +3,25 @@
 // Super Rotation System box (3×3 for T/L, 4×4 for I, 2×2 for O), so spinning
 // the box about its centre is exactly how the piece turns in the game: T/L
 // pivot on the middle cell of their three-long bar, the I on a grid corner.
-// Not mounted anywhere yet.
+// `lift` nudges a box up by that many cells so the four resting pieces share
+// one grid (the row centres the boxes, and the 4×4 and 2×2 are half a cell
+// off the 3×3s). Not mounted anywhere yet.
 
-const CELL = 11;
+export const CELL = 11;
 const SEAM = 1.2; // gap between cells, so each square reads as its own block
 
 export type Cell = [col: number, row: number];
 
-export const PIECES: { name: string; box: number; cells: Cell[] }[] = [
+export const PIECES: {
+  name: string;
+  box: number;
+  lift?: number;
+  cells: Cell[];
+}[] = [
   {
     name: "tetris-i",
     box: 4,
+    lift: 0.5,
     cells: [
       [0, 1],
       [1, 1],
@@ -24,6 +32,7 @@ export const PIECES: { name: string; box: number; cells: Cell[] }[] = [
   {
     name: "tetris-o",
     box: 2,
+    lift: 0.5,
     cells: [
       [0, 0],
       [1, 0],
