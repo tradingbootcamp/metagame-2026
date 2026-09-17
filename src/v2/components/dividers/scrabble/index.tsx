@@ -137,7 +137,9 @@ export default function ScrabbleDivider() {
 
   const advance = (i: number) => {
     const next = [...tiles];
-    const letter = CYCLE[(CYCLE.indexOf(tiles[i].letter) + 1) % CYCLE.length];
+    // A played blank is still a blank: clicking it steps on to A like one.
+    const from = tiles[i].blank ? "" : tiles[i].letter;
+    const letter = CYCLE[(CYCLE.indexOf(from) + 1) % CYCLE.length];
     next[i] = { letter };
     setArmed(letter === "" ? i : null);
     play(next);
