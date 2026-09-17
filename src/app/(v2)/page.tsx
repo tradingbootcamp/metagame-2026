@@ -9,10 +9,11 @@ import CardSuitsDivider from "@/v2/components/dividers/card-suits";
 import CatanDivider from "@/v2/components/dividers/catan";
 import ChessDivider from "@/v2/components/dividers/chess";
 import DiceDivider from "@/v2/components/dividers/dice";
-import DungeonCrawlDivider from "@/v2/components/dividers/dungeon-crawl";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
 import PacmanDivider from "@/v2/components/dividers/pacman";
+import ScrabbleDivider from "@/v2/components/dividers/scrabble";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
+import TetrisDivider from "@/v2/components/dividers/tetris";
 import FaqItem from "@/v2/components/FaqItem";
 import Highlights2025 from "@/v2/components/Highlights2025";
 import KeyDates from "@/v2/components/KeyDates";
@@ -364,7 +365,7 @@ export default function Home() {
         </div>
       </section>
 
-      <DungeonCrawlDivider />
+      <ScrabbleDivider />
 
       {/* the megagame */}
       <section id="megagame" className={`${SECTION} md:py-14`}>
@@ -627,7 +628,7 @@ export default function Home() {
         </div>
       </section>
 
-      <DungeonCrawlDivider />
+      <TetrisDivider />
 
       {/* key dates */}
       <section id="key-dates" className={`${SECTION} md:py-14`}>
