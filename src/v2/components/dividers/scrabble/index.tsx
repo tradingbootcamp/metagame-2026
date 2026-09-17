@@ -8,7 +8,6 @@ import {
   BASE_LOOK,
   FALL_MS,
   MAGA_MS,
-  RESTOCK_MS,
   RISE_MS,
   SPELLS,
   STRETCH,
@@ -50,7 +49,6 @@ export function ScrabbleTile({
   armed = false,
   look = BASE_LOOK,
   motion,
-  fresh = false,
   onClick,
 }: {
   letter: string;
@@ -59,7 +57,6 @@ export function ScrabbleTile({
   armed?: boolean;
   look?: Look;
   motion?: Motion;
-  fresh?: boolean;
   onClick?: () => void;
 }) {
   const maskId = useId();
@@ -87,7 +84,6 @@ export function ScrabbleTile({
         transition:
           motion?.transition ??
           "transform 300ms ease-out, opacity 300ms ease-out, filter 300ms ease-out",
-        animation: fresh ? "scrabble-draw 420ms ease-out" : undefined,
       }}
       onClick={onClick}
     >
@@ -161,7 +157,8 @@ const setRack = (next: Tile[]) => {
 // CYCLE. A click that lands on the blank arms it: the next letter typed is
 // played on it (unscored, as in the game); Escape or another click disarms.
 // Spelling a blacklisted word flashes the tiles orange and re-rolls; spelling
-// one of the easter-egg words in effects.ts casts it.
+// one of the easter-egg words in effects.ts casts it. Nothing an egg does is
+// undone short of a reload — FALL and RISE end the rack for good.
 export default function ScrabbleDivider() {
   const tiles = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [flash, setFlash] = useState(false);
@@ -171,9 +168,9 @@ export default function ScrabbleDivider() {
   const [turn, setTurn] = useState(0);
   const [turning, setTurning] = useState<{ stagger: number } | null>(null);
   const [exit, setExit] = useState<{ up: boolean; seeds: Seed[] } | null>(null);
-  // Bumped when a fresh rack is drawn, so the tiles remount instead of
-  // animating back from wherever they flew off to.
-  const [draw, setDraw] = useState(0);
+  // Set once the last tile is clear of the page: the rack is unmounted and the
+  // divider is just a rule from then on.
+  const [gone, setGone] = useState(false);
   const [maga, setMaga] = useState(0);
 
   useEffect(() => {
@@ -216,19 +213,13 @@ export default function ScrabbleDivider() {
     return () => clearTimeout(t);
   }, [turning]);
 
-  // Gone is gone — but a divider with no tiles is a dead divider, so draw a
-  // fresh rack from the bag once they're clear of the page.
+  // Gone is gone. Once the slowest tile has left, drop the rack entirely.
   useEffect(() => {
     if (!exit) return;
     const longest = Math.max(...exit.seeds.map((s) => s.delay));
     const t = setTimeout(
-      () => {
-        setRack(randomRack());
-        setTurn(0);
-        setDraw((n) => n + 1);
-        setExit(null);
-      },
-      (exit.up ? RISE_MS : FALL_MS) + longest + RESTOCK_MS,
+      () => setGone(true),
+      (exit.up ? RISE_MS : FALL_MS) + longest,
     );
     return () => clearTimeout(t);
   }, [exit]);
@@ -304,19 +295,19 @@ export default function ScrabbleDivider() {
           className="-mx-4 -my-2.5 flex items-center gap-[22px] rounded-2xl px-4 py-2.5 transition-colors duration-500"
           style={{ background: look.dark ? PLATE : "transparent" }}
         >
-          {tiles.map((t, i) => (
-            <ScrabbleTile
-              key={`${draw}-${i}`}
-              letter={t.letter}
-              scored={!t.blank}
-              flash={flash}
-              armed={armed === i}
-              look={look}
-              motion={motionFor(i)}
-              fresh={draw > 0}
-              onClick={() => advance(i)}
-            />
-          ))}
+          {!gone &&
+            tiles.map((t, i) => (
+              <ScrabbleTile
+                key={i}
+                letter={t.letter}
+                scored={!t.blank}
+                flash={flash}
+                armed={armed === i}
+                look={look}
+                motion={motionFor(i)}
+                onClick={() => advance(i)}
+              />
+            ))}
         </div>
       </DividerRow>
       {maga > 0 && (

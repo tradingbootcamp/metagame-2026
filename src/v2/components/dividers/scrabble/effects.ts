@@ -2,8 +2,9 @@
 // RACK_SIZE letters by construction — if RACK_SIZE ever changes, this table is
 // what goes with it.
 
-// The persistent half of the eggs. Everything here is a toggle: spell the word
-// again (after breaking it) to put it back.
+// The persistent half of the eggs. One-way, all of it: there's no four-letter
+// word for "light", and the same goes for short, straight, dull and plain. A
+// reload is the only way back.
 export type Look = {
   scale: number; // 1 = baseline; GROW and TINY set it absolutely
   tall: boolean;
@@ -22,13 +23,9 @@ export const BASE_LOOK: Look = {
   dark: false,
 };
 
-const toggle = (key: "tall" | "skew" | "glow" | "blue" | "dark") => (l: Look) =>
-  ({ ...l, [key]: !l[key] }) as Look;
-
-const sizeTo = (scale: number) => (l: Look) => ({
-  ...l,
-  scale: l.scale === scale ? 1 : scale,
-});
+const set =
+  (patch: Partial<Look>) =>
+  (l: Look): Look => ({ ...l, ...patch });
 
 export type Spell =
   | { kind: "bell"; which: "bell" | "ding" | "ring" }
@@ -47,21 +44,20 @@ export const SPELLS: Record<string, Spell> = {
   SPIN: { kind: "turn", stagger: 0, turns: 2 },
   FALL: { kind: "exit", up: false },
   RISE: { kind: "exit", up: true },
-  GROW: { kind: "look", apply: sizeTo(1.15) },
-  TINY: { kind: "look", apply: sizeTo(0.5) },
-  DARK: { kind: "look", apply: toggle("dark") },
-  TALL: { kind: "look", apply: toggle("tall") },
-  SKEW: { kind: "look", apply: toggle("skew") },
-  GLOW: { kind: "look", apply: toggle("glow") },
-  BLUE: { kind: "look", apply: toggle("blue") },
+  // Absolute, not cumulative: GROW then TINY lands on 50% of baseline, not 57%.
+  GROW: { kind: "look", apply: set({ scale: 1.15 }) },
+  TINY: { kind: "look", apply: set({ scale: 0.5 }) },
+  DARK: { kind: "look", apply: set({ dark: true }) },
+  TALL: { kind: "look", apply: set({ tall: true }) },
+  SKEW: { kind: "look", apply: set({ skew: true }) },
+  GLOW: { kind: "look", apply: set({ glow: true }) },
+  BLUE: { kind: "look", apply: set({ blue: true }) },
 };
 
 export const TURN_MS = 700;
 export const FALL_MS = 950;
 export const RISE_MS = 1500;
 export const MAGA_MS = 1300;
-// Beat between the last tile leaving and a fresh rack being drawn.
-export const RESTOCK_MS = 600;
 
 // How far up TALL stretches the tile borders, in the 0–100 tile viewBox.
 export const STRETCH = 15;
