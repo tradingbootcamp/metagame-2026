@@ -218,7 +218,7 @@ export default function Home() {
       <section id="about" className={`${SECTION} md:pt-11 md:pb-12`}>
         <div className={CONTAINER}>
           <div className="max-w-[600px]">
-            <SectionHeading eyebrow="What is all this?" title="Metagame 2026" />
+            <SectionHeading title="Metagame 2026" />
             <p className={PROSE}>
               Metagame is a weekend conference devoted to games. We mean games
               in the broadest sense of the word: any experience that is designed

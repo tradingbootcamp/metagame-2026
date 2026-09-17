@@ -10,7 +10,7 @@ export default function SectionHeading({
   className = "",
   eyebrowClassName,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: React.ReactNode;
   align?: "left" | "center";
   className?: string;
@@ -20,9 +20,11 @@ export default function SectionHeading({
     <div
       className={`${align === "center" ? "text-center" : "text-left"} ${className}`}
     >
-      <p className={cn(EYEBROW, "mb-2.5 text-meeple", eyebrowClassName)}>
-        {eyebrow}
-      </p>
+      {eyebrow && (
+        <p className={cn(EYEBROW, "mb-2.5 text-meeple", eyebrowClassName)}>
+          {eyebrow}
+        </p>
+      )}
       <h2 className={`${HEADING} text-[clamp(28px,4vw,40px)] text-navy`}>
         {title}
       </h2>
