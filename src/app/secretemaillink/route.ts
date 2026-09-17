@@ -12,7 +12,8 @@ const FILE = path.join(process.cwd(), "emails", "announcement.html");
 const MERGE_TAGS: Record<string, string> = {
   "{{UnsubscribeURL}}": "#",
   "{{RewardsURL}}": "https://emailoctopus.com",
-  "{{SenderInfoLine}}": "",
+  "{{SenderInfoLine}}":
+    "Metagame LLC, EO Physical Return Address, 86-90 Paul Street, London, EC2A 4NE, United Kingdom",
 };
 
 export async function GET() {
