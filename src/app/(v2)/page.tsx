@@ -446,7 +446,7 @@ export default function Home() {
                 href={LIGHTHAVEN_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="float-right mt-6 mb-2 ml-4 w-[45%] lg:hidden"
+                className="float-right -mt-2 -mr-6 -mb-2 ml-1 w-[52%] lg:hidden"
               >
                 <Image
                   src={lighthavenCutout}
