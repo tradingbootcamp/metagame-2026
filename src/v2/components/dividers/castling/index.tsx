@@ -66,7 +66,7 @@ function Piece({
 
 // K · B · N · R, the kingside back rank. Fianchetto the bishop (g2) and develop
 // the knight (f3), then the king castles; a blocked king shakes. Clicking the castled king
-// resets the row. Not a puzzle row (the odd-pieces row is "chess").
+// resets the row.
 export default function CastlingDivider() {
   const [bishop, setBishop] = useState(false);
   const [knight, setKnight] = useState(false);
@@ -86,7 +86,7 @@ export default function CastlingDivider() {
   };
 
   return (
-    <DividerRow>
+    <DividerRow game="chess">
       <Piece
         icon={king}
         move={{ dx: 2, dy: 0 }}

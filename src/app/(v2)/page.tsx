@@ -7,8 +7,8 @@ import ContactLink from "@/v2/components/contact/ContactLink";
 import CrypticsLightbox from "@/v2/components/CrypticsLightbox";
 import BloodOnTheClocktowerDivider from "@/v2/components/dividers/blood-on-the-clocktower";
 import CardSuitsDivider from "@/v2/components/dividers/card-suits";
+import CastlingDivider from "@/v2/components/dividers/castling";
 import CatanDivider from "@/v2/components/dividers/catan";
-import ChessDivider from "@/v2/components/dividers/chess";
 import DiceDivider from "@/v2/components/dividers/dice";
 import DndDivider from "@/v2/components/dividers/dnd";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
@@ -273,7 +273,7 @@ export default function Home() {
         <Carousel images={CAROUSEL} />
       </div>
 
-      <ChessDivider />
+      <CastlingDivider />
 
       {/* speakers */}
       <section id="speakers" className={`${SECTION} md:py-14`}>
