@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import DividerRow from "../DividerRow";
 import { GLYPH, SHADOW } from "../sizing";
 import {
@@ -81,17 +81,34 @@ export function ScrabbleTile({
 
 const FLASH_MS = 350;
 
+// The rack lives outside React so the first client read can roll a random
+// word while the server renders blanks — no hydration mismatch, no setState
+// in an effect. Shared across every mounted rack, which is fine: there's one.
+const BLANK: string[] = Array.from({ length: RACK_SIZE }, () => "");
+let rack: string[] | null = null;
+const listeners = new Set<() => void>();
+const getSnapshot = () => (rack ??= randomRack());
+const getServerSnapshot = () => BLANK;
+const subscribe = (fn: () => void) => {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+};
+const setRack = (next: string[]) => {
+  rack = next;
+  listeners.forEach((l) => l());
+};
+
 // A rack of RACK_SIZE tiles. Each click advances that tile one step through
-// CYCLE. The rack starts blank on the server and rolls a random word on mount
-// (so there's no hydration mismatch); spelling a blacklisted word flashes the
-// tiles orange and re-rolls.
+// CYCLE; spelling a blacklisted word flashes the tiles orange and re-rolls.
 export default function ScrabbleDivider() {
-  const [rack, setRack] = useState<string[]>(() =>
-    Array.from({ length: RACK_SIZE }, () => ""),
+  const letters = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
   );
   const [flash, setFlash] = useState(false);
-
-  useEffect(() => setRack(randomRack()), []);
 
   useEffect(() => {
     if (!flash) return;
@@ -100,8 +117,8 @@ export default function ScrabbleDivider() {
   }, [flash]);
 
   const advance = (i: number) => {
-    const next = [...rack];
-    next[i] = CYCLE[(CYCLE.indexOf(rack[i]) + 1) % CYCLE.length];
+    const next = [...letters];
+    next[i] = CYCLE[(CYCLE.indexOf(letters[i]) + 1) % CYCLE.length];
     if (isBlocked(next)) {
       setFlash(true);
       setRack(randomRack());
@@ -112,7 +129,7 @@ export default function ScrabbleDivider() {
 
   return (
     <DividerRow>
-      {rack.map((l, i) => (
+      {letters.map((l, i) => (
         <ScrabbleTile
           key={i}
           letter={l}
