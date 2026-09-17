@@ -1,4 +1,4 @@
-// Standard English Scrabble letter values.
+// Standard English Scrabble letter values. "" is the blank tile.
 export const SCRABBLE_SCORES: Record<string, number> = {
   A: 1,
   B: 3,
@@ -26,7 +26,55 @@ export const SCRABBLE_SCORES: Record<string, number> = {
   X: 8,
   Y: 4,
   Z: 10,
+  "": 0,
 };
 
-// The words the divider flips between on click. Together they spell METAGAME.
-export const WORDS = ["META", "GAME"] as const;
+// Click order: A…Z then the blank, then round again.
+export const CYCLE = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ", ""];
+
+export const RACK_SIZE = 4;
+
+// Four-letter words the rack refuses to spell — landing on one flashes the
+// tiles and re-rolls. Random starts are re-rolled past these too.
+const BLACKLIST = new Set([
+  "FUCK",
+  "SHIT",
+  "CUNT",
+  "COCK",
+  "DICK",
+  "TWAT",
+  "TITS",
+  "PISS",
+  "CUMS",
+  "JIZZ",
+  "SLUT",
+  "KIKE",
+  "SPIC",
+  "GOOK",
+  "COON",
+  "DAGO",
+  "FAGS",
+  "RAPE",
+  "NAZI",
+  "ANAL",
+  "ARSE",
+  "HOMO",
+  "DYKE",
+  "WANK",
+  "CRAP",
+  "HOES",
+]);
+
+export const isBlocked = (rack: string[]) => BLACKLIST.has(rack.join(""));
+
+export function randomRack(): string[] {
+  const letters = CYCLE.slice(0, 26);
+  let rack: string[];
+  do {
+    rack = Array.from(
+      { length: RACK_SIZE },
+      () => letters[Math.floor(Math.random() * letters.length)],
+    );
+  } while (isBlocked(rack));
+  return rack;
+}
