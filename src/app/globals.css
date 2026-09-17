@@ -185,6 +185,490 @@ button:not(:disabled) {
   }
 }
 
+/* JUMP: crouch, leap, then land with a squash. The small downward nudges keep the
+   tile's foot planted while it's squashed about its centre. */
+@keyframes scrabble-jump {
+  0%,
+  100% {
+    translate: 0;
+    scale: 1;
+  }
+  18% {
+    translate: 0 3px;
+    scale: 1.12 0.8;
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  50% {
+    translate: 0 -20px;
+    scale: 0.94 1.08;
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.3);
+  }
+  78% {
+    translate: 0 2px;
+    scale: 1.1 0.86;
+  }
+}
+
+/* FIRE: the whole silhouette leans a little, about its base. */
+.scrabble-flame {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: scrabble-flame 2600ms ease-in-out infinite alternate;
+}
+
+@keyframes scrabble-flame {
+  from {
+    transform: skewX(2.5deg) scaleY(0.97);
+  }
+  to {
+    transform: skewX(-2.5deg) scaleY(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrabble-flame {
+    animation: none;
+  }
+}
+
+/* FLIP: a higher JUMP. The turn is its own animation so it can run at one
+   steady rate through the air, where the jump's easing would stall it at the
+   top. */
+@keyframes scrabble-flip {
+  0%,
+  100% {
+    translate: 0;
+    scale: 1;
+  }
+  14% {
+    translate: 0 2px;
+    scale: 1.07 0.88;
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  50% {
+    translate: 0 -32px;
+    scale: 1;
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.3);
+  }
+  86% {
+    translate: 0 1px;
+    scale: 1.06 0.92;
+  }
+}
+
+@keyframes scrabble-flip-turn {
+  0%,
+  14% {
+    rotate: 0deg;
+  }
+  86%,
+  100% {
+    rotate: 360deg;
+  }
+}
+
+@keyframes scrabble-buzz {
+  0%,
+  100% {
+    translate: 0;
+    rotate: 0deg;
+  }
+  25% {
+    translate: -1.5px 0.5px;
+    rotate: -1.5deg;
+  }
+  75% {
+    translate: 1.5px -0.5px;
+    rotate: 1.5deg;
+  }
+}
+
+@keyframes scrabble-wave {
+  0%,
+  100% {
+    translate: 0;
+    scale: 1;
+    animation-timing-function: ease-out;
+  }
+  45% {
+    translate: 0 -14px;
+    scale: 0.96 1.1;
+    animation-timing-function: ease-in;
+  }
+}
+
+@keyframes scrabble-entry {
+  from {
+    opacity: 0;
+  }
+}
+
+/* SNOW / RAIN: from above the viewport to below it, drifting by --dx and turning by --spin. */
+@keyframes scrabble-fall {
+  from {
+    translate: 0 0;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  to {
+    translate: var(--dx) 112vh;
+    rotate: var(--spin);
+    opacity: 1;
+  }
+}
+
+/* DUST: blown across the viewport left to right, fading in and out. */
+@keyframes scrabble-drift {
+  from {
+    translate: -100vw 0;
+    opacity: 0;
+  }
+  25%,
+  75% {
+    opacity: 1;
+  }
+  to {
+    translate: 110vw var(--dy);
+    opacity: 0;
+  }
+}
+
+/* Runs alongside scrabble-drift on its own property, so each speck's path waves
+   rather than ruling a line across the screen. */
+@keyframes scrabble-waver {
+  from {
+    transform: translateY(calc(var(--waver) * -1));
+  }
+  to {
+    transform: translateY(var(--waver));
+  }
+}
+
+/* DICE: a single knife stroke, drawn along its length. */
+@keyframes scrabble-chop {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* CRAB: a good long look at it first; then sideways off the left of the page in
+   two bursts, the way they do. scrabble-scurry is the bounce of the run. */
+@keyframes scrabble-scuttle {
+  0%,
+  26% {
+    translate: 0;
+    animation-timing-function: ease-in-out;
+  }
+  44%,
+  52% {
+    translate: -22vw;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
+  }
+  100% {
+    translate: -130vw;
+  }
+}
+
+/* The claws going up and down from the shoulder through the wait before the
+   scuttle. An odd count, so they end up raised and stay there for the run. */
+.scrabble-claw {
+  animation: scrabble-claw 400ms 500ms ease-in-out 5 alternate both;
+}
+
+@keyframes scrabble-claw {
+  from {
+    rotate: 0deg;
+  }
+  to {
+    rotate: var(--up);
+  }
+}
+
+/* Once he's off: the same swing but uneven, and a different length per claw, so
+   the two drift in and out of step. */
+@keyframes scrabble-claw-flail {
+  0%,
+  100% {
+    rotate: var(--up);
+  }
+  17% {
+    rotate: calc(var(--up) * 0.25);
+  }
+  34% {
+    rotate: calc(var(--up) * 1.15);
+  }
+  52% {
+    rotate: calc(var(--up) * -0.2);
+  }
+  66% {
+    rotate: calc(var(--up) * 0.8);
+  }
+  83% {
+    rotate: calc(var(--up) * 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrabble-claw {
+    animation: none;
+  }
+}
+
+@keyframes scrabble-scurry {
+  from {
+    transform: translateY(0) rotate(-1.2deg);
+  }
+  to {
+    transform: translateY(-2.5px) rotate(1.2deg);
+  }
+}
+
+/* A leg, flexing about where it joins the body. */
+.scrabble-leg {
+  transform-box: fill-box;
+  animation: scrabble-leg 900ms ease-in-out infinite alternate;
+}
+
+@keyframes scrabble-leg-idle {
+  from {
+    transform: rotate(-1.5deg);
+  }
+  to {
+    transform: rotate(1.5deg);
+  }
+}
+
+@keyframes scrabble-leg {
+  from {
+    transform: rotate(-7deg);
+  }
+  to {
+    transform: rotate(7deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrabble-leg {
+    animation: none;
+  }
+}
+
+/* FISH: the line swings from the rod's tip; the float bobs on its end. */
+.scrabble-line {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: scrabble-swing 3400ms ease-in-out infinite alternate;
+}
+
+.scrabble-float {
+  animation: scrabble-bob 1300ms ease-in-out infinite alternate;
+}
+
+@keyframes scrabble-swing {
+  from {
+    transform: rotate(-5deg);
+  }
+  to {
+    transform: rotate(6deg);
+  }
+}
+
+@keyframes scrabble-bob {
+  from {
+    translate: 0 -3px;
+  }
+  to {
+    translate: 0 5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrabble-line,
+  .scrabble-float {
+    animation: none;
+  }
+}
+
+/* DICE: a chopped-off piece toppling to its place in the heap, to stay. */
+.scrabble-crumb {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes scrabble-crumble {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+  }
+}
+
+/* ACID: the layer comes up slowly, holds, and goes; its hue keeps turning; each
+   blob wanders between two spots, swelling on the way. */
+@keyframes scrabble-acid {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  30%,
+  72% {
+    opacity: 0.26;
+  }
+}
+
+@keyframes scrabble-hue {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+@keyframes scrabble-acid-blob {
+  from {
+    translate: var(--from);
+    scale: 1;
+  }
+  to {
+    translate: var(--to);
+    scale: var(--swell);
+  }
+}
+
+/* SUDO: the fake console docks up from the bottom edge of the page. */
+@keyframes scrabble-dock {
+  from {
+    translate: 0 100%;
+  }
+}
+
+/* STAR / MOON: the letter gives way to the glyph, then comes back. */
+@keyframes scrabble-glyph-in {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  30%,
+  70% {
+    opacity: 1;
+  }
+}
+
+@keyframes scrabble-glyph-out {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  30%,
+  70% {
+    opacity: 0;
+  }
+}
+
+/* COIN: knocked out of the tile, up and partway back, spinning edge-on. */
+@keyframes scrabble-coin {
+  0% {
+    translate: 0 -10px;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.4, 1);
+  }
+  60% {
+    translate: 0 -52px;
+    opacity: 1;
+    animation-timing-function: ease-in;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    translate: 0 -34px;
+    opacity: 0;
+  }
+}
+
+@keyframes scrabble-coin-spin {
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+/* LOVE: a heart slips out from behind its tile, pops, then drifts off. */
+@keyframes scrabble-love {
+  0% {
+    translate: 0;
+    scale: 0.4;
+    opacity: 0;
+  }
+  18% {
+    translate: 0 -26px;
+    scale: 1.35;
+    opacity: 1;
+  }
+  26% {
+    scale: 0.9;
+  }
+  34% {
+    translate: 0 -30px;
+    scale: 1;
+    rotate: 0deg;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    translate: var(--love-x) -78px;
+    scale: 1;
+    rotate: var(--love-tilt);
+    opacity: 0;
+  }
+}
+
+/* RISE: two of these run at once with animation-composition: add. Each starts
+   and ends at rest so the tile leaves the rack without a jump. */
+@keyframes scrabble-sway-a {
+  0% {
+    translate: 0;
+    rotate: 0deg;
+    animation-timing-function: ease-out;
+  }
+  25% {
+    translate: var(--sway-a) 0;
+    rotate: var(--tilt);
+    animation-timing-function: ease-in-out;
+  }
+  75% {
+    translate: calc(var(--sway-a) * -1) 0;
+    rotate: calc(var(--tilt) * -1);
+    animation-timing-function: ease-in;
+  }
+  100% {
+    translate: 0;
+    rotate: 0deg;
+  }
+}
+
+@keyframes scrabble-sway-b {
+  0% {
+    translate: 0;
+    animation-timing-function: ease-out;
+  }
+  25% {
+    translate: var(--sway-b) 0;
+    animation-timing-function: ease-in-out;
+  }
+  75% {
+    translate: calc(var(--sway-b) * -1) 0;
+    animation-timing-function: ease-in;
+  }
+  100% {
+    translate: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* One steady flash instead of three. */
   @keyframes scrabble-maga {

@@ -89,6 +89,9 @@ const BLACKLIST = new Set([
   "HOMO",
   "NAZI",
   "PISS",
+  // Not rude, just refused: anyone hunting for sound effects will try it.
+  "FART",
+  "POOP",
 ]);
 
 // A tile on the rack. `blank` marks a blank played as a letter: it shows the

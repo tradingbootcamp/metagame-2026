@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import ScrabbleDebug from "./ScrabbleDebug";
 import ContentPage from "@/v2/components/ContentPage";
 import { NoPuzzle } from "@/v2/components/dividers/DividerRow";
 import BloodOnTheClocktowerDivider from "@/v2/components/dividers/blood-on-the-clocktower";
@@ -50,10 +51,16 @@ export default function DividersPage() {
       <NoPuzzle>
         {DIVIDERS.map(([name, Divider]) => (
           <section key={name} className="relative">
-            <p className="absolute top-1/2 left-0 -translate-y-1/2 font-mono text-xs text-ink/50">
-              {name}
-            </p>
-            <Divider />
+            {Divider === ScrabbleDivider ? (
+              <ScrabbleDebug />
+            ) : (
+              <>
+                <p className="absolute top-1/2 left-0 -translate-y-1/2 font-mono text-xs text-ink/50">
+                  {name}
+                </p>
+                <Divider />
+              </>
+            )}
           </section>
         ))}
       </NoPuzzle>
