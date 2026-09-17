@@ -13,6 +13,8 @@ type Move = { dx: number; dy: number; knight?: boolean };
 
 // A knight walks its L one leg at a time — up then across on the way out,
 // across then down on the way back — so x and y sit on separate wrappers.
+// Only the glyph takes clicks: the x wrapper's box stays on the rank, where
+// it would cover a neighbour.
 function Piece({
   icon,
   move,
@@ -34,8 +36,7 @@ function Piece({
   });
   return (
     <span
-      onClick={onClick}
-      className="transition-transform ease-out"
+      className="pointer-events-none transition-transform ease-out"
       style={{
         transform: `translateX(${moved ? move.dx * STEP : 0}px)`,
         ...leg(!moved),
@@ -49,8 +50,9 @@ function Piece({
         }}
       >
         <span
+          onClick={onClick}
           onAnimationEnd={onShakeEnd}
-          className={`block ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
+          className={`pointer-events-auto block ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
         >
           <IconGlyph icon={icon} />
         </span>
