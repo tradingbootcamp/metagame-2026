@@ -122,11 +122,13 @@ function ClueForm() {
     <div className="flex w-full flex-col gap-2">
       {/* Status (thanks / errors) floats over the photo's bottom corner so it
           takes no layout space and the dialog keeps one size. */}
-      <div className="relative">
+      {/* On phones the portrait photo is capped so the form row fits on
+          screen without the dialog scrolling. */}
+      <div className="relative flex justify-center">
         <Image
           src={metaCryptics}
           alt={ALT}
-          className="h-auto w-full"
+          className="h-auto max-h-[calc(100svh-8rem)] w-auto max-w-full sm:max-h-none sm:w-full"
           sizes="(min-width: 640px) 630px, 100vw"
         />
         <p
@@ -139,7 +141,10 @@ function ClueForm() {
         </p>
       </div>
       {recordId === null ? (
-        <form onSubmit={submitClue} className="flex flex-col gap-3 sm:flex-row">
+        <form
+          onSubmit={submitClue}
+          className="flex shrink-0 flex-col gap-3 sm:flex-row"
+        >
           <Input
             type="text"
             required
@@ -153,7 +158,7 @@ function ClueForm() {
           <Button
             type="submit"
             disabled={busy || !clue.trim()}
-            className="h-12 px-7 text-base"
+            className="h-10 px-5 text-sm sm:h-12 sm:px-7 sm:text-base"
           >
             {busy ? "…" : "Submit"}
           </Button>
@@ -163,7 +168,7 @@ function ClueForm() {
         // so the dialog keeps its height.
         <form
           onSubmit={submitContact}
-          className={`grid grid-cols-2 gap-3 sm:flex ${
+          className={`grid shrink-0 grid-cols-2 gap-3 sm:flex ${
             contactDone || !recordId ? "invisible" : ""
           }`}
         >
@@ -189,7 +194,7 @@ function ClueForm() {
             type="submit"
             variant="navy"
             disabled={busy || (!name.trim() && !email.trim())}
-            className="col-span-2 h-12 px-7 text-base sm:col-auto"
+            className="col-span-2 h-10 px-5 text-sm sm:col-auto sm:h-12 sm:px-7 sm:text-base"
           >
             {busy ? "…" : "Add"}
           </Button>
