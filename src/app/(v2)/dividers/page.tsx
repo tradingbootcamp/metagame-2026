@@ -4,6 +4,7 @@ import { NoPuzzle } from "@/v2/components/dividers/DividerRow";
 import BloodOnTheClocktowerDivider from "@/v2/components/dividers/blood-on-the-clocktower";
 import CandyLandDivider from "@/v2/components/dividers/candy-land";
 import CardSuitsDivider from "@/v2/components/dividers/card-suits";
+import CastlingDivider from "@/v2/components/dividers/castling";
 import CatanDivider from "@/v2/components/dividers/catan";
 import ChessDivider from "@/v2/components/dividers/chess";
 import DdrDivider from "@/v2/components/dividers/ddr";
@@ -24,6 +25,7 @@ import TetrisDivider from "@/v2/components/dividers/tetris";
 // eyeballed without wiring them into the one-pager. 404s in production.
 const DIVIDERS: [string, React.ComponentType][] = [
   ["chess", ChessDivider],
+  ["castling", CastlingDivider],
   ["card-suits", CardSuitsDivider],
   ["dice", DiceDivider],
   ["dnd", DndDivider],

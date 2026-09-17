@@ -6,6 +6,7 @@ import { SuitCard } from "@/v2/components/dividers/card-suits";
 import { SUITS } from "@/v2/components/dividers/card-suits/suits";
 import { ICONS as BOTC } from "@/v2/components/dividers/blood-on-the-clocktower/icons";
 import { ICONS as CANDY } from "@/v2/components/dividers/candy-land/icons";
+import { ICONS as CASTLING } from "@/v2/components/dividers/castling/icons";
 import { ICONS as CATAN } from "@/v2/components/dividers/catan/icons";
 import { ICONS as DND } from "@/v2/components/dividers/dnd/icons";
 import { ICONS as MONOPOLY } from "@/v2/components/dividers/monopoly/icons";
@@ -21,10 +22,15 @@ const LINK = "font-semibold text-navy underline underline-offset-2";
 
 // Every divider glyph by its `name`, so a credit can show the art it covers.
 const GLYPHS = new Map<string, GameIcon>(
-  [...BOTC, ...CANDY, ...CATAN, ...DND, ...MONOPOLY, ...PACMAN].map((ic) => [
-    ic.name,
-    ic,
-  ]),
+  [
+    ...BOTC,
+    ...CANDY,
+    ...CASTLING,
+    ...CATAN,
+    ...DND,
+    ...MONOPOLY,
+    ...PACMAN,
+  ].map((ic) => [ic.name, ic]),
 );
 
 type Credit = { name: string; author: string; href: string; icons: string[] };
@@ -148,6 +154,30 @@ const NOUN_PROJECT: Credit[] = [
     author: "Lars Meiertoberens",
     href: "https://thenounproject.com/icon/licorice-4282177/",
     icons: ["candy-licorice"],
+  },
+  {
+    name: "King",
+    author: "Lewen Design",
+    href: "https://thenounproject.com/icon/king-8388703/",
+    icons: ["chess-king"],
+  },
+  {
+    name: "Bishop",
+    author: "IconInnovate",
+    href: "https://thenounproject.com/icon/bishop-8399684/",
+    icons: ["chess-bishop"],
+  },
+  {
+    name: "Knight",
+    author: "IconInnovate",
+    href: "https://thenounproject.com/icon/knight-8399674/",
+    icons: ["chess-knight"],
+  },
+  {
+    name: "Rook",
+    author: "IconInnovate",
+    href: "https://thenounproject.com/icon/rook-8399680/",
+    icons: ["chess-rook"],
   },
 ];
 
