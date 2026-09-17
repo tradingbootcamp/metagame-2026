@@ -1,4 +1,4 @@
-// Minecraft divider — pickaxe, grass block, creeper face, torch. Pixel grids
+// Minecraft divider — pickaxe, grass block, creeper face, sword. Pixel grids
 // except the block, which is an isometric cube with the grass fringe and a
 // little dirt punched out of its sides. Nothing to credit. Not mounted
 // anywhere yet.
@@ -9,20 +9,18 @@ import { sprite } from "../sprite";
 
 const CHARCOAL = "#4d4d4d";
 
-// Traced from the game's 16×16 diamond pickaxe sprite.
+// The game's 16×16 diamond pickaxe sprite, thinned a pixel to read at 30px.
 const PICKAXE = sprite("mc-pickaxe", [
   "......#####.....",
   ".....#########..",
-  "......########..",
-  "..........####..",
-  ".........######.",
-  "........###.###.",
-  ".......###..###.",
-  "......###...###.",
-  ".....###....###.",
-  "....###......#..",
-  "...###..........",
-  "..###...........",
+  "..........#####.",
+  ".........##..##.",
+  "........##...##.",
+  ".......##....##.",
+  "......##.....##.",
+  ".....##......##.",
+  "....##.......#..",
+  "...##...........",
   "..##............",
 ]);
 
@@ -37,22 +35,24 @@ const CREEPER = sprite("mc-creeper", [
   "##.##.##",
 ]);
 
-// Wall torch: flame block on a stick leaning off the wall.
-const TORCH = sprite("mc-torch", [
-  "..........##....",
-  ".........####...",
-  ".........####...",
-  ".........####...",
-  "..........##....",
-  "..........##....",
-  ".........##.....",
-  ".........##.....",
-  "........##......",
-  "........##......",
-  ".......##.......",
-  ".......##.......",
-  "......##........",
-  "......##........",
+// Traced from the game's 16×16 diamond sword sprite.
+const SWORD = sprite("mc-sword", [
+  ".............###",
+  "............####",
+  "...........#####",
+  "..........#####.",
+  ".........#####..",
+  "........#####...",
+  "..##...#####....",
+  "..###.#####.....",
+  "...#######......",
+  "...######.......",
+  "....####........",
+  "...######.......",
+  "..###.####......",
+  "####....##......",
+  "###.............",
+  "###.............",
 ]);
 
 // Isometric cube: top rhombus, left and right faces, seams between them.
@@ -123,7 +123,7 @@ export default function MinecraftDivider() {
       <IconGlyph icon={PICKAXE} />
       <GrassBlock />
       <IconGlyph icon={CREEPER} />
-      <IconGlyph icon={TORCH} />
+      <IconGlyph icon={SWORD} />
     </DividerRow>
   );
 }

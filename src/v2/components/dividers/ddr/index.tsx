@@ -14,30 +14,16 @@ const DIRECTIONS = [
   ["ddr-right", 90],
 ] as const;
 
+const inset = (k: number) => `translate(50 50) scale(${k}) translate(-50 -50)`;
+
 function Arrow({ name, rotate }: { name: string; rotate: number }) {
   const maskId = `mask-${name}`;
   return (
     <svg viewBox="0 0 100 100" aria-hidden className={`${GLYPH} ${SHADOW}`}>
-      {/* Strokes centred on the outline carve uniform bands: a 9-wide
-          border kept, a 5-wide gap cut, and the core kept. */}
       <mask id={maskId} maskUnits="userSpaceOnUse">
         <path d={ARROW} fill="#fff" />
-        <path
-          d={ARROW}
-          fill="none"
-          stroke="#000"
-          strokeWidth={28}
-          strokeLinejoin="miter"
-          strokeMiterlimit={8}
-        />
-        <path
-          d={ARROW}
-          fill="none"
-          stroke="#fff"
-          strokeWidth={18}
-          strokeLinejoin="miter"
-          strokeMiterlimit={8}
-        />
+        <path d={ARROW} transform={inset(0.72)} fill="#000" />
+        <path d={ARROW} transform={inset(0.5)} fill="#fff" />
       </mask>
       <g transform={`rotate(${rotate} 50 50)`}>
         <path d={ARROW} fill={CHARCOAL} mask={`url(#${maskId})`} />
