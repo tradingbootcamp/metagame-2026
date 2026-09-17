@@ -122,13 +122,14 @@ function ClueForm() {
     <div className="flex w-full flex-col gap-2">
       {/* Status (thanks / errors) floats over the photo's bottom corner so it
           takes no layout space and the dialog keeps one size. */}
-      {/* On phones the portrait photo is capped so the form row fits on
-          screen without the dialog scrolling. */}
-      <div className="relative flex justify-center">
+      {/* On short phones the portrait photo is capped so the form row fits on
+          screen without the dialog scrolling. Width stays 100%: with w-auto,
+          next/image's intrinsic size comes from `sizes` and can be tiny. */}
+      <div className="relative">
         <Image
           src={metaCryptics}
           alt={ALT}
-          className="h-auto max-h-[calc(100svh-8rem)] w-auto max-w-full sm:max-h-none sm:w-full"
+          className="h-auto max-h-[calc(100svh-8rem)] w-full object-contain sm:max-h-none"
           sizes="(min-width: 640px) 630px, 100vw"
         />
         <p
@@ -153,7 +154,7 @@ function ClueForm() {
             onChange={(e) => setClue(e.target.value)}
             placeholder="Submit your own cryptic clue"
             aria-label="Your cryptic clue"
-            className={`${FIELD_LIGHT} min-w-0 flex-1`}
+            className={`${FIELD_LIGHT} min-w-0 sm:flex-1`}
           />
           <Button
             type="submit"
