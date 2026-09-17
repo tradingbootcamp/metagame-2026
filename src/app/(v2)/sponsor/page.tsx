@@ -183,8 +183,8 @@ function isCount(v: Cell): v is string {
   return typeof v === "string" && /^\d+$/.test(v);
 }
 
-// Lowest tier (Patron up) offering exactly this value — checks and counts are
-// colored by the tier where that benefit first appears.
+// Lowest tier (Patron up) offering exactly this value — in the stacked cards,
+// checks and counts are colored by the tier where that benefit first appears.
 function introducedAt(benefit: (typeof BENEFITS)[number], value: Cell) {
   return [...TIERS].reverse().find((t) => benefit.cells[t.id] === value);
 }
@@ -193,7 +193,7 @@ function markClass(benefit: (typeof BENEFITS)[number], value: Cell): string {
   return introducedAt(benefit, value)?.mark ?? "text-meeple";
 }
 
-function BenefitCell({ value, mark }: { value: Cell; mark: string }) {
+function BenefitCell({ value }: { value: Cell }) {
   if (value === false) {
     return (
       <span aria-label="Not included" className="text-ink/30">
@@ -202,11 +202,11 @@ function BenefitCell({ value, mark }: { value: Cell; mark: string }) {
     );
   }
   if (isCount(value)) {
-    return <span className={`text-[17px] font-bold ${mark}`}>{value}</span>;
+    return <span className="text-[17px] font-bold text-navy">{value}</span>;
   }
   return (
     <span className="inline-flex flex-col items-center gap-1">
-      <FaCheck aria-label="Included" className={mark} size={14} />
+      <FaCheck aria-label="Included" className="text-meeple" size={14} />
       {typeof value === "string" && (
         <span className="text-xs leading-tight font-semibold text-ink/70">
           {value}
@@ -365,10 +365,7 @@ export default function SponsorPage() {
                   </th>
                   {TIERS.map((t) => (
                     <td key={t.id} className={`px-3 py-3.5 ${t.cell}`}>
-                      <BenefitCell
-                        value={b.cells[t.id]}
-                        mark={markClass(b, b.cells[t.id])}
-                      />
+                      <BenefitCell value={b.cells[t.id]} />
                     </td>
                   ))}
                 </tr>
