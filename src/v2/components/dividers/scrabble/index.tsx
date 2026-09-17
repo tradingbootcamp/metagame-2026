@@ -204,29 +204,14 @@ export function ScrabbleTile({
     <svg
       viewBox="0 0 100 100"
       aria-hidden
-      className={`${GLYPH} shrink-0 touch-manipulation pointer-coarse:cursor-pointer ${look.glow ? "drop-shadow-[0_0_5px_rgba(216,80,43,0.85)]" : SHADOW} ${
-        look.tall ||
-        look.dead ||
-        look.fuzz ||
-        look.fire ||
-        horns ||
-        halo ||
-        diced ||
-        rod
-          ? "overflow-visible"
-          : ""
+      className={`${GLYPH} shrink-0 touch-manipulation overflow-visible pointer-coarse:cursor-pointer ${
+        look.glow ? "drop-shadow-[0_0_5px_rgba(216,80,43,0.85)]" : SHADOW
       }`}
       style={{
         transform: `${motion?.transform ?? ""} ${restPose(look)}`,
         opacity: motion?.opacity,
         ...motion?.extra,
-        // --scrabble-hit is a tap margin on touch devices and 0 on a mouse,
-        // which gets the icon's exact edges. Cancelled by an equal negative
-        // margin either way, so the rack lays out the same on both.
-        boxSizing: "content-box",
-        padding: "var(--scrabble-hit)",
-        margin: "calc(var(--scrabble-hit) * -1)",
-        marginLeft: `calc(${gap}px - var(--scrabble-hit))`,
+        marginLeft: gap,
         WebkitTapHighlightColor: "transparent",
         transition: `${
           motion?.transition ??
@@ -236,6 +221,19 @@ export function ScrabbleTile({
       onClick={onClick}
       ref={ref}
     >
+      {/* The tap target. An <svg> is only hit-tested where it actually paints,
+          and the letter is a hole punched through the tile — so without this a
+          tap on the letter, on a rounded corner, or in the 4-unit border falls
+          straight through. Sized past the viewBox on touch (globals.css),
+          hence overflow-visible above. */}
+      <rect
+        className="scrabble-hit"
+        x="0"
+        y="0"
+        width="100"
+        height="100"
+        fill="none"
+      />
       {/* The default mask region stops 10% outside the viewBox, which would
           crop a tile that's both TALL and DEAD. */}
       <mask

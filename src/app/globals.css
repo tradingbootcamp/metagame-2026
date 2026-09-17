@@ -168,18 +168,19 @@ button:not(:disabled) {
   }
 }
 
-/* Scrabble divider (src/v2/components/dividers/scrabble). Tapping one tile
-   over and over is the whole interaction, and 30px of icon is a third of what
-   a thumb wants, so touch devices get a transparent margin around each tile.
-   A mouse gets the icon's exact edges — the row is a secret, and a hitbox
-   wider than the tile is one more way to trip over it. */
-:root {
-  --scrabble-hit: 0px;
+/* Scrabble divider (src/v2/components/dividers/scrabble). The invisible rect
+   that catches taps on a tile: pointer-events has to be spelled out, since the
+   rect paints nothing. A mouse gets the tile's own 30px box; tapping one tile
+   over and over is the whole interaction on a phone, so touch grows it to the
+   46px a thumb wants (scaled about the centre of the 100-unit viewBox). */
+.scrabble-hit {
+  pointer-events: all;
+  transform-origin: 50px 50px;
 }
 
 @media (pointer: coarse) {
-  :root {
-    --scrabble-hit: 8px;
+  .scrabble-hit {
+    transform: scale(1.54);
   }
 }
 
