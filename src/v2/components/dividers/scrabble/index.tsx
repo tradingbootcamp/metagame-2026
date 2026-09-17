@@ -5,7 +5,7 @@ import { RACK, SCRABBLE_SCORES } from "./tiles";
 
 // Scrabble tiles in the piece-set language: a solid charcoal tile with the
 // letter and its score punched out so the cream shows through. Drawn here, no
-// attribution needed. `letter` is any A–Z; the score comes from tiles.ts.
+// attribution needed. Not mounted anywhere yet; available for a future section. `letter` is any A–Z; the score comes from tiles.ts.
 const CHARCOAL = "#4d4d4d";
 const FONT = "var(--font-space-grotesk), system-ui, sans-serif";
 
