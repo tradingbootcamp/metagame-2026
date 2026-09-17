@@ -41,8 +41,8 @@ export default function HeroBackdrop() {
           background: `radial-gradient(circle at 50% var(--wash-y), rgba(${CREAM}, ${WASH_PEAK}) 0%, rgba(${CREAM}, 0) ${WASH_TAPER}%)`,
         }}
       />
-      {/* Bottom edge dissolves into the page background over the last 5%. */}
-      <div className="absolute inset-x-0 bottom-0 h-[5%] bg-linear-to-b from-transparent to-background" />
+      {/* Bottom edge dissolves into the page background over the last 10%. */}
+      <div className="absolute inset-x-0 bottom-0 h-[10%] bg-linear-to-b from-transparent to-background" />
     </div>
   );
 }
