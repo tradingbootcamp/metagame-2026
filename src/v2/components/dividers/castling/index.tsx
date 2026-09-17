@@ -39,14 +39,14 @@ function Piece({
       className="pointer-events-none transition-transform ease-out"
       style={{
         transform: `translateX(${moved ? move.dx * STEP : 0}px)`,
-        ...leg(Boolean(move.knight)),
+        ...leg(false),
       }}
     >
       <span
         className="block transition-transform ease-out"
         style={{
           transform: `translateY(${moved ? move.dy * STEP : 0}px)`,
-          ...leg(false),
+          ...leg(Boolean(move.knight)),
         }}
       >
         <span
@@ -103,7 +103,7 @@ export default function CastlingDivider() {
       />
       <Piece
         icon={knightIcon}
-        move={{ dx: -1, dy: -2, knight: true }}
+        move={{ dx: -2, dy: -1, knight: true }}
         moved={knight}
         onClick={() => !castled && setKnight(!knight)}
       />
