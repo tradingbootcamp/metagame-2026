@@ -144,5 +144,6 @@ This is not a puzzle.
 You received this email because you subscribed to our list. You can
 unsubscribe at any time: {{UnsubscribeURL}}
 
-Powered by EmailOctopus: {{RewardsURL}}
 {{SenderInfoLine}}
+
+Powered by EmailOctopus: {{RewardsURL}}
