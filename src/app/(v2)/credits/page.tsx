@@ -9,7 +9,6 @@ import { ICONS as CANDY } from "@/v2/components/dividers/candy-land/icons";
 import { ICONS as CATAN } from "@/v2/components/dividers/catan/icons";
 import { ICONS as DND } from "@/v2/components/dividers/dnd/icons";
 import { ICONS as MONOPOLY } from "@/v2/components/dividers/monopoly/icons";
-import { ICONS as NINTENDO } from "@/v2/components/dividers/nintendo/icons";
 import { ICONS as PACMAN } from "@/v2/components/dividers/pacman/icons";
 
 export const metadata: Metadata = {
@@ -154,30 +153,6 @@ const NOUN_PROJECT: Credit[] = [
     author: "Lars Meiertoberens",
     href: "https://thenounproject.com/icon/licorice-4282177/",
     icons: ["candy-licorice"],
-  },
-  {
-    name: "NES Controller",
-    author: "Smashicons",
-    href: "https://thenounproject.com/icon/nes-controller-1128223/",
-    icons: ["nintendo-nes"],
-  },
-  {
-    name: "N64 Controller",
-    author: "David Swanson",
-    href: "https://thenounproject.com/icon/n64-controller-197931/",
-    icons: ["nintendo-n64"],
-  },
-  {
-    name: "Gamecube",
-    author: "Jack",
-    href: "https://thenounproject.com/icon/gamecube-221027/",
-    icons: ["nintendo-gamecube"],
-  },
-  {
-    name: "Wiimote",
-    author: "David Swanson",
-    href: "https://thenounproject.com/icon/wiimote-197924/",
-    icons: ["nintendo-wiimote"],
   },
 ];
 

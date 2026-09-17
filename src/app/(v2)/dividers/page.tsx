@@ -14,7 +14,6 @@ import GoDivider from "@/v2/components/dividers/go";
 import JigsawDivider from "@/v2/components/dividers/jigsaw";
 import MinecraftDivider from "@/v2/components/dividers/minecraft";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
-import NintendoDivider from "@/v2/components/dividers/nintendo";
 import PacmanDivider from "@/v2/components/dividers/pacman";
 import ScrabbleDivider from "@/v2/components/dividers/scrabble";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
@@ -42,7 +41,6 @@ const DIVIDERS: [string, React.ComponentType][] = [
   ["space-invaders", SpaceInvadersDivider],
   ["minecraft", MinecraftDivider],
   ["ddr", DdrDivider],
-  ["nintendo", NintendoDivider],
 ];
 
 export default function DividersPage() {
