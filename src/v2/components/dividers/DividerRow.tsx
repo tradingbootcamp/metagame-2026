@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Star } from "lucide-react";
 import {
   getServerSnapshot,
@@ -10,6 +15,15 @@ import {
   subscribe,
   type Game,
 } from "@/v2/puzzle/store";
+
+// Wrap rows in this to take them out of the puzzle (the /dividers gallery):
+// clicks neither guess nor shake, and no stars render.
+const NoPuzzleContext = createContext(false);
+export function NoPuzzle({ children }: { children: React.ReactNode }) {
+  return (
+    <NoPuzzleContext.Provider value={true}>{children}</NoPuzzleContext.Provider>
+  );
+}
 
 // Layout shell every section divider shares: two hairlines flanking the icons.
 // With `game` set the row is a puzzle target (src/v2/puzzle/store.ts): stars
@@ -25,9 +39,11 @@ export default function DividerRow({
 }) {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [shaking, setShaking] = useState(false);
-  const stars = game ? state.stars[game] : 0;
+  const off = useContext(NoPuzzleContext);
+  const stars = game && !off ? state.stars[game] : 0;
 
   const onClick = () => {
+    if (off) return;
     if ((game ? guess(game) : miss()) === "wrong") setShaking(true);
   };
 
@@ -52,9 +68,9 @@ export default function DividerRow({
         onAnimationEnd={() => setShaking(false)}
         className={`flex items-center gap-[22px] ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
       >
-        {game && star}
+        {game && !off && star}
         {children}
-        {game && star}
+        {game && !off && star}
       </div>
       <span className="h-px max-w-40 flex-1 bg-line" />
     </div>

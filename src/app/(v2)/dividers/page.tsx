@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import ContentPage from "@/v2/components/ContentPage";
+import { NoPuzzle } from "@/v2/components/dividers/DividerRow";
 import BloodOnTheClocktowerDivider from "@/v2/components/dividers/blood-on-the-clocktower";
+import CandyLandDivider from "@/v2/components/dividers/candy-land";
 import CardSuitsDivider from "@/v2/components/dividers/card-suits";
 import CatanDivider from "@/v2/components/dividers/catan";
 import ChessDivider from "@/v2/components/dividers/chess";
@@ -32,18 +34,21 @@ const DIVIDERS: [string, React.ComponentType][] = [
   ["jigsaw", JigsawDivider],
   ["tetris", TetrisDivider],
   ["scrabble", ScrabbleDivider],
+  ["candy-land", CandyLandDivider],
 ];
 
 export default function DividersPage() {
   if (process.env.NODE_ENV === "production") notFound();
   return (
     <ContentPage eyebrow="Dev only" title="Dividers">
-      {DIVIDERS.map(([name, Divider]) => (
-        <section key={name}>
-          <p className="font-mono text-xs text-ink/50">{name}</p>
-          <Divider />
-        </section>
-      ))}
+      <NoPuzzle>
+        {DIVIDERS.map(([name, Divider]) => (
+          <section key={name}>
+            <p className="font-mono text-xs text-ink/50">{name}</p>
+            <Divider />
+          </section>
+        ))}
+      </NoPuzzle>
     </ContentPage>
   );
 }

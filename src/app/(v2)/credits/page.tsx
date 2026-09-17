@@ -5,6 +5,7 @@ import { IconGlyph, type GameIcon } from "@/v2/components/dividers/IconDivider";
 import { SuitCard } from "@/v2/components/dividers/card-suits";
 import { SUITS } from "@/v2/components/dividers/card-suits/suits";
 import { ICONS as BOTC } from "@/v2/components/dividers/blood-on-the-clocktower/icons";
+import { ICONS as CANDY } from "@/v2/components/dividers/candy-land/icons";
 import { ICONS as CATAN } from "@/v2/components/dividers/catan/icons";
 import { ICONS as DND } from "@/v2/components/dividers/dnd/icons";
 import { ICONS as MONOPOLY } from "@/v2/components/dividers/monopoly/icons";
@@ -20,7 +21,7 @@ const LINK = "font-semibold text-navy underline underline-offset-2";
 
 // Every divider glyph by its `name`, so a credit can show the art it covers.
 const GLYPHS = new Map<string, GameIcon>(
-  [...BOTC, ...CATAN, ...DND, ...MONOPOLY, ...PACMAN].map((ic) => [
+  [...BOTC, ...CANDY, ...CATAN, ...DND, ...MONOPOLY, ...PACMAN].map((ic) => [
     ic.name,
     ic,
   ]),
@@ -123,6 +124,30 @@ const NOUN_PROJECT: Credit[] = [
     author: "Callum Taylor",
     href: "https://thenounproject.com/browse/icons/term/wool/",
     icons: ["catan-wool"],
+  },
+  {
+    name: "Lollipop",
+    author: "Nook Fulloption",
+    href: "https://thenounproject.com/icon/lollipop-1161550/",
+    icons: ["candy-lollipop"],
+  },
+  {
+    name: "Candy Cane",
+    author: "Alex Furgiuele",
+    href: "https://thenounproject.com/icon/candy-cane-1441095/",
+    icons: ["candy-candy-cane"],
+  },
+  {
+    name: "Crown",
+    author: "Upnow Graphic",
+    href: "https://thenounproject.com/icon/crown-7080893/",
+    icons: ["candy-crown"],
+  },
+  {
+    name: "Licorice",
+    author: "Lars Meiertoberens",
+    href: "https://thenounproject.com/icon/licorice-4282177/",
+    icons: ["candy-licorice"],
   },
 ];
 
