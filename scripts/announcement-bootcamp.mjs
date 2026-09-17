@@ -16,38 +16,13 @@ swap(
   "      Arbor also runs non-trading events: Metagame 2026, Nov 6&ndash;8 in Berkeley. Early bird tickets through September 30\n",
 );
 
-const card = `          <table
-            role="presentation"
-            class="container"`;
 swap(
-  `        <td align="center" style="padding: 24px 12px">\n${card}`,
-  `        <td align="center" style="padding: 24px 12px">
-          <table
-            role="presentation"
-            class="container"
-            width="600"
-            cellpadding="0"
-            cellspacing="0"
-            border="0"
-            style="width: 600px; max-width: 600px"
-          >
-            <tr>
-              <td
-                align="center"
-                style="
-                  padding: 4px 28px 22px 28px;
-                  font-family: Arial, Helvetica, sans-serif;
-                  font-size: 16px;
-                  line-height: 1.55;
-                  color: #173059;
-                "
-              >
-                Did you know Arbor also runs non-trading events? We are
-                excited to announce our second annual Metagame Conference!
-              </td>
-            </tr>
-          </table>
-${card}`,
+  `                  We&rsquo;re back! Metagame is a weekend conference devoted to`,
+  `                  <div style="margin: 0 0 14px 0">
+                    Did you know Arbor also runs non-trading events? We are
+                    excited to announce our second annual Metagame Conference!
+                  </div>
+                  Metagame is a weekend conference devoted to`,
 );
 
 swap(
@@ -56,18 +31,50 @@ swap(
                 <table`,
   `                  Metagame 2026
                 </div>
-                <div
-                  style="
-                    margin: 8px 0 0 0;
-                    font-family: 'Courier New', Courier, monospace;
-                    font-size: 12px;
-                    letter-spacing: 2px;
-                    text-transform: uppercase;
-                    color: #8a827d;
-                  "
+                <table
+                  role="presentation"
+                  cellpadding="0"
+                  cellspacing="0"
+                  border="0"
+                  style="margin-top: 12px"
                 >
-                  by Arbor
-                </div>
+                  <tr>
+                    <td
+                      valign="middle"
+                      style="
+                        padding: 0 10px 0 0;
+                        font-family: Arial, Helvetica, sans-serif;
+                        font-size: 18px;
+                        font-weight: bold;
+                        line-height: 1.2;
+                        color: #173059;
+                      "
+                    >
+                      Presented by
+                    </td>
+                    <td valign="middle" style="padding: 0 7px 0 0; line-height: 0">
+                      <img
+                        src="https://www.trading.camp/trading-bootcamp/arbor-tree-logo-medlight.png"
+                        width="36"
+                        height="32"
+                        alt=""
+                        style="display: block; width: 36px; height: 32px; border: 0"
+                      />
+                    </td>
+                    <td
+                      valign="middle"
+                      style="
+                        font-family: Arial, Helvetica, sans-serif;
+                        font-size: 22px;
+                        font-weight: bold;
+                        line-height: 1.2;
+                        color: #173059;
+                      "
+                    >
+                      Arbor
+                    </td>
+                  </tr>
+                </table>
                 <table`,
 );
 
