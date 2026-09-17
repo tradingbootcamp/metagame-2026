@@ -404,7 +404,7 @@ export default function Home() {
               <Image
                 src={megagameChess}
                 alt="Giant orange and blue chess pieces, a knight in front"
-                className="h-auto w-full [mask-image:linear-gradient(to_right,transparent,black_30%)]"
+                className="h-auto w-full lg:[mask-image:linear-gradient(to_right,transparent,black_30%)]"
                 sizes="(min-width: 1024px) 560px, 100vw"
               />
               <figcaption className="mt-3 text-center text-sm text-ink/70 italic">
