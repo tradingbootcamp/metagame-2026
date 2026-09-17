@@ -92,4 +92,12 @@ swap(
                     >team@metagame.games</a>.`,
 );
 
+swap(
+  `                  You received this email because you subscribed to our list.
+                  You can`,
+  `                  You received this email because you subscribed to updates from
+                  Arbor Trading Bootcamp. Metagame is another Arbor event, and we
+                  thought you&rsquo;d want to hear about it. You can`,
+);
+
 writeFileSync(new URL("announcement-bootcamp.html", dir), html);
