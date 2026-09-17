@@ -17,12 +17,20 @@ swap(
 );
 
 swap(
-  `                  We&rsquo;re back! Metagame is a weekend conference devoted to`,
+  `                  We&rsquo;re back! Metagame is a weekend conference devoted to
+                  games, in the broadest sense of the word: any experience`,
   `                  <div style="margin: 0 0 14px 0">
                     Did you know Arbor also runs non-trading events? We are
                     excited to announce our second annual Metagame Conference!
                   </div>
-                  Metagame is a weekend conference devoted to`,
+                  <div style="margin: 0 0 14px 0">
+                    Metagame 2026 is a weekend conference dedicated to games and
+                    strategy in all shapes and flavors. If you like our bootcamps,
+                    we think you&rsquo;d enjoy Metagame and would love to see you
+                    there!
+                  </div>
+                  Metagame is devoted to games in the broadest sense of the word:
+                  any experience`,
 );
 
 swap(
