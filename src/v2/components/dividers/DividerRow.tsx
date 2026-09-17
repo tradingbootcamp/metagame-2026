@@ -6,6 +6,7 @@ import {
   getServerSnapshot,
   getSnapshot,
   guess,
+  miss,
   subscribe,
   type Game,
 } from "@/v2/puzzle/store";
@@ -13,21 +14,25 @@ import {
 // Layout shell every section divider shares: two hairlines flanking the icons.
 // With `game` set the row is a puzzle target (src/v2/puzzle/store.ts): stars
 // appear either side of the icons as the game is found, and a wrong pick
-// shakes the row. Deliberately no pointer cursor or label — it's a secret.
+// shakes the row. `decoy` rows are in the puzzle but aren't any game: a click
+// is always wrong, and they earn no stars. Deliberately no pointer cursor or
+// label — it's a secret.
 export default function DividerRow({
   children,
   game,
+  decoy = false,
 }: {
   children: React.ReactNode;
   game?: Game;
+  decoy?: boolean;
 }) {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [shaking, setShaking] = useState(false);
   const stars = game ? state.stars[game] : 0;
 
   const onClick = () => {
-    if (!game) return;
-    if (guess(game) === "wrong") setShaking(true);
+    const result = game ? guess(game) : decoy ? miss() : null;
+    if (result === "wrong") setShaking(true);
   };
 
   // Stars always take up their space so earning one doesn't shift the icons.

@@ -99,14 +99,19 @@ function pickNext(stars: Record<Game, Stars>, exclude: Game): Current {
 
 export type Guess = "right" | "wrong" | "done";
 
+// A click on a divider that isn't any game (a decoy row): always wrong.
+export function miss(): Guess {
+  const s = getSnapshot();
+  if (s.current === "win") return "done";
+  write({ stars: zeroStars(), current: s.current });
+  return "wrong";
+}
+
 // A click on `game`'s divider.
 export function guess(game: Game): Guess {
   const s = getSnapshot();
   if (s.current === "win") return "done";
-  if (s.current !== game) {
-    write({ stars: zeroStars(), current: s.current });
-    return "wrong";
-  }
+  if (s.current !== game) return miss();
   const stars = { ...s.stars, [game]: Math.min(2, s.stars[game] + 1) as Stars };
   write({ stars, current: pickNext(stars, game) });
   return "right";
