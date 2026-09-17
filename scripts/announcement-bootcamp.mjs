@@ -7,7 +7,8 @@ const dir = new URL("../emails/", import.meta.url);
 let html = readFileSync(new URL("announcement.html", dir), "utf8");
 
 function swap(anchor, replacement) {
-  if (html.split(anchor).length !== 2) throw new Error(`anchor not found exactly once: ${anchor.slice(0, 60)}`);
+  if (html.split(anchor).length !== 2)
+    throw new Error(`anchor not found exactly once: ${anchor.slice(0, 60)}`);
   html = html.replace(anchor, replacement);
 }
 
