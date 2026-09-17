@@ -164,7 +164,11 @@ export function ScrabbleTile({
   onClick?: () => void;
   ref?: Ref<SVGSVGElement>;
 }) {
-  const maskId = useId();
+  const tileId = useId();
+  // WebKit doesn't repaint a masked shape when only the mask's contents
+  // change (the new letter showed up on the next scroll), so the letter is
+  // part of the id: the mask reference itself changes with it.
+  const maskId = `${tileId}-${letter}${scored ? "" : "-blank"}`;
   // TALL grows the tile borders upward only; the text keeps its size and just
   // re-centres, so the letter never deforms. The extra height spills outside
   // the viewBox, hence overflow-visible.
