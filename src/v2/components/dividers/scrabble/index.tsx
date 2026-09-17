@@ -1,7 +1,9 @@
-import { useId } from "react";
+"use client";
+
+import { useId, useState } from "react";
 import DividerRow from "../DividerRow";
 import { GLYPH, SHADOW } from "../sizing";
-import { RACK, SCRABBLE_SCORES } from "./tiles";
+import { SCRABBLE_SCORES, WORDS } from "./tiles";
 
 // Scrabble tiles in the piece-set language: a solid charcoal tile with the
 // letter and its score punched out so the cream shows through. Drawn here, no
@@ -52,12 +54,19 @@ export function ScrabbleTile({ letter }: { letter: string }) {
   );
 }
 
+// Clicking the row cycles through WORDS (META ⇄ GAME).
 export default function ScrabbleDivider() {
+  const [i, setI] = useState(0);
   return (
     <DividerRow>
-      {RACK.map((l, i) => (
-        <ScrabbleTile key={i} letter={l} />
-      ))}
+      <span
+        className="flex items-center gap-[22px]"
+        onClick={() => setI((i + 1) % WORDS.length)}
+      >
+        {WORDS[i].split("").map((l, j) => (
+          <ScrabbleTile key={j} letter={l} />
+        ))}
+      </span>
     </DividerRow>
   );
 }

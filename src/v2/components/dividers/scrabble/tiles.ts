@@ -28,6 +28,5 @@ export const SCRABBLE_SCORES: Record<string, number> = {
   Z: 10,
 };
 
-// The tiles the divider lays down. Together with a second A and E they spell
-// METAGAME, so this is the full rack for spelling shenanigans elsewhere.
-export const RACK = ["M", "E", "T", "A", "G"] as const;
+// The words the divider flips between on click. Together they spell METAGAME.
+export const WORDS = ["META", "GAME"] as const;
