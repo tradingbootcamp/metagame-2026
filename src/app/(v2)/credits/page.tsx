@@ -21,15 +21,10 @@ const LINK = "font-semibold text-navy underline underline-offset-2";
 
 // Every divider glyph by its `name`, so a credit can show the art it covers.
 const GLYPHS = new Map<string, GameIcon>(
-  [
-    ...BOTC,
-    ...CANDY,
-    ...CATAN,
-    ...DND,
-    ...MONOPOLY,
-    ...NINTENDO,
-    ...PACMAN,
-  ].map((ic) => [ic.name, ic]),
+  [...BOTC, ...CANDY, ...CATAN, ...DND, ...MONOPOLY, ...PACMAN].map((ic) => [
+    ic.name,
+    ic,
+  ]),
 );
 
 type Credit = { name: string; author: string; href: string; icons: string[] };
