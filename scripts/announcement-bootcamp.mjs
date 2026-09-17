@@ -83,4 +83,13 @@ swap(
                 <table`,
 );
 
+swap(
+  `                  or reply to this email.`,
+  `                  or email
+                  <a
+                    href="mailto:team@metagame.games"
+                    style="color: #d8502b; font-weight: bold; text-decoration: none"
+                    >team@metagame.games</a>.`,
+);
+
 writeFileSync(new URL("announcement-bootcamp.html", dir), html);
