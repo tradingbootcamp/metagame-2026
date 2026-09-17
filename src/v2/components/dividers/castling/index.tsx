@@ -9,10 +9,9 @@ import { ICONS } from "./icons";
 const STEP = 46;
 const LEG = 180;
 
-// `xFirst` set = an L walked one leg at a time, in that order.
-type Move = { dx: number; dy: number; xFirst?: boolean };
+type Move = { dx: number; dy: number; knight?: boolean };
 
-// x and y sit on separate wrappers so a knight can walk its L leg by leg.
+// x and y sit on separate wrappers so a knight can walk its L two then one.
 // Only the glyph takes clicks: the x wrapper's box stays on the rank, where
 // it would cover a neighbour.
 function Piece({
@@ -39,14 +38,14 @@ function Piece({
       className="pointer-events-none transition-transform ease-out"
       style={{
         transform: `translateX(${moved ? move.dx * STEP : 0}px)`,
-        ...leg(move.xFirst === false),
+        ...leg(Boolean(move.knight)),
       }}
     >
       <span
         className="block transition-transform ease-out"
         style={{
           transform: `translateY(${moved ? move.dy * STEP : 0}px)`,
-          ...leg(move.xFirst === true),
+          ...leg(false),
         }}
       >
         <span
@@ -67,7 +66,6 @@ function Piece({
 export default function CastlingDivider() {
   const [bishop, setBishop] = useState(false);
   const [knight, setKnight] = useState(false);
-  const [knightXFirst, setKnightXFirst] = useState(false);
   const [castled, setCastled] = useState(false);
   const [shaking, setShaking] = useState(false);
   const [king, bishopIcon, knightIcon, rook] = ICONS;
@@ -79,14 +77,6 @@ export default function CastlingDivider() {
       setKnight(false);
     } else if (bishop && knight) setCastled(true);
     else setShaking(true);
-  };
-
-  // The knight's L runs along whichever file the bishop isn't on: the f-file
-  // once the bishop is on g2, else the g-file.
-  const onKnight = () => {
-    if (castled) return;
-    setKnightXFirst(knight ? !bishop : bishop);
-    setKnight(!knight);
   };
 
   return (
@@ -107,9 +97,9 @@ export default function CastlingDivider() {
       />
       <Piece
         icon={knightIcon}
-        move={{ dx: -1, dy: -2, xFirst: knightXFirst }}
+        move={{ dx: -1, dy: -2, knight: true }}
         moved={knight}
-        onClick={onKnight}
+        onClick={() => !castled && setKnight(!knight)}
       />
       <Piece
         icon={rook}
