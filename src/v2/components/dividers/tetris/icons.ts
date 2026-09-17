@@ -1,7 +1,7 @@
 // Tetromino divider — I · O · T · L drawn here as four unit squares each (no
-// third-party art, nothing to credit). Pieces are cell grids so they can be
-// rotated; `render` turns a grid into an svg viewBox + paths sized in px so
-// the layout box follows the rotation. Not mounted anywhere yet.
+// third-party art, nothing to credit). `render` centres a piece's cells in a
+// square box so it can spin in place without the row reflowing. Not mounted
+// anywhere yet.
 
 const CELL = 11;
 const SEAM = 1.2; // gap between cells, so each square reads as its own block
@@ -47,27 +47,19 @@ export const PIECES: { name: string; cells: Cell[] }[] = [
   },
 ];
 
-const size = (cells: Cell[]) => ({
-  cols: Math.max(...cells.map(([c]) => c)) + 1,
-  rows: Math.max(...cells.map(([, r]) => r)) + 1,
-});
-
-// Quarter turn clockwise: (c, r) → (rows-1-r, c).
-export function rotate(cells: Cell[]): Cell[] {
-  const { rows } = size(cells);
-  return cells.map(([c, r]) => [rows - 1 - r, c]);
-}
-
 export function render(cells: Cell[]) {
-  const { cols, rows } = size(cells);
+  const cols = Math.max(...cells.map(([c]) => c)) + 1;
+  const rows = Math.max(...cells.map(([, r]) => r)) + 1;
+  const box = Math.max(cols, rows) * CELL;
+  const dx = (box - cols * CELL) / 2;
+  const dy = (box - rows * CELL) / 2;
   const side = CELL - SEAM;
   return {
-    viewBox: `0 0 ${cols * CELL} ${rows * CELL}`,
-    width: cols * CELL,
-    height: rows * CELL,
+    viewBox: `0 0 ${box} ${box}`,
+    box,
     paths: cells.map(
       ([c, r]) =>
-        `M${c * CELL + SEAM / 2} ${r * CELL + SEAM / 2}h${side}v${side}h-${side}z`,
+        `M${dx + c * CELL + SEAM / 2} ${dy + r * CELL + SEAM / 2}h${side}v${side}h-${side}z`,
     ),
   };
 }

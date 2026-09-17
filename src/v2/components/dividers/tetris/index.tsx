@@ -3,21 +3,22 @@
 import { useState } from "react";
 import DividerRow from "../DividerRow";
 import { SHADOW } from "../sizing";
-import { PIECES, render, rotate, type Cell } from "./icons";
+import { PIECES, render, type Cell } from "./icons";
 
 const CHARCOAL = "#4d4d4d";
 
-// Click a piece to turn it a quarter clockwise; the row re-flows around it.
-function Piece({ cells: initial }: { cells: Cell[] }) {
-  const [cells, setCells] = useState(initial);
-  const { viewBox, width, height, paths } = render(cells);
+// Click a piece to spin it a quarter clockwise. The angle only ever grows so
+// consecutive clicks keep turning the same way instead of unwinding.
+function Piece({ cells }: { cells: Cell[] }) {
+  const [deg, setDeg] = useState(0);
+  const { viewBox, box, paths } = render(cells);
   return (
     <svg
       viewBox={viewBox}
       aria-hidden
-      style={{ width, height }}
-      className={`${SHADOW} transition-[width,height] duration-200`}
-      onClick={() => setCells(rotate(cells))}
+      style={{ width: box, height: box, transform: `rotate(${deg}deg)` }}
+      className={`${SHADOW} transition-transform duration-300 ease-out`}
+      onClick={() => setDeg(deg + 90)}
     >
       {paths.map((d, i) => (
         <path key={i} d={d} fill={CHARCOAL} />
