@@ -12,7 +12,7 @@ import HeroBackdrop from "./HeroBackdrop";
 // section's stacking context: behind the dice, above the cream.
 export default function SiteHero() {
   return (
-    <section className="relative isolate flex min-h-[88svh] flex-col items-center px-8 pt-[12vh] pb-8 text-center">
+    <section className="relative isolate flex min-h-[88svh] flex-col items-center px-8 pt-[12vh] pb-8 text-center md:pt-[7vh]">
       <HeroBackdrop />
       <Dice />
       <div className="mt-4 flex w-[85vw] max-w-[52ch] flex-col items-center rounded-lg border border-navy/10 bg-cream/70 px-5 py-4 shadow-[0_8px_24px_rgba(23,48,89,0.12)] md:mt-10 md:w-auto md:px-7 md:py-5">

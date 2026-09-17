@@ -24,7 +24,7 @@ export default function HeroBackdrop() {
       // w-screen centred on the hero: it sits inside main's gutter.
       // --wash-y is the dice's centre: the hero's 12vh top padding plus half
       // the dice stage height (Dice.tsx).
-      className="absolute top-0 left-1/2 -z-10 h-[88svh] w-screen -translate-x-1/2 overflow-hidden [--wash-y:calc(12vh+clamp(160px,20vh,220px)/2)] md:[--wash-y:calc(12vh+clamp(330px,38vh,440px)/2)]"
+      className="absolute top-0 left-1/2 -z-10 h-[88svh] w-screen -translate-x-1/2 overflow-hidden [--wash-y:calc(12vh+clamp(160px,20vh,220px)/2)] md:[--wash-y:calc(7vh+clamp(330px,38vh,440px)/2)]"
     >
       {/* The puzzle's pick: a CSS variable the boot script sets on <html>
           before first paint (src/v2/puzzle). */}
