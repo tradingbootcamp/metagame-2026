@@ -91,16 +91,20 @@ const BLACKLIST = new Set([
   "PISS",
 ]);
 
-export const isBlocked = (rack: string[]) => BLACKLIST.has(rack.join(""));
+// A tile on the rack. `blank` marks a blank played as a letter: it shows the
+// letter but, as in the game, no score.
+export type Tile = { letter: string; blank?: boolean };
 
-export function randomRack(): string[] {
+export const isBlocked = (rack: Tile[]) =>
+  BLACKLIST.has(rack.map((t) => t.letter).join(""));
+
+export function randomRack(): Tile[] {
   const letters = CYCLE.slice(0, 26);
-  let rack: string[];
+  let rack: Tile[];
   do {
-    rack = Array.from(
-      { length: RACK_SIZE },
-      () => letters[Math.floor(Math.random() * letters.length)],
-    );
+    rack = Array.from({ length: RACK_SIZE }, () => ({
+      letter: letters[Math.floor(Math.random() * letters.length)],
+    }));
   } while (isBlocked(rack));
   return rack;
 }
