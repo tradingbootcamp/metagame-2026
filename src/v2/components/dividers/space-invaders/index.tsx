@@ -1,5 +1,5 @@
-// Space Invaders divider — the three alien sprites and the laser cannon, drawn
-// as pixel grids. Nothing to credit. Not mounted anywhere yet.
+// Space Invaders divider — squid, crab, a shield bunker and the laser cannon,
+// drawn as pixel grids. Nothing to credit. Not mounted anywhere yet.
 import IconDivider from "../IconDivider";
 import { sprite } from "../sprite";
 
@@ -24,15 +24,23 @@ const ICONS = [
     "#.#.....#.#",
     "...##.##...",
   ]),
-  sprite("invader-octopus", [
-    "....####....",
-    ".##########.",
-    "############",
-    "###..##..###",
-    "############",
-    "...##..##...",
-    "..##.##.##..",
-    "##........##",
+  sprite("invader-bunker", [
+    "....##############....",
+    "...################...",
+    "..##################..",
+    ".####################.",
+    "######################",
+    "######################",
+    "######################",
+    "######################",
+    "######################",
+    "######################",
+    "######################",
+    "######################",
+    "#######........#######",
+    "######..........######",
+    "#####............#####",
+    "#####............#####",
   ]),
   sprite("invader-cannon", [
     "......#......",
