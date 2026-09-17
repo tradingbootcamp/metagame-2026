@@ -168,8 +168,22 @@ button:not(:disabled) {
   }
 }
 
-/* Scrabble divider easter eggs (src/v2/components/dividers/scrabble): MAGA
-   flashes a red bar across the top of the viewport. */
+/* Scrabble divider (src/v2/components/dividers/scrabble). Tapping one tile
+   over and over is the whole interaction, and 30px of icon is a third of what
+   a thumb wants, so touch devices get a transparent margin around each tile.
+   A mouse gets the icon's exact edges — the row is a secret, and a hitbox
+   wider than the tile is one more way to trip over it. */
+:root {
+  --scrabble-hit: 0px;
+}
+
+@media (pointer: coarse) {
+  :root {
+    --scrabble-hit: 8px;
+  }
+}
+
+/* MAGA flashes a red bar across the top of the viewport. */
 @keyframes scrabble-maga {
   0%,
   22%,

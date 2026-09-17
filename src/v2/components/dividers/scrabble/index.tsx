@@ -220,10 +220,13 @@ export function ScrabbleTile({
         transform: `${motion?.transform ?? ""} ${restPose(look)}`,
         opacity: motion?.opacity,
         ...motion?.extra,
+        // --scrabble-hit is a tap margin on touch devices and 0 on a mouse,
+        // which gets the icon's exact edges. Cancelled by an equal negative
+        // margin either way, so the rack lays out the same on both.
         boxSizing: "content-box",
-        padding: HIT_PAD,
-        margin: -HIT_PAD,
-        marginLeft: gap - HIT_PAD,
+        padding: "var(--scrabble-hit)",
+        margin: "calc(var(--scrabble-hit) * -1)",
+        marginLeft: `calc(${gap}px - var(--scrabble-hit))`,
         WebkitTapHighlightColor: "transparent",
         transition: `${
           motion?.transition ??
@@ -584,10 +587,6 @@ const FLASH_MS = 350;
 // — for ROLL's geometry and for placing LOVE's hearts.
 const TILE_PX = 30;
 const TILE_GAP = 22;
-// Transparent tap margin around each tile: 30px of icon is a third of the
-// 44px a thumb wants. Cancelled by an equal negative margin, so the rack is
-// laid out exactly as before and tileX() still finds the tiles.
-const HIT_PAD = 8;
 const PLATE_PAD = 16;
 // PART: extra room opened up in the middle of the rack.
 const PART_PX = 14;
