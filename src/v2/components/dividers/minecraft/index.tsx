@@ -9,19 +9,23 @@ import { sprite } from "../sprite";
 
 const CHARCOAL = "#4d4d4d";
 
-// The game's 16×16 diamond pickaxe sprite, thinned a pixel to read at 30px.
+// The game's diamond pickaxe, a pixel thinner than the 16×16 sprite so it
+// reads at 30px: symmetric about the handle, a point at each end of the head.
 const PICKAXE = sprite("mc-pickaxe", [
   "......#####.....",
-  ".....#########..",
-  "..........#####.",
-  ".........##..##.",
-  "........##...##.",
-  ".......##....##.",
-  "......##.....##.",
-  ".....##......##.",
-  "....##.......#..",
+  ".....##########.",
+  ".............##.",
+  "...........##.#.",
+  "..........##..#.",
+  ".........##...##",
+  "........##....##",
+  ".......##.....##",
+  "......##......##",
+  ".....##.......##",
+  "....##........#.",
   "...##...........",
   "..##............",
+  ".##.............",
 ]);
 
 const CREEPER = sprite("mc-creeper", [
