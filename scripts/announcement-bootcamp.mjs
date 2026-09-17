@@ -11,9 +11,23 @@ function swap(anchor, replacement) {
   html = html.replace(anchor, replacement);
 }
 
+// EmailOctopus's own preview-text field supplies the preheader for this list.
 swap(
-  "      Early bird tickets available through September 30\n",
-  "      Arbor also runs non-trading events: Metagame 2026, Nov 6&ndash;8 in Berkeley. Early bird tickets through September 30\n",
+  `    <div
+      style="
+        display: none;
+        max-height: 0;
+        overflow: hidden;
+        font-size: 1px;
+        line-height: 1px;
+        color: #fff5f2;
+      "
+    >
+      Early bird tickets available through September 30
+    </div>
+
+`,
+  "",
 );
 
 swap(
