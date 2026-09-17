@@ -43,8 +43,10 @@ export default function DividersPage() {
     <ContentPage eyebrow="Dev only" title="Dividers">
       <NoPuzzle>
         {DIVIDERS.map(([name, Divider]) => (
-          <section key={name}>
-            <p className="font-mono text-xs text-ink/50">{name}</p>
+          <section key={name} className="relative">
+            <p className="absolute top-1/2 left-0 -translate-y-1/2 font-mono text-xs text-ink/50">
+              {name}
+            </p>
             <Divider />
           </section>
         ))}
