@@ -452,7 +452,7 @@ export default function Home() {
               </p>
               <Button asChild variant="navy" className="mt-5">
                 <a href={HOUSING_URL} target="_blank" rel="noopener noreferrer">
-                  Book your rooms
+                  Book your room
                 </a>
               </Button>
             </div>
