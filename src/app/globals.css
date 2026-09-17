@@ -167,3 +167,43 @@ button:not(:disabled) {
     transform: translateX(4px);
   }
 }
+
+/* Scrabble divider easter eggs (src/v2/components/dividers/scrabble). MAGA
+   flashes a red bar across the top of the viewport; a rack drawn after FALL
+   or RISE fades back in. */
+@keyframes scrabble-maga {
+  0%,
+  22%,
+  55% {
+    opacity: 1;
+  }
+  11%,
+  38% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes scrabble-draw {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* One steady flash instead of three. */
+  @keyframes scrabble-maga {
+    0%,
+    70% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}
