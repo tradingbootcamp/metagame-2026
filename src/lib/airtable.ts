@@ -435,7 +435,7 @@ export async function recordEgg(found: EggEvent, visit: string): Promise<void> {
               Event: found.event,
               ...(found.event === "cast" && {
                 Word: found.word,
-                Via: found.via,
+                "Word via": found.via,
               }),
               ...(found.event === "clicks" && { Clicks: found.clicks }),
               Visit: visit,
