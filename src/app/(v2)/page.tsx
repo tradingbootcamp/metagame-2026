@@ -11,7 +11,7 @@ import ChessDivider from "@/v2/components/dividers/chess";
 import DiceDivider from "@/v2/components/dividers/dice";
 import DndDivider from "@/v2/components/dividers/dnd";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
-import PacmanDivider from "@/v2/components/dividers/pacman";
+import ScrabbleDivider from "@/v2/components/dividers/scrabble";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
 import TetrisDivider from "@/v2/components/dividers/tetris";
 import FaqItem from "@/v2/components/FaqItem";
@@ -512,7 +512,7 @@ export default function Home() {
         </div>
       </section>
 
-      <PacmanDivider />
+      <ScrabbleDivider />
 
       {/* tickets */}
       <section id="tickets" className={`${SECTION} md:py-14`}>

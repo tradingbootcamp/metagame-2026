@@ -68,8 +68,7 @@ import {
 // attribution needed. `letter` is A–Z or "" for the blank; the score comes
 // from tiles.ts and is left off when `scored` is false (a played blank).
 // `armed` dims the tile while it waits for a typed letter. `look` and
-// `motion` carry the easter eggs (effects.ts). Not mounted anywhere yet;
-// available for a future section.
+// `motion` carry the easter eggs (effects.ts).
 const CHARCOAL = "#4d4d4d";
 const FONT = "var(--font-space-grotesk), system-ui, sans-serif";
 
