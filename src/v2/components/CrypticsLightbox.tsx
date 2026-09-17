@@ -48,7 +48,7 @@ export default function CrypticsLightbox({
           close button: click outside or press Escape. */}
       <DialogContent
         showCloseButton={false}
-        className="flex max-h-[calc(100vh-1rem)] w-[min(630px,calc(100vw-1rem))] max-w-none flex-col gap-2 overflow-y-auto border-navy/15 bg-cream p-2 text-ink"
+        className="top-2 flex max-h-[calc(100vh-1rem)] w-[min(630px,calc(100vw-1rem))] max-w-none translate-y-0 flex-col gap-2 overflow-y-auto border-navy/15 bg-cream p-2 text-ink sm:top-1/2 sm:-translate-y-1/2"
       >
         <DialogTitle className="sr-only">
           Cryptic Crossword Contest, 2025
@@ -144,7 +144,7 @@ function ClueForm() {
       {recordId === null ? (
         <form
           onSubmit={submitClue}
-          className="flex shrink-0 flex-col gap-3 sm:flex-row"
+          className="order-first flex shrink-0 flex-col gap-3 sm:order-none sm:flex-row"
         >
           <Input
             type="text"
@@ -169,7 +169,7 @@ function ClueForm() {
         // so the dialog keeps its height.
         <form
           onSubmit={submitContact}
-          className={`grid shrink-0 grid-cols-2 gap-3 sm:flex ${
+          className={`order-first grid shrink-0 grid-cols-2 gap-3 sm:order-none sm:flex ${
             contactDone || !recordId ? "invisible" : ""
           }`}
         >
