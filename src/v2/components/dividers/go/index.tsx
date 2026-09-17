@@ -5,7 +5,7 @@ import DividerRow from "../DividerRow";
 import { GLYPH, SHADOW } from "../sizing";
 
 const CHARCOAL = "#4d4d4d";
-const LINES = [17, 50, 83]; // grid intersections
+const LINES = [15, 50, 85]; // grid intersections
 const R = 14;
 
 type Point = [x: number, y: number]; // grid indices 0..2
@@ -51,8 +51,8 @@ function GoShape({ name, black, white }: Shape) {
       <g mask={`url(#${maskId})`} fill={CHARCOAL}>
         {LINES.map((v) => (
           <g key={v}>
-            <rect x={LINES[0]} y={v - 1.5} width={66} height={3} />
-            <rect x={v - 1.5} y={LINES[0]} width={3} height={66} />
+            <rect x={LINES[0]} y={v - 1.5} width={70} height={3} />
+            <rect x={v - 1.5} y={LINES[0]} width={3} height={70} />
           </g>
         ))}
         {[...black, ...white].map((p, i) => (

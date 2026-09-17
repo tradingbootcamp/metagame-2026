@@ -17,8 +17,8 @@ const PIECES: Piece[] = [
   { name: "jigsaw-middle-2", edges: ["socket", "socket", "tab", "tab"] },
 ];
 
-const A = 24; // square from A to B in a 100 box; tabs reach ~10 beyond
-const B = 76;
+const A = 18; // square from A to B in a 100 box; tabs reach 16 beyond
+const B = 82;
 const L = B - A;
 
 // One edge in a local frame: s along the edge (0–1), o outward. A tab is a
