@@ -2,16 +2,32 @@
 // Fire-and-forget: nothing here may delay or break an effect.
 export type Via = "click" | "type";
 
-// Groups one page load's casts together and nothing more: made fresh each
-// load, kept only in memory, tied to no one.
+// Groups one sitting's casts together and nothing more. Kept in sessionStorage
+// so it survives a reload — reloading is how you get a finished rack back, so
+// it's part of the same sitting — but not the tab closing, and it's tied to no
+// one. Falls back to per-load if storage is unavailable.
+const KEY = "scrabble-visit";
 let visit: string | undefined;
+
+const visitId = () => {
+  if (visit) return visit;
+  try {
+    visit = sessionStorage.getItem(KEY) ?? undefined;
+    if (!visit) {
+      visit = Math.random().toString(36).slice(2, 8);
+      sessionStorage.setItem(KEY, visit);
+    }
+  } catch {
+    visit ??= Math.random().toString(36).slice(2, 8);
+  }
+  return visit;
+};
 
 export function trackCast(word: string, via: Via) {
   try {
-    visit ??= Math.random().toString(36).slice(2, 8);
     navigator.sendBeacon(
       "/api/egg",
-      new Blob([JSON.stringify({ word, via, visit })], {
+      new Blob([JSON.stringify({ word, via, visit: visitId() })], {
         type: "application/json",
       }),
     );
