@@ -654,7 +654,11 @@ export default function ScrabbleDivider({
   const hangUp = useRef<((fade?: number) => void) | null>(null);
   useEffect(() => () => hangUp.current?.(), []);
   const before = useRef<Tile[] | null>(null);
-  const typing = useRef<{ under: Tile[]; length: number } | null>(null);
+  const typing = useRef<{
+    under: Tile[];
+    length: number;
+    reached: number;
+  } | null>(null);
   const plateRef = useRef<HTMLDivElement>(null);
   const holeRef = useRef<HTMLSpanElement>(null);
   const tileRefs = useRef<(SVGSVGElement | null)[]>([]);
@@ -1020,8 +1024,8 @@ export default function ScrabbleDivider({
   };
 
   // Typed letters overwrite the rack from the left, one at a time; the tiles
-  // not reached yet keep what they had when the word was started (and get it
-  // back on backspace).
+  // not reached yet keep what they had when the word was started. Backspace
+  // leaves a blank behind.
   const spell = (letters: string) => {
     if (exit || stopped) return;
     setArmed(null);
@@ -1029,13 +1033,14 @@ export default function ScrabbleDivider({
       !typing.current ||
       (letters.length === 1 && typing.current.length !== 2) ||
       letters.length > typing.current.length + 1;
-    if (fresh) typing.current = { under: tiles, length: 0 };
-    const { under, length } = typing.current!;
+    if (fresh) typing.current = { under: tiles, length: 0, reached: 0 };
+    const { under, length, reached } = typing.current!;
     typing.current!.length = letters.length;
+    typing.current!.reached = Math.max(reached, letters.length);
     const next = under.map((t, i) =>
-      i < letters.length ? { letter: letters[i] } : t,
+      i < letters.length ? { letter: letters[i] } : i < reached ? BLANK[i] : t,
     );
-    // Backspacing only uncovers what was there; it doesn't spell it again.
+    // Backspacing only clears; it doesn't spell what's left again.
     if (letters.length < length) setRack(next);
     else play(next);
   };
