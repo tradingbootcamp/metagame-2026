@@ -6,7 +6,7 @@ import { SuitCard } from "@/v2/components/dividers/card-suits";
 import { SUITS } from "@/v2/components/dividers/card-suits/suits";
 import { ICONS as BOTC } from "@/v2/components/dividers/blood-on-the-clocktower/icons";
 import { ICONS as CATAN } from "@/v2/components/dividers/catan/icons";
-import { ICONS as DUNGEON } from "@/v2/components/dividers/dungeon-crawl/icons";
+import { ICONS as DND } from "@/v2/components/dividers/dnd/icons";
 import { ICONS as MONOPOLY } from "@/v2/components/dividers/monopoly/icons";
 import { ICONS as PACMAN } from "@/v2/components/dividers/pacman/icons";
 
@@ -20,7 +20,7 @@ const LINK = "font-semibold text-navy underline underline-offset-2";
 
 // Every divider glyph by its `name`, so a credit can show the art it covers.
 const GLYPHS = new Map<string, GameIcon>(
-  [...BOTC, ...CATAN, ...DUNGEON, ...MONOPOLY, ...PACMAN].map((ic) => [
+  [...BOTC, ...CATAN, ...DND, ...MONOPOLY, ...PACMAN].map((ic) => [
     ic.name,
     ic,
   ]),

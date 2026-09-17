@@ -1,4 +1,4 @@
-// Dungeon-crawl divider — icons from game-icons.net (CC BY 3.0), bg rect
+// D&D divider — the hero puzzle's dnd row; icons from game-icons.net (CC BY 3.0), bg rect
 // stripped and recoloured by IconDivider. Authors: lorc, delapouite.
 // Keep a visible game-icons.net credit somewhere on the site.
 import type { GameIcon } from "../IconDivider";

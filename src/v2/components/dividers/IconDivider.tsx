@@ -39,14 +39,12 @@ export function IconGlyph({ icon }: { icon: GameIcon }) {
 export default function IconDivider({
   icons,
   game,
-  decoy,
 }: {
   icons: GameIcon[];
   game?: Game;
-  decoy?: boolean;
 }) {
   return (
-    <DividerRow game={game} decoy={decoy}>
+    <DividerRow game={game}>
       {icons.map((ic) => (
         <IconGlyph key={ic.name} icon={ic} />
       ))}

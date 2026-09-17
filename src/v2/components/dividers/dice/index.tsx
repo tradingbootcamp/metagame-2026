@@ -1,7 +1,7 @@
 // Faceted polyhedral "weird dice" (d4/d6/d8/d20) as solid charcoal glyphs with
 // transparent facet seams (cut via mask, so the page bg shows through) — the
-// same solid-with-negative-space language as the weirdchess divider. The
-// hero puzzle's D&D row.
+// same solid-with-negative-space language as the weirdchess divider. Just
+// dice — not a puzzle game.
 import DividerRow from "../DividerRow";
 import { GLYPH, SHADOW } from "../sizing";
 
@@ -83,7 +83,7 @@ function DiceGlyph({ id, silhouette, seams, pips }: Die) {
 
 export default function DiceDivider() {
   return (
-    <DividerRow game="dnd">
+    <DividerRow>
       {DICE.map((d) => (
         <DiceGlyph key={d.id} {...d} />
       ))}

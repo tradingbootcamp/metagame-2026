@@ -9,7 +9,7 @@ import CardSuitsDivider from "@/v2/components/dividers/card-suits";
 import CatanDivider from "@/v2/components/dividers/catan";
 import ChessDivider from "@/v2/components/dividers/chess";
 import DiceDivider from "@/v2/components/dividers/dice";
-import DungeonCrawlDivider from "@/v2/components/dividers/dungeon-crawl";
+import DndDivider from "@/v2/components/dividers/dnd";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
 import PacmanDivider from "@/v2/components/dividers/pacman";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
@@ -364,7 +364,7 @@ export default function Home() {
         </div>
       </section>
 
-      <DungeonCrawlDivider />
+      <DndDivider />
 
       {/* the megagame */}
       <section id="megagame" className={`${SECTION} md:py-14`}>
@@ -627,7 +627,7 @@ export default function Home() {
         </div>
       </section>
 
-      <DungeonCrawlDivider />
+      <DndDivider />
 
       {/* key dates */}
       <section id="key-dates" className={`${SECTION} md:py-14`}>
