@@ -34,19 +34,6 @@ Pulled over so far:
 
 To add a page to the nav: add an entry to `components/nav/links.ts`.
 
-## Dividers (`components/dividers/`)
-
-Every section divider is its own folder with an `index.tsx`; most are four
-charcoal glyphs in a `DividerRow`. `IconDivider` renders path data (Noun
-Project / game-icons.net art, or anything drawn by hand), `sprite.ts` turns
-rows of `#` into pixel art, and `sizing.ts` holds the shared glyph size.
-
-**`/dividers` is a dev-only gallery** of every set, mounted on the one-pager
-or not, for iterating on them without touching the page. It 404s in
-production and its rows are outside the puzzle (`NoPuzzle`), so clicks there
-never shake or wipe stars. To add a set: make the folder, then add one line to
-`src/app/(v2)/dividers/page.tsx`. Third-party art gets a line on `/credits`.
-
 ## Hero puzzle (`puzzle/`)
 
 On load one of seven games is picked at random and its crop of the library
