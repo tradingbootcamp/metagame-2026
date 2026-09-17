@@ -404,3 +404,43 @@ export async function recordDiscountCode(
 
   return { stored: true };
 }
+
+/**
+ * Append one row to Egg Tracking. Plain create, no upsert: every cast is its own
+ * row and Airtable does the counting. No-ops without a token, like the rest.
+ */
+export async function recordEggCast(cast: {
+  word: string;
+  via: "click" | "type";
+  visit: string;
+}): Promise<void> {
+  const { AIRTABLE_API_KEY } = env;
+  if (!AIRTABLE_API_KEY) return;
+
+  const res = await fetch(
+    `https://api.airtable.com/v0/${airtableConfig.baseId}/${airtableConfig.eggTrackingTableId}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        records: [
+          {
+            fields: {
+              Word: cast.word,
+              Via: cast.via,
+              Visit: cast.visit,
+              When: new Date().toISOString(),
+              [TEST_FIELD]: process.env.VERCEL_ENV !== "production",
+            },
+          },
+        ],
+      }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`Airtable responded ${res.status}: ${await res.text()}`);
+  }
+}

@@ -19,6 +19,7 @@ import Crab from "./Crab";
 import Acid, { ACID_MS, rollTrip, type Trip } from "./Acid";
 import Sudo, { SUDO_MS } from "./Sudo";
 import Weather, { rollShower, showerMs, type Shower } from "./Weather";
+import { trackCast, type Via } from "./track";
 import { wobble } from "./wobble";
 import WordEntry from "./WordEntry";
 import {
@@ -1005,7 +1006,7 @@ export default function ScrabbleDivider({
     return () => clearTimeout(t);
   }, [exit]);
 
-  const play = (next: Tile[]) => {
+  const play = (next: Tile[], via: Via) => {
     if (isBlocked(next)) {
       // One of them gets its own colour.
       setFlash(
@@ -1019,8 +1020,12 @@ export default function ScrabbleDivider({
     // What UNDO goes back to: the rack as it stood before this letter.
     before.current = tiles;
     setRack(next);
-    const spell = SPELLS[next.map((t) => t.letter).join("")];
-    if (spell) cast(spell);
+    const word = next.map((t) => t.letter).join("");
+    const spell = SPELLS[word];
+    if (spell) {
+      trackCast(word, via);
+      cast(spell);
+    }
   };
 
   // Typed letters overwrite the rack from the left, one at a time; the tiles
@@ -1042,7 +1047,7 @@ export default function ScrabbleDivider({
     );
     // Backspacing only clears; it doesn't spell what's left again.
     if (letters.length < length) setRack(next);
-    else play(next);
+    else play(next, "type");
   };
 
   useImperativeHandle(ref, () => ({ spell }));
@@ -1055,7 +1060,7 @@ export default function ScrabbleDivider({
     const letter = CYCLE[(CYCLE.indexOf(from) + 1) % CYCLE.length];
     next[i] = { letter };
     setArmed(letter === "" ? i : null);
-    play(next);
+    play(next, "click");
   };
 
   useEffect(() => {
@@ -1068,7 +1073,7 @@ export default function ScrabbleDivider({
       const next = [...tiles];
       next[armed] = { letter: e.key.toUpperCase(), blank: true };
       setArmed(null);
-      play(next);
+      play(next, "click");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

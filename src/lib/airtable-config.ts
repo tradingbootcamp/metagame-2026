@@ -15,4 +15,6 @@ export const airtableConfig = {
   discountCodesTableId: "tble7XP43WyeKeHXd",
   /** "META Cryptic Clues" table — clues submitted from the FAQ whiteboard lightbox. */
   crypticCluesTableId: "tblzZTAMKKftdRROy",
+  /** "Egg Tracking" table — easter-egg words cast on the scrabble divider. */
+  eggTrackingTableId: "tblpz5jxmWsC6R4av",
 } as const;
