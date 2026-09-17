@@ -2,20 +2,20 @@
 // Fire-and-forget: nothing here may delay or break an effect.
 export type Via = "click" | "type";
 
-// Groups one sitting's casts together and nothing more. Kept in sessionStorage
-// so it survives a reload — reloading is how you get a finished rack back, so
-// it's part of the same sitting — but not the tab closing, and it's tied to no
-// one. Falls back to per-load if storage is unavailable.
+// Groups one browser's casts together and nothing more: a random code kept in
+// localStorage, so it survives reloads (how you get a finished rack back) and
+// return visits (do people come back for more?). It's tied to no one — no name,
+// email or IP goes with it. Falls back to per-load if storage is unavailable.
 const KEY = "scrabble-visit";
 let visit: string | undefined;
 
 const visitId = () => {
   if (visit) return visit;
   try {
-    visit = sessionStorage.getItem(KEY) ?? undefined;
+    visit = localStorage.getItem(KEY) ?? undefined;
     if (!visit) {
       visit = Math.random().toString(36).slice(2, 8);
-      sessionStorage.setItem(KEY, visit);
+      localStorage.setItem(KEY, visit);
     }
   } catch {
     visit ??= Math.random().toString(36).slice(2, 8);
