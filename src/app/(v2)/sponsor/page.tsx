@@ -81,8 +81,16 @@ const TIERS: {
 type Cell = boolean | string;
 // cardLabels: per-tier rewording for the stacked card view, where a row can
 // say what it means instead of carrying a qualifier under a check.
+const NOTES = {
+  creative: "We\u2019ll talk.",
+  honor: "VIP badge, a ticket to the VIP dinner, a room on site, and 20 points",
+  careers: "Opt-in per attendee",
+};
+type NoteId = keyof typeof NOTES;
+
 const BENEFITS: {
   label: string;
+  note?: NoteId;
   cells: Record<TierId, Cell>;
   cardLabels?: Partial<Record<TierId, string>>;
 }[] = [
@@ -118,7 +126,8 @@ const BENEFITS: {
     },
   },
   {
-    label: "Attendee careers database***",
+    label: "Attendee careers database",
+    note: "careers",
     cells: {
       headline: true,
       platinum: true,
@@ -128,7 +137,8 @@ const BENEFITS: {
     },
   },
   {
-    label: "\u201cGuest of Honor\u201d tickets**",
+    label: "\u201cGuest of Honor\u201d tickets",
+    note: "honor",
     cells: {
       headline: "2",
       platinum: "2",
@@ -168,7 +178,8 @@ const BENEFITS: {
     },
   },
   {
-    label: "Creative direction*",
+    label: "Creative direction",
+    note: "creative",
     cells: {
       headline: true,
       platinum: false,
@@ -216,13 +227,48 @@ function BenefitCell({ value }: { value: Cell }) {
   );
 }
 
-function TierCard({ tier }: { tier: (typeof TIERS)[number] }) {
-  // Perks unique to this tier first, then inherited ones, highest tier down.
+// Perks unique to this tier first, then inherited ones, highest tier down.
+function cardRows(tier: (typeof TIERS)[number]) {
   const rank = (b: (typeof BENEFITS)[number]) =>
     TIERS.findIndex((t) => t.id === introducedAt(b, b.cells[tier.id])?.id);
-  const rows = BENEFITS.filter((b) => b.cells[tier.id] !== false).sort(
+  return BENEFITS.filter((b) => b.cells[tier.id] !== false).sort(
     (a, b) => rank(a) - rank(b),
   );
+}
+
+// Footnotes are numbered in reading order, which differs between the table
+// and the stacked cards.
+function noteOrder(rows: typeof BENEFITS): NoteId[] {
+  return [...new Set(rows.flatMap((b) => b.note ?? []))];
+}
+const TABLE_NOTES = noteOrder(BENEFITS);
+const CARD_NOTES = noteOrder(TIERS.flatMap(cardRows));
+
+function stars(order: NoteId[], note?: NoteId) {
+  return note ? "*".repeat(order.indexOf(note) + 1) : "";
+}
+
+function Footnotes({
+  order,
+  className,
+}: {
+  order: NoteId[];
+  className: string;
+}) {
+  return (
+    <p className={`mt-3 text-xs text-ink/55 ${className}`}>
+      {order.map((id) => (
+        <span key={id} className="block">
+          {stars(order, id)}
+          {NOTES[id]}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+function TierCard({ tier }: { tier: (typeof TIERS)[number] }) {
+  const rows = cardRows(tier);
   return (
     <article className="overflow-hidden rounded-xl border border-line bg-white">
       <header className={`px-5 py-4 ${tier.head}`}>
@@ -264,6 +310,7 @@ function TierCard({ tier }: { tier: (typeof TIERS)[number] }) {
                     <span className={`font-bold ${mark}`}>{v} </span>
                   )}
                   {label ?? b.label}
+                  {stars(CARD_NOTES, b.note)}
                 </span>
               </span>
               {!label && typeof v === "string" && !isCount(v) && (
@@ -362,6 +409,7 @@ export default function SponsorPage() {
                     className="sticky left-0 z-[1] bg-white px-4 py-3.5 text-left font-semibold text-ink"
                   >
                     {b.label}
+                    {stars(TABLE_NOTES, b.note)}
                   </th>
                   {TIERS.map((t) => (
                     <td key={t.id} className={`px-3 py-3.5 ${t.cell}`}>
@@ -373,13 +421,8 @@ export default function SponsorPage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-3 text-xs text-ink/55">
-          *We&rsquo;ll talk.
-          <br />
-          **VIP badge, a ticket to the VIP dinner, a room on site, and 20 points
-          <br />
-          ***Opt-in per attendee
-        </p>
+        <Footnotes order={CARD_NOTES} className="md:hidden" />
+        <Footnotes order={TABLE_NOTES} className="hidden md:block" />
       </section>
 
       <p className="mt-10 text-base text-ink/60">
