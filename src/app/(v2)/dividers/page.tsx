@@ -11,10 +11,12 @@ import DominoesDivider from "@/v2/components/dividers/dominoes";
 import DndDivider from "@/v2/components/dividers/dnd";
 import GoDivider from "@/v2/components/dividers/go";
 import JigsawDivider from "@/v2/components/dividers/jigsaw";
+import MinecraftDivider from "@/v2/components/dividers/minecraft";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
 import PacmanDivider from "@/v2/components/dividers/pacman";
 import ScrabbleDivider from "@/v2/components/dividers/scrabble";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
+import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
 import TetrisDivider from "@/v2/components/dividers/tetris";
 
 // Dev-only gallery of every divider, mounted or not, so new sets can be
@@ -35,6 +37,8 @@ const DIVIDERS: [string, React.ComponentType][] = [
   ["tetris", TetrisDivider],
   ["scrabble", ScrabbleDivider],
   ["candy-land", CandyLandDivider],
+  ["space-invaders", SpaceInvadersDivider],
+  ["minecraft", MinecraftDivider],
 ];
 
 export default function DividersPage() {
