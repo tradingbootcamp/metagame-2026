@@ -43,11 +43,9 @@ export default function SnapCarousel({
 }) {
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
-  // Slot the last arrow/dot press is heading for, and whether that smooth
-  // scroll has landed yet. Arrows step from this, not from the live scroll
-  // position, so rapid clicks don't re-read a half-finished animation.
-  const target = useRef(0);
-  const pending = useRef(false);
+  // Arrows and dots are off while a press's scroll is in flight: a second
+  // press mid-animation would read a half-finished position and misfire.
+  const [moving, setMoving] = useState(false);
   const n = slides.length;
   // Clones only appear after hydration: server HTML starts scrolled to 0, so
   // rendering the leading clone there would flash the last slide first.
@@ -62,7 +60,6 @@ export default function SnapCarousel({
   useLayoutEffect(() => {
     const el = track.current;
     if (el && loop) jump(el, 1);
-    target.current = loop ? 1 : 0;
   }, [loop]);
 
   useEffect(() => {
@@ -76,20 +73,13 @@ export default function SnapCarousel({
     };
     const onSettle = () => {
       const w = el.clientWidth;
-      if (!w) return;
-      // An instant jump fires its own scrollend while the follow-up smooth
-      // scroll is still moving; only a landing on the target counts.
-      if (Math.abs(el.scrollLeft - slot * w) > 1) return;
-      if (pending.current && slot !== target.current) return;
-      pending.current = false;
+      if (!w || Math.abs(el.scrollLeft - slot * w) > 1) return;
       if (loop && (slot === 0 || slot === n + 1)) {
         slot = slot === 0 ? n : 1;
         jump(el, slot);
       }
-      target.current = slot;
+      setMoving(false);
     };
-    // A swipe or wheel takes over from whatever an arrow press was doing.
-    const onUserScroll = () => (pending.current = false);
     // Safari only got `scrollend` recently; fall back to a quiet period.
     let timer: number | undefined;
     const onScrollDebounced = () => {
@@ -97,8 +87,6 @@ export default function SnapCarousel({
       timer = window.setTimeout(onSettle, 120);
     };
     el.addEventListener("scroll", onScroll, { passive: true });
-    el.addEventListener("touchstart", onUserScroll, { passive: true });
-    el.addEventListener("wheel", onUserScroll, { passive: true });
     if (el.onscrollend !== undefined)
       el.addEventListener("scrollend", onSettle);
     else el.addEventListener("scroll", onScrollDebounced, { passive: true });
@@ -115,34 +103,21 @@ export default function SnapCarousel({
     return () => {
       clearTimeout(timer);
       el.removeEventListener("scroll", onScroll);
-      el.removeEventListener("touchstart", onUserScroll);
-      el.removeEventListener("wheel", onUserScroll);
       el.removeEventListener("scrollend", onSettle);
       el.removeEventListener("scroll", onScrollDebounced);
       ro.disconnect();
     };
   }, [n, loop, offset]);
 
-  const goTo = useCallback((slot: number) => {
-    const el = track.current;
-    if (!el) return;
-    // Native smooth scrolling restarts its easing on every call, so a burst
-    // of clicks would crawl. Finish the in-flight move first, then animate.
-    if (pending.current) jump(el, target.current);
-    target.current = slot;
-    pending.current = true;
-    el.scrollTo({ left: slot * el.clientWidth, behavior: "smooth" });
-  }, []);
-
-  const step = (delta: number) => {
-    let from = target.current;
-    // Still heading for a clone: continue from its real twin instead.
-    if (loop && (from === 0 || from === n + 1)) {
-      from = from === 0 ? n : 1;
-      target.current = from;
-    }
-    goTo(from + delta);
-  };
+  const goTo = useCallback(
+    (slot: number) => {
+      const el = track.current;
+      if (!el || moving || slot === slotOf(el)) return;
+      setMoving(true);
+      el.scrollTo({ left: slot * el.clientWidth, behavior: "smooth" });
+    },
+    [moving],
+  );
 
   return (
     <div className={`relative ${className}`}>
@@ -174,8 +149,9 @@ export default function SnapCarousel({
           key={dir}
           type="button"
           aria-label={dir === "prev" ? `Previous ${label}` : `Next ${label}`}
-          onClick={() => step(dir === "prev" ? -1 : 1)}
-          className={`absolute top-1/2 hidden h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-navy/15 bg-cream/90 text-navy shadow-md transition hover:bg-white [@media(hover:hover)]:flex ${
+          aria-disabled={moving}
+          onClick={() => goTo(index + offset + (dir === "prev" ? -1 : 1))}
+          className={`absolute top-1/2 hidden h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-navy/15 bg-cream/90 text-navy shadow-md transition hover:bg-white aria-disabled:cursor-default aria-disabled:opacity-50 aria-disabled:hover:bg-cream/90 [@media(hover:hover)]:flex ${
             arrowsOutside
               ? dir === "prev"
                 ? "left-0"
