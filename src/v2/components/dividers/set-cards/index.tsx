@@ -14,9 +14,10 @@ import { CARD as CARD_SIZE, SHADOW } from "../sizing";
 // which never move). Tap three cards (they glow); a set fades out and is
 // redealt in place, anything else shakes. Every deal holds at least one set.
 const CHARCOAL = "#4d4d4d";
-const EXIT_MS = 300;
+const EXIT_MS = 500; // a found set fading out
+const DEAL_MS = 600; // a dealt card fading in
 const SHAKE_MS = 400;
-const STAGGER_MS = 60;
+const STAGGER_MS = 90;
 const PIPS = 5; // pips shown before any are earned
 // DividerRow's gap-[22px]: the spread cards keep the centre four's spacing.
 const GAP = 22;
@@ -267,7 +268,7 @@ function CardGlyph({
           animation:
             delay === null
               ? undefined
-              : `set-deal ${EXIT_MS}ms ease-out ${delay}ms both`,
+              : `set-deal ${DEAL_MS}ms ease-out ${delay}ms both`,
         }}
       >
         <path
@@ -419,7 +420,7 @@ export default function SetCardDivider() {
         {found > 0 && (
           <div
             aria-hidden
-            className="pointer-events-none absolute top-full left-1/2 mt-3 flex -translate-x-1/2 animate-[set-deal_300ms_ease-out] gap-2"
+            className="pointer-events-none absolute top-full left-1/2 mt-3 flex -translate-x-1/2 animate-[set-deal_600ms_ease-out] gap-2"
           >
             {Array.from({ length: Math.max(PIPS, found) }, (_, i) => (
               <span

@@ -67,7 +67,7 @@ export default function DividerRow({
     />
   );
 
-  const line = `pointer-events-none h-px max-w-40 flex-1 bg-line transition-opacity duration-300 ${bare ? "opacity-0" : ""}`;
+  const line = `pointer-events-none h-px max-w-40 flex-1 bg-line transition-opacity duration-500 ${bare ? "opacity-0" : ""}`;
 
   return (
     <div className="flex scroll-mt-16 items-center justify-center gap-[22px] py-6 md:scroll-mt-24 md:py-10">
