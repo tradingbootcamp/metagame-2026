@@ -1319,6 +1319,8 @@ export default function ScrabbleDivider({
         ref={side === "meta" ? metaRef : gameRef}
         className="relative z-30 block"
       >
+        {/* The letter is a hole: backed, or the hairline runs through it. */}
+        <span className="absolute inset-[10%] -z-10 bg-background" />
         <ScrabbleTile
           letter={MARK_LETTER[side]}
           look={{ ...BASE_LOOK, tint: MARK_COLOR[side] }}
