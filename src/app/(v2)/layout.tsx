@@ -1,6 +1,7 @@
 import ContactProvider from "@/v2/components/contact/ContactProvider";
 import SiteFooter from "@/v2/components/SiteFooter";
 import SiteShell from "@/v2/components/SiteShell";
+import HatToast from "@/v2/hat-trick/HatToast";
 
 // The rewritten site. Everything it renders lives under src/v2/ — see
 // src/v2/README.md. The previous one-pager is still served at /legacy.
@@ -18,6 +19,7 @@ export default function SiteLayout({
         <SiteShell>{children}</SiteShell>
         <SiteFooter />
       </ContactProvider>
+      <HatToast />
     </div>
   );
 }

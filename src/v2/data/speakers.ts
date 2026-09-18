@@ -1,4 +1,5 @@
 import amy from "../../../public/images/speakers/amy_schneider.jpg";
+import andrew from "../../../public/images/speakers/andrew_nathenson.jpg";
 import caro from "../../../public/images/speakers/caro_murphy.jpg";
 import chris from "../../../public/images/speakers/chris_grace.jpg";
 import lexi from "../../../public/images/speakers/lexi_kohanski.jpg";
@@ -44,5 +45,12 @@ export const SPEAKERS: Person[] = [
     title: "Jeopardy!",
     titleUrl: "https://en.wikipedia.org/wiki/Amy_Schneider",
     photo: amy,
+  },
+  {
+    name: "Andrew Nathenson",
+    title: "Cult of the Clocktower",
+    titleUrl:
+      "https://podcasts.apple.com/us/podcast/cult-of-the-clocktower/id1478486574",
+    photo: andrew,
   },
 ];

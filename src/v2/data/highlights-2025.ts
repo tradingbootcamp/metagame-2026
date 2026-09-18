@@ -1,4 +1,5 @@
 import type { StaticImageData } from "next/image";
+import { HATS, type Hat } from "@/v2/hat-trick/hats";
 import games from "../../../public/images/misc_photos/board_game_round_robin_2.jpg";
 import talks from "../../../public/images/misc_photos/jay_dragon.jpg";
 import workshops from "../../../public/images/misc_photos/david_turner.jpg";
@@ -13,6 +14,8 @@ export type HighlightGroup = {
   label: string;
   photo: StaticImageData;
   alt: string;
+  // Hat Trick: hats hidden in this photo (see src/v2/hat-trick).
+  hats?: Hat[];
   sessions: HighlightSession[];
 };
 
@@ -72,6 +75,7 @@ export const HIGHLIGHTS_2025: HighlightGroup[] = [
     label: "Games & More",
     photo: games,
     alt: "A crowd leaning over a long table of abstract games during the board game round robin",
+    hats: [HATS.wizard],
     sessions: [
       { title: "Escape the Sudoku", hosts: "Thomas Snyder" },
       { title: "Two Rooms and a Boom", hosts: "Alan Gerding" },

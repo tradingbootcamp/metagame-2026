@@ -20,6 +20,9 @@ export type GameIcon = {
   // Optional size override (else GLYPH). Wide glyphs (e.g. the car) need a wider
   // box so they don't render short next to the square tokens.
   className?: string;
+  // Same-colour stroke (in viewBox units) to fatten line-art sources so they
+  // hold their own next to the solid sets.
+  strokeWidth?: number;
 };
 
 export function IconGlyph({ icon }: { icon: GameIcon }) {
@@ -30,7 +33,15 @@ export function IconGlyph({ icon }: { icon: GameIcon }) {
       className={`${icon.className ?? GLYPH} ${SHADOW}`}
     >
       {(icon.paths ?? [icon.d ?? ""]).map((d, i) => (
-        <path key={i} d={d} fill={CHARCOAL} fillRule={icon.fillRule} />
+        <path
+          key={i}
+          d={d}
+          fill={CHARCOAL}
+          fillRule={icon.fillRule}
+          stroke={icon.strokeWidth ? CHARCOAL : undefined}
+          strokeWidth={icon.strokeWidth}
+          strokeLinejoin="round"
+        />
       ))}
     </svg>
   );

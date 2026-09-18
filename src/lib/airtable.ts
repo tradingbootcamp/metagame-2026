@@ -1,6 +1,7 @@
 import { env } from "@/env";
 import { airtableConfig } from "@/lib/airtable-config";
 import { EMAIL_LIST_VALUE, type InterestValue } from "@/lib/interests";
+import type { EggEvent } from "@/v2/components/dividers/track";
 
 export type SignupResult = { stored: boolean; reason?: string };
 
@@ -403,4 +404,50 @@ export async function recordDiscountCode(
   }
 
   return { stored: true };
+}
+
+/**
+ * One row in Egg Tracking. A `clicks` event is upserted — one row per visit per
+ * egg, overwritten with the running total — and everything else is appended, so
+ * Airtable does the counting. No-ops without a token, like the rest.
+ */
+export async function recordEgg(found: EggEvent, visit: string): Promise<void> {
+  const { AIRTABLE_API_KEY } = env;
+  if (!AIRTABLE_API_KEY) return;
+
+  const upsert = found.event === "clicks";
+  const res = await fetch(
+    `https://api.airtable.com/v0/${airtableConfig.baseId}/${airtableConfig.eggTrackingTableId}`,
+    {
+      method: upsert ? "PATCH" : "POST",
+      headers: {
+        Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...(upsert && {
+          performUpsert: { fieldsToMergeOn: ["Visit", "Egg", "Event"] },
+        }),
+        records: [
+          {
+            fields: {
+              Egg: found.egg,
+              Event: found.event,
+              ...(found.event === "cast" && {
+                Word: found.word,
+                "Word via": found.via,
+              }),
+              ...(found.event === "clicks" && { Clicks: found.clicks }),
+              Visit: visit,
+              When: new Date().toISOString(),
+              [TEST_FIELD]: process.env.VERCEL_ENV !== "production",
+            },
+          },
+        ],
+      }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`Airtable responded ${res.status}: ${await res.text()}`);
+  }
 }

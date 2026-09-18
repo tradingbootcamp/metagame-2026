@@ -1,4 +1,5 @@
 import type { StaticImageData } from "next/image";
+import { HATS, type Hat } from "@/v2/hat-trick/hats";
 import ben from "../../../public/images/team/ben.jpg";
 import brendan from "../../../public/images/team/brendan.jpg";
 import brian from "../../../public/images/team/brian.jpg";
@@ -23,6 +24,8 @@ export type Person = {
   titleUrl?: string;
   photo?: StaticImageData;
   email?: string;
+  // Hat Trick: hats hidden in this photo (see src/v2/hat-trick).
+  hats?: Hat[];
 };
 
 export const TEAM: Person[] = [
@@ -45,7 +48,12 @@ export const TEAM: Person[] = [
     email: "brian@metagame.games",
   },
   { name: "John Bromels", title: "Megagame Lead", photo: john },
-  { name: "Jisk Kopczynski", title: "Megagame Chief of Staff", photo: jisk },
+  {
+    name: "Jisk Kopczynski",
+    title: "Megagame Chief of Staff",
+    photo: jisk,
+    hats: [HATS.pirate],
+  },
   {
     name: "David Holt",
     title: "Marketing & Sponsorships",
@@ -61,7 +69,12 @@ export const TEAM: Person[] = [
 ];
 
 export const ADVISORS: Person[] = [
-  { name: "Brendan Hurst", title: "Advisor", photo: brendan },
+  {
+    name: "Brendan Hurst",
+    title: "Advisor",
+    photo: brendan,
+    hats: [HATS.sequin],
+  },
   { name: "Tommy Honton", title: "Advisor", photo: tommy },
   { name: "Patrick McKenzie", title: "Advisor", photo: patrick },
 ];

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import type { Person } from "@/v2/data/team";
+import HatImage from "@/v2/hat-trick/HatImage";
 import ContactLink from "./contact/ContactLink";
 import { HEADING } from "./styles";
 
@@ -19,11 +20,20 @@ export default function PersonCard({
   titleUrl,
   photo,
   email,
+  hats,
   compact = false,
 }: Person & { compact?: boolean }) {
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-navy/[0.16] bg-white shadow-[0_8px_24px_rgba(23,48,89,0.08)]">
-      {photo ? (
+      {photo && hats?.length ? (
+        <HatImage
+          src={photo}
+          alt={name}
+          hats={hats}
+          className={`w-full ${compact ? "aspect-square" : "aspect-[4/5]"}`}
+          sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
+        />
+      ) : photo ? (
         <Image
           src={photo}
           alt={name}

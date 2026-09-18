@@ -12,8 +12,9 @@ import ChessDivider from "@/v2/components/dividers/chess";
 import DiceDivider from "@/v2/components/dividers/dice";
 import DndDivider from "@/v2/components/dividers/dnd";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
-import PacmanDivider from "@/v2/components/dividers/pacman";
+import ScrabbleDivider from "@/v2/components/dividers/scrabble";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
+import TetrisDivider from "@/v2/components/dividers/tetris";
 import FaqItem from "@/v2/components/FaqItem";
 import Highlights2025 from "@/v2/components/Highlights2025";
 import KeyDates from "@/v2/components/KeyDates";
@@ -33,6 +34,7 @@ import { Button } from "@/v2/components/ui/button";
 import { CAROUSEL } from "@/v2/data/carousel";
 import { GOLD_SPONSORS, PATRON_SPONSORS } from "@/v2/data/sponsors";
 import { SPEAKERS } from "@/v2/data/speakers";
+import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
 import {
   HOTELS_SEARCH_URL,
   HOUSING_URL,
@@ -247,24 +249,22 @@ export default function Home() {
       <section id="speakers" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
           <SectionHeading eyebrow="Who will be there?" title="Speakers" />
-          <div className="mt-10 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
+          {/* Wrapping flex, not a grid, so a short last row centers. */}
+          <div className="mt-10 flex flex-wrap justify-center gap-5">
             {SPEAKERS.map((speaker) => (
-              <PersonCard key={speaker.name} {...speaker} compact />
+              <div
+                key={speaker.name}
+                className="w-[calc(50%-0.625rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]"
+              >
+                <PersonCard {...speaker} compact />
+              </div>
             ))}
+            <div className="w-[calc(50%-0.625rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]">
+              <SpeakerCtaCard href={RFP_FORM_URL} />
+            </div>
           </div>
-          <p className="mt-8 text-base text-ink/70">
+          <p className="mt-8 text-center text-base text-ink/70">
             And many more coming soon&hellip;
-          </p>
-          <p className="mt-2 text-base text-ink/70">
-            Want to speak or run a session?{" "}
-            <a
-              href={RFP_FORM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={NEWSLETTER_LINK}
-            >
-              Submit a proposal &rarr;
-            </a>
           </p>
         </div>
       </section>
@@ -511,7 +511,7 @@ export default function Home() {
         </div>
       </section>
 
-      <PacmanDivider />
+      <ScrabbleDivider />
 
       {/* tickets */}
       <section id="tickets" className={`${SECTION} md:py-14`}>
@@ -627,7 +627,7 @@ export default function Home() {
         </div>
       </section>
 
-      <DndDivider />
+      <TetrisDivider />
 
       {/* key dates */}
       <section id="key-dates" className={`${SECTION} md:py-14`}>

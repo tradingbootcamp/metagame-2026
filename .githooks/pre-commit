@@ -1,0 +1,8 @@
+#!/bin/sh
+# Worktrees without their own node_modules borrow the main checkout's.
+for bin in node_modules/.bin "$(git rev-parse --path-format=absolute --git-common-dir)/../node_modules/.bin"; do
+  if [ -x "$bin/lint-staged" ]; then
+    PATH="$bin:$PATH" exec lint-staged
+  fi
+done
+echo "pre-commit: lint-staged not installed, skipping format (run pnpm install)" >&2
