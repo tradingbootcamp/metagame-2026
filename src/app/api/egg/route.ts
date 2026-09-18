@@ -25,9 +25,11 @@ const parse = (body: Record<string, unknown>): EggEvent | null => {
 // fires and forgets, so this never reports failure back: a lost row is fine, a
 // console error on someone's page is not.
 export async function POST(request: Request) {
-  // Preview and local casts are ours, not visitors'. Server-side, so plain
-  // VERCEL_ENV is fine (undefined off Vercel, so local dev doesn't write).
-  if (process.env.VERCEL_ENV !== "production")
+  // Preview and local casts are ours, not visitors'. NEXT_PUBLIC_, not plain
+  // VERCEL_ENV: deploys go out prebuilt from Actions, so the env we can count
+  // on is the one Next inlined at build time. Same call as the Stripe mode in
+  // src/lib/tickets.ts.
+  if (process.env.NEXT_PUBLIC_VERCEL_ENV !== "production")
     return new Response(null, { status: 204 });
 
   let body: Record<string, unknown>;
