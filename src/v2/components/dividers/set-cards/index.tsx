@@ -17,6 +17,7 @@ const CHARCOAL = "#4d4d4d";
 const EXIT_MS = 300;
 const SHAKE_MS = 400;
 const STAGGER_MS = 60;
+const PIPS = 5; // pips shown before any are earned
 // DividerRow's gap-[22px]: the spread cards keep the centre four's spacing.
 const GAP = 22;
 
@@ -117,7 +118,6 @@ const pick = <T,>(xs: readonly T[]) =>
 // same slot, and it should still fade in as new); `delay` is its fade-in, or
 // null for the four the page loads with.
 type Slot = { card: Card; seq: number; delay: number | null };
-let seq = 0;
 
 const DECK: Card[] = SHAPE_NAMES.flatMap((shape) =>
   COUNT_NAMES.flatMap((count) =>
@@ -129,7 +129,10 @@ const DECK: Card[] = SHAPE_NAMES.flatMap((shape) =>
 // least one blank in it is picked to be the guaranteed set, so the fresh cards
 // aren't always the answer. Cards are drawn from the rest of the deck, so the
 // row never repeats one (MAX_CARDS keeps that possible).
-function deal(slots: (Slot | null)[], delay: (i: number) => number): Slot[] {
+function deal(
+  slots: (Slot | null)[],
+  mint: (card: Card, i: number) => Slot,
+): Slot[] {
   const blanks = slots.flatMap((s, i) => (s ? [] : [i]));
   for (;;) {
     const cards: (Card | null)[] = slots.map((s) => s?.card ?? null);
@@ -151,9 +154,7 @@ function deal(slots: (Slot | null)[], delay: (i: number) => number): Slot[] {
     deck.splice(at, 1);
     cards[last] = z;
     for (const i of blanks) cards[i] ??= draw();
-    return cards.map(
-      (card, i) => slots[i] ?? { card: card!, seq: seq++, delay: delay(i) },
-    );
+    return cards.map((card, i) => slots[i] ?? mint(card!, i));
   }
 }
 
@@ -165,7 +166,7 @@ const FIRST: Slot[] = (
     { shape: "squiggle", count: 3, shading: "open" },
     { shape: "diamond", count: 2, shading: "solid" },
   ] as Card[]
-).map((card) => ({ card, seq: seq++, delay: null }));
+).map((card, seq) => ({ card, seq, delay: null }));
 
 function CardGlyph({
   card,
@@ -307,6 +308,10 @@ export default function SetCardDivider() {
   const [shaking, setShaking] = useState(false);
   // Set once the row has spread: the card width the spread cards are placed by.
   const [spread, setSpread] = useState<{ cardWidth: number } | null>(null);
+  const [found, setFound] = useState(0);
+  // Counts up from FIRST's keys. Kept here, not at module level, so a hot
+  // reload can't restart it under a board that's still holding old keys.
+  const seq = useRef(FIRST.length);
   const centre = useRef<HTMLDivElement>(null);
   const first = useRef<SVGSVGElement>(null);
 
@@ -326,7 +331,11 @@ export default function SetCardDivider() {
     // Fades in from the centre outward.
     const away = (i: number) => Math.abs(i - (slots.length - 1) / 2) - 1.5;
     setSpread({ cardWidth });
-    return deal(slots, (i) => away(i) * STAGGER_MS);
+    return deal(slots, (card, i) => ({
+      card,
+      seq: seq.current++,
+      delay: away(i) * STAGGER_MS,
+    }));
   };
 
   const onClick = (i: number) => {
@@ -358,9 +367,10 @@ export default function SetCardDivider() {
       setBoard(
         deal(
           board.map((slot, j) => (next.includes(j) ? null : slot)),
-          () => 0,
+          (card) => ({ card, seq: seq.current++, delay: 0 }),
         ),
       );
+      setFound((f) => f + 1);
       setPicked([]);
       setLeaving(false);
     }, EXIT_MS);
@@ -396,6 +406,23 @@ export default function SetCardDivider() {
       <div ref={centre} className="relative flex items-center gap-[22px]">
         {board.map((_, i) =>
           i >= inner && i < inner + 4 ? glyph(i) : glyph(i, place(i)),
+        )}
+        {/* Sets found, one pip each, hung under the row so nothing shifts. */}
+        {found > 0 && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-full left-1/2 mt-3 flex -translate-x-1/2 animate-[set-deal_300ms_ease-out] gap-2"
+          >
+            {Array.from({ length: Math.max(PIPS, found) }, (_, i) => (
+              <span
+                key={i}
+                className="size-1 rounded-full transition-colors duration-300"
+                style={{
+                  background: i < found ? CHARCOAL : "var(--color-line)",
+                }}
+              />
+            ))}
+          </div>
         )}
       </div>
     </DividerRow>
