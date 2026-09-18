@@ -31,6 +31,7 @@ import {
   CODE_STAGGER,
   MARK_COLOR,
   MARK_FLY_MS,
+  MARK_HOLD_MS,
   MARK_JOIN_MS,
   MARK_LETTER,
   BITES_TO_FINISH,
@@ -1039,18 +1040,20 @@ export default function ScrabbleDivider({
       const b = to.getBoundingClientRect();
       return `translate(${b.left - a.left + dx}px, ${b.top - a.top}px)`;
     };
-    const total = MARK_FLY_MS + MARK_JOIN_MS;
-    const opts = {
-      duration: total,
-      easing: "cubic-bezier(.34,1.1,.64,1)",
-      fill: "both" as const,
-    };
-    const held = MARK_FLY_MS / total;
+    const total = MARK_FLY_MS + MARK_HOLD_MS + MARK_JOIN_MS;
+    // Per segment, not on the options: an iteration easing would warp the whole
+    // timeline instead of letting the slide and the drop each settle.
+    const ease = "cubic-bezier(.34,1.1,.64,1)";
+    const opts = { duration: total, fill: "both" as const };
+    const met = MARK_FLY_MS / total;
+    const parts = (MARK_FLY_MS + MARK_HOLD_MS) / total;
+    const beside = shift(m, g, -(TILE_PX + CODE_GAP));
     const runs = [
       m.animate(
         [
-          { transform: "none" },
-          { transform: shift(m, g, -(TILE_PX + CODE_GAP)), offset: held },
+          { transform: "none", easing: ease },
+          { transform: beside, offset: met },
+          { transform: beside, offset: parts, easing: ease },
           { transform: shift(m, s0) },
         ],
         opts,
@@ -1058,7 +1061,8 @@ export default function ScrabbleDivider({
       g.animate(
         [
           { transform: "none" },
-          { transform: "none", offset: held },
+          { transform: "none", offset: met },
+          { transform: "none", offset: parts, easing: ease },
           { transform: shift(g, s1) },
         ],
         opts,
@@ -1448,7 +1452,6 @@ export default function ScrabbleDivider({
                     {reveal === "open" && (
                       <ScrabbleTile
                         letter={ch}
-                        scored={ch !== "_"}
                         look={
                           flown
                             ? {

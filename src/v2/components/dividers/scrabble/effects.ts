@@ -246,12 +246,14 @@ export const MARK_COLOR: Record<Side, string> = {
 };
 // Needs a Stripe promotion code and an active, non-Stripe row in Airtable's
 // Discount Codes table (src/lib/discount-codes.ts) to be worth anything.
-export const CODE = "MG_TILES";
+export const CODE = "MGTILES";
 export const CODE_NOTE = "for $25 off";
-export const MARK_FLY_MS = 850;
-export const MARK_JOIN_MS = 650;
-export const CODE_STAGGER = 90;
-export const CODE_ENTRY_MS = 400;
+export const MARK_FLY_MS = 1300;
+// Sat beside the G, before the pair drops: the whole point is seeing them meet.
+export const MARK_HOLD_MS = 700;
+export const MARK_JOIN_MS = 900;
+export const CODE_STAGGER = 140;
+export const CODE_ENTRY_MS = 500;
 
 export const TURN_MS = 1500;
 // A beat between the word landing and FALL/RISE letting go.
