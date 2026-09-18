@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import DividerRow from "../DividerRow";
 import { IconGlyph } from "../IconDivider";
+import Crossbow from "./Crossbow";
 import { ICONS } from "./icons";
 
 const SPIN = "inline-flex transition-[rotate,translate,opacity] ease-in";
@@ -37,7 +38,7 @@ export default function BloodOnTheClocktowerDivider() {
                 onClick={onCrossbow}
                 className={`${SPIN} duration-300 ${stage ? "rotate-45" : ""}`}
               >
-                <IconGlyph icon={icon} />
+                <Crossbow d={icon.d ?? ""} fired={stage === 2} />
               </span>
               <span
                 ref={bolt}
