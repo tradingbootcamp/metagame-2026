@@ -1,7 +1,68 @@
-import IconDivider from "../IconDivider";
+"use client";
+
+import { useRef, useState } from "react";
+import DividerRow from "../DividerRow";
+import { IconGlyph } from "../IconDivider";
 import { ICONS } from "./icons";
 
-// blood · demon · trident · clock tower — a nod to Blood on the Clocktower.
+const SPIN = "inline-flex transition-[rotate,translate,opacity] ease-in";
+
+// blood · crossbow · demon's trident · clock tower — a nod to Blood on the
+// Clocktower. Click the crossbow and it swings round onto the trident; click
+// again and it shoots, the trident keeling over. A third click resets.
 export default function BloodOnTheClocktowerDivider() {
-  return <IconDivider icons={ICONS} game="botct" />;
+  const [stage, setStage] = useState<0 | 1 | 2>(0);
+  const bolt = useRef<HTMLSpanElement>(null);
+
+  const onCrossbow = () => {
+    if (stage === 1) {
+      bolt.current?.animate(
+        [
+          { opacity: 1, transform: "translateX(0)" },
+          { opacity: 1, transform: "translateX(30px)" },
+        ],
+        { duration: 160, easing: "linear" },
+      );
+    }
+    setStage(((stage + 1) % 3) as 0 | 1 | 2);
+  };
+
+  return (
+    <DividerRow game="botct">
+      {ICONS.map((icon) => {
+        if (icon.name === "crossbow") {
+          return (
+            <span key={icon.name} className="relative inline-flex">
+              <span
+                onClick={onCrossbow}
+                className={`${SPIN} duration-300 ${stage ? "rotate-45" : ""}`}
+              >
+                <IconGlyph icon={icon} />
+              </span>
+              <span
+                ref={bolt}
+                className="pointer-events-none absolute top-1/2 left-5 h-0.5 w-2.5 -translate-y-1/2 rounded-full bg-[#4d4d4d] opacity-0"
+              />
+            </span>
+          );
+        }
+        if (icon.name === "trident") {
+          // The source glyph points down-right; -90° stands it up-right.
+          return (
+            <span
+              key={icon.name}
+              className={`${SPIN} ${
+                stage === 2
+                  ? "translate-y-3.5 -rotate-45 opacity-60 delay-150 duration-500"
+                  : "-rotate-90 duration-300"
+              }`}
+            >
+              <IconGlyph icon={icon} />
+            </span>
+          );
+        }
+        return <IconGlyph key={icon.name} icon={icon} />;
+      })}
+    </DividerRow>
+  );
 }
