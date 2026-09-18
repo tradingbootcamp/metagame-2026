@@ -256,12 +256,6 @@ export const CODE_SPAN: Record<Side, [number, number]> = {
   meta: [0, 1],
   game: [1, 2],
 };
-// DRAFT, to compare: the long code, 18 doubled to $36.
-// export const CODE = "METAGAMETILES";
-// export const CODE_SPAN: Record<Side, [number, number]> = {
-//   meta: [0, 4],
-//   game: [4, 8],
-// };
 // The mark sits tinted on its rack tile for a beat, then leaves for its
 // hairline.
 export const MARK_LIFT_MS = 700;

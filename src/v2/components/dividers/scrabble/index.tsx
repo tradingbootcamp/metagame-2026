@@ -603,13 +603,12 @@ const TILE_GAP = 22;
 // The reveal row is twice the rack's length, so its tiles sit tighter.
 const CODE_GAP = 8;
 
-// Where `to` sits relative to `from`, as a transform about the top left: the
-// dividers' widths are all flex-derived and the code row is scaled to fit a
-// phone, so these trips can only be measured at runtime.
+// Where `to` sits relative to `from`, as a transform. The dividers' widths are
+// all flex-derived, so these trips can only be measured at runtime.
 const shift = (from: Element, to: Element) => {
   const a = from.getBoundingClientRect();
   const b = to.getBoundingClientRect();
-  return `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width})`;
+  return `translate(${b.left - a.left}px, ${b.top - a.top}px)`;
 };
 const CODE_SCORE = [...CODE].reduce((n, ch) => n + SCRABBLE_SCORES[ch], 0);
 const CODE_OFF = CODE_SCORE * CODE_MULTIPLIER;
@@ -627,11 +626,6 @@ const codeSide = (i: number) =>
   (["meta", "game"] as Side[]).find(
     (k) => i >= CODE_SPAN[k][0] && i < CODE_SPAN[k][1],
   );
-// A long code is scaled down to fit a phone on one line.
-const CODE_FIT =
-  CODE.length > 9
-    ? "scale-[.62] min-[380px]:scale-[.7] min-[440px]:scale-[.85] min-[540px]:scale-100"
-    : "";
 const PLATE_PAD = 16;
 // PART: extra room opened up in the middle of the rack.
 const PART_PX = 14;
@@ -1323,7 +1317,7 @@ export default function ScrabbleDivider({
     marks[side] && reveal !== "open" ? (
       <span
         ref={side === "meta" ? metaRef : gameRef}
-        className="relative z-30 block origin-top-left"
+        className="relative z-30 block"
       >
         <ScrabbleTile
           letter={MARK_LETTER[side]}
@@ -1522,7 +1516,7 @@ export default function ScrabbleDivider({
             </span>
             <span
               aria-hidden
-              className={`flex origin-top items-center ${CODE_FIT}`}
+              className="flex items-center"
               style={{ gap: CODE_GAP }}
             >
               {[...CODE].map((ch, i) => {
