@@ -1,6 +1,10 @@
 import { recordEgg } from "@/lib/airtable";
 import { SPELLS } from "@/v2/components/dividers/scrabble/effects";
-import type { EggEvent } from "@/v2/components/dividers/track";
+import {
+  CLICK_EGGS,
+  type ClickEgg,
+  type EggEvent,
+} from "@/v2/components/dividers/track";
 
 // Anything else is dropped: this is a public endpoint writing to our base.
 const parse = (body: Record<string, unknown>): EggEvent | null => {
@@ -11,14 +15,15 @@ const parse = (body: Record<string, unknown>): EggEvent | null => {
       (via === "click" || via === "type")
       ? { egg, event, word, via }
       : null;
-  if ((egg === "tetris" || egg === "chess") && event === "clicks")
+  if (CLICK_EGGS.includes(egg as ClickEgg) && event === "clicks")
     return Number.isInteger(clicks) &&
       (clicks as number) > 0 &&
       (clicks as number) < 1e6
-      ? { egg, event, clicks: clicks as number }
+      ? { egg: egg as ClickEgg, event, clicks: clicks as number }
       : null;
   if (egg === "chess" && event === "castle") return { egg, event };
   if (egg === "tetris" && event === "clear") return { egg, event };
+  if (egg === "clocktower" && event === "shoot") return { egg, event };
   return null;
 };
 

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import DividerRow from "../DividerRow";
 import { IconGlyph } from "../IconDivider";
 import Crossbow from "./Crossbow";
+import { trackClick, trackEgg } from "../track";
 import { ICONS } from "./icons";
 
 const SPIN = "inline-flex transition-[rotate,translate,opacity] ease-in";
@@ -16,7 +17,9 @@ export default function BloodOnTheClocktowerDivider() {
   const bolt = useRef<HTMLSpanElement>(null);
 
   const onCrossbow = () => {
+    trackClick("clocktower");
     if (stage === 1) {
+      trackEgg({ egg: "clocktower", event: "shoot" });
       bolt.current?.animate(
         [
           { opacity: 1, transform: "translateX(0)" },
