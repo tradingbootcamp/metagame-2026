@@ -627,8 +627,8 @@ export default function Home() {
             className="mb-12"
           />
           {/* Photo rides alongside the list on wide screens, sized so its 3:4
-              height roughly matches the collapsed list, and stays put (sticky)
-              as answers open; on phones it follows the list. */}
+              height roughly matches the collapsed list; on phones it follows
+              the list. */}
           <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start">
             {/* Contact line lives in the list column so it hugs the questions
                 rather than dropping below the (taller) photo. */}
@@ -650,7 +650,7 @@ export default function Home() {
                 <AnagramEmail className={BODY_LINK} />.
               </p>
             </div>
-            <CrypticsLightbox className="block lg:sticky lg:top-24" />
+            <CrypticsLightbox className="block" />
           </div>
         </div>
       </section>
