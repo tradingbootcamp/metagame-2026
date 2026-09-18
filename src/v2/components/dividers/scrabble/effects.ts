@@ -93,6 +93,7 @@ export type Spell =
       which: "bing" | "bong" | "bell" | "ding" | "dong" | "ting" | "ring";
     }
   | { kind: "maga" }
+  | { kind: "mark"; side: Side }
   | { kind: "turn"; turns: number }
   | { kind: "hop"; hop: Hop }
   | { kind: "love" }
@@ -121,6 +122,9 @@ export const SPELLS: Record<string, Spell> = {
   // A dial tone, for five minutes. STOP is the only way to end it early.
   TONE: { kind: "tone" },
   MAGA: { kind: "maga" },
+  // The only two eggs that leave a mark on the row rather than the rack.
+  META: { kind: "mark", side: "meta" },
+  GAME: { kind: "mark", side: "game" },
   SPIN: { kind: "turn", turns: 2 },
   JUMP: { kind: "hop", hop: { name: "jump", ms: 750, count: 1, stagger: 0 } },
   // A jump with one full somersault in the air.
@@ -230,6 +234,24 @@ export const SPELLS: Record<string, Spell> = {
   GRAY: { kind: "look", apply: set({ tint: GRAY }) },
   GREY: { kind: "look", apply: set({ tint: GRAY }) },
 };
+
+// The one egg with something to win, so unlike the rest it outlives its cast:
+// META and GAME each leave a tile on a hairline, and both earned reveal the
+// code. A reload still clears it.
+export type Side = "meta" | "game";
+export const MARK_LETTER: Record<Side, string> = { meta: "M", game: "G" };
+export const MARK_COLOR: Record<Side, string> = {
+  meta: "var(--color-brand-blue)",
+  game: "var(--color-meeple)",
+};
+// Needs a Stripe promotion code and an active, non-Stripe row in Airtable's
+// Discount Codes table (src/lib/discount-codes.ts) to be worth anything.
+export const CODE = "MG_TILES";
+export const CODE_NOTE = "for $25 off";
+export const MARK_FLY_MS = 850;
+export const MARK_JOIN_MS = 650;
+export const CODE_STAGGER = 90;
+export const CODE_ENTRY_MS = 400;
 
 export const TURN_MS = 1500;
 // A beat between the word landing and FALL/RISE letting go.

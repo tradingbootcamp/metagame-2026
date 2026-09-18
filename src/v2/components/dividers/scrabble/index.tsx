@@ -25,6 +25,14 @@ import WordEntry from "./WordEntry";
 import {
   BASE_LOOK,
   MAGA_MS,
+  CODE,
+  CODE_ENTRY_MS,
+  CODE_NOTE,
+  CODE_STAGGER,
+  MARK_COLOR,
+  MARK_FLY_MS,
+  MARK_JOIN_MS,
+  MARK_LETTER,
   BITES_TO_FINISH,
   BOMB_MS,
   COIN_MS,
@@ -53,6 +61,7 @@ import {
   type Hop,
   type Look,
   type Seed,
+  type Side,
   type Spell,
 } from "./effects";
 import {
@@ -586,6 +595,8 @@ const FLASH_MS = 350;
 // — for ROLL's geometry and for placing LOVE's hearts.
 const TILE_PX = 30;
 const TILE_GAP = 22;
+// The reveal row is twice the rack's length, so its tiles sit tighter.
+const CODE_GAP = 8;
 const PLATE_PAD = 16;
 // PART: extra room opened up in the middle of the rack.
 const PART_PX = 14;
@@ -683,6 +694,13 @@ export default function ScrabbleDivider({
   // empty spacers, so the hairlines keep their gap.
   const [gone, setGone] = useState(false);
   const [maga, setMaga] = useState(0);
+  // META and GAME each leave a mark on a hairline; both earned flies them into
+  // the code below the rack.
+  const [marks, setMarks] = useState({ meta: false, game: false });
+  const [reveal, setReveal] = useState<"none" | "flying" | "open">("none");
+  const metaRef = useRef<HTMLSpanElement>(null);
+  const gameRef = useRef<HTMLSpanElement>(null);
+  const slotRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
   useEffect(() => {
     if (!flash) return;
@@ -697,6 +715,10 @@ export default function ScrabbleDivider({
         break;
       case "maga":
         setMaga((n) => n + 1);
+        break;
+      case "mark":
+        setFlash(MARK_COLOR[spell.side]);
+        setMarks((m) => (m[spell.side] ? m : { ...m, [spell.side]: true }));
         break;
       case "turn":
         if (reducedMotion()) break;
@@ -997,6 +1019,56 @@ export default function ScrabbleDivider({
   }, [acid]);
 
   useEffect(() => {
+    if (reveal === "none" && marks.meta && marks.game)
+      setReveal(reducedMotion() ? "open" : "flying");
+  }, [marks, reveal]);
+
+  // Measured, not laid out: the hairlines are flex-1, so how far the M has to
+  // travel is only known at runtime.
+  useEffect(() => {
+    if (reveal !== "flying") return;
+    const m = metaRef.current;
+    const g = gameRef.current;
+    const [s0, s1] = slotRefs.current;
+    if (!m || !g || !s0 || !s1) {
+      setReveal("open");
+      return;
+    }
+    const shift = (from: Element, to: Element, dx = 0) => {
+      const a = from.getBoundingClientRect();
+      const b = to.getBoundingClientRect();
+      return `translate(${b.left - a.left + dx}px, ${b.top - a.top}px)`;
+    };
+    const total = MARK_FLY_MS + MARK_JOIN_MS;
+    const opts = {
+      duration: total,
+      easing: "cubic-bezier(.34,1.1,.64,1)",
+      fill: "both" as const,
+    };
+    const held = MARK_FLY_MS / total;
+    const runs = [
+      m.animate(
+        [
+          { transform: "none" },
+          { transform: shift(m, g, -(TILE_PX + CODE_GAP)), offset: held },
+          { transform: shift(m, s0) },
+        ],
+        opts,
+      ),
+      g.animate(
+        [
+          { transform: "none" },
+          { transform: "none", offset: held },
+          { transform: shift(g, s1) },
+        ],
+        opts,
+      ),
+    ];
+    runs[1].onfinish = () => setReveal("open");
+    return () => runs.forEach((r) => r.cancel());
+  }, [reveal]);
+
+  useEffect(() => {
     if (!sudo) return;
     const t = setTimeout(() => setSudo(0), SUDO_MS);
     return () => clearTimeout(t);
@@ -1160,6 +1232,22 @@ export default function ScrabbleDivider({
     };
   };
 
+  // Lifted over the rack while it flies, so it passes in front of it.
+  const mark = (side: Side) =>
+    marks[side] && reveal !== "open" ? (
+      <span
+        ref={side === "meta" ? metaRef : gameRef}
+        className={`block animate-[scrabble-entry_400ms_ease-out] ${
+          reveal === "flying" ? "z-30" : ""
+        }`}
+      >
+        <ScrabbleTile
+          letter={MARK_LETTER[side]}
+          look={{ ...BASE_LOOK, tint: MARK_COLOR[side] }}
+        />
+      </span>
+    ) : undefined;
+
   return (
     <>
       <div className="relative">
@@ -1177,7 +1265,7 @@ export default function ScrabbleDivider({
             />
           </div>
         )}
-        <DividerRow>
+        <DividerRow left={mark("meta")} right={mark("game")}>
           {/* The dark-mode plate: the letters are punched out of the tiles, so
             in dark mode this is what shows through them. Negative margins keep
             the padding from shifting the hairlines. */}
@@ -1337,6 +1425,68 @@ export default function ScrabbleDivider({
             )}
           </div>
         </DividerRow>
+        {reveal !== "none" && (
+          <div className="-mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 pb-6 md:-mt-7 md:pb-10">
+            <span className="sr-only">
+              {reveal === "open" ? `${CODE} ${CODE_NOTE}` : ""}
+            </span>
+            <span
+              aria-hidden
+              className="flex items-center"
+              style={{ gap: CODE_GAP }}
+            >
+              {[...CODE].map((ch, i) => {
+                const flown = i < 2;
+                return (
+                  <span
+                    key={i}
+                    ref={(el) => {
+                      slotRefs.current[i] = el;
+                    }}
+                    className={`${GLYPH} shrink-0`}
+                  >
+                    {reveal === "open" && (
+                      <ScrabbleTile
+                        letter={ch}
+                        scored={ch !== "_"}
+                        look={
+                          flown
+                            ? {
+                                ...BASE_LOOK,
+                                tint: MARK_COLOR[i === 0 ? "meta" : "game"],
+                              }
+                            : BASE_LOOK
+                        }
+                        motion={
+                          flown
+                            ? undefined
+                            : {
+                                extra: {
+                                  animation: `scrabble-entry ${CODE_ENTRY_MS}ms ${(i - 2) * CODE_STAGGER}ms ease-out both`,
+                                },
+                              }
+                        }
+                      />
+                    )}
+                  </span>
+                );
+              })}
+            </span>
+            <span
+              aria-hidden
+              className="text-sm font-semibold text-ink/70"
+              style={
+                reveal === "open"
+                  ? {
+                      animation: `scrabble-entry ${CODE_ENTRY_MS}ms ${(CODE.length - 2) * CODE_STAGGER}ms ease-out both`,
+                    }
+                  : { opacity: 0 }
+              }
+            >
+              {CODE_NOTE}
+            </span>
+          </div>
+        )}
       </div>
       {shower && <Weather key={shower.id} shower={shower} color={CHARCOAL} />}
       {acid && <Acid key={acid.id} trip={acid.trip} />}

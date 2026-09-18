@@ -32,12 +32,18 @@ export function NoPuzzle({ children }: { children: React.ReactNode }) {
 // stops there, so the row's own interaction (Tetris spinning, …) only runs
 // for clicks the puzzle passes on. A wrong pick shakes the row. Deliberately
 // no pointer cursor or label — it's a secret.
+// `left`/`right` hang a mark on the hairlines themselves, centred and out of
+// the flow, so a row without them is laid out exactly as before.
 export default function DividerRow({
   children,
   game,
+  left,
+  right,
 }: {
   children: React.ReactNode;
   game?: Game;
+  left?: React.ReactNode;
+  right?: React.ReactNode;
 }) {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [shaking, setShaking] = useState(false);
@@ -64,9 +70,19 @@ export default function DividerRow({
     />
   );
 
+  const rule = (mark?: React.ReactNode) => (
+    <span className="relative h-px max-w-40 flex-1 bg-line">
+      {mark && (
+        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          {mark}
+        </span>
+      )}
+    </span>
+  );
+
   return (
     <div className="flex scroll-mt-16 items-center justify-center gap-[22px] py-6 md:scroll-mt-24 md:py-10">
-      <span className="h-px max-w-40 flex-1 bg-line" />
+      {rule(left)}
       <div
         data-puzzle-game={game}
         onClickCapture={onClickCapture}
@@ -77,7 +93,7 @@ export default function DividerRow({
         {children}
         {game && !off && star}
       </div>
-      <span className="h-px max-w-40 flex-1 bg-line" />
+      {rule(right)}
     </div>
   );
 }
