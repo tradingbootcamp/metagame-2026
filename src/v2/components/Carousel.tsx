@@ -13,8 +13,9 @@ export default function Carousel({
     <div className="mx-auto w-full max-w-[960px] px-8">
       <SnapCarousel
         label="photo"
-        peek
-        slideClassName="overflow-hidden rounded-2xl"
+        trackClassName="rounded-2xl"
+        // The arrows sit inside the padded wrapper, so nudge them in past
+        // the track's rounded corners.
         className="[&>button]:mx-1"
         slides={images.map(({ src, alt, hats }, i) =>
           hats?.length ? (
