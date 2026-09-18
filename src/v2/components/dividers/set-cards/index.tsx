@@ -14,7 +14,6 @@ import { CARD as CARD_SIZE, SHADOW } from "../sizing";
 // which never move). Tap three cards (they glow); a set fades out and is
 // redealt in place, anything else shakes. Every deal holds at least one set.
 const CHARCOAL = "#4d4d4d";
-const GLOW = "drop-shadow-[0_0_5px_rgba(216,80,43,0.85)]";
 const EXIT_MS = 300;
 const SHAKE_MS = 400;
 const STAGGER_MS = 60;
@@ -189,6 +188,7 @@ function CardGlyph({
 }) {
   const { shape, count, shading } = card;
   const maskId = `set-${useId()}`;
+  const glowId = `${maskId}-glow`;
   const clips: React.ReactNode[] = [];
   const cut: React.ReactNode[] = [];
 
@@ -241,12 +241,10 @@ function CardGlyph({
       viewBox="22 6 56 88"
       aria-hidden
       onClick={onClick}
-      className={`${CARD_SIZE} shrink-0 touch-manipulation overflow-visible pointer-coarse:cursor-pointer ${
-        selected ? GLOW : SHADOW
-      } ${shaking ? `animate-[shake_${SHAKE_MS}ms_ease-in-out]` : ""}`}
+      className={`${CARD_SIZE} ${SHADOW} shrink-0 touch-manipulation overflow-visible pointer-coarse:cursor-pointer ${shaking ? `animate-[shake_${SHAKE_MS}ms_ease-in-out]` : ""}`}
       style={{
         opacity: leaving ? 0 : 1,
-        transition: `filter 300ms ease-out, opacity ${EXIT_MS}ms ease-out`,
+        transition: `opacity ${EXIT_MS}ms ease-out`,
         animation:
           delay === null
             ? undefined
@@ -255,7 +253,25 @@ function CardGlyph({
         ...style,
       }}
     >
-      <defs>{clips}</defs>
+      <defs>
+        {clips}
+        {/* The selection glow: the card's solid silhouette blurred, with the
+            silhouette itself cut back out — a halo round the outside only, so
+            nothing shines through the punched-out symbols. */}
+        <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="blur" />
+          <feComposite in="blur" in2="SourceAlpha" operator="out" />
+        </filter>
+      </defs>
+      <path
+        d={CARD}
+        fill="var(--color-meeple)"
+        filter={`url(#${glowId})`}
+        style={{
+          opacity: selected ? 1 : 0,
+          transition: "opacity 300ms ease-out",
+        }}
+      />
       <mask
         id={maskId}
         maskUnits="userSpaceOnUse"
