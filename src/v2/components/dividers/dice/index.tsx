@@ -102,7 +102,7 @@ const DICE: Die[] = [
       { x: 37.9, y: 77.4, turn: -156, size: 9, digits: 1 },
       { x: 62.1, y: 77.4, turn: 156, size: 9, digits: 1 },
     ],
-    initial: [20, 8, 2, 14, 7, 1, 9, 5, 6, 3],
+    initial: [20, 10, 12, 14, 2, 3, 4, 5, 6, 8],
   },
 ];
 
@@ -142,13 +142,15 @@ const PIPS: [number, number][][] = [
   ],
 ];
 
-// Distinct values, one per visible face. Narrow faces draw from 1–9 first so
-// the two-digit values are left for faces that fit them; on the cube no two
-// visible faces may be opposites (summing to 7).
+// Distinct values, one per visible face. Opposite faces sum to sides + 1 and
+// can never be seen together, so no two values may. Narrow faces draw from 1–9
+// first, leaving the two-digit values for faces that fit them.
 function roll(die: Die): number[] {
   const slots = die.faces ?? die.pipFaces ?? [];
   const pool = Array.from({ length: die.sides }, (_, i) => i + 1);
   const out: number[] = new Array(slots.length);
+  // A d4 has no opposite faces: every face touches the other three.
+  const opposites = die.sides > 4;
   const take = (ok: (n: number) => boolean) => {
     const options = pool.filter(ok);
     const n = options[Math.floor(Math.random() * options.length)];
@@ -161,8 +163,10 @@ function roll(die: Die): number[] {
       (a, b) => (die.faces?.[b].digits ?? 0) - (die.faces?.[a].digits ?? 0),
     );
   for (const i of order) {
-    out[i] = take((n) =>
-      die.pipFaces ? !out.includes(7 - n) : !die.faces?.[i].digits || n < 10,
+    out[i] = take(
+      (n) =>
+        (!opposites || !out.includes(die.sides + 1 - n)) &&
+        (!die.faces?.[i].digits || n < 10),
     );
   }
   return out;
