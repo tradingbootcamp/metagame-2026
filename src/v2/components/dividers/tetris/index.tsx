@@ -129,7 +129,7 @@ export default function TetrisDivider() {
     trackClick("tetris");
     if (madeLine(next)) {
       setPhase("set");
-      trackEgg({ egg: "tetris", event: "line" });
+      trackEgg({ egg: "tetris", event: "clear" });
     }
   };
 

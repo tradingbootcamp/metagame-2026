@@ -8,7 +8,7 @@ export type EggEvent =
   | { egg: "scrabble"; event: "cast"; word: string; via: Via }
   | { egg: "tetris" | "chess"; event: "clicks"; clicks: number }
   | { egg: "chess"; event: "castle" }
-  | { egg: "tetris"; event: "line" };
+  | { egg: "tetris"; event: "clear" };
 
 // Groups one browser's eggs together and nothing more: a random code kept in
 // localStorage, so it survives reloads (how you get a finished rack back) and
