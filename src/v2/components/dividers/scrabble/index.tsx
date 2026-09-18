@@ -32,8 +32,6 @@ import {
   MARK_COLOR,
   MARK_BOTH_MS,
   MARK_CAST_MS,
-  MARK_FLY_MS,
-  MARK_HOLD_MS,
   MARK_JOIN_MS,
   MARK_LETTER,
   MARK_LIFT_MS,
@@ -604,10 +602,10 @@ const CODE_GAP = 8;
 
 // Where `to` sits relative to `from`, as a transform. The dividers' widths are
 // all flex-derived, so these trips can only be measured at runtime.
-const shift = (from: Element, to: Element, dx = 0) => {
+const shift = (from: Element, to: Element) => {
   const a = from.getBoundingClientRect();
   const b = to.getBoundingClientRect();
-  return `translate(${b.left - a.left + dx}px, ${b.top - a.top}px)`;
+  return `translate(${b.left - a.left}px, ${b.top - a.top}px)`;
 };
 const PLATE_PAD = 16;
 // PART: extra room opened up in the middle of the rack.
@@ -1068,8 +1066,8 @@ export default function ScrabbleDivider({
         );
   }, [marks]);
 
-  // Measured, not laid out: the hairlines are flex-1, so how far the M has to
-  // travel is only known at runtime.
+  // Measured, not laid out: the hairlines are flex-1, so how far the marks
+  // have to travel is only known at runtime.
   useEffect(() => {
     if (reveal !== "flying") return;
     const m = metaRef.current;
@@ -1079,33 +1077,14 @@ export default function ScrabbleDivider({
       setReveal("open");
       return;
     }
-    const total = MARK_FLY_MS + MARK_HOLD_MS + MARK_JOIN_MS;
-    // Per segment, not on the options: an iteration easing would warp the whole
-    // timeline instead of letting the slide and the drop each settle.
-    const ease = "cubic-bezier(.34,1.1,.64,1)";
-    const opts = { duration: total, fill: "both" as const };
-    const met = MARK_FLY_MS / total;
-    const parts = (MARK_FLY_MS + MARK_HOLD_MS) / total;
-    const beside = shift(m, g, -(TILE_PX + CODE_GAP));
+    const opts = {
+      duration: MARK_JOIN_MS,
+      easing: "cubic-bezier(.45,0,.25,1)",
+      fill: "both" as const,
+    };
     const runs = [
-      m.animate(
-        [
-          { transform: "none", easing: ease },
-          { transform: beside, offset: met },
-          { transform: beside, offset: parts, easing: ease },
-          { transform: shift(m, s0) },
-        ],
-        opts,
-      ),
-      g.animate(
-        [
-          { transform: "none" },
-          { transform: "none", offset: met },
-          { transform: "none", offset: parts, easing: ease },
-          { transform: shift(g, s1) },
-        ],
-        opts,
-      ),
+      m.animate([{ transform: "none" }, { transform: shift(m, s0) }], opts),
+      g.animate([{ transform: "none" }, { transform: shift(g, s1) }], opts),
     ];
     runs[1].onfinish = () => setReveal("open");
     return () => runs.forEach((r) => r.cancel());
@@ -1277,8 +1256,7 @@ export default function ScrabbleDivider({
     };
   };
 
-  // Lifted over the rack: it starts out sat on a rack tile, and the M crosses
-  // in front of the rack on its way to the G.
+  // Lifted over the rack: it starts out sat on a rack tile.
   const mark = (side: Side) =>
     marks[side] && reveal !== "open" ? (
       <span

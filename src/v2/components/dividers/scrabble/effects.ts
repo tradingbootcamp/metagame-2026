@@ -254,10 +254,8 @@ export const MARK_LIFT_MS = 700;
 export const MARK_CAST_MS = 1400;
 // Both marks at rest on their hairlines, before they go to meet.
 export const MARK_BOTH_MS = 1000;
-export const MARK_FLY_MS = 1300;
-// Sat beside the G, before the pair drops: the whole point is seeing them meet.
-export const MARK_HOLD_MS = 700;
-export const MARK_JOIN_MS = 900;
+// The pair's trip in from the hairlines to the head of the code.
+export const MARK_JOIN_MS = 1400;
 export const CODE_STAGGER = 140;
 export const CODE_ENTRY_MS = 500;
 
