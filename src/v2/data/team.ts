@@ -12,11 +12,13 @@ import patrick from "../../../public/images/team/patrick.jpg";
 import ricki from "../../../public/images/team/ricki.jpg";
 import sparr from "../../../public/images/team/sparr.jpg";
 import tommy from "../../../public/images/team/tommy.jpg";
+import yemima from "../../../public/images/team/yemima.jpg";
 
-// The people running the con (TEAM: on /team and in the home page's team
-// carousel) and the advisors (ADVISORS: /team only), in display order. To add someone: append an entry and import their
-// photo from public/images/team/ (800px JPEGs). Omit `photo` for an initials
-// placeholder, `email` if they'd rather not be contacted directly.
+// The people running the con (TEAM) and the advisors (ADVISORS), shown on
+// /team in display order. TeamCarousel also reads TEAM but isn't mounted
+// anywhere right now. To add someone: add an entry and import their photo from
+// public/images/team/ (800px JPEGs). Omit `photo` for an initials placeholder,
+// `email` if they'd rather not be contacted directly.
 export type Person = {
   name: string;
   title: string;
@@ -46,6 +48,11 @@ export const TEAM: Person[] = [
     title: "Operations Lead",
     photo: brian,
     email: "brian@metagame.games",
+  },
+  {
+    name: "Yemima Morris",
+    title: "Volunteer Coordinator",
+    photo: yemima,
   },
   { name: "John Bromels", title: "Megagame Lead", photo: john },
   {

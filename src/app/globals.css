@@ -168,6 +168,13 @@ button:not(:disabled) {
   }
 }
 
+/* Set divider: a card dealt onto the row. */
+@keyframes set-deal {
+  from {
+    opacity: 0;
+  }
+}
+
 /* Scrabble divider (src/v2/components/dividers/scrabble). The invisible rect
    that catches taps on a tile: pointer-events has to be spelled out, since the
    rect paints nothing. A mouse gets the tile's own 30px box; tapping one tile

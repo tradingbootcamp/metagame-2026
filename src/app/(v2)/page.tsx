@@ -38,11 +38,13 @@ import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
 import {
   HOTELS_SEARCH_URL,
   HOUSING_URL,
+  PODCAST_EPISODE_URL,
   LIGHTHAVEN_URL,
   MEGAGAME_PROPOSAL_FORM_URL,
   RFP_FORM_URL,
   VOLUNTEER_FORM_URL,
 } from "@/v2/lib/links";
+import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
 import megagameChess from "../../../public/images/megagame-chess.jpg";
@@ -202,6 +204,32 @@ const FAQS: {
           reach out
         </ContactLink>{" "}
         so we can figure out how to make it work.
+      </>
+    ),
+  },
+  {
+    question: "Where can I learn more about Metagame?",
+    answer: (
+      <>
+        <a
+          href={SOCIAL_LINKS.DISCORD}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={BODY_LINK}
+        >
+          Join our Discord
+        </a>{" "}
+        to chat with the team and other attendees, or check out Ricki&apos;s
+        conversation about Metagame 2025 on the{" "}
+        <a
+          href={PODCAST_EPISODE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={BODY_LINK}
+        >
+          Complex Systems podcast
+        </a>
+        .
       </>
     ),
   },
@@ -599,8 +627,8 @@ export default function Home() {
             className="mb-12"
           />
           {/* Photo rides alongside the list on wide screens, sized so its 3:4
-              height roughly matches the collapsed list, and stays put (sticky)
-              as answers open; on phones it follows the list. */}
+              height roughly matches the collapsed list; on phones it follows
+              the list. */}
           <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start">
             {/* Contact line lives in the list column so it hugs the questions
                 rather than dropping below the (taller) photo. */}
@@ -622,7 +650,7 @@ export default function Home() {
                 <AnagramEmail className={BODY_LINK} />.
               </p>
             </div>
-            <CrypticsLightbox className="block lg:sticky lg:top-24" />
+            <CrypticsLightbox className="block" />
           </div>
         </div>
       </section>

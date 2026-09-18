@@ -1,12 +1,25 @@
-// SET cards rendered in the weirdchess/dice language: a solid charcoal card with
-// the symbols punched out as negative space. Colour is the one SET attribute we
-// drop in b/w — shape (diamond/oval/squiggle), count (1–3) and shading
-// (solid = cut, open = cut outline, striped = cut stripes) carry it. Decorative;
-// no wired-up use yet.
+"use client";
+
+import { useId, useRef, useState } from "react";
 import DividerRow from "../DividerRow";
 import { CARD as CARD_SIZE, SHADOW } from "../sizing";
 
+// SET cards rendered in the weirdchess/dice language: a solid charcoal card with
+// the symbols punched out as negative space. Colour is the one SET attribute we
+// drop in b/w — shape (diamond/oval/squiggle), count (1–3) and shading
+// (solid = cut, open = cut outline, striped = cut stripes) carry it.
+//
+// The cards are a game. Four is too few to be one, so the first tap spreads
+// more cards out along the row (they fade in around the centre four, which
+// never move; the hairlines draw back to make room). Tap three cards (they glow); a set fades out and is
+// redealt in place, anything else shakes. Every deal holds at least one set.
 const CHARCOAL = "#4d4d4d";
+const EXIT_MS = 500; // a found set fading out
+const DEAL_MS = 600; // a dealt card fading in
+const SHAKE_MS = 400;
+const STAGGER_MS = 90;
+// DividerRow's gap-[22px]: the spread cards keep the centre four's spacing.
+const GAP = 22;
 
 // portrait card, rounded corners, centred in the viewBox
 const CARD =
@@ -15,8 +28,12 @@ const CARD =
 const HW = 16; // symbol half-width
 const HH = 7; // symbol half-height
 
-type Shape = "diamond" | "oval" | "squiggle";
-type Shading = "solid" | "striped" | "open";
+const SHAPE_NAMES = ["diamond", "oval", "squiggle"] as const;
+const COUNT_NAMES = [1, 2, 3] as const;
+const SHADING_NAMES = ["solid", "striped", "open"] as const;
+type Shape = (typeof SHAPE_NAMES)[number];
+type Count = (typeof COUNT_NAMES)[number];
+type Shading = (typeof SHADING_NAMES)[number];
 
 // A smooth squiggle: a sine centreline offset to a constant thickness with
 // semicircle end-caps, so there are no sharp corners at any scale. Sampled as a
@@ -66,23 +83,113 @@ const SHAPES: Record<Shape, (cy: number) => string> = {
 };
 
 // vertical centres of the symbols, evenly stacked, for each count
-const COUNTS: Record<1 | 2 | 3, number[]> = {
+const COUNTS: Record<Count, number[]> = {
   1: [50],
   2: [38, 62],
   3: [29, 50, 71],
 };
 
-type Card = { id: string; shape: Shape; count: 1 | 2 | 3; shading: Shading };
+type Card = { shape: Shape; count: Count; shading: Shading };
 
-const CARDS: Card[] = [
-  { id: "a", shape: "diamond", count: 1, shading: "solid" },
-  { id: "b", shape: "oval", count: 2, shading: "striped" },
-  { id: "c", shape: "squiggle", count: 3, shading: "open" },
-  { id: "d", shape: "diamond", count: 2, shading: "solid" },
-];
+const key = (c: Card) => `${c.shape}-${c.count}-${c.shading}`;
 
-function CardGlyph({ id, shape, count, shading }: Card) {
-  const maskId = `set-${id}`;
+// With three attributes there are 27 cards, and any two fix the third that
+// completes their set: per attribute, the shared value or the one left over.
+const third = (a: Card, b: Card): Card => ({
+  shape:
+    a.shape === b.shape
+      ? a.shape
+      : SHAPE_NAMES.find((s) => s !== a.shape && s !== b.shape)!,
+  count:
+    a.count === b.count
+      ? a.count
+      : COUNT_NAMES.find((n) => n !== a.count && n !== b.count)!,
+  shading:
+    a.shading === b.shading
+      ? a.shading
+      : SHADING_NAMES.find((s) => s !== a.shading && s !== b.shading)!,
+});
+
+const isSet = (a: Card, b: Card, c: Card) => key(third(a, b)) === key(c);
+
+const pick = <T,>(xs: readonly T[]) =>
+  xs[Math.floor(Math.random() * xs.length)];
+// A card in a slot. `seq` keys it (a redeal can put the same card back in the
+// same slot, and it should still fade in as new); `delay` is its fade-in, or
+// null for the four the page loads with.
+type Slot = { card: Card; seq: number; delay: number | null };
+
+const DECK: Card[] = SHAPE_NAMES.flatMap((shape) =>
+  COUNT_NAMES.flatMap((count) =>
+    SHADING_NAMES.map((shading) => ({ shape, count, shading })),
+  ),
+);
+
+// Fills the empty slots so the row holds at least one set: one triple with at
+// least one blank in it is picked to be the guaranteed set, so the fresh cards
+// aren't always the answer. Cards are drawn from the rest of the deck, so the
+// row never repeats one.
+function deal(
+  slots: (Slot | null)[],
+  mint: (card: Card, i: number) => Slot,
+): Slot[] {
+  const blanks = slots.flatMap((s, i) => (s ? [] : [i]));
+  for (;;) {
+    const cards: (Card | null)[] = slots.map((s) => s?.card ?? null);
+    const used = new Set(cards.map((c) => c && key(c)));
+    const deck = DECK.filter((c) => !used.has(key(c)));
+    const draw = () =>
+      deck.splice(Math.floor(Math.random() * deck.length), 1)[0];
+    const last = pick(blanks);
+    const others = new Set<number>();
+    while (others.size < 2) {
+      const i = Math.floor(Math.random() * slots.length);
+      if (i !== last) others.add(i);
+    }
+    for (const i of others) cards[i] ??= draw();
+    const [x, y] = [...others].map((i) => cards[i]!);
+    const z = third(x, y);
+    const at = deck.findIndex((c) => key(c) === key(z));
+    if (at < 0) continue; // already on the row: pick again
+    deck.splice(at, 1);
+    cards[last] = z;
+    for (const i of blanks) cards[i] ??= draw();
+    return cards.map((card, i) => slots[i] ?? mint(card!, i));
+  }
+}
+
+// The deal the page loads with (the first three are a set).
+const FIRST: Slot[] = (
+  [
+    { shape: "diamond", count: 1, shading: "solid" },
+    { shape: "oval", count: 2, shading: "striped" },
+    { shape: "squiggle", count: 3, shading: "open" },
+    { shape: "diamond", count: 2, shading: "solid" },
+  ] as Card[]
+).map((card, seq) => ({ card, seq, delay: null }));
+
+function CardGlyph({
+  card,
+  selected,
+  leaving,
+  shaking,
+  delay,
+  style,
+  onClick,
+  ref,
+}: {
+  card: Card;
+  selected: boolean;
+  leaving: boolean;
+  shaking: boolean;
+  delay: number | null;
+  style?: React.CSSProperties;
+  onClick: () => void;
+  ref?: React.Ref<SVGSVGElement>;
+}) {
+  const { shape, count, shading } = card;
+  const maskId = `set-${useId()}`;
+  const glowId = `${maskId}-glow`;
   const clips: React.ReactNode[] = [];
   const cut: React.ReactNode[] = [];
 
@@ -125,31 +232,215 @@ function CardGlyph({ id, shape, count, shading }: Card) {
     }
   });
 
+  // Tapping is the whole interaction, so it has to survive iOS: no
+  // double-tap-to-zoom, and the cursor Safari wants before it delivers a click
+  // to a plain <svg>. The invisible rect widens the target into the gutters —
+  // a 22px-wide card is a small thing to hit with a thumb.
   return (
-    <svg viewBox="22 6 56 88" aria-hidden className={`${CARD_SIZE} ${SHADOW}`}>
-      <defs>{clips}</defs>
-      <mask
-        id={maskId}
-        maskUnits="userSpaceOnUse"
-        x="0"
-        y="0"
-        width="100"
-        height="100"
+    <svg
+      ref={ref}
+      viewBox="22 6 56 88"
+      aria-hidden
+      onClick={onClick}
+      className={`${CARD_SIZE} ${SHADOW} shrink-0 touch-manipulation overflow-visible pointer-coarse:cursor-pointer ${shaking ? `animate-[shake_${SHAKE_MS}ms_ease-in-out]` : ""}`}
+      style={{
+        opacity: leaving ? 0 : 1,
+        transition: `opacity ${EXIT_MS}ms ease-out`,
+        WebkitTapHighlightColor: "transparent",
+        ...style,
+      }}
+    >
+      <defs>
+        {clips}
+        {/* The selection glow: the card's solid silhouette blurred, with the
+            silhouette itself cut back out — a halo round the outside only, so
+            nothing shines through the punched-out symbols. */}
+        <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="blur" />
+          <feComposite in="blur" in2="SourceAlpha" operator="out" />
+        </filter>
+      </defs>
+      {/* The deal's fade-in lives here, not on the <svg>: an inline animation
+          there would outrank the shake's class. */}
+      <g
+        style={{
+          animation:
+            delay === null
+              ? undefined
+              : `set-deal ${DEAL_MS}ms ease-out ${delay}ms both`,
+        }}
       >
-        <path d={CARD} fill="#fff" />
-        {cut}
-      </mask>
-      <path d={CARD} fill={CHARCOAL} mask={`url(#${maskId})`} />
+        <path
+          d={CARD}
+          fill="var(--color-meeple)"
+          filter={`url(#${glowId})`}
+          style={{
+            opacity: selected ? 1 : 0,
+            transition: "opacity 300ms ease-out",
+          }}
+        />
+        <mask
+          id={maskId}
+          maskUnits="userSpaceOnUse"
+          x="0"
+          y="0"
+          width="100"
+          height="100"
+        >
+          <path d={CARD} fill="#fff" />
+          {cut}
+        </mask>
+        <path d={CARD} fill={CHARCOAL} mask={`url(#${maskId})`} />
+      </g>
+      <rect x={6} y={-4} width={88} height={108} fill="transparent" />
     </svg>
   );
 }
 
+// Eight cards on the row: with three attributes a triple is a set 1 time in
+// 25, so eight hold about as many sets (~2) as the real game's twelve of 81.
+const MAX_CARDS = 8;
+
+// How many cards fit either side of the centre four: `pitch` apart, out to
+// the edge of the row (the hairlines' full span).
+const fit = (rowWidth: number, cardWidth: number, pitch: number) =>
+  Math.min(
+    (MAX_CARDS - 4) / 2,
+    Math.max(0, Math.floor((rowWidth / 2 - cardWidth / 2) / pitch - 1.5)),
+  );
+
 export default function SetCardDivider() {
+  const [board, setBoard] = useState(FIRST);
+  const [picked, setPicked] = useState<number[]>([]);
+  const [leaving, setLeaving] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  // Set once the row has spread: the card width the spread cards are placed
+  // by, and how many went either side.
+  const [spread, setSpread] = useState<{
+    cardWidth: number;
+    side: number;
+  } | null>(null);
+  const [found, setFound] = useState(0);
+  // Counts up from FIRST's keys. Kept here, not at module level, so a hot
+  // reload can't restart it under a board that's still holding old keys.
+  const seq = useRef(FIRST.length);
+  const centre = useRef<HTMLDivElement>(null);
+  const first = useRef<SVGSVGElement>(null);
+
+  // The spread cards sit over the hairlines, so they're placed by hand rather
+  // than laid out: offsets from the row's centre in card pitches. The centre
+  // four stay in flow, so they never move.
+  const spreadOut = () => {
+    const cardWidth = first.current!.getBoundingClientRect().width;
+    const pitch = cardWidth + GAP;
+    const row = centre.current!.closest("[data-puzzle-game]")!.parentElement!;
+    const side = fit(row.clientWidth, cardWidth, pitch);
+    const slots: (Slot | null)[] = [
+      ...Array<null>(side).fill(null),
+      ...board,
+      ...Array<null>(side).fill(null),
+    ];
+    // Fades in from the centre outward.
+    const away = (i: number) => Math.abs(i - (slots.length - 1) / 2) - 1.5;
+    setSpread({ cardWidth, side });
+    return deal(slots, (card, i) => ({
+      card,
+      seq: seq.current++,
+      delay: away(i) * STAGGER_MS,
+    }));
+  };
+
+  const onClick = (i: number) => {
+    if (leaving || shaking) return;
+    if (!spread) {
+      const wide = spreadOut();
+      setBoard(wide);
+      setPicked([i + (wide.length - board.length) / 2]);
+      return;
+    }
+    if (picked.includes(i)) {
+      setPicked(picked.filter((p) => p !== i));
+      return;
+    }
+    const next = [...picked, i];
+    setPicked(next);
+    if (next.length < 3) return;
+    const [a, b, c] = next.map((p) => board[p].card);
+    if (!isSet(a, b, c)) {
+      setShaking(true);
+      setTimeout(() => {
+        setShaking(false);
+        setPicked([]);
+      }, SHAKE_MS);
+      return;
+    }
+    setLeaving(true);
+    setTimeout(() => {
+      setBoard(
+        deal(
+          board.map((slot, j) => (next.includes(j) ? null : slot)),
+          (card) => ({ card, seq: seq.current++, delay: 0 }),
+        ),
+      );
+      setFound((f) => f + 1);
+      setPicked([]);
+      setLeaving(false);
+    }, EXIT_MS);
+  };
+
+  const n = board.length;
+  const inner = (n - 4) / 2;
+  const glyph = (i: number, style?: React.CSSProperties) => (
+    <CardGlyph
+      key={board[i].seq}
+      ref={i === inner ? first : undefined}
+      card={board[i].card}
+      delay={board[i].delay}
+      selected={picked.includes(i)}
+      leaving={leaving && picked.includes(i)}
+      shaking={shaking && picked.includes(i)}
+      style={style}
+      onClick={() => onClick(i)}
+    />
+  );
+  const place = (i: number): React.CSSProperties => {
+    const pitch = spread!.cardWidth + GAP;
+    const off = i - (n - 1) / 2;
+    return {
+      position: "absolute",
+      top: 0,
+      left: `calc(50% + ${(off * pitch - spread!.cardWidth / 2).toFixed(2)}px)`,
+    };
+  };
+
+  // The first card either side lands in the star's slot; each one after that
+  // runs a pitch further over the hairline, which gives way (and keeps a gap).
+  const overhang = spread
+    ? Math.max(0, spread.side * (spread.cardWidth + GAP) - 2 * GAP)
+    : undefined;
+
   return (
-    <DividerRow game="set">
-      {CARDS.map((c) => (
-        <CardGlyph key={c.id} {...c} />
-      ))}
+    <DividerRow game="set" overhang={overhang}>
+      <div ref={centre} className="relative flex items-center gap-[22px]">
+        {board.map((_, i) =>
+          i >= inner && i < inner + 4 ? glyph(i) : glyph(i, place(i)),
+        )}
+        {/* Sets found, one pip each, hung under the row so nothing shifts. */}
+        {found > 0 && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-full left-1/2 mt-3 flex -translate-x-1/2 gap-2"
+          >
+            {Array.from({ length: found }, (_, i) => (
+              <span
+                key={i}
+                className="size-1 animate-[set-deal_600ms_ease-out] rounded-full"
+                style={{ background: CHARCOAL }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </DividerRow>
   );
 }

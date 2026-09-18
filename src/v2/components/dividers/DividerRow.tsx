@@ -31,17 +31,20 @@ export function NoPuzzle({ children }: { children: React.ReactNode }) {
 // phase: when the puzzle claims one (a find, or any click while in game) it
 // stops there, so the row's own interaction (Tetris spinning, …) only runs
 // for clicks the puzzle passes on. A wrong pick shakes the row. Deliberately
-// no pointer cursor or label — it's a secret.
-// `left`/`right` hang a mark on the hairlines themselves, centred and out of
-// the flow, so a row without them is laid out exactly as before.
+// no pointer cursor or label — it's a secret. `overhang` is for a row whose
+// icons have spread out past the stars (Set): the stars hide, and each hairline
+// is clipped back that many px from its inner end.
+// `left`/`right` hang a mark on the hairlines, centred and out of the flow.
 export default function DividerRow({
   children,
   game,
+  overhang,
   left,
   right,
 }: {
   children: React.ReactNode;
   game?: Game;
+  overhang?: number;
   left?: React.ReactNode;
   right?: React.ReactNode;
 }) {
@@ -64,14 +67,21 @@ export default function DividerRow({
       aria-hidden
       size={22}
       strokeWidth={2}
-      className={`shrink-0 fill-meeple text-meeple transition-opacity duration-300 ${
-        found ? "opacity-100" : "opacity-0"
+      className={`pointer-events-none shrink-0 fill-meeple text-meeple transition-opacity duration-300 ${
+        found && overhang === undefined ? "opacity-100" : "opacity-0"
       }`}
     />
   );
 
-  const rule = (mark?: React.ReactNode) => (
-    <span className="relative h-px max-w-40 flex-1 bg-line">
+  // The mark is the line's sibling, not its child: the clip would take it too.
+  const line = (side: "left" | "right", mark?: React.ReactNode) => (
+    <span className="pointer-events-none relative h-px max-w-40 flex-1">
+      <span
+        className="absolute inset-0 bg-line transition-[clip-path] duration-500"
+        style={{
+          clipPath: `inset(0 ${side === "left" ? (overhang ?? 0) : 0}px 0 ${side === "right" ? (overhang ?? 0) : 0}px)`,
+        }}
+      />
       {mark && (
         <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
           {mark}
@@ -82,7 +92,7 @@ export default function DividerRow({
 
   return (
     <div className="flex scroll-mt-16 items-center justify-center gap-[22px] py-6 md:scroll-mt-24 md:py-10">
-      {rule(left)}
+      {line("left", left)}
       <div
         data-puzzle-game={game}
         onClickCapture={onClickCapture}
@@ -93,7 +103,7 @@ export default function DividerRow({
         {children}
         {game && !off && star}
       </div>
-      {rule(right)}
+      {line("right", right)}
     </div>
   );
 }
