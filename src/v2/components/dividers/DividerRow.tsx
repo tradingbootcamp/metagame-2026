@@ -31,13 +31,16 @@ export function NoPuzzle({ children }: { children: React.ReactNode }) {
 // phase: when the puzzle claims one (a find, or any click while in game) it
 // stops there, so the row's own interaction (Tetris spinning, …) only runs
 // for clicks the puzzle passes on. A wrong pick shakes the row. Deliberately
-// no pointer cursor or label — it's a secret.
+// no pointer cursor or label — it's a secret. `bare` fades the hairlines and
+// stars out, for a row whose icons have spread over them (Set).
 export default function DividerRow({
   children,
   game,
+  bare = false,
 }: {
   children: React.ReactNode;
   game?: Game;
+  bare?: boolean;
 }) {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [shaking, setShaking] = useState(false);
@@ -59,14 +62,16 @@ export default function DividerRow({
       size={22}
       strokeWidth={2}
       className={`shrink-0 fill-meeple text-meeple transition-opacity duration-300 ${
-        found ? "opacity-100" : "opacity-0"
+        found && !bare ? "opacity-100" : "opacity-0"
       }`}
     />
   );
 
+  const line = `h-px max-w-40 flex-1 bg-line transition-opacity duration-300 ${bare ? "opacity-0" : ""}`;
+
   return (
     <div className="flex scroll-mt-16 items-center justify-center gap-[22px] py-6 md:scroll-mt-24 md:py-10">
-      <span className="h-px max-w-40 flex-1 bg-line" />
+      <span className={line} />
       <div
         data-puzzle-game={game}
         onClickCapture={onClickCapture}
@@ -77,7 +82,7 @@ export default function DividerRow({
         {children}
         {game && !off && star}
       </div>
-      <span className="h-px max-w-40 flex-1 bg-line" />
+      <span className={line} />
     </div>
   );
 }
