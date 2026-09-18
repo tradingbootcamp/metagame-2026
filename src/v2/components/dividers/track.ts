@@ -2,13 +2,18 @@
 // finds these. Fire-and-forget: nothing here may delay or break an egg.
 export type Via = "click" | "type";
 
+// Eggs whose clicks are counted.
+export const CLICK_EGGS = ["tetris", "chess", "dice", "clocktower"] as const;
+export type ClickEgg = (typeof CLICK_EGGS)[number];
+
 // What /api/egg accepts. A `clicks` event carries this visit's running total
 // and overwrites its one row; every other event is a row of its own.
 export type EggEvent =
   | { egg: "scrabble"; event: "cast"; word: string; via: Via }
-  | { egg: "tetris" | "chess"; event: "clicks"; clicks: number }
+  | { egg: ClickEgg; event: "clicks"; clicks: number }
   | { egg: "chess"; event: "castle" }
-  | { egg: "tetris"; event: "clear" };
+  | { egg: "tetris"; event: "clear" }
+  | { egg: "clocktower"; event: "shoot" };
 
 // Groups one browser's eggs together and nothing more: a random code kept in
 // localStorage, so it survives reloads (how you get a finished rack back) and
@@ -49,17 +54,17 @@ export function trackEgg(e: EggEvent) {
 // here (and in localStorage, to carry across visits) and goes out once the
 // clicking pauses, or when the page is left mid-flurry.
 const SETTLE_MS = 1500;
-const pending = new Map<"tetris" | "chess", ReturnType<typeof setTimeout>>();
-const totals = new Map<"tetris" | "chess", number>();
+const pending = new Map<ClickEgg, ReturnType<typeof setTimeout>>();
+const totals = new Map<ClickEgg, number>();
 let listening = false;
 
-const flush = (egg: "tetris" | "chess") => {
+const flush = (egg: ClickEgg) => {
   clearTimeout(pending.get(egg));
   pending.delete(egg);
   trackEgg({ egg, event: "clicks", clicks: totals.get(egg)! });
 };
 
-export function trackClick(egg: "tetris" | "chess") {
+export function trackClick(egg: ClickEgg) {
   const key = `egg-clicks-${egg}`;
   let total = totals.get(egg);
   try {

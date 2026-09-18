@@ -428,6 +428,9 @@ export async function recordEgg(found: EggEvent, visit: string): Promise<void> {
         ...(upsert && {
           performUpsert: { fieldsToMergeOn: ["Visit", "Egg", "Event"] },
         }),
+        // Egg and Event are single-selects: a new egg adds its own options.
+        // Safe on a public endpoint because /api/egg allow-lists both.
+        typecast: true,
         records: [
           {
             fields: {
