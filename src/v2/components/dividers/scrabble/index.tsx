@@ -1088,7 +1088,7 @@ export default function ScrabbleDivider({
     );
     const both = marks.meta && marks.game;
     run.onfinish = () => {
-      if (side === "game") setDwUp(true);
+      if (both) setDwUp(true);
       // Not out from under someone already spelling the next word.
       const word = getSnapshot()
         .map((t) => t.letter)
@@ -1543,9 +1543,9 @@ export default function ScrabbleDivider({
                     className={`${GLYPH} relative isolate shrink-0`}
                   >
                     {i === CODE_SPAN.game[0] && (dwUp || reveal === "open") && (
-                      // The square the G lands on: up once the G is out on
-                      // its hairline, too faint to give much away until it
-                      // flashes.
+                      // The square the G lands on: up once the second mark is
+                      // out on its hairline, too faint to give much away
+                      // until it flashes.
                       <span
                         ref={dwRef}
                         className="absolute -inset-[3px] -z-10 flex flex-col items-center justify-center rounded-[3px] text-center text-[5.5px] leading-[1.15] font-bold tracking-wide uppercase"
