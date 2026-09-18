@@ -12,7 +12,8 @@ const LEG = 180;
 
 type Move = { dx: number; dy: number; knight?: boolean };
 
-// x and y sit on separate wrappers so a knight can walk its L two then one.
+// x and y sit on separate wrappers so a knight can walk its L: up first on
+// the way out (clear of the king's square), retraced on the way back.
 // Only the glyph takes clicks: the x wrapper's box stays on the rank, where
 // it would cover a neighbour.
 function Piece({
@@ -34,19 +35,20 @@ function Piece({
     transitionDuration: `${LEG}ms`,
     transitionDelay: second ? `${LEG}ms` : "0ms",
   });
+  const knight = Boolean(move.knight);
   return (
     <span
       className="pointer-events-none transition-transform ease-out"
       style={{
         transform: `translateX(${moved ? move.dx * STEP : 0}px)`,
-        ...leg(false),
+        ...leg(knight && moved),
       }}
     >
       <span
         className="block transition-transform ease-out"
         style={{
           transform: `translateY(${moved ? move.dy * STEP : 0}px)`,
-          ...leg(Boolean(move.knight)),
+          ...leg(knight && !moved),
         }}
       >
         <span
