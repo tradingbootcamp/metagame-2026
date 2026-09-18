@@ -13,37 +13,60 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const noSubscribe = () => () => {};
 
-const slotOf = (el: HTMLElement) => Math.round(el.scrollLeft / el.clientWidth);
+// Where the track has to be scrolled for slot k to sit centred. Measured per
+// slide, not k × a width: with `peek` the slides are narrower than the track.
+const leftOf = (el: HTMLElement, slot: number) => {
+  const slide = el.children[slot] as HTMLElement | undefined;
+  return slide
+    ? slide.offsetLeft - (el.clientWidth - slide.offsetWidth) / 2
+    : 0;
+};
+
+const slotOf = (el: HTMLElement) => {
+  let best = 0;
+  for (let k = 1; k < el.children.length; k++)
+    if (
+      Math.abs(leftOf(el, k) - el.scrollLeft) <
+      Math.abs(leftOf(el, best) - el.scrollLeft)
+    )
+      best = k;
+  return best;
+};
 
 const jump = (el: HTMLElement, slot: number) =>
-  el.scrollTo({ left: slot * el.clientWidth, behavior: "instant" });
+  el.scrollTo({ left: leftOf(el, slot), behavior: "instant" });
 
 // Generic one-slide-at-a-time strip. Native scroll-snap does the work — swipe
-// on touch, arrows and dots on desktop — so it needs no gesture library and
-// stays smooth on phones. Slides are whatever you pass; each fills the track.
+// on touch, arrows on desktop — so it needs no gesture library and stays
+// smooth on phones. Slides are whatever you pass; each fills the track, or
+// with `peek` leaves room for a faded slice of its neighbours either side.
 //
-// It loops: a clone of the last slide sits before the first and one of the
-// first after the last, so stepping past either end looks like one more
-// slide. Once the scroll settles on a clone we jump (no animation) to its
-// real twin, and the next gesture carries on from there.
+// It loops: clones of the last slides sit before the first and of the first
+// after the last, so stepping past either end looks like one more slide. Once
+// the scroll settles on a clone we jump (no animation) to its real twin, and
+// the next gesture carries on from there.
 export default function SnapCarousel({
   slides,
   label,
   className = "",
   trackClassName = "",
+  slideClassName = "",
   arrowsOutside = false,
+  peek = false,
 }: {
   slides: ReactNode[];
-  label: string; // what a slide is, for the arrow/dot labels ("photo")
+  label: string; // what a slide is, for the arrow labels ("photo")
   className?: string;
   trackClassName?: string;
+  slideClassName?: string;
   // Arrows flush with the wrapper's edges instead of over the slide — pair
   // with horizontal padding on `className` to give them a gutter.
   arrowsOutside?: boolean;
+  peek?: boolean;
 }) {
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
-  // Arrows and dots are off while a press's scroll is in flight: a second
+  // Arrows are off while a press's scroll is in flight: a second
   // press mid-animation would read a half-finished position and misfire.
   const [moving, setMoving] = useState(false);
   const n = slides.length;
@@ -54,13 +77,16 @@ export default function SnapCarousel({
     () => n > 1,
     () => false,
   );
-  const offset = loop ? 1 : 0; // track slot holding real slide 0
-  const items = loop ? [slides[n - 1], ...slides, slides[0]] : slides;
+  // A clone's own neighbour shows too with `peek`, so it takes two a side.
+  const offset = loop ? (peek ? 2 : 1) : 0; // track slot holding real slide 0
+  const items = loop
+    ? [...slides.slice(-offset), ...slides, ...slides.slice(0, offset)]
+    : slides;
 
   useLayoutEffect(() => {
     const el = track.current;
-    if (el && loop) jump(el, 1);
-  }, [loop]);
+    if (el && loop) jump(el, offset);
+  }, [loop, offset]);
 
   useEffect(() => {
     const el = track.current;
@@ -72,10 +98,10 @@ export default function SnapCarousel({
       setIndex((((slot - offset) % n) + n) % n);
     };
     const onSettle = () => {
-      const w = el.clientWidth;
-      if (!w || Math.abs(el.scrollLeft - slot * w) > 1) return;
-      if (loop && (slot === 0 || slot === n + 1)) {
-        slot = slot === 0 ? n : 1;
+      if (!el.clientWidth || Math.abs(el.scrollLeft - leftOf(el, slot)) > 1)
+        return;
+      if (loop && (slot < offset || slot >= offset + n)) {
+        slot += slot < offset ? n : -n;
         jump(el, slot);
       }
       setMoving(false);
@@ -114,7 +140,7 @@ export default function SnapCarousel({
       const el = track.current;
       if (!el || moving || slot === slotOf(el)) return;
       setMoving(true);
-      el.scrollTo({ left: slot * el.clientWidth, behavior: "smooth" });
+      el.scrollTo({ left: leftOf(el, slot), behavior: "smooth" });
     },
     [moving],
   );
@@ -123,21 +149,28 @@ export default function SnapCarousel({
     <div className={`relative ${className}`}>
       <div
         ref={track}
-        className={`flex snap-x snap-mandatory [scrollbar-width:none] overflow-x-auto overscroll-x-contain [&::-webkit-scrollbar]:hidden ${trackClassName}`}
+        className={`relative flex snap-x snap-mandatory [scrollbar-width:none] overflow-x-auto overscroll-x-contain [&::-webkit-scrollbar]:hidden ${peek ? "gap-3" : ""} ${trackClassName}`}
         aria-roledescription="carousel"
       >
         {items.map((slide, k) => {
-          const clone = loop && (k === 0 || k === n + 1);
-          const i = (k - offset + n) % n;
+          const clone = loop && (k < offset || k >= offset + n);
+          const i = (((k - offset) % n) + n) % n;
+          // A ghost is a way to its slide, not a place to use it from.
+          const ghost = peek && i !== index;
           return (
             <div
               key={clone ? `clone-${k}` : i}
-              className="w-full shrink-0 snap-center"
+              className={`shrink-0 snap-center transition-opacity duration-300 ${
+                peek ? "w-[84%]" : "w-full"
+              } ${ghost ? "cursor-pointer opacity-35" : ""} ${slideClassName}`}
               aria-roledescription="slide"
               aria-label={`${i + 1} of ${n}`}
               aria-hidden={clone || undefined}
+              onClick={ghost ? () => goTo(k) : undefined}
             >
-              {slide}
+              <div className={ghost ? "pointer-events-none" : undefined}>
+                {slide}
+              </div>
             </div>
           );
         })}
@@ -164,21 +197,6 @@ export default function SnapCarousel({
           {dir === "prev" ? <ChevronLeft /> : <ChevronRight />}
         </button>
       ))}
-
-      <div className="mt-4 flex justify-center gap-2">
-        {slides.map((_, i) => (
-          <button
-            key={i}
-            type="button"
-            aria-label={`Go to ${label} ${i + 1}`}
-            aria-current={i === index}
-            onClick={() => goTo(i + offset)}
-            className={`h-2.5 w-2.5 cursor-pointer rounded-full transition ${
-              i === index ? "bg-meeple" : "bg-navy/25 hover:bg-navy/50"
-            }`}
-          />
-        ))}
-      </div>
     </div>
   );
 }

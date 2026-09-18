@@ -267,7 +267,9 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="py-6">
+      {/* Bottom padding matches the next section's top, so the divider sits
+          midway between the photo and the heading. */}
+      <div className="pt-6 pb-8 md:pb-14">
         <Carousel images={CAROUSEL} />
       </div>
 
