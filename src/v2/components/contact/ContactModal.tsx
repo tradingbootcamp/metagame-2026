@@ -50,24 +50,27 @@ export default function ContactModal({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="flex max-w-[560px] flex-col gap-5 px-9 py-8">
+      <DialogContent
+        aria-describedby={undefined}
+        className="flex max-w-[560px] flex-col gap-5 px-9 py-8"
+      >
         <div>
           <DialogTitle
             className={`${HEADING} text-[clamp(22px,3vw,28px)] text-cream`}
           >
             Contact us
           </DialogTitle>
-          <DialogDescription className="mt-1.5 text-[15px] text-cream/80">
-            {to === TEAM_EMAIL
-              ? "Questions, ticket transfers, accessibility, anything else — we'll reply by email."
-              : `Your message goes to ${to}. We'll reply by email.`}
-          </DialogDescription>
+          {to !== TEAM_EMAIL && (
+            <DialogDescription className="mt-1.5 text-[15px] text-cream/80">
+              Your message goes to {to}.
+            </DialogDescription>
+          )}
         </div>
 
         {status === "success" ? (
           <div className="flex flex-col items-start gap-4">
             <p className="text-base text-cream/90">
-              Thanks — your message is on its way. We&apos;ll get back to you at{" "}
+              Thanks! We&apos;ll reply to{" "}
               <span className="font-semibold text-cream">{email}</span>.
             </p>
             <Button type="button" variant="ghost" onClick={onClose}>

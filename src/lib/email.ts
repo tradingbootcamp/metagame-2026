@@ -249,12 +249,13 @@ export async function sendContactEmail({
     replyTo: [email],
     subject: `[Contact] ${line}`,
     html: `
+      <p style="color: #888; font-size: 13px;">Sent via the contact form at metagame.games &mdash; reply to this email to answer.</p>
       <p><strong>From:</strong> ${escapeHtml(name)} &lt;${escapeHtml(email)}&gt;</p>
       <p><strong>Subject:</strong> ${escapeHtml(line)}</p>
       <hr />
       <p style="white-space: pre-wrap;">${escapeHtml(message)}</p>
     `,
-    text: `From: ${name} <${email}>\nSubject: ${line}\n\n${message}`,
+    text: `Sent via the contact form at metagame.games — reply to this email to answer.\n\nFrom: ${name} <${email}>\nSubject: ${line}\n\n${message}`,
   });
   if (error) throw new Error(error.message);
   return true;
