@@ -19,7 +19,7 @@ export default function BloodOnTheClocktowerDivider() {
   const onCrossbow = () => {
     trackClick("clocktower");
     if (stage === 1) {
-      trackEgg({ egg: "clocktower", event: "shoot" });
+      trackEgg({ egg: "clocktower", event: "kill" });
       bolt.current?.animate(
         [
           { opacity: 1, transform: "translateX(0)" },

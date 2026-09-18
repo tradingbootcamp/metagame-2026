@@ -23,7 +23,7 @@ const parse = (body: Record<string, unknown>): EggEvent | null => {
       : null;
   if (egg === "chess" && event === "castle") return { egg, event };
   if (egg === "tetris" && event === "clear") return { egg, event };
-  if (egg === "clocktower" && event === "shoot") return { egg, event };
+  if (egg === "clocktower" && event === "kill") return { egg, event };
   return null;
 };
 

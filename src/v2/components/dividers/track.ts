@@ -13,7 +13,7 @@ export type EggEvent =
   | { egg: ClickEgg; event: "clicks"; clicks: number }
   | { egg: "chess"; event: "castle" }
   | { egg: "tetris"; event: "clear" }
-  | { egg: "clocktower"; event: "shoot" };
+  | { egg: "clocktower"; event: "kill" };
 
 // Groups one browser's eggs together and nothing more: a random code kept in
 // localStorage, so it survives reloads (how you get a finished rack back) and
