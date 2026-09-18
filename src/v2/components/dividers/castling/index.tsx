@@ -10,9 +10,10 @@ import { ICONS, PAWN } from "./icons";
 const STEP = 46;
 const LEG = 180;
 // Castled: the pair hop, the move is written up, and the row resets itself.
-const HOP_AT = 2 * LEG + 80;
-const HOP_MS = 380;
-const CASTLED_MS = 2800;
+// A beat after they've settled, then one small hop.
+const HOP_AT = 2 * LEG + 500;
+const HOP_MS = 520;
+const CASTLED_MS = 3200;
 
 type Move = { dx: number; dy: number; knight?: boolean };
 
@@ -110,10 +111,10 @@ export default function CastlingDivider() {
           ref.current?.animate(
             [
               { transform: "none", easing: "ease-out" },
-              { transform: "translateY(-10px)", easing: "ease-in" },
+              { transform: "translateY(-6px)", easing: "ease-in" },
               { transform: "none" },
             ],
-            { delay: HOP_AT + i * 110, duration: HOP_MS, iterations: 2 },
+            { delay: HOP_AT + i * 80, duration: HOP_MS },
           ),
         );
     const t = setTimeout(reset, CASTLED_MS);
@@ -152,15 +153,15 @@ export default function CastlingDivider() {
             face on the site sets a capital O that reads as a zero. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute top-full left-1/2 mt-2 flex -translate-x-1/2 items-center gap-[3px] font-[family-name:var(--font-space-grotesk)] text-[15px] leading-none font-bold text-ink/60 transition-opacity duration-500"
+          className="pointer-events-none absolute top-full left-1/2 mt-2 flex -translate-x-1/2 items-center gap-[3px] font-[family-name:var(--font-space-grotesk)] text-[14px] leading-none font-medium text-ink/60 transition-opacity duration-500"
           style={{
             opacity: castled ? 1 : 0,
             transitionDelay: castled ? `${HOP_AT}ms` : "0ms",
           }}
         >
-          <span className="size-[12px] rounded-full border-[2.5px] border-current" />
-          <span className="h-[2.5px] w-[6px] bg-current" />
-          <span className="size-[12px] rounded-full border-[2.5px] border-current" />
+          <span className="size-[11px] rounded-full border-[1.5px] border-current" />
+          <span className="h-[1.5px] w-[6px] bg-current" />
+          <span className="size-[11px] rounded-full border-[1.5px] border-current" />
           <span className="ml-px">!</span>
         </span>
         <Piece
