@@ -30,12 +30,13 @@ import {
   CODE_NOTE,
   CODE_STAGGER,
   MARK_COLOR,
+  MARK_BOTH_MS,
   MARK_CAST_MS,
   MARK_FLY_MS,
-  MARK_FROM,
   MARK_HOLD_MS,
   MARK_JOIN_MS,
   MARK_LETTER,
+  MARK_LIFT_MS,
   BITES_TO_FINISH,
   BOMB_MS,
   COIN_MS,
@@ -731,10 +732,7 @@ export default function ScrabbleDivider({
       case "mark": {
         setFlash(MARK_COLOR[spell.side]);
         if (marks[spell.side]) break;
-        const held = { ...marks, [spell.side]: true };
-        setMarks(held);
-        if (held.meta && held.game)
-          setReveal(reducedMotion() ? "open" : "flying");
+        setMarks({ ...marks, [spell.side]: true });
         break;
       }
       case "turn":
@@ -1035,21 +1033,37 @@ export default function ScrabbleDivider({
     return () => clearTimeout(t);
   }, [acid]);
 
-  // The mark leaves its rack tile and travels out to the hairline.
+  // The mark leaves its rack tile (META's M and GAME's G both lead the word)
+  // and travels out to the hairline. The pair only set off to meet once the
+  // second has landed: the join measures them, so they have to be at rest.
   useEffect(() => {
     const side = (["meta", "game"] as Side[]).find(
       (k) => marks[k] && !flown.current.has(k),
     );
     if (!side) return;
     flown.current.add(side);
+    const both = marks.meta && marks.game;
     const el = side === "meta" ? metaRef.current : gameRef.current;
-    const from = tileRefs.current[MARK_FROM[side]];
-    if (!el || !from || reducedMotion()) return;
-    el.animate([{ transform: shift(el, from) }, { transform: "none" }], {
-      duration: MARK_CAST_MS,
-      easing: "cubic-bezier(.34,1.05,.64,1)",
-      fill: "both",
-    });
+    const from = tileRefs.current[0];
+    if (!el || !from || reducedMotion()) {
+      if (both) setReveal("open");
+      return;
+    }
+    const run = el.animate(
+      [{ transform: shift(el, from) }, { transform: "none" }],
+      {
+        delay: MARK_LIFT_MS,
+        duration: MARK_CAST_MS,
+        easing: "cubic-bezier(.45,0,.25,1)",
+        fill: "both",
+      },
+    );
+    if (both)
+      run.onfinish = () =>
+        setTimeout(
+          () => setReveal((r) => (r === "none" ? "flying" : r)),
+          MARK_BOTH_MS,
+        );
   }, [marks]);
 
   // Measured, not laid out: the hairlines are flex-1, so how far the M has to
@@ -1259,12 +1273,13 @@ export default function ScrabbleDivider({
     };
   };
 
-  // Lifted over the rack while it flies, so it passes in front of it.
+  // Lifted over the rack: it starts out sat on a rack tile, and the M crosses
+  // in front of the rack on its way to the G.
   const mark = (side: Side) =>
     marks[side] && reveal !== "open" ? (
       <span
         ref={side === "meta" ? metaRef : gameRef}
-        className={`block ${reveal === "flying" ? "z-30" : ""}`}
+        className="relative z-30 block"
       >
         <ScrabbleTile
           letter={MARK_LETTER[side]}
