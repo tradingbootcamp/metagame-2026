@@ -715,9 +715,12 @@ export default function ScrabbleDivider({
   const slotRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const flown = useRef(new Set<Side>());
 
+  // A mark's cast holds its colour until the mark has settled on its hairline.
+  const flashMs = useRef(FLASH_MS);
   useEffect(() => {
     if (!flash) return;
-    const t = setTimeout(() => setFlash(null), FLASH_MS);
+    const t = setTimeout(() => setFlash(null), flashMs.current);
+    flashMs.current = FLASH_MS;
     return () => clearTimeout(t);
   }, [flash]);
 
@@ -732,6 +735,7 @@ export default function ScrabbleDivider({
       case "mark": {
         setFlash(MARK_COLOR[spell.side]);
         if (marks[spell.side]) break;
+        if (!reducedMotion()) flashMs.current = MARK_LIFT_MS + MARK_CAST_MS;
         const held = { ...marks, [spell.side]: true };
         setMarks(held);
         if (held.meta && held.game && reducedMotion()) setReveal("open");
@@ -1137,6 +1141,8 @@ export default function ScrabbleDivider({
       setRack(randomRack());
       return;
     }
+    // A held flash doesn't carry over onto the next word.
+    setFlash(null);
     // What UNDO goes back to: the rack as it stood before this letter.
     before.current = tiles;
     setRack(next);
