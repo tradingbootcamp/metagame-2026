@@ -18,7 +18,6 @@ const EXIT_MS = 500; // a found set fading out
 const DEAL_MS = 600; // a dealt card fading in
 const SHAKE_MS = 400;
 const STAGGER_MS = 90;
-const PIPS = 5; // pips shown before any are earned
 // DividerRow's gap-[22px]: the spread cards keep the centre four's spacing.
 const GAP = 22;
 
@@ -430,15 +429,13 @@ export default function SetCardDivider() {
         {found > 0 && (
           <div
             aria-hidden
-            className="pointer-events-none absolute top-full left-1/2 mt-3 flex -translate-x-1/2 animate-[set-deal_600ms_ease-out] gap-2"
+            className="pointer-events-none absolute top-full left-1/2 mt-3 flex -translate-x-1/2 gap-2"
           >
-            {Array.from({ length: Math.max(PIPS, found) }, (_, i) => (
+            {Array.from({ length: found }, (_, i) => (
               <span
                 key={i}
-                className="size-1 rounded-full transition-colors duration-300"
-                style={{
-                  background: i < found ? CHARCOAL : "var(--color-line)",
-                }}
+                className="size-1 animate-[set-deal_600ms_ease-out] rounded-full"
+                style={{ background: CHARCOAL }}
               />
             ))}
           </div>
