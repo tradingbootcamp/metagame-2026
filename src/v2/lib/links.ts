@@ -43,4 +43,7 @@ export const LIGHTHAVEN_URL = "https://lighthaven.space/";
 export const HOTELS_SEARCH_URL =
   "https://www.google.com/search?q=hotels+near+lighthaven+in+berkeley&ie=UTF-8";
 export const LAST_YEAR_SITE_URL = "https://2025.metagame.games";
+// Ricki on the Complex Systems podcast, talking about Metagame 2025.
+export const PODCAST_EPISODE_URL =
+  "https://www.complexsystemspodcast.com/episodes/narrative-mastery-character-bleed-in-games-with-ricki-heicklen/";
 export const TEAM_EMAIL = "team@metagame.games";

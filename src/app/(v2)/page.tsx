@@ -38,11 +38,13 @@ import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
 import {
   HOTELS_SEARCH_URL,
   HOUSING_URL,
+  PODCAST_EPISODE_URL,
   LIGHTHAVEN_URL,
   MEGAGAME_PROPOSAL_FORM_URL,
   RFP_FORM_URL,
   VOLUNTEER_FORM_URL,
 } from "@/v2/lib/links";
+import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
 import megagameChess from "../../../public/images/megagame-chess.jpg";
@@ -202,6 +204,36 @@ const FAQS: {
           reach out
         </ContactLink>{" "}
         so we can figure out how to make it work.
+      </>
+    ),
+  },
+  {
+    question: "Where can I learn more about Metagame?",
+    answer: (
+      <>
+        <a
+          href={SOCIAL_LINKS.DISCORD}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={BODY_LINK}
+        >
+          Join our Discord
+        </a>{" "}
+        to chat with the team and other attendees, or check out Ricki&apos;s
+        conversation about Metagame 2025 on the{" "}
+        <a
+          href={PODCAST_EPISODE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={BODY_LINK}
+        >
+          Complex Systems podcast
+        </a>
+        . Still have questions?{" "}
+        <ContactLink subject="Question about Metagame" className={BODY_LINK}>
+          Contact us
+        </ContactLink>{" "}
+        and we&apos;ll get back to you.
       </>
     ),
   },
