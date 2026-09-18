@@ -10,8 +10,9 @@ import DividerRow from "../DividerRow";
 import { SHADOW } from "../sizing";
 
 const CHARCOAL = "#4d4d4d";
-// Bigger than GLYPH: the face values need the extra size to read.
-const SIZE = "h-[45px] w-[45px]";
+// Bigger than GLYPH so the face values read, with the excess taken back as
+// negative margin: the row lays out (pitch, height) exactly like a GLYPH row.
+const SIZE = "-m-[7.5px] h-[45px] w-[45px]";
 const SPIN_MS = 700;
 
 // A numbered face: where its value sits, its tilt (the value's top points out
