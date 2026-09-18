@@ -244,18 +244,27 @@ export async function sendContactEmail({
   }
   const line = subject?.trim() || "Website contact form";
   const { error } = await resend.emails.send({
-    from: "Metagame Contact Form <tickets@metagame.games>",
+    // From the team inbox so reply-all reaches the group as well as the sender.
+    from: `Metagame Website <${TEAM}>`,
     to: [to],
     replyTo: [email],
     subject: `[Contact] ${line}`,
     html: `
-      <p style="color: #888; font-size: 13px;">Sent via the contact form at metagame.games &mdash; reply to this email to answer.</p>
-      <p><strong>From:</strong> ${escapeHtml(name)} &lt;${escapeHtml(email)}&gt;</p>
-      <p><strong>Subject:</strong> ${escapeHtml(line)}</p>
-      <hr />
-      <p style="white-space: pre-wrap;">${escapeHtml(message)}</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="text-align: center; margin: 24px 0 8px;">
+          <img src="${SITE}/dice_logo.png" alt="METAGAME" width="240" style="max-width: 100%; height: auto;" />
+        </div>
+        <h1 style="color: #333; text-align: center; font-size: 22px;">Website Contact Form Submitted</h1>
+        <p style="color: #888; font-size: 13px; text-align: center;">Reply to this email to answer them.</p>
+        <table style="border-collapse: collapse; margin: 20px 0; font-size: 15px;">
+          <tr><td style="padding: 4px 12px 4px 0; color: #888;">Name</td><td style="padding: 4px 0;">${escapeHtml(name)}</td></tr>
+          <tr><td style="padding: 4px 12px 4px 0; color: #888;">Email</td><td style="padding: 4px 0;">${escapeHtml(email)}</td></tr>
+          <tr><td style="padding: 4px 12px 4px 0; color: #888;">Subject</td><td style="padding: 4px 0;">${escapeHtml(line)}</td></tr>
+        </table>
+        <div style="background-color: #f5f5f5; border: 1px solid #ddd; padding: 16px 20px; border-radius: 8px; white-space: pre-wrap;">${escapeHtml(message)}</div>
+      </div>
     `,
-    text: `Sent via the contact form at metagame.games — reply to this email to answer.\n\nFrom: ${name} <${email}>\nSubject: ${line}\n\n${message}`,
+    text: `Website Contact Form Submitted\nReply to this email to answer them.\n\nName: ${name}\nEmail: ${email}\nSubject: ${line}\n\n${message}`,
   });
   if (error) throw new Error(error.message);
   return true;
