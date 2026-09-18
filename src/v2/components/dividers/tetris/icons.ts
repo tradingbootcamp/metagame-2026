@@ -44,9 +44,9 @@ export const PIECES: {
     name: "tetris-t",
     box: 3,
     cells: [
+      [1, 0],
       [0, 1],
       [1, 1],
-      [2, 1],
       [1, 2],
     ],
   },
