@@ -1545,15 +1545,13 @@ export default function ScrabbleDivider({
                       // too faint to give much away until it flashes.
                       <span
                         ref={dwRef}
-                        className="absolute -inset-[3px] -z-10 flex flex-col items-center justify-center rounded-[3px] text-center text-[5.5px] leading-[1.15] font-bold tracking-wide uppercase"
+                        className="absolute -inset-[3px] -z-10 flex items-center justify-center rounded-[3px] text-[15px] leading-none font-bold"
                         style={{
                           ...DW_FAINT,
                           animation: `scrabble-entry ${CODE_ENTRY_MS * 2}ms ease-out both`,
                         }}
                       >
-                        <span>Double</span>
-                        <span>word</span>
-                        <span>score</span>
+                        DW
                       </span>
                     )}
                     {/* The letters are holes: without this the G would show
