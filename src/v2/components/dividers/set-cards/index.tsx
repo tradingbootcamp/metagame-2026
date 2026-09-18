@@ -246,10 +246,6 @@ function CardGlyph({
       style={{
         opacity: leaving ? 0 : 1,
         transition: `opacity ${EXIT_MS}ms ease-out`,
-        animation:
-          delay === null
-            ? undefined
-            : `set-deal ${EXIT_MS}ms ease-out ${delay}ms both`,
         WebkitTapHighlightColor: "transparent",
         ...style,
       }}
@@ -264,27 +260,38 @@ function CardGlyph({
           <feComposite in="blur" in2="SourceAlpha" operator="out" />
         </filter>
       </defs>
-      <path
-        d={CARD}
-        fill="var(--color-meeple)"
-        filter={`url(#${glowId})`}
+      {/* The deal's fade-in lives here, not on the <svg>: an inline animation
+          there would outrank the shake's class. */}
+      <g
         style={{
-          opacity: selected ? 1 : 0,
-          transition: "opacity 300ms ease-out",
+          animation:
+            delay === null
+              ? undefined
+              : `set-deal ${EXIT_MS}ms ease-out ${delay}ms both`,
         }}
-      />
-      <mask
-        id={maskId}
-        maskUnits="userSpaceOnUse"
-        x="0"
-        y="0"
-        width="100"
-        height="100"
       >
-        <path d={CARD} fill="#fff" />
-        {cut}
-      </mask>
-      <path d={CARD} fill={CHARCOAL} mask={`url(#${maskId})`} />
+        <path
+          d={CARD}
+          fill="var(--color-meeple)"
+          filter={`url(#${glowId})`}
+          style={{
+            opacity: selected ? 1 : 0,
+            transition: "opacity 300ms ease-out",
+          }}
+        />
+        <mask
+          id={maskId}
+          maskUnits="userSpaceOnUse"
+          x="0"
+          y="0"
+          width="100"
+          height="100"
+        >
+          <path d={CARD} fill="#fff" />
+          {cut}
+        </mask>
+        <path d={CARD} fill={CHARCOAL} mask={`url(#${maskId})`} />
+      </g>
       <rect x={6} y={-4} width={88} height={108} fill="transparent" />
     </svg>
   );
