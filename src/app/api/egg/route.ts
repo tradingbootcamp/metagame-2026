@@ -25,6 +25,11 @@ const parse = (body: Record<string, unknown>): EggEvent | null => {
 // fires and forgets, so this never reports failure back: a lost row is fine, a
 // console error on someone's page is not.
 export async function POST(request: Request) {
+  // Preview and local casts are ours, not visitors'. Server-side, so plain
+  // VERCEL_ENV is fine (undefined off Vercel, so local dev doesn't write).
+  if (process.env.VERCEL_ENV !== "production")
+    return new Response(null, { status: 204 });
+
   let body: Record<string, unknown>;
   try {
     body = await request.json();

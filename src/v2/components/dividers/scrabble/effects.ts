@@ -248,6 +248,10 @@ export const MARK_COLOR: Record<Side, string> = {
 // Discount Codes table (src/lib/discount-codes.ts) to be worth anything.
 export const CODE = "MGTILES";
 export const CODE_NOTE = "for $25 off";
+// Which rack tile the mark leaves from: META's M, GAME's G.
+export const MARK_FROM: Record<Side, number> = { meta: 0, game: 1 };
+// The mark's trip out of the rack to its hairline, on the cast.
+export const MARK_CAST_MS = 1100;
 export const MARK_FLY_MS = 1300;
 // Sat beside the G, before the pair drops: the whole point is seeing them meet.
 export const MARK_HOLD_MS = 700;

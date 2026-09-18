@@ -30,7 +30,9 @@ import {
   CODE_NOTE,
   CODE_STAGGER,
   MARK_COLOR,
+  MARK_CAST_MS,
   MARK_FLY_MS,
+  MARK_FROM,
   MARK_HOLD_MS,
   MARK_JOIN_MS,
   MARK_LETTER,
@@ -598,6 +600,14 @@ const TILE_PX = 30;
 const TILE_GAP = 22;
 // The reveal row is twice the rack's length, so its tiles sit tighter.
 const CODE_GAP = 8;
+
+// Where `to` sits relative to `from`, as a transform. The dividers' widths are
+// all flex-derived, so these trips can only be measured at runtime.
+const shift = (from: Element, to: Element, dx = 0) => {
+  const a = from.getBoundingClientRect();
+  const b = to.getBoundingClientRect();
+  return `translate(${b.left - a.left + dx}px, ${b.top - a.top}px)`;
+};
 const PLATE_PAD = 16;
 // PART: extra room opened up in the middle of the rack.
 const PART_PX = 14;
@@ -702,6 +712,7 @@ export default function ScrabbleDivider({
   const metaRef = useRef<HTMLSpanElement>(null);
   const gameRef = useRef<HTMLSpanElement>(null);
   const slotRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const flown = useRef(new Set<Side>());
 
   useEffect(() => {
     if (!flash) return;
@@ -1024,6 +1035,23 @@ export default function ScrabbleDivider({
     return () => clearTimeout(t);
   }, [acid]);
 
+  // The mark leaves its rack tile and travels out to the hairline.
+  useEffect(() => {
+    const side = (["meta", "game"] as Side[]).find(
+      (k) => marks[k] && !flown.current.has(k),
+    );
+    if (!side) return;
+    flown.current.add(side);
+    const el = side === "meta" ? metaRef.current : gameRef.current;
+    const from = tileRefs.current[MARK_FROM[side]];
+    if (!el || !from || reducedMotion()) return;
+    el.animate([{ transform: shift(el, from) }, { transform: "none" }], {
+      duration: MARK_CAST_MS,
+      easing: "cubic-bezier(.34,1.05,.64,1)",
+      fill: "both",
+    });
+  }, [marks]);
+
   // Measured, not laid out: the hairlines are flex-1, so how far the M has to
   // travel is only known at runtime.
   useEffect(() => {
@@ -1035,11 +1063,6 @@ export default function ScrabbleDivider({
       setReveal("open");
       return;
     }
-    const shift = (from: Element, to: Element, dx = 0) => {
-      const a = from.getBoundingClientRect();
-      const b = to.getBoundingClientRect();
-      return `translate(${b.left - a.left + dx}px, ${b.top - a.top}px)`;
-    };
     const total = MARK_FLY_MS + MARK_HOLD_MS + MARK_JOIN_MS;
     // Per segment, not on the options: an iteration easing would warp the whole
     // timeline instead of letting the slide and the drop each settle.
@@ -1241,9 +1264,7 @@ export default function ScrabbleDivider({
     marks[side] && reveal !== "open" ? (
       <span
         ref={side === "meta" ? metaRef : gameRef}
-        className={`block animate-[scrabble-entry_400ms_ease-out] ${
-          reveal === "flying" ? "z-30" : ""
-        }`}
+        className={`block ${reveal === "flying" ? "z-30" : ""}`}
       >
         <ScrabbleTile
           letter={MARK_LETTER[side]}
