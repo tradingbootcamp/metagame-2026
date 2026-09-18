@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 import DividerRow from "../DividerRow";
 import { IconGlyph } from "../IconDivider";
 import { trackClick, trackEgg } from "../track";
@@ -9,6 +9,10 @@ import { ICONS, PAWN } from "./icons";
 // One square: a piece's width plus DividerRow's 22px gap.
 const STEP = 46;
 const LEG = 180;
+// Castled: the pair hop, the move is written up, and the row resets itself.
+const HOP_AT = 2 * LEG + 80;
+const HOP_MS = 380;
+const CASTLED_MS = 2800;
 
 type Move = { dx: number; dy: number; knight?: boolean };
 
@@ -23,6 +27,7 @@ function Piece({
   shaking,
   onClick,
   onShakeEnd,
+  glyphRef,
 }: {
   icon: (typeof ICONS)[number];
   move: Move;
@@ -30,6 +35,7 @@ function Piece({
   shaking?: boolean;
   onClick: () => void;
   onShakeEnd?: () => void;
+  glyphRef?: Ref<HTMLSpanElement>;
 }) {
   const leg = (second: boolean) => ({
     transitionDuration: `${LEG}ms`,
@@ -52,6 +58,7 @@ function Piece({
         }}
       >
         <span
+          ref={glyphRef}
           onClick={() => {
             trackClick("chess");
             onClick();
@@ -77,21 +84,48 @@ const PAWNS = [
 ];
 
 // K · B · N · R, the kingside back rank. Fianchetto the bishop (g2) and develop
-// the knight (f3), then the king castles; a blocked king shakes. Clicking the castled king
-// resets the row.
+// the knight (f3), then the king castles; a blocked king shakes. Castled, the
+// row resets itself after a beat, or at once on a click.
 export default function CastlingDivider() {
   const [bishop, setBishop] = useState(false);
   const [knight, setKnight] = useState(false);
   const [castled, setCastled] = useState(false);
   const [shaking, setShaking] = useState(false);
   const [king, bishopIcon, knightIcon, rook] = ICONS;
+  const kingRef = useRef<HTMLSpanElement>(null);
+  const rookRef = useRef<HTMLSpanElement>(null);
+
+  const reset = () => {
+    setCastled(false);
+    setBishop(false);
+    setKnight(false);
+  };
+
+  useEffect(() => {
+    if (!castled) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const hops = still
+      ? []
+      : [kingRef, rookRef].map((ref, i) =>
+          ref.current?.animate(
+            [
+              { transform: "none", easing: "ease-out" },
+              { transform: "translateY(-10px)", easing: "ease-in" },
+              { transform: "none" },
+            ],
+            { delay: HOP_AT + i * 110, duration: HOP_MS, iterations: 2 },
+          ),
+        );
+    const t = setTimeout(reset, CASTLED_MS);
+    return () => {
+      clearTimeout(t);
+      hops.forEach((hop) => hop?.cancel());
+    };
+  }, [castled]);
 
   const onKing = () => {
-    if (castled) {
-      setCastled(false);
-      setBishop(false);
-      setKnight(false);
-    } else if (bishop && knight) {
+    if (castled) reset();
+    else if (bishop && knight) {
       setCastled(true);
       trackEgg({ egg: "chess", event: "castle" });
     } else setShaking(true);
@@ -113,7 +147,20 @@ export default function CastlingDivider() {
             <IconGlyph icon={PAWN} />
           </span>
         ))}
+        {/* Kingside castling, annotated as a good move. Hangs in the row's own
+            bottom padding. */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-full left-1/2 mt-1.5 -translate-x-1/2 font-mono text-sm font-semibold tracking-wide text-ink/60 transition-opacity duration-500"
+          style={{
+            opacity: castled ? 1 : 0,
+            transitionDelay: castled ? `${HOP_AT}ms` : "0ms",
+          }}
+        >
+          O-O!
+        </span>
         <Piece
+          glyphRef={kingRef}
           icon={king}
           move={{ dx: 2, dy: 0 }}
           moved={castled}
@@ -134,6 +181,7 @@ export default function CastlingDivider() {
           onClick={() => !castled && setKnight(!knight)}
         />
         <Piece
+          glyphRef={rookRef}
           icon={rook}
           move={{ dx: -2, dy: 0 }}
           moved={castled}
