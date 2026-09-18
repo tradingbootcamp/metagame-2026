@@ -732,7 +732,9 @@ export default function ScrabbleDivider({
       case "mark": {
         setFlash(MARK_COLOR[spell.side]);
         if (marks[spell.side]) break;
-        setMarks({ ...marks, [spell.side]: true });
+        const held = { ...marks, [spell.side]: true };
+        setMarks(held);
+        if (held.meta && held.game && reducedMotion()) setReveal("open");
         break;
       }
       case "turn":
@@ -1042,13 +1044,9 @@ export default function ScrabbleDivider({
     );
     if (!side) return;
     flown.current.add(side);
-    const both = marks.meta && marks.game;
     const el = side === "meta" ? metaRef.current : gameRef.current;
     const from = tileRefs.current[0];
-    if (!el || !from || reducedMotion()) {
-      if (both) setReveal("open");
-      return;
-    }
+    if (!el || !from || reducedMotion()) return;
     const run = el.animate(
       [{ transform: shift(el, from) }, { transform: "none" }],
       {
@@ -1058,7 +1056,7 @@ export default function ScrabbleDivider({
         fill: "both",
       },
     );
-    if (both)
+    if (marks.meta && marks.game)
       run.onfinish = () =>
         setTimeout(
           () => setReveal((r) => (r === "none" ? "flying" : r)),
