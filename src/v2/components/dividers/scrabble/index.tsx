@@ -716,10 +716,15 @@ export default function ScrabbleDivider({
       case "maga":
         setMaga((n) => n + 1);
         break;
-      case "mark":
+      case "mark": {
         setFlash(MARK_COLOR[spell.side]);
-        setMarks((m) => (m[spell.side] ? m : { ...m, [spell.side]: true }));
+        if (marks[spell.side]) break;
+        const held = { ...marks, [spell.side]: true };
+        setMarks(held);
+        if (held.meta && held.game)
+          setReveal(reducedMotion() ? "open" : "flying");
         break;
+      }
       case "turn":
         if (reducedMotion()) break;
         setTurning(true);
@@ -1017,11 +1022,6 @@ export default function ScrabbleDivider({
     const t = setTimeout(() => setAcid(null), ACID_MS);
     return () => clearTimeout(t);
   }, [acid]);
-
-  useEffect(() => {
-    if (reveal === "none" && marks.meta && marks.game)
-      setReveal(reducedMotion() ? "open" : "flying");
-  }, [marks, reveal]);
 
   // Measured, not laid out: the hairlines are flex-1, so how far the M has to
   // travel is only known at runtime.
