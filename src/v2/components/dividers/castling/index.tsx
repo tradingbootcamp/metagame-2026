@@ -147,17 +147,21 @@ export default function CastlingDivider() {
             <IconGlyph icon={PAWN} />
           </span>
         ))}
-        {/* Kingside castling, annotated as a good move. Hangs in the row's own
-            bottom padding. */}
+        {/* O-O!: kingside castling, annotated as a good move. Hangs in the
+            row's own bottom padding. The O's are drawn: at this size every
+            face on the site sets a capital O that reads as a zero. */}
         <span
           aria-hidden
-          className="pointer-events-none absolute top-full left-1/2 mt-1.5 -translate-x-1/2 font-mono text-sm font-semibold tracking-wide text-ink/60 transition-opacity duration-500"
+          className="pointer-events-none absolute top-full left-1/2 mt-2 flex -translate-x-1/2 items-center gap-[3px] font-[family-name:var(--font-space-grotesk)] text-[15px] leading-none font-bold text-ink/60 transition-opacity duration-500"
           style={{
             opacity: castled ? 1 : 0,
             transitionDelay: castled ? `${HOP_AT}ms` : "0ms",
           }}
         >
-          O-O!
+          <span className="size-[12px] rounded-full border-[2.5px] border-current" />
+          <span className="h-[2.5px] w-[6px] bg-current" />
+          <span className="size-[12px] rounded-full border-[2.5px] border-current" />
+          <span className="ml-px">!</span>
         </span>
         <Piece
           glyphRef={kingRef}
