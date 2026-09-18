@@ -12,7 +12,8 @@ const BLINK_MS = 90;
 const BLINKS = 5;
 
 // play → set (the winning turn finishes) → flash (the line blinks) → fall
-// (the line is gone and what stood on it drops a row, for good).
+// (the line is gone and what stood on it drops a row, for good; anything
+// hanging below stays put, as in the game).
 type Phase = "play" | "set" | "flash" | "fall";
 
 // Click a piece to spin it a quarter clockwise about its SRS box centre (the
@@ -39,8 +40,8 @@ function Piece({
   const spinning = phase === "play" || phase === "set";
   const lying = spinning ? cells : turn(box, cells, quarters);
   const { viewBox, px, paths } = render(box, lying);
-  const onLine = (i: number) =>
-    !spinning && lying[i][1] === floorRow(box, lift);
+  const floor = floorRow(box, lift);
+  const onLine = (i: number) => !spinning && lying[i][1] === floor;
 
   useEffect(() => {
     if (phase !== "flash") return;
@@ -80,7 +81,9 @@ function Piece({
               fill={CHARCOAL}
               style={{
                 transform:
-                  phase === "fall" ? `translateY(${CELL}px)` : undefined,
+                  phase === "fall" && lying[i][1] < floor
+                    ? `translateY(${CELL}px)`
+                    : undefined,
                 transition: "transform 250ms ease-in",
               }}
             />
@@ -97,16 +100,14 @@ function Piece({
   );
 }
 
-// Every piece fills its width of the floor row and has nothing below it.
+// Every piece fills its width of the floor row.
 const madeLine = (quarters: number[]) =>
-  PIECES.every((p, i) => {
-    const floor = floorRow(p.box, p.lift);
-    const lying = turn(p.box, p.cells, quarters[i]);
-    return (
-      lying.filter(([, r]) => r === floor).length === p.box &&
-      !lying.some(([, r]) => r > floor)
-    );
-  });
+  PIECES.every(
+    (p, i) =>
+      turn(p.box, p.cells, quarters[i]).filter(
+        ([, r]) => r === floorRow(p.box, p.lift),
+      ).length === p.box,
+  );
 
 // I · O · T · L tetrominoes, drawn in icons.ts. Not a puzzle row (no library image).
 export default function TetrisDivider() {
