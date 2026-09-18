@@ -27,7 +27,8 @@ import {
   MAGA_MS,
   CODE,
   CODE_ENTRY_MS,
-  CODE_NOTE,
+  CODE_MULTIPLIER,
+  CODE_SPAN,
   CODE_STAGGER,
   MARK_COLOR,
   MARK_BOTH_MS,
@@ -600,13 +601,25 @@ const TILE_GAP = 22;
 // The reveal row is twice the rack's length, so its tiles sit tighter.
 const CODE_GAP = 8;
 
-// Where `to` sits relative to `from`, as a transform. The dividers' widths are
-// all flex-derived, so these trips can only be measured at runtime.
+// Where `to` sits relative to `from`, as a transform about the top left: the
+// dividers' widths are all flex-derived and the code row is scaled to fit a
+// phone, so these trips can only be measured at runtime.
 const shift = (from: Element, to: Element) => {
   const a = from.getBoundingClientRect();
   const b = to.getBoundingClientRect();
-  return `translate(${b.left - a.left}px, ${b.top - a.top}px)`;
+  return `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width})`;
 };
+const CODE_SCORE = [...CODE].reduce((n, ch) => n + SCRABBLE_SCORES[ch], 0);
+const CODE_OFF = CODE_SCORE * CODE_MULTIPLIER;
+const codeSide = (i: number) =>
+  (["meta", "game"] as Side[]).find(
+    (k) => i >= CODE_SPAN[k][0] && i < CODE_SPAN[k][1],
+  );
+// A long code is scaled down to fit a phone on one line.
+const CODE_FIT =
+  CODE.length > 9
+    ? "scale-[.62] min-[380px]:scale-[.7] min-[440px]:scale-[.85] min-[540px]:scale-100"
+    : "";
 const PLATE_PAD = 16;
 // PART: extra room opened up in the middle of the rack.
 const PART_PX = 14;
@@ -1083,7 +1096,8 @@ export default function ScrabbleDivider({
     if (reveal !== "flying") return;
     const m = metaRef.current;
     const g = gameRef.current;
-    const [s0, s1] = slotRefs.current;
+    const s0 = slotRefs.current[CODE_SPAN.meta[0]];
+    const s1 = slotRefs.current[CODE_SPAN.game[0]];
     if (!m || !g || !s0 || !s1) {
       setReveal("open");
       return;
@@ -1272,7 +1286,7 @@ export default function ScrabbleDivider({
     marks[side] && reveal !== "open" ? (
       <span
         ref={side === "meta" ? metaRef : gameRef}
-        className="relative z-30 block"
+        className="relative z-30 block origin-top-left"
       >
         <ScrabbleTile
           letter={MARK_LETTER[side]}
@@ -1465,34 +1479,57 @@ export default function ScrabbleDivider({
         {reveal !== "none" && (
           // Out of the flow, in the padding the row and the next section
           // already have, so nothing below moves.
-          <div className="pointer-events-none absolute inset-x-0 top-full -mt-3 flex items-center justify-center gap-x-2 whitespace-nowrap md:-mt-7 md:gap-x-3">
+          <div className="pointer-events-none absolute inset-x-0 top-full -mt-4 flex flex-col items-center justify-center gap-x-3 whitespace-nowrap md:-mt-7 md:flex-row">
             <span className="sr-only">
-              {reveal === "open" ? `${CODE} ${CODE_NOTE}` : ""}
+              {reveal === "open" ? `${CODE} for $${CODE_OFF} off` : ""}
             </span>
             <span
               aria-hidden
-              className="flex items-center"
+              className={`flex origin-top items-center ${CODE_FIT}`}
               style={{ gap: CODE_GAP }}
             >
               {[...CODE].map((ch, i) => {
-                const flown = i < 2;
+                const side = codeSide(i);
+                const flown = side && i === CODE_SPAN[side][0];
+                // The tiles that pop in, in order, skipping the two that flew.
+                const nth =
+                  i -
+                  (["meta", "game"] as Side[]).filter(
+                    (k) => CODE_SPAN[k][0] < i,
+                  ).length;
                 return (
                   <span
                     key={i}
                     ref={(el) => {
                       slotRefs.current[i] = el;
                     }}
-                    className={`${GLYPH} shrink-0`}
+                    className={`${GLYPH} relative isolate shrink-0`}
                   >
+                    {i === CODE_SPAN.game[0] && (
+                      // The square the G lands on. Up before the flight, so
+                      // there's a moment to read it.
+                      <span
+                        className="absolute -inset-[3px] -z-10 flex flex-col items-center justify-center rounded-[3px] bg-[#f2a7a0] text-center text-[5.5px] leading-[1.15] font-bold tracking-wide text-[#7a2f2a] uppercase"
+                        style={{
+                          animation: `scrabble-entry ${CODE_ENTRY_MS}ms ease-out both`,
+                        }}
+                      >
+                        <span>Double</span>
+                        <span>word</span>
+                        <span>score</span>
+                      </span>
+                    )}
+                    {/* The letters are holes: without this the G would show
+                        the square through itself. */}
+                    {i === CODE_SPAN.game[0] && reveal === "open" && (
+                      <span className="absolute inset-[1.5px] -z-10 rounded-[3.5px] bg-background" />
+                    )}
                     {reveal === "open" && (
                       <ScrabbleTile
                         letter={ch}
                         look={
-                          flown
-                            ? {
-                                ...BASE_LOOK,
-                                tint: MARK_COLOR[i === 0 ? "meta" : "game"],
-                              }
+                          side
+                            ? { ...BASE_LOOK, tint: MARK_COLOR[side] }
                             : BASE_LOOK
                         }
                         motion={
@@ -1500,7 +1537,7 @@ export default function ScrabbleDivider({
                             ? undefined
                             : {
                                 extra: {
-                                  animation: `scrabble-entry ${CODE_ENTRY_MS}ms ${(i - 2) * CODE_STAGGER}ms ease-out both`,
+                                  animation: `scrabble-entry ${CODE_ENTRY_MS}ms ${nth * CODE_STAGGER}ms ease-out both`,
                                 },
                               }
                         }
@@ -1512,7 +1549,7 @@ export default function ScrabbleDivider({
             </span>
             <span
               aria-hidden
-              className="text-sm font-semibold text-ink/70"
+              className="text-xs leading-4 font-semibold text-ink/70 md:text-sm"
               style={
                 reveal === "open"
                   ? {
@@ -1521,7 +1558,7 @@ export default function ScrabbleDivider({
                   : { opacity: 0 }
               }
             >
-              {CODE_NOTE}
+              {CODE_SCORE} × {CODE_MULTIPLIER} = ${CODE_OFF} off
             </span>
           </div>
         )}

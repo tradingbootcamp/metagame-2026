@@ -245,9 +245,23 @@ export const MARK_COLOR: Record<Side, string> = {
   game: "var(--color-meeple)",
 };
 // Needs a Stripe promotion code and an active, non-Stripe row in Airtable's
-// Discount Codes table (src/lib/discount-codes.ts) to be worth anything.
+// Discount Codes table (src/lib/discount-codes.ts) to be worth anything. Worth
+// what its tiles score, doubled by the square the G lands on: both of those
+// have to be set to match.
 export const CODE = "MGTILES";
-export const CODE_NOTE = "for $25 off";
+export const CODE_MULTIPLIER = 2;
+// The run of code tiles in each mark's colour, [from, to). The mark lands on
+// the first of its run.
+export const CODE_SPAN: Record<Side, [number, number]> = {
+  meta: [0, 1],
+  game: [1, 2],
+};
+// DRAFT, to compare: the long code, 18 doubled to $36.
+// export const CODE = "METAGAMETILES";
+// export const CODE_SPAN: Record<Side, [number, number]> = {
+//   meta: [0, 4],
+//   game: [4, 8],
+// };
 // The mark sits tinted on its rack tile for a beat, then leaves for its
 // hairline.
 export const MARK_LIFT_MS = 700;
@@ -256,7 +270,7 @@ export const MARK_CAST_MS = 1400;
 export const MARK_BOTH_MS = 1000;
 // The pair's trip in from the hairlines to the head of the code.
 export const MARK_JOIN_MS = 1400;
-export const CODE_STAGGER = 140;
+export const CODE_STAGGER = 90;
 export const CODE_ENTRY_MS = 500;
 
 export const TURN_MS = 1500;
