@@ -18,6 +18,7 @@ const parse = (body: Record<string, unknown>): EggEvent | null => {
       ? { egg, event, clicks: clicks as number }
       : null;
   if (egg === "chess" && event === "castle") return { egg, event };
+  if (egg === "tetris" && event === "line") return { egg, event };
   return null;
 };
 

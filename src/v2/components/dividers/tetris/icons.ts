@@ -62,6 +62,20 @@ export const PIECES: {
   },
 ];
 
+// The cells after that many quarter turns clockwise about the box centre.
+export const turn = (box: number, cells: Cell[], quarters: number): Cell[] =>
+  quarters % 4 === 0
+    ? cells
+    : turn(
+        box,
+        cells.map(([c, r]): Cell => [box - 1 - r, c]),
+        quarters - 1,
+      );
+
+// The box row lying on the divider's centre line: the one grid row every
+// piece can reach, so the one that can fill.
+export const floorRow = (box: number, lift = 0) => box / 2 + lift - 0.5;
+
 export function render(box: number, cells: Cell[]) {
   const side = CELL - SEAM;
   return {
