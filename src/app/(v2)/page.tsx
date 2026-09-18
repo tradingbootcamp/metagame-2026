@@ -229,11 +229,7 @@ const FAQS: {
         >
           Complex Systems podcast
         </a>
-        . Still have questions?{" "}
-        <ContactLink subject="Question about Metagame" className={BODY_LINK}>
-          Contact us
-        </ContactLink>{" "}
-        and we&apos;ll get back to you.
+        .
       </>
     ),
   },
