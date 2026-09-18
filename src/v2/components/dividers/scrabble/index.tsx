@@ -737,6 +737,7 @@ export default function ScrabbleDivider({
   const gameRef = useRef<HTMLSpanElement>(null);
   const slotRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const dwRef = useRef<HTMLSpanElement>(null);
+  const [dwUp, setDwUp] = useState(false);
   const flown = useRef(new Set<Side>());
 
   // A mark's cast holds its colour until the mark has settled on its hairline.
@@ -1087,6 +1088,7 @@ export default function ScrabbleDivider({
     );
     const both = marks.meta && marks.game;
     run.onfinish = () => {
+      if (side === "game") setDwUp(true);
       // Not out from under someone already spelling the next word.
       const word = getSnapshot()
         .map((t) => t.letter)
@@ -1540,9 +1542,10 @@ export default function ScrabbleDivider({
                     }}
                     className={`${GLYPH} relative isolate shrink-0`}
                   >
-                    {i === CODE_SPAN.game[0] && (
-                      // The square the G lands on: there from the first mark,
-                      // too faint to give much away until it flashes.
+                    {i === CODE_SPAN.game[0] && (dwUp || reveal === "open") && (
+                      // The square the G lands on: up once the G is out on
+                      // its hairline, too faint to give much away until it
+                      // flashes.
                       <span
                         ref={dwRef}
                         className="absolute -inset-[3px] -z-10 flex flex-col items-center justify-center rounded-[3px] text-center text-[5.5px] leading-[1.15] font-bold tracking-wide uppercase"
