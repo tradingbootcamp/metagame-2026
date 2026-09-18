@@ -7,15 +7,16 @@
 // visible face.
 import { useEffect, useRef, useState } from "react";
 import DividerRow from "../DividerRow";
-import { GLYPH, SHADOW } from "../sizing";
+import { SHADOW } from "../sizing";
 
 const CHARCOAL = "#4d4d4d";
-// The numbered dice need the extra size for their face values to read.
-const BIG = "h-[45px] w-[45px]";
+// Bigger than GLYPH: the face values need the extra size to read.
+const SIZE = "h-[45px] w-[45px]";
 const SPIN_MS = 700;
 
-// A numbered face: where its value sits, how big, and the most digits it fits.
-type Face = { x: number; y: number; size: number; digits?: 1 };
+// A numbered face: where its value sits, its tilt (the value's top points out
+// from the vertex the faces share), how big, and the most digits it fits.
+type Face = { x: number; y: number; turn: number; size: number; digits?: 1 };
 // A pipped face of the iso cube: centre, plus the two pip-grid step vectors.
 type PipFace = {
   c: [number, number];
@@ -26,6 +27,7 @@ type PipFace = {
 type Die = {
   id: string;
   sides: number;
+  pivot: [number, number]; // visual centre, which the spin turns about
   silhouette: string;
   seams: string; // facet edges, punched out as transparent lines
   faces?: Face[];
@@ -34,16 +36,18 @@ type Die = {
 };
 
 const DICE: Die[] = [
-  // tetrahedron: three faces meeting at a low centre point
+  // tetrahedron: three faces meeting at a low centre point. The side faces are
+  // too narrow to turn a value outwards, so those lean up along the face.
   {
     id: "d4",
     sides: 4,
+    pivot: [50, 58.7],
     silhouette: "M50 12 L86 82 L14 82 Z",
     seams: "M50 12 L50 58 M14 82 L50 58 M86 82 L50 58",
     faces: [
-      { x: 39, y: 53, size: 20 },
-      { x: 61, y: 53, size: 20 },
-      { x: 50, y: 73, size: 17 },
+      { x: 38.5, y: 54, turn: 27, size: 19 },
+      { x: 61.5, y: 54, turn: -27, size: 19 },
+      { x: 50, y: 73, turn: 0, size: 17 },
     ],
     initial: [4, 2, 3],
   },
@@ -51,6 +55,7 @@ const DICE: Die[] = [
   {
     id: "d6",
     sides: 6,
+    pivot: [50, 54],
     silhouette: "M50 18 L82 36 L82 72 L50 90 L18 72 L18 36 Z",
     seams: "M18 36 L50 54 M82 36 L50 54 M50 54 L50 90",
     pipFaces: [
@@ -64,13 +69,14 @@ const DICE: Die[] = [
   {
     id: "d8",
     sides: 8,
+    pivot: [50, 50],
     silhouette: "M50 10 L86 50 L50 90 L14 50 Z",
     seams: "M50 10 L50 90 M14 50 L86 50",
     faces: [
-      { x: 41, y: 38, size: 22 },
-      { x: 59, y: 38, size: 22 },
-      { x: 41, y: 62, size: 22 },
-      { x: 59, y: 62, size: 22 },
+      { x: 38.5, y: 37.5, turn: -45, size: 22 },
+      { x: 61.5, y: 37.5, turn: 45, size: 22 },
+      { x: 38.5, y: 62.5, turn: -135, size: 22 },
+      { x: 61.5, y: 62.5, turn: 135, size: 22 },
     ],
     initial: [8, 3, 5, 2],
   },
@@ -79,20 +85,21 @@ const DICE: Die[] = [
   {
     id: "d20",
     sides: 20,
+    pivot: [50, 50],
     silhouette: "M50 8 L86.4 29 L86.4 71 L50 92 L13.6 71 L13.6 29 Z",
     seams:
       "M50 69.3 L33.3 40.3 L66.7 40.3 Z M50 69.3 L50 92 M50 69.3 L86.4 71 M50 69.3 L13.6 71 M33.3 40.3 L13.6 29 M33.3 40.3 L13.6 71 M33.3 40.3 L50 8 M66.7 40.3 L86.4 29 M66.7 40.3 L50 8 M66.7 40.3 L86.4 71",
     faces: [
-      { x: 50, y: 49, size: 13 },
-      { x: 50, y: 30, size: 15 },
-      { x: 33, y: 60, size: 13 },
-      { x: 67, y: 60, size: 13 },
-      { x: 33, y: 27, size: 9, digits: 1 },
-      { x: 67, y: 27, size: 9, digits: 1 },
-      { x: 21, y: 48, size: 10, digits: 1 },
-      { x: 79, y: 48, size: 10, digits: 1 },
-      { x: 38, y: 78, size: 9, digits: 1 },
-      { x: 62, y: 78, size: 9, digits: 1 },
+      { x: 50, y: 50, turn: 0, size: 13 },
+      { x: 50, y: 29.5, turn: 0, size: 15 },
+      { x: 32.3, y: 60.2, turn: -120, size: 13 },
+      { x: 67.7, y: 60.2, turn: 120, size: 13 },
+      { x: 32.3, y: 25.8, turn: -36, size: 9, digits: 1 },
+      { x: 67.7, y: 25.8, turn: 36, size: 9, digits: 1 },
+      { x: 20.2, y: 46.8, turn: -84, size: 10, digits: 1 },
+      { x: 79.8, y: 46.8, turn: 84, size: 10, digits: 1 },
+      { x: 37.9, y: 77.4, turn: -156, size: 9, digits: 1 },
+      { x: 62.1, y: 77.4, turn: 156, size: 9, digits: 1 },
     ],
     initial: [20, 8, 2, 14, 7, 1, 9, 5, 6, 3],
   },
@@ -180,9 +187,10 @@ function DiceGlyph({ die }: { die: Die }) {
       onClick={onClick}
       style={{
         rotate: `${spins * 720}deg`,
+        transformOrigin: `${die.pivot[0]}% ${die.pivot[1]}%`,
         transitionDuration: `${SPIN_MS}ms`,
       }}
-      className={`${die.faces ? BIG : GLYPH} ${SHADOW} transition-[rotate] ease-in-out`}
+      className={`${SIZE} ${SHADOW} transition-[rotate] ease-in-out`}
     >
       <mask
         id={maskId}
@@ -201,23 +209,26 @@ function DiceGlyph({ die }: { die: Die }) {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        {die.pipFaces?.map(({ c, u, v }, f) =>
-          PIPS[values[f]].map(([a, b], i) => (
-            <circle
-              key={`${f}-${i}`}
-              cx={c[0] + a * u[0] + b * v[0]}
-              cy={c[1] + a * u[1] + b * v[1]}
-              r={values[f] > 3 ? 3.2 : 4}
-              fill="#000"
-            />
-          )),
-        )}
-        {die.faces?.map(({ x, y, size }, f) => (
+        {die.pipFaces?.map(({ c, u, v }, f) => (
+          <g key={f} transform={`matrix(${[...u, ...v, ...c].join(" ")})`}>
+            {PIPS[values[f]].map(([a, b], i) => (
+              <circle
+                key={i}
+                cx={a}
+                cy={b}
+                r={values[f] > 3 ? 0.38 : 0.45}
+                fill="#000"
+              />
+            ))}
+          </g>
+        ))}
+        {die.faces?.map(({ x, y, turn, size }, f) => (
           <text
             key={f}
             x={x}
             y={y}
             fontSize={size}
+            transform={`rotate(${turn} ${x} ${y})`}
             textAnchor="middle"
             dominantBaseline="central"
             fill="#000"
