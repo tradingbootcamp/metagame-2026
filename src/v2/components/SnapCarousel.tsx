@@ -33,8 +33,24 @@ const slotOf = (el: HTMLElement) => {
   return best;
 };
 
-const jump = (el: HTMLElement, slot: number) =>
+// `peek`: a slide's opacity follows how far it is from centre, so the one
+// leaving dims as the one arriving comes up — under a finger as much as an
+// arrow. Written straight to the DOM: this runs on every scroll frame.
+const GHOST = 0.35;
+const fade = (el: HTMLElement) => {
+  const stride =
+    el.children.length > 1 ? leftOf(el, 1) - leftOf(el, 0) : el.clientWidth;
+  if (!stride) return;
+  for (let k = 0; k < el.children.length; k++) {
+    const away = Math.min(1, Math.abs(leftOf(el, k) - el.scrollLeft) / stride);
+    (el.children[k] as HTMLElement).style.opacity = `${1 - (1 - GHOST) * away}`;
+  }
+};
+
+const jump = (el: HTMLElement, slot: number, peek: boolean) => {
   el.scrollTo({ left: leftOf(el, slot), behavior: "instant" });
+  if (peek) fade(el);
+};
 
 // Generic one-slide-at-a-time strip. Native scroll-snap does the work — swipe
 // on touch, arrows on desktop — so it needs no gesture library and stays
@@ -85,8 +101,8 @@ export default function SnapCarousel({
 
   useLayoutEffect(() => {
     const el = track.current;
-    if (el && loop) jump(el, offset);
-  }, [loop, offset]);
+    if (el && loop) jump(el, offset, peek);
+  }, [loop, offset, peek]);
 
   useEffect(() => {
     const el = track.current;
@@ -95,6 +111,7 @@ export default function SnapCarousel({
     const onScroll = () => {
       if (!el.clientWidth) return;
       slot = slotOf(el);
+      if (peek) fade(el);
       setIndex((((slot - offset) % n) + n) % n);
     };
     const onSettle = () => {
@@ -102,7 +119,7 @@ export default function SnapCarousel({
         return;
       if (loop && (slot < offset || slot >= offset + n)) {
         slot += slot < offset ? n : -n;
-        jump(el, slot);
+        jump(el, slot, peek);
       }
       setMoving(false);
     };
@@ -122,7 +139,7 @@ export default function SnapCarousel({
     const ro = new ResizeObserver(() => {
       if (el.clientWidth === width) return;
       width = el.clientWidth;
-      jump(el, slot);
+      jump(el, slot, peek);
     });
     ro.observe(el);
 
@@ -133,7 +150,7 @@ export default function SnapCarousel({
       el.removeEventListener("scroll", onScrollDebounced);
       ro.disconnect();
     };
-  }, [n, loop, offset]);
+  }, [n, loop, offset, peek]);
 
   const goTo = useCallback(
     (slot: number) => {
@@ -160,7 +177,8 @@ export default function SnapCarousel({
           return (
             <div
               key={clone ? `clone-${k}` : i}
-              className={`shrink-0 snap-center transition-opacity duration-300 ${
+              // opacity-35 is only the server's guess: fade() takes over.
+              className={`shrink-0 snap-center ${
                 peek ? "w-[84%]" : "w-full"
               } ${ghost ? "cursor-pointer opacity-35" : ""} ${slideClassName}`}
               aria-roledescription="slide"
