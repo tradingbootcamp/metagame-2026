@@ -29,10 +29,9 @@ export const SPONSOR_FORM_URL =
 export const FINANCIAL_AID_FORM_URL =
   "https://airtable.com/appROpPV6XUP4CSqX/pagNpxewXARLObldc/form";
 
-// On-site housing at Lighthaven. The password in the URL is public now that
-// tickets are on sale.
+// On-site housing at Lighthaven.
 export const HOUSING_URL =
-  "https://www.havenbookings.space/events/metagame-2026/login?password=goofy-pouch-wake-buddy";
+  "https://www.havenbookings.space/events/metagame-2026";
 
 // Manifund fiscal-sponsorship page for tax-deductible donations.
 export const MANIFUND_URL = "https://manifund.org/projects/metagame-2026";
