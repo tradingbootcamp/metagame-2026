@@ -10,7 +10,7 @@ import { CARD as CARD_SIZE, SHADOW } from "../sizing";
 // (solid = cut, open = cut outline, striped = cut stripes) carry it.
 //
 // The cards are a game. Four is too few to be one, so the first tap spreads
-// a full row of cards over the hairlines (they fade in around the centre four,
+// more cards out over the hairlines (they fade in around the centre four,
 // which never move). Tap three cards (they glow); a set fades out and is
 // redealt in place, anything else shakes. Every deal holds at least one set.
 const CHARCOAL = "#4d4d4d";
@@ -128,7 +128,7 @@ const DECK: Card[] = SHAPE_NAMES.flatMap((shape) =>
 // Fills the empty slots so the row holds at least one set: one triple with at
 // least one blank in it is picked to be the guaranteed set, so the fresh cards
 // aren't always the answer. Cards are drawn from the rest of the deck, so the
-// row never repeats one (MAX_CARDS keeps that possible).
+// row never repeats one.
 function deal(
   slots: (Slot | null)[],
   mint: (card: Card, i: number) => Slot,
@@ -290,8 +290,9 @@ function CardGlyph({
   );
 }
 
-// The deck is 27 cards; a few stay in hand so a redeal can't run dry.
-const MAX_CARDS = 24;
+// Eight cards on the row: with three attributes a triple is a set 1 time in
+// 25, so eight hold about as many sets (~2) as the real game's twelve of 81.
+const MAX_CARDS = 8;
 
 // How many cards fit either side of the centre four: `pitch` apart, out to
 // the edge of the row (the hairlines' full span).
