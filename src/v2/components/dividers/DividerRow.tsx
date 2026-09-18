@@ -31,16 +31,17 @@ export function NoPuzzle({ children }: { children: React.ReactNode }) {
 // phase: when the puzzle claims one (a find, or any click while in game) it
 // stops there, so the row's own interaction (Tetris spinning, …) only runs
 // for clicks the puzzle passes on. A wrong pick shakes the row. Deliberately
-// no pointer cursor or label — it's a secret. `bare` fades the hairlines and
-// stars out, for a row whose icons have spread over them (Set).
+// no pointer cursor or label — it's a secret. `overhang` is for a row whose
+// icons have spread out past the stars (Set): the stars hide, and each hairline
+// is clipped back that many px from its inner end.
 export default function DividerRow({
   children,
   game,
-  bare = false,
+  overhang,
 }: {
   children: React.ReactNode;
   game?: Game;
-  bare?: boolean;
+  overhang?: number;
 }) {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [shaking, setShaking] = useState(false);
@@ -62,16 +63,23 @@ export default function DividerRow({
       size={22}
       strokeWidth={2}
       className={`pointer-events-none shrink-0 fill-meeple text-meeple transition-opacity duration-300 ${
-        found && !bare ? "opacity-100" : "opacity-0"
+        found && overhang === undefined ? "opacity-100" : "opacity-0"
       }`}
     />
   );
 
-  const line = `pointer-events-none h-px max-w-40 flex-1 bg-line transition-opacity duration-500 ${bare ? "opacity-0" : ""}`;
+  const line = (side: "left" | "right") => (
+    <span
+      className="pointer-events-none h-px max-w-40 flex-1 bg-line transition-[clip-path] duration-500"
+      style={{
+        clipPath: `inset(0 ${side === "left" ? (overhang ?? 0) : 0}px 0 ${side === "right" ? (overhang ?? 0) : 0}px)`,
+      }}
+    />
+  );
 
   return (
     <div className="flex scroll-mt-16 items-center justify-center gap-[22px] py-6 md:scroll-mt-24 md:py-10">
-      <span className={line} />
+      {line("left")}
       <div
         data-puzzle-game={game}
         onClickCapture={onClickCapture}
@@ -82,7 +90,7 @@ export default function DividerRow({
         {children}
         {game && !off && star}
       </div>
-      <span className={line} />
+      {line("right")}
     </div>
   );
 }

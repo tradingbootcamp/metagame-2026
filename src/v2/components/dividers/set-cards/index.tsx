@@ -10,8 +10,8 @@ import { CARD as CARD_SIZE, SHADOW } from "../sizing";
 // (solid = cut, open = cut outline, striped = cut stripes) carry it.
 //
 // The cards are a game. Four is too few to be one, so the first tap spreads
-// more cards out over the hairlines (they fade in around the centre four,
-// which never move). Tap three cards (they glow); a set fades out and is
+// more cards out along the row (they fade in around the centre four, which
+// never move; the hairlines draw back to make room). Tap three cards (they glow); a set fades out and is
 // redealt in place, anything else shakes. Every deal holds at least one set.
 const CHARCOAL = "#4d4d4d";
 const EXIT_MS = 500; // a found set fading out
@@ -315,8 +315,12 @@ export default function SetCardDivider() {
   const [picked, setPicked] = useState<number[]>([]);
   const [leaving, setLeaving] = useState(false);
   const [shaking, setShaking] = useState(false);
-  // Set once the row has spread: the card width the spread cards are placed by.
-  const [spread, setSpread] = useState<{ cardWidth: number } | null>(null);
+  // Set once the row has spread: the card width the spread cards are placed
+  // by, and how many went either side.
+  const [spread, setSpread] = useState<{
+    cardWidth: number;
+    side: number;
+  } | null>(null);
   const [found, setFound] = useState(0);
   // Counts up from FIRST's keys. Kept here, not at module level, so a hot
   // reload can't restart it under a board that's still holding old keys.
@@ -339,7 +343,7 @@ export default function SetCardDivider() {
     ];
     // Fades in from the centre outward.
     const away = (i: number) => Math.abs(i - (slots.length - 1) / 2) - 1.5;
-    setSpread({ cardWidth });
+    setSpread({ cardWidth, side });
     return deal(slots, (card, i) => ({
       card,
       seq: seq.current++,
@@ -410,8 +414,14 @@ export default function SetCardDivider() {
     };
   };
 
+  // The first card either side lands in the star's slot; each one after that
+  // runs a pitch further over the hairline, which gives way (and keeps a gap).
+  const overhang = spread
+    ? Math.max(0, spread.side * (spread.cardWidth + GAP) - 2 * GAP)
+    : undefined;
+
   return (
-    <DividerRow game="set" bare={Boolean(spread)}>
+    <DividerRow game="set" overhang={overhang}>
       <div ref={centre} className="relative flex items-center gap-[22px]">
         {board.map((_, i) =>
           i >= inner && i < inner + 4 ? glyph(i) : glyph(i, place(i)),
