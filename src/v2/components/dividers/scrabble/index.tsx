@@ -1038,8 +1038,9 @@ export default function ScrabbleDivider({
   }, [acid]);
 
   // The mark leaves its rack tile (META's M and GAME's G both lead the word)
-  // and travels out to the hairline. The pair only set off to meet once the
-  // second has landed: the join measures them, so they have to be at rest.
+  // and travels out to the hairline, and the rack re-rolls once it lands. The
+  // pair only set off to meet once the second has landed: the join measures
+  // them, so they have to be at rest.
   useEffect(() => {
     const side = (["meta", "game"] as Side[]).find(
       (k) => marks[k] && !flown.current.has(k),
@@ -1058,12 +1059,22 @@ export default function ScrabbleDivider({
         fill: "both",
       },
     );
-    if (marks.meta && marks.game)
-      run.onfinish = () =>
+    const both = marks.meta && marks.game;
+    run.onfinish = () => {
+      // Not out from under someone already spelling the next word.
+      const word = getSnapshot()
+        .map((t) => t.letter)
+        .join("");
+      if (word === side.toUpperCase()) {
+        setRand((n) => n + 1);
+        setTyped((w) => w && "");
+      }
+      if (both)
         setTimeout(
           () => setReveal((r) => (r === "none" ? "flying" : r)),
           MARK_BOTH_MS,
         );
+    };
   }, [marks]);
 
   // Measured, not laid out: the hairlines are flex-1, so how far the marks
@@ -1275,8 +1286,12 @@ export default function ScrabbleDivider({
       <div className="relative">
         {typed !== null && !exit && (
           // Past the right-hand hairline where there's room, under the rack
-          // where there isn't.
-          <div className="absolute top-full left-1/2 -mt-4 -translate-x-1/2 animate-[scrabble-entry_400ms_ease-out] lg:top-1/2 lg:left-[calc(50%+300px)] lg:mt-0 lg:translate-x-0 lg:-translate-y-1/2">
+          // where there isn't — or over it, once the code has the space under.
+          <div
+            className={`absolute left-1/2 -translate-x-1/2 animate-[scrabble-entry_400ms_ease-out] lg:top-1/2 lg:bottom-auto lg:left-[calc(50%+300px)] lg:m-0 lg:translate-x-0 lg:-translate-y-1/2 ${
+              reveal === "none" ? "top-full -mt-4" : "bottom-full -mb-4"
+            }`}
+          >
             <WordEntry
               word={typed}
               disabled={stopped}
@@ -1448,7 +1463,9 @@ export default function ScrabbleDivider({
           </div>
         </DividerRow>
         {reveal !== "none" && (
-          <div className="-mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 pb-6 md:-mt-7 md:pb-10">
+          // Out of the flow, in the padding the row and the next section
+          // already have, so nothing below moves.
+          <div className="pointer-events-none absolute inset-x-0 top-full -mt-3 flex items-center justify-center gap-x-2 whitespace-nowrap md:-mt-7 md:gap-x-3">
             <span className="sr-only">
               {reveal === "open" ? `${CODE} ${CODE_NOTE}` : ""}
             </span>
