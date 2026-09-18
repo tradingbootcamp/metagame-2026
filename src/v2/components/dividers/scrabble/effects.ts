@@ -271,6 +271,9 @@ export const MARK_BOTH_MS = 1000;
 // The pair's trip in from the hairlines to the head of the code.
 export const MARK_JOIN_MS = 1400;
 export const CODE_STAGGER = 90;
+// The sum, told a step at a time: the score, the square's flash, ×2, the total.
+export const CODE_BEAT_MS = 800;
+export const DW_FLASH_MS = 1300;
 export const CODE_ENTRY_MS = 500;
 
 export const TURN_MS = 1500;

@@ -26,10 +26,12 @@ import {
   BASE_LOOK,
   MAGA_MS,
   CODE,
+  CODE_BEAT_MS,
   CODE_ENTRY_MS,
   CODE_MULTIPLIER,
   CODE_SPAN,
   CODE_STAGGER,
+  DW_FLASH_MS,
   MARK_COLOR,
   MARK_BOTH_MS,
   MARK_CAST_MS,
@@ -611,6 +613,16 @@ const shift = (from: Element, to: Element) => {
 };
 const CODE_SCORE = [...CODE].reduce((n, ch) => n + SCRABBLE_SCORES[ch], 0);
 const CODE_OFF = CODE_SCORE * CODE_MULTIPLIER;
+// From the code opening: the rest of the tiles land, then the sum is told.
+const CODE_SCORE_AT = (CODE.length - 2) * CODE_STAGGER + CODE_ENTRY_MS;
+const DW_FLASH_AT = CODE_SCORE_AT + CODE_BEAT_MS;
+const CODE_TIMES_AT = DW_FLASH_AT + DW_FLASH_MS * 0.6;
+const CODE_OFF_AT = CODE_TIMES_AT + CODE_BEAT_MS;
+const DW_FAINT = {
+  background: "rgba(77,77,77,.1)",
+  color: "rgba(77,77,77,.3)",
+};
+const DW_PINK = { background: "#f2a7a0", color: "#7a2f2a" };
 const codeSide = (i: number) =>
   (["meta", "game"] as Side[]).find(
     (k) => i >= CODE_SPAN[k][0] && i < CODE_SPAN[k][1],
@@ -724,6 +736,7 @@ export default function ScrabbleDivider({
   const metaRef = useRef<HTMLSpanElement>(null);
   const gameRef = useRef<HTMLSpanElement>(null);
   const slotRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const dwRef = useRef<HTMLSpanElement>(null);
   const flown = useRef(new Set<Side>());
 
   // A mark's cast holds its colour until the mark has settled on its hairline.
@@ -1115,6 +1128,28 @@ export default function ScrabbleDivider({
     return () => runs.forEach((r) => r.cancel());
   }, [reveal]);
 
+  // The square comes up over the G in its own colour, long enough to read,
+  // then slips back under it as a rim.
+  useEffect(() => {
+    if (reveal !== "open") return;
+    const still = reducedMotion();
+    const run = dwRef.current?.animate(
+      [
+        { ...DW_FAINT, zIndex: -10, transform: "none" },
+        { ...DW_PINK, zIndex: 10, transform: "scale(1.5)", offset: 0.2 },
+        { ...DW_PINK, zIndex: 10, transform: "scale(1.5)", offset: 0.7 },
+        { ...DW_PINK, zIndex: -10, transform: "none" },
+      ],
+      {
+        delay: still ? 0 : DW_FLASH_AT,
+        duration: still ? 1 : DW_FLASH_MS,
+        easing: "ease-in-out",
+        fill: "both",
+      },
+    );
+    return () => run?.cancel();
+  }, [reveal]);
+
   useEffect(() => {
     if (!sudo) return;
     const t = setTimeout(() => setSudo(0), SUDO_MS);
@@ -1303,7 +1338,7 @@ export default function ScrabbleDivider({
           // where there isn't — or over it, once the code has the space under.
           <div
             className={`absolute left-1/2 -translate-x-1/2 animate-[scrabble-entry_400ms_ease-out] lg:top-1/2 lg:bottom-auto lg:left-[calc(50%+300px)] lg:m-0 lg:translate-x-0 lg:-translate-y-1/2 ${
-              reveal === "none" ? "top-full -mt-4" : "bottom-full -mb-4"
+              marks.meta || marks.game ? "bottom-full -mb-4" : "top-full -mt-4"
             }`}
           >
             <WordEntry
@@ -1476,7 +1511,7 @@ export default function ScrabbleDivider({
             )}
           </div>
         </DividerRow>
-        {reveal !== "none" && (
+        {(marks.meta || marks.game) && (
           // Out of the flow, in the padding the row and the next section
           // already have, so nothing below moves.
           <div className="pointer-events-none absolute inset-x-0 top-full -mt-4 flex flex-col items-center justify-center gap-x-3 whitespace-nowrap md:-mt-7 md:flex-row">
@@ -1506,12 +1541,14 @@ export default function ScrabbleDivider({
                     className={`${GLYPH} relative isolate shrink-0`}
                   >
                     {i === CODE_SPAN.game[0] && (
-                      // The square the G lands on. Up before the flight, so
-                      // there's a moment to read it.
+                      // The square the G lands on: there from the first mark,
+                      // too faint to give much away until it flashes.
                       <span
-                        className="absolute -inset-[3px] -z-10 flex flex-col items-center justify-center rounded-[3px] bg-[#f2a7a0] text-center text-[5.5px] leading-[1.15] font-bold tracking-wide text-[#7a2f2a] uppercase"
+                        ref={dwRef}
+                        className="absolute -inset-[3px] -z-10 flex flex-col items-center justify-center rounded-[3px] text-center text-[5.5px] leading-[1.15] font-bold tracking-wide uppercase"
                         style={{
-                          animation: `scrabble-entry ${CODE_ENTRY_MS}ms ease-out both`,
+                          ...DW_FAINT,
+                          animation: `scrabble-entry ${CODE_ENTRY_MS * 2}ms ease-out both`,
                         }}
                       >
                         <span>Double</span>
@@ -1549,16 +1586,26 @@ export default function ScrabbleDivider({
             </span>
             <span
               aria-hidden
-              className="text-xs leading-4 font-semibold text-ink/70 md:text-sm"
-              style={
-                reveal === "open"
-                  ? {
-                      animation: `scrabble-entry ${CODE_ENTRY_MS}ms ${(CODE.length - 2) * CODE_STAGGER}ms ease-out both`,
-                    }
-                  : { opacity: 0 }
-              }
+              className="flex gap-x-1 text-xs leading-4 font-semibold text-ink/70 md:text-sm"
             >
-              {CODE_SCORE} × {CODE_MULTIPLIER} = ${CODE_OFF} off
+              {[
+                [CODE_SCORE_AT, `${CODE_SCORE}`],
+                [CODE_TIMES_AT, `× ${CODE_MULTIPLIER}`],
+                [CODE_OFF_AT, `= $${CODE_OFF} off`],
+              ].map(([at, text]) => (
+                <span
+                  key={at}
+                  style={
+                    reveal === "open"
+                      ? {
+                          animation: `scrabble-entry ${CODE_ENTRY_MS}ms ${at}ms ease-out both`,
+                        }
+                      : { opacity: 0 }
+                  }
+                >
+                  {text}
+                </span>
+              ))}
             </span>
           </div>
         )}
