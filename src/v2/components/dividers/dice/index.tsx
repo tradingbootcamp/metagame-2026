@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import DividerRow from "../DividerRow";
 import { SHADOW } from "../sizing";
+import { trackClick } from "../track";
 
 const CHARCOAL = "#4d4d4d";
 // Bigger than GLYPH so the face values read, with the excess taken back as
@@ -179,6 +180,7 @@ function DiceGlyph({ die }: { die: Die }) {
   useEffect(() => () => clearTimeout(swap.current), []);
 
   const onClick = () => {
+    trackClick("dice");
     setSpins((n) => n + 1);
     clearTimeout(swap.current);
     swap.current = setTimeout(() => setValues(roll(die)), SPIN_MS / 2);
