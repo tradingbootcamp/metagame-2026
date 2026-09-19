@@ -7,8 +7,8 @@
 // one grid (the row centres the boxes, and the 4×4 and 2×2 are half a cell
 // off the 3×3s). Not mounted anywhere yet.
 
-export const CELL = 14.3;
-const SEAM = 1.56; // gap between cells, so each square reads as its own block
+export const CELL = 13.2;
+const SEAM = 1.44; // gap between cells, so each square reads as its own block
 
 export type Cell = [col: number, row: number];
 

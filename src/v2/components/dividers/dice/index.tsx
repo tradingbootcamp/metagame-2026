@@ -13,7 +13,7 @@ import { trackClick } from "../track";
 const CHARCOAL = "#4d4d4d";
 // Bigger than GLYPH so the face values read, with the excess taken back as
 // negative margin: the row lays out (pitch, height) exactly like a GLYPH row.
-const SIZE = "-m-[9.75px] h-[58.5px] w-[58.5px]";
+const SIZE = "-m-[9px] h-[54px] w-[54px]";
 const SPIN_MS = 700;
 
 // A numbered face: where its value sits, its tilt (the value's top points out

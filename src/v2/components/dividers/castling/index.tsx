@@ -6,8 +6,8 @@ import { IconGlyph } from "../IconDivider";
 import { trackClick, trackEgg } from "../track";
 import { ICONS, PAWN } from "./icons";
 
-// One square: a piece's width plus DividerRow's 22px gap.
-const STEP = 53;
+// One square: a piece's width plus DividerRow's 28px gap.
+const STEP = 57;
 const LEG = 180;
 // Castled: the pair hop, the move is written up, and the row resets itself.
 // A beat after they've settled, then one small hop.
@@ -111,7 +111,7 @@ export default function CastlingDivider() {
           ref.current?.animate(
             [
               { transform: "none", easing: "ease-out" },
-              { transform: "translateY(-8px)", easing: "ease-in" },
+              { transform: "translateY(-7px)", easing: "ease-in" },
               { transform: "none" },
             ],
             { delay: HOP_AT + i * 80, duration: HOP_MS },
@@ -134,7 +134,7 @@ export default function CastlingDivider() {
 
   return (
     <DividerRow game="chess">
-      <span className="relative flex items-center gap-[22px]">
+      <span className="relative flex items-center gap-[28px]">
         {PAWNS.map(([file, rank]) => (
           <span
             key={file}

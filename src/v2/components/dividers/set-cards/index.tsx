@@ -18,8 +18,8 @@ const EXIT_MS = 500; // a found set fading out
 const DEAL_MS = 600; // a dealt card fading in
 const SHAKE_MS = 400;
 const STAGGER_MS = 90;
-// DividerRow's gap-[22px]: the spread cards keep the centre four's spacing.
-const GAP = 22;
+// DividerRow's gap-[28px]: the spread cards keep the centre four's spacing.
+const GAP = 28;
 
 // portrait card, rounded corners, centred in the viewBox
 const CARD =
@@ -235,7 +235,7 @@ function CardGlyph({
   // Tapping is the whole interaction, so it has to survive iOS: no
   // double-tap-to-zoom, and the cursor Safari wants before it delivers a click
   // to a plain <svg>. The invisible rect widens the target into the gutters —
-  // a 22px-wide card is a small thing to hit with a thumb.
+  // a 26px-wide card is a small thing to hit with a thumb.
   return (
     <svg
       ref={ref}
@@ -421,7 +421,7 @@ export default function SetCardDivider() {
 
   return (
     <DividerRow game="set" overhang={overhang}>
-      <div ref={centre} className="relative flex items-center gap-[22px]">
+      <div ref={centre} className="relative flex items-center gap-[28px]">
         {board.map((_, i) =>
           i >= inner && i < inner + 4 ? glyph(i) : glyph(i, place(i)),
         )}

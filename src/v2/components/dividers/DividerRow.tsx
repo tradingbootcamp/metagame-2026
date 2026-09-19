@@ -91,13 +91,13 @@ export default function DividerRow({
   );
 
   return (
-    <div className="flex scroll-mt-16 items-center justify-center gap-[22px] py-6 md:scroll-mt-24 md:py-10">
+    <div className="flex scroll-mt-16 items-center justify-center gap-[28px] py-6 md:scroll-mt-24 md:py-10">
       {line("left", left)}
       <div
         data-puzzle-game={game}
         onClickCapture={onClickCapture}
         onAnimationEnd={() => setShaking(false)}
-        className={`flex items-center gap-[22px] ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
+        className={`flex items-center gap-[28px] ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
       >
         {game && !off && star}
         {children}

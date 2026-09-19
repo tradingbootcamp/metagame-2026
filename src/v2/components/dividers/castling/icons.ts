@@ -4,7 +4,7 @@
 // heights). Credit on /credits.
 import type { GameIcon } from "../IconDivider";
 
-const PIECE = { viewBox: "20 4 60 92", className: "h-[48px] w-[31px]" };
+const PIECE = { viewBox: "20 4 60 92", className: "h-[44px] w-[29px]" };
 
 export const ICONS: GameIcon[] = [
   {
