@@ -6,8 +6,7 @@ import { X } from "lucide-react";
 // the bottom of the viewport. It says outright that there's nothing to find,
 // so nobody goes digging through the real console for a puzzle.
 const LINES: [text: string, at: number][] = [
-  ["$ sudo scrabble", 300],
-  ["$ this is not a puzzle. :(", 1400],
+  ["$ this is not a puzzle. :(", 300],
 ];
 
 export const SUDO_MS = 6000;
