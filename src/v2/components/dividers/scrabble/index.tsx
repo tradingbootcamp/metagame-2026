@@ -596,10 +596,10 @@ const glyphPath = (shape: Glyph, tile: number) =>
 
 const FLASH_MS = 350;
 
-// The rack's layout in px — GLYPH's side, and the plate's gap-[28px] and px-4
+// The rack's layout in px — GLYPH's side, and the plate's gap-[34px] and px-4
 // — for ROLL's geometry and for placing LOVE's hearts.
-const TILE_PX = 36;
-const TILE_GAP = 28;
+const TILE_PX = 33;
+const TILE_GAP = 34;
 // The reveal row is twice the rack's length, so its tiles sit tighter.
 const CODE_GAP = 8;
 
@@ -1355,7 +1355,7 @@ export default function ScrabbleDivider({
             the padding from shifting the hairlines. */}
           <div
             ref={plateRef}
-            className="relative isolate -mx-4 -my-2.5 flex items-center gap-[28px] px-4 py-2.5"
+            className="relative isolate -mx-4 -my-2.5 flex items-center gap-[34px] px-4 py-2.5"
             style={
               exit?.to === "crab" && !reducedMotion()
                 ? {
@@ -1412,7 +1412,7 @@ export default function ScrabbleDivider({
               <span
                 key={coin.id}
                 aria-hidden
-                className="pointer-events-none absolute top-1/2 -mt-[8.5px] -ml-[6px] h-[17px] w-[12px] opacity-0 [perspective:80px]"
+                className="pointer-events-none absolute top-1/2 -mt-[7.5px] -ml-[5.5px] h-[15px] w-[11px] opacity-0 [perspective:80px]"
                 style={{
                   left: tileX(look, coin.tile),
                   animation: `scrabble-coin ${COIN_MS}ms`,
@@ -1433,7 +1433,7 @@ export default function ScrabbleDivider({
               <span
                 key={`colon-${glyph.id}`}
                 aria-hidden
-                className="pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col gap-[8px] opacity-0"
+                className="pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col gap-[7.5px] opacity-0"
                 style={{
                   animation: `scrabble-glyph-in ${GLYPH_TIMING.time.ms}ms ease-in-out`,
                 }}
@@ -1441,7 +1441,7 @@ export default function ScrabbleDivider({
                 {[0, 1].map((dot) => (
                   <span
                     key={dot}
-                    className="size-[6px] rounded-full"
+                    className="size-[5.5px] rounded-full"
                     style={{ background: tileFill(look) }}
                   />
                 ))}
@@ -1544,7 +1544,7 @@ export default function ScrabbleDivider({
                       // until it flashes.
                       <span
                         ref={dwRef}
-                        className="absolute -inset-[3.5px] -z-10 flex flex-col items-center justify-center rounded-[3.5px] text-center text-[6.5px] leading-[1.15] font-bold tracking-wide uppercase"
+                        className="absolute -inset-[3px] -z-10 flex flex-col items-center justify-center rounded-[3px] text-center text-[6px] leading-[1.15] font-bold tracking-wide uppercase"
                         style={{
                           ...DW_FAINT,
                           animation: `scrabble-entry ${CODE_ENTRY_MS * 2}ms ease-out both`,
@@ -1558,7 +1558,7 @@ export default function ScrabbleDivider({
                     {/* The letters are holes: without this the G would show
                         the square through itself. */}
                     {i === CODE_SPAN.game[0] && reveal === "open" && (
-                      <span className="absolute inset-[2px] -z-10 rounded-[4px] bg-background" />
+                      <span className="absolute inset-[1.5px] -z-10 rounded-[3.5px] bg-background" />
                     )}
                     {reveal === "open" && (
                       <ScrabbleTile

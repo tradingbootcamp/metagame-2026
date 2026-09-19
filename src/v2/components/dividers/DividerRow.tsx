@@ -62,14 +62,16 @@ export default function DividerRow({
   };
 
   // Stars always take up their space so earning one doesn't shift the icons.
-  const star = (
+  // The negative margin pulls a star in from the icons' wide gap, so its slot
+  // doesn't push the hairline far out.
+  const star = (side: "left" | "right") => (
     <Star
       aria-hidden
       size={22}
       strokeWidth={2}
       className={`pointer-events-none shrink-0 fill-meeple text-meeple transition-opacity duration-300 ${
-        found && overhang === undefined ? "opacity-100" : "opacity-0"
-      }`}
+        side === "left" ? "-mr-[22px] md:-mr-3" : "-ml-[22px] md:-ml-3"
+      } ${found && overhang === undefined ? "opacity-100" : "opacity-0"}`}
     />
   );
 
@@ -91,17 +93,17 @@ export default function DividerRow({
   );
 
   return (
-    <div className="flex scroll-mt-16 items-center justify-center gap-[28px] py-6 md:scroll-mt-24 md:py-10">
+    <div className="flex scroll-mt-16 items-center justify-center gap-3 py-6 md:scroll-mt-24 md:gap-[22px] md:py-10">
       {line("left", left)}
       <div
         data-puzzle-game={game}
         onClickCapture={onClickCapture}
         onAnimationEnd={() => setShaking(false)}
-        className={`flex items-center gap-[28px] ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
+        className={`flex items-center gap-[34px] ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
       >
-        {game && !off && star}
+        {game && !off && star("left")}
         {children}
-        {game && !off && star}
+        {game && !off && star("right")}
       </div>
       {line("right", right)}
     </div>
