@@ -7,7 +7,7 @@ import { trackClick, trackEgg } from "../track";
 import { ICONS, PAWN } from "./icons";
 
 // One square: a piece's width plus DividerRow's 22px gap.
-const STEP = 46;
+const STEP = 53;
 const LEG = 180;
 // Castled: the pair hop, the move is written up, and the row resets itself.
 // A beat after they've settled, then one small hop.
@@ -111,7 +111,7 @@ export default function CastlingDivider() {
           ref.current?.animate(
             [
               { transform: "none", easing: "ease-out" },
-              { transform: "translateY(-6px)", easing: "ease-in" },
+              { transform: "translateY(-8px)", easing: "ease-in" },
               { transform: "none" },
             ],
             { delay: HOP_AT + i * 80, duration: HOP_MS },

@@ -2,6 +2,6 @@
 // glyphs (dice, chess, game-icons) render at GLYPH. The portrait solid cards
 // (set, suits) are narrower, so they take a little more height to sit at the same
 // optical size — CARD. Tune these two and every divider follows.
-export const GLYPH = "h-[30px] w-[30px]";
-export const CARD = "h-[34px] w-auto";
+export const GLYPH = "h-[39px] w-[39px]";
+export const CARD = "h-[44px] w-auto";
 export const SHADOW = "drop-shadow-[0_1px_2px_rgba(27,27,27,0.12)]";

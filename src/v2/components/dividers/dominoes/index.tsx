@@ -54,7 +54,7 @@ function Domino({ tile: [a, b] }: { tile: [number, number] }) {
     <svg
       viewBox="0 0 100 50"
       aria-hidden
-      className={`h-[22px] w-[44px] ${SHADOW}`}
+      className={`h-[28.5px] w-[57px] ${SHADOW}`}
     >
       <mask id={maskId} maskUnits="userSpaceOnUse">
         <rect width="100" height="50" rx="6" fill="#fff" />

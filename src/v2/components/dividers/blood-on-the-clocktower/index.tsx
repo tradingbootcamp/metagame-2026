@@ -23,7 +23,7 @@ export default function BloodOnTheClocktowerDivider() {
       bolt.current?.animate(
         [
           { opacity: 1, transform: "translateX(0)" },
-          { opacity: 1, transform: "translateX(30px)" },
+          { opacity: 1, transform: "translateX(39px)" },
         ],
         { duration: 160, easing: "linear" },
       );
@@ -45,7 +45,7 @@ export default function BloodOnTheClocktowerDivider() {
               </span>
               <span
                 ref={bolt}
-                className="pointer-events-none absolute top-1/2 left-5 h-0.5 w-2.5 -translate-y-1/2 rounded-full bg-[#4d4d4d] opacity-0"
+                className="pointer-events-none absolute top-1/2 left-[26px] h-[2.5px] w-[13px] -translate-y-1/2 rounded-full bg-[#4d4d4d] opacity-0"
               />
             </span>
           );
@@ -57,7 +57,7 @@ export default function BloodOnTheClocktowerDivider() {
               key={icon.name}
               className={`${SPIN} ${
                 stage === 2
-                  ? "translate-y-3.5 -rotate-45 opacity-60 delay-150 duration-500"
+                  ? "translate-y-[18px] -rotate-45 opacity-60 delay-150 duration-500"
                   : "-rotate-90 duration-300"
               }`}
             >
