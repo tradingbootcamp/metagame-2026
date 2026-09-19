@@ -6,8 +6,10 @@ import { IconGlyph } from "../IconDivider";
 import { trackClick, trackEgg } from "../track";
 import { ICONS, PAWN } from "./icons";
 
-// One square: a piece's width plus DividerRow's 34px gap.
+// One square across: a piece's width plus DividerRow's 34px gap. Ranks are
+// shorter than files are wide, or the knight climbs well into the section above.
 const STEP = 60;
+const RANK = 46;
 const LEG = 180;
 // Castled: the pair hop, the move is written up, and the row resets itself.
 // A beat after they've settled, then one small hop.
@@ -54,7 +56,7 @@ function Piece({
       <span
         className="block transition-transform ease-out"
         style={{
-          transform: `translateY(${moved ? move.dy * STEP : 0}px)`,
+          transform: `translateY(${moved ? move.dy * RANK : 0}px)`,
           ...leg(knight && !moved),
         }}
       >
@@ -141,7 +143,7 @@ export default function CastlingDivider() {
             className="pointer-events-none absolute bottom-0 transition-opacity duration-500"
             style={{
               left: file * STEP,
-              transform: `translateY(${-rank * STEP}px)`,
+              transform: `translateY(${-rank * RANK}px)`,
               opacity: bishop || knight || castled ? 0.22 : 0,
             }}
           >

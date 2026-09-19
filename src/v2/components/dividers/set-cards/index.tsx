@@ -18,8 +18,6 @@ const EXIT_MS = 500; // a found set fading out
 const DEAL_MS = 600; // a dealt card fading in
 const SHAKE_MS = 400;
 const STAGGER_MS = 90;
-// DividerRow's gap-[34px]: the spread cards keep the centre four's spacing.
-const GAP = 34;
 
 // portrait card, rounded corners, centred in the viewBox
 const CARD =
@@ -315,10 +313,10 @@ export default function SetCardDivider() {
   const [leaving, setLeaving] = useState(false);
   const [shaking, setShaking] = useState(false);
   // Set once the row has spread: the card width the spread cards are placed
-  // by, and how many went either side.
+  // by, how far apart, and how far they run over each hairline.
   const [spread, setSpread] = useState<{
     cardWidth: number;
-    side: number;
+    pitch: number;
     overhang: number;
   } | null>(null);
   const [found, setFound] = useState(0);
@@ -333,7 +331,9 @@ export default function SetCardDivider() {
   // four stay in flow, so they never move.
   const spreadOut = () => {
     const cardWidth = first.current!.getBoundingClientRect().width;
-    const pitch = cardWidth + GAP;
+    // The spread cards keep the centre four's spacing.
+    const pitch =
+      cardWidth + parseFloat(getComputedStyle(centre.current!).columnGap);
     const icons = centre.current!.closest("[data-puzzle-game]")!;
     const row = icons.parentElement!;
     const side = fit(row.clientWidth, cardWidth, pitch);
@@ -350,7 +350,7 @@ export default function SetCardDivider() {
     ];
     // Fades in from the centre outward.
     const away = (i: number) => Math.abs(i - (slots.length - 1) / 2) - 1.5;
-    setSpread({ cardWidth, side, overhang });
+    setSpread({ cardWidth, pitch, overhang });
     return deal(slots, (card, i) => ({
       card,
       seq: seq.current++,
@@ -412,18 +412,22 @@ export default function SetCardDivider() {
     />
   );
   const place = (i: number): React.CSSProperties => {
-    const pitch = spread!.cardWidth + GAP;
+    const { cardWidth, pitch } = spread!;
     const off = i - (n - 1) / 2;
     return {
       position: "absolute",
       top: 0,
-      left: `calc(50% + ${(off * pitch - spread!.cardWidth / 2).toFixed(2)}px)`,
+      left: `calc(50% + ${(off * pitch - cardWidth / 2).toFixed(2)}px)`,
     };
   };
 
   return (
     <DividerRow game="set" overhang={spread?.overhang}>
-      <div ref={centre} className="relative flex items-center gap-[34px]">
+      {/* Tighter on a phone than the other rows, so all eight cards fit. */}
+      <div
+        ref={centre}
+        className="relative flex items-center gap-[22px] md:gap-[34px]"
+      >
         {board.map((_, i) =>
           i >= inner && i < inner + 4 ? glyph(i) : glyph(i, place(i)),
         )}
