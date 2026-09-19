@@ -186,7 +186,9 @@ function DiceGlyph({ die }: { die: Die }) {
     swap.current = setTimeout(() => setValues(roll(die)), SPIN_MS / 2);
   };
 
-  const maskId = `dice-seam-${die.id}`;
+  // WebKit won't repaint a masked shape when only the mask's text changes, so
+  // the values go in the id — the reference itself changes with the roll.
+  const maskId = `dice-seam-${die.id}-${values.join("-")}`;
   return (
     <svg
       viewBox="0 0 100 100"
