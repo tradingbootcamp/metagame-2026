@@ -28,7 +28,6 @@ const CANNON_SPEED = 240;
 const SHOT_SPEED = 220;
 const BOMB_SPEED = 70;
 const MARCH_MS = [0, 110, 250];
-const MAX_STARS = 5;
 
 type Phase = "idle" | "rise" | "play" | "dead" | "won";
 type Fate = "alive" | "boom" | "dead";
@@ -64,14 +63,14 @@ const newGame = () => ({
 // squid · crab · bunker · cannon. Click the row and it opens out into a game:
 // the mouse or ←/→ steers, a click or space fires; a tap slides over and fires,
 // and a held drag steers with autofire. Clearing both invaders earns a star
-// under the cannon, and a faster march next time.
+// under the cannon.
 // Not mounted anywhere yet.
 export default function SpaceInvadersDivider() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [fates, setFates] = useState<Fate[]>(["alive", "alive"]);
   const [frame, setFrame] = useState(0);
   const [rows, setRows] = useState(BUNKER_ROWS);
-  const [wins, setWins] = useState(0);
+  const [starred, setStarred] = useState(false);
 
   const field = useRef<HTMLDivElement>(null);
   const alienEls = useRef<(HTMLElement | null)[]>([]);
@@ -111,7 +110,6 @@ export default function SpaceInvadersDivider() {
   useEffect(() => {
     if (phase !== "play") return;
     const g = newGame();
-    const marchMs = (n: number) => MARCH_MS[n] * 0.8 ** wins;
 
     const end = (p: Phase) => {
       g.over = true;
@@ -162,7 +160,7 @@ export default function SpaceInvadersDivider() {
         300,
       );
       if (!g.alive.includes(true)) {
-        setWins((w) => w + 1);
+        setStarred(true);
         end("won");
       }
     };
@@ -272,8 +270,8 @@ export default function SpaceInvadersDivider() {
       const left = g.alive.filter(Boolean).length;
       if (left) {
         g.march += dt * 1000;
-        while (g.march >= marchMs(left)) {
-          g.march -= marchMs(left);
+        while (g.march >= MARCH_MS[left]) {
+          g.march -= MARCH_MS[left];
           march();
         }
         g.bombIn -= dt;
@@ -348,7 +346,7 @@ export default function SpaceInvadersDivider() {
       window.removeEventListener("keyup", onKeyUp);
       bolts.forEach((el) => el && (el.style.opacity = "0"));
     };
-  }, [phase, wins, reset]);
+  }, [phase, reset]);
 
   const BOLT_CLASS =
     "pointer-events-none absolute top-0 left-0 bg-[#4d4d4d] opacity-0";
@@ -377,16 +375,13 @@ export default function SpaceInvadersDivider() {
         </span>
         <span ref={cannonEl} className="relative inline-flex">
           <IconGlyph icon={phase === "dead" ? BOOM : CANNON} />
-          <span className="pointer-events-none absolute top-[26px] left-1/2 flex -translate-x-1/2 gap-px">
-            {Array.from({ length: Math.min(wins, MAX_STARS) }, (_, i) => (
-              <Star
-                key={i}
-                aria-hidden
-                size={9}
-                className="fill-meeple text-meeple"
-              />
-            ))}
-          </span>
+          {starred && (
+            <Star
+              aria-hidden
+              size={9}
+              className="pointer-events-none absolute top-[26px] left-1/2 -translate-x-1/2 fill-meeple text-meeple"
+            />
+          )}
         </span>
         <span
           ref={shotEl}
