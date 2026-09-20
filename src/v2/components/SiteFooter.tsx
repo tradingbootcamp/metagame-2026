@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FaDiscord, FaEnvelope } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
 import ContactLink from "./contact/ContactLink";
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { NAV_LINKS } from "./nav/links";
@@ -25,6 +26,15 @@ export default function SiteFooter() {
             >
               <FaDiscord aria-hidden />
               Discord
+            </a>
+            <a
+              href={SOCIAL_LINKS.TWITTER}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={CONTACT}
+            >
+              <FaXTwitter aria-hidden />
+              Twitter
             </a>
           </div>
           <div
