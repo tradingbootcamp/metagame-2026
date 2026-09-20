@@ -27,6 +27,10 @@ export type Game = (typeof GAMES)[number];
 export type Current = Game | "win";
 export type PuzzleState = { stars: Record<Game, boolean>; current: Current };
 
+// Parked while the puzzle is untangled from the dividers' own interactions:
+// off, every load gets FALLBACK_GAME's image and no divider click is a guess.
+export const PUZZLE_ENABLED = false;
+
 // Boot script failed / JS off: the boot script and the store agree on this.
 export const FALLBACK_GAME: Game = "catan";
 

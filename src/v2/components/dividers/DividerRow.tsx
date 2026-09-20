@@ -11,6 +11,7 @@ import {
   getServerSnapshot,
   getSnapshot,
   guess,
+  PUZZLE_ENABLED,
   subscribe,
   type Game,
 } from "@/v2/puzzle/store";
@@ -50,7 +51,7 @@ export default function DividerRow({
 }) {
   const state = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [shaking, setShaking] = useState(false);
-  const off = useContext(NoPuzzleContext);
+  const off = useContext(NoPuzzleContext) || !PUZZLE_ENABLED;
   const found = Boolean(game && !off && state.stars[game]);
 
   const onClickCapture = (e: React.MouseEvent) => {
