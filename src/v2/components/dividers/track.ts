@@ -3,7 +3,13 @@
 export type Via = "click" | "type";
 
 // Eggs whose clicks are counted.
-export const CLICK_EGGS = ["tetris", "chess", "dice", "clocktower"] as const;
+export const CLICK_EGGS = [
+  "tetris",
+  "chess",
+  "dice",
+  "clocktower",
+  "invaders",
+] as const;
 export type ClickEgg = (typeof CLICK_EGGS)[number];
 
 // What /api/egg accepts. A `clicks` event carries this visit's running total
@@ -13,7 +19,8 @@ export type EggEvent =
   | { egg: ClickEgg; event: "clicks"; clicks: number }
   | { egg: "chess"; event: "castle" }
   | { egg: "tetris"; event: "clear" }
-  | { egg: "clocktower"; event: "kill" };
+  | { egg: "clocktower"; event: "kill" }
+  | { egg: "invaders"; event: "win" };
 
 // Groups one browser's eggs together and nothing more: a random code kept in
 // localStorage, so it survives reloads (how you get a finished rack back) and

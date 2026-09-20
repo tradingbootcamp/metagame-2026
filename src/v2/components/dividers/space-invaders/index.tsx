@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Star } from "lucide-react";
 import DividerRow from "../DividerRow";
 import { IconGlyph } from "../IconDivider";
+import { trackClick, trackEgg } from "../track";
 import { BOOM, BUNKER_ROWS, CANNON, CRAB, SQUID, bunker } from "./icons";
 
 // Field geometry, in CSS px: four 30px boxes on a 22px gap, as DividerRow lays
@@ -91,6 +92,7 @@ export default function SpaceInvadersDivider() {
 
   const start = () => {
     if (phase !== "idle") return;
+    trackClick("invaders");
     place(bunkerEl.current, 0, -RISE, true);
     alienEls.current.forEach((el) => place(el, 0, -2 * RISE, true));
     setPhase("rise");
@@ -161,6 +163,7 @@ export default function SpaceInvadersDivider() {
       );
       if (!g.alive.includes(true)) {
         setStarred(true);
+        trackEgg({ egg: "invaders", event: "win" });
         end("won");
       }
     };
