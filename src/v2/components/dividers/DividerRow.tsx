@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { Star } from "lucide-react";
+import { ICON_GAP } from "./sizing";
 import {
   getServerSnapshot,
   getSnapshot,
@@ -100,7 +101,7 @@ export default function DividerRow({
         data-puzzle-game={game}
         onClickCapture={onClickCapture}
         onAnimationEnd={() => setShaking(false)}
-        className={`flex items-center gap-[34px] ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
+        className={`flex items-center ${ICON_GAP} ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
       >
         {game && !off && star("left")}
         {children}

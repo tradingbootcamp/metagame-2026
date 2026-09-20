@@ -4,15 +4,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Star } from "lucide-react";
 import DividerRow from "../DividerRow";
 import { IconGlyph } from "../IconDivider";
+import { GLYPH_PX, ICON_GAP, ICON_GAP_PX } from "../sizing";
 import { trackClick, trackEgg } from "../track";
 import { BOOM, BUNKER_ROWS, CANNON, CRAB, SQUID, bunker } from "./icons";
 
-// Field geometry, in CSS px: four 30px boxes on a 22px gap, as DividerRow lays
-// them out. One sprite pixel is PX; the 8-row art sits centred in its box.
-const BOX = 30;
+// Field geometry, in CSS px: four boxes in a row, as DividerRow lays them
+// out. One sprite pixel is PX; the 8-row art sits centred in its box.
+const BOX = GLYPH_PX;
 const PX = BOX / 13;
-const HOME = [0, 52, 104, 156];
-const FIELD = 186;
+const HOME = [0, 1, 2, 3].map((i) => i * (BOX + ICON_GAP_PX));
+const FIELD = HOME[3] + BOX;
 const ART_TOP = (BOX - 8 * PX) / 2;
 const ART_BOTTOM = ART_TOP + 8 * PX;
 const RISE = 10 * PX;
@@ -360,7 +361,7 @@ export default function SpaceInvadersDivider() {
       <div
         ref={field}
         onClick={start}
-        className="relative flex items-center gap-[22px]"
+        className={`relative flex items-center ${ICON_GAP}`}
       >
         {ALIENS.map((a, i) => (
           <span
@@ -382,7 +383,8 @@ export default function SpaceInvadersDivider() {
             <Star
               aria-hidden
               size={9}
-              className="pointer-events-none absolute top-[26px] left-1/2 -translate-x-1/2 fill-meeple text-meeple"
+              className="pointer-events-none absolute left-1/2 -translate-x-1/2 fill-meeple text-meeple"
+              style={{ top: ART_BOTTOM + 1 }}
             />
           )}
         </span>
