@@ -533,26 +533,21 @@ export function ScrabbleTile({
         </g>
       )}
       {bubble > 0 && (
-        // Swells where it's blown — the fish's mouth, or the top of the tile —
-        // then lets go.
+        // Swells against the tile's right side, then lets go.
         <g
           key={bubble}
           fill="none"
           stroke={fill}
           strokeLinecap="round"
-          transform={
-            rod && caught
-              ? `translate(158 ${tip + REELED - 2})`
-              : `translate(50 ${box.y - 3})`
-          }
+          transform={`translate(${box.x + box.width + 2} ${box.y + box.height * 0.25})`}
         >
           <g
             className="scrabble-bubble"
             opacity="0"
             style={{ animation: `scrabble-bubble ${BLOW_MS}ms ease-in-out` }}
           >
-            <circle cy="-14" r="14" strokeWidth="2.5" />
-            <path d="M-8 -17a9 9 0 0 1 5 -5" strokeWidth="2" />
+            <circle cx="14" r="14" strokeWidth="2.5" />
+            <path d="M6 -3a9 9 0 0 1 5 -5" strokeWidth="2" />
           </g>
         </g>
       )}
@@ -804,10 +799,8 @@ export default function ScrabbleDivider({
     id: number;
     hearts: { x: number; tilt: number }[];
   } | null>(null);
-  // One bubble. With a fish on the line it's the fish's, so the tile is the rod's.
-  const [bubble, setBubble] = useState<{ id: number; tile: number } | null>(
-    null,
-  );
+  // Bumped per cast, so BLOW can be cast again with a bubble still in the air.
+  const [bubble, setBubble] = useState(0);
   const [exit, setExit] = useState<{ to: Exit; seeds: Seed[] } | null>(null);
   // Set once the last tile is clear of the page: the tiles are swapped for
   // empty spacers, so the hairlines keep their gap.
@@ -921,12 +914,7 @@ export default function ScrabbleDivider({
         break;
       case "blow":
         if (reducedMotion()) break;
-        setBubble((b) => ({
-          id: (b?.id ?? 0) + 1,
-          tile: look.catch
-            ? RACK_SIZE - 1
-            : Math.floor(Math.random() * RACK_SIZE),
-        }));
+        setBubble((n) => n + 1);
         break;
       case "love":
         if (reducedMotion()) break;
@@ -974,12 +962,6 @@ export default function ScrabbleDivider({
     );
     return () => clearTimeout(t);
   }, [love]);
-
-  useEffect(() => {
-    if (!bubble) return;
-    const t = setTimeout(() => setBubble(null), BLOW_MS);
-    return () => clearTimeout(t);
-  }, [bubble]);
 
   useEffect(() => {
     if (!maga) return;
@@ -1602,7 +1584,7 @@ export default function ScrabbleDivider({
                   diced={exit?.to === "dice"}
                   rod={look.fish && i === RACK_SIZE - 1}
                   caught={look.catch}
-                  bubble={bubble?.tile === i ? bubble.id : 0}
+                  bubble={i === RACK_SIZE - 1 ? bubble : 0}
                   hat={maga}
                   bites={look.bites.filter((t) => t === i).length}
                   horns={

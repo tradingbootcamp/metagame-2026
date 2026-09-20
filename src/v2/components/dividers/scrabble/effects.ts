@@ -138,7 +138,7 @@ export const SPELLS: Record<string, Spell> = {
   BUZZ: { kind: "hop", hop: { name: "buzz", ms: 85, count: 12, stagger: 23 } },
   LOVE: { kind: "love" },
   COIN: { kind: "coin" },
-  // A bubble out of a random tile, or out of the fish if one's been caught.
+  // A bubble out of the side of the last tile: the W's.
   BLOW: { kind: "blow" },
   // Over the whole screen, for a few seconds.
   SNOW: { kind: "weather", weather: "snow" },
