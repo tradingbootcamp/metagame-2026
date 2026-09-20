@@ -25,6 +25,7 @@ export type Look = {
   evil: boolean;
   good: boolean;
   fish: boolean;
+  catch: boolean; // FISH, FISH_MS later
   tilt: number; // TILT: degrees, the same for every tile
   bites: number[]; // the tile each BITE landed on, in order
   dark: boolean;
@@ -48,6 +49,7 @@ export const BASE_LOOK: Look = {
   evil: false,
   good: false,
   fish: false,
+  catch: false,
   tilt: 0,
   bites: [],
   dark: false,
@@ -98,6 +100,7 @@ export type Spell =
   | { kind: "hop"; hop: Hop }
   | { kind: "love" }
   | { kind: "coin" }
+  | { kind: "blow" }
   | { kind: "weather"; weather: Weather }
   | { kind: "glyph"; shape: Glyph }
   | { kind: "type" }
@@ -135,6 +138,8 @@ export const SPELLS: Record<string, Spell> = {
   BUZZ: { kind: "hop", hop: { name: "buzz", ms: 85, count: 12, stagger: 23 } },
   LOVE: { kind: "love" },
   COIN: { kind: "coin" },
+  // A bubble out of a random tile, or out of the fish if one's been caught.
+  BLOW: { kind: "blow" },
   // Over the whole screen, for a few seconds.
   SNOW: { kind: "weather", weather: "snow" },
   RAIN: { kind: "weather", weather: "rain" },
@@ -209,7 +214,7 @@ export const SPELLS: Record<string, Spell> = {
         : l;
     },
   },
-  // The last tile puts a line out and waits.
+  // The last tile puts a line out and waits. FISH_MS of patience lands one.
   FISH: { kind: "look", apply: set({ fish: true }) },
   // A halo over the first tile — EVIL's opposite number, and they stack.
   GOOD: { kind: "look", apply: set({ good: true }) },
@@ -308,11 +313,13 @@ export const GLYPH_TIMING: Record<Glyph, { ms: number; stagger: number }> = {
   time: { ms: 4500, stagger: 0 },
 };
 export const COIN_MS = 650;
+export const BLOW_MS = 3600;
+export const FISH_MS = 30_000;
 export const RAND_TICKS = 12;
 export const RAND_TICK_MS = 65;
 export const LOVE_MS = 1900;
 export const LOVE_STAGGER = 170;
-export const MAGA_MS = 1300;
+export const MAGA_MS = 2600;
 
 // How far up TALL stretches the tile borders, in the 0–100 tile viewBox.
 export const STRETCH = 15;

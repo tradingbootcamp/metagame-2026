@@ -191,19 +191,15 @@ button:not(:disabled) {
   }
 }
 
-/* MAGA flashes a red bar across the top of the viewport. */
+/* MAGA: the tops of the tiles go red for a while. */
 @keyframes scrabble-maga {
   0%,
-  22%,
-  55% {
-    opacity: 1;
-  }
-  11%,
-  38% {
-    opacity: 0;
-  }
   100% {
     opacity: 0;
+  }
+  12%,
+  78% {
+    opacity: 1;
   }
 }
 
@@ -509,10 +505,116 @@ button:not(:disabled) {
   }
 }
 
+/* The catch: the float is pulled under, then the line comes up short with the
+   fish on it. At rest these are all the reeled-in state, so the delays run
+   `backwards`. */
+.scrabble-bite {
+  opacity: 0;
+  animation: scrabble-bite 800ms ease-in;
+}
+
+.scrabble-reel-line {
+  animation: scrabble-reel-line 1100ms 800ms cubic-bezier(0.3, 0, 0.2, 1)
+    backwards;
+}
+
+.scrabble-reel {
+  animation: scrabble-reel 1100ms 800ms cubic-bezier(0.3, 0, 0.2, 1) backwards;
+}
+
+.scrabble-wriggle {
+  animation: scrabble-wriggle 240ms 1200ms ease-in-out infinite alternate;
+}
+
+@keyframes scrabble-bite {
+  0% {
+    translate: 0 0;
+    opacity: 1;
+  }
+  25% {
+    translate: 0 14px;
+  }
+  45% {
+    translate: 0 3px;
+  }
+  70% {
+    translate: 0 20px;
+    opacity: 1;
+  }
+  100% {
+    translate: 0 26px;
+    opacity: 0;
+  }
+}
+
+@keyframes scrabble-reel-line {
+  from {
+    transform: scaleY(var(--slack));
+  }
+}
+
+@keyframes scrabble-reel {
+  from {
+    translate: 0 var(--drop);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+}
+
+@keyframes scrabble-wriggle {
+  from {
+    rotate: -10deg;
+  }
+  to {
+    rotate: 10deg;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .scrabble-line,
-  .scrabble-float {
+  .scrabble-float,
+  .scrabble-bite,
+  .scrabble-reel-line,
+  .scrabble-reel,
+  .scrabble-wriggle {
     animation: none;
+  }
+}
+
+/* BLOW: swells from where it's blown, lets go, wanders up and pops. */
+.scrabble-bubble {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+@keyframes scrabble-bubble {
+  0% {
+    translate: 0 0;
+    scale: 0;
+    opacity: 1;
+  }
+  22%,
+  28% {
+    translate: 0 0;
+    scale: 1;
+  }
+  50% {
+    translate: 16px -70px;
+  }
+  74% {
+    translate: -10px -150px;
+  }
+  95% {
+    translate: 12px -225px;
+    scale: 1;
+    opacity: 1;
+  }
+  100% {
+    translate: 13px -232px;
+    scale: 1.6;
+    opacity: 0;
   }
 }
 
@@ -688,18 +790,5 @@ button:not(:disabled) {
   }
   100% {
     translate: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* One steady flash instead of three. */
-  @keyframes scrabble-maga {
-    0%,
-    70% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 0;
-    }
   }
 }

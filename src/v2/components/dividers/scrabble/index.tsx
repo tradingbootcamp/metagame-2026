@@ -39,6 +39,7 @@ import {
   MARK_LETTER,
   MARK_LIFT_MS,
   BITES_TO_FINISH,
+  BLOW_MS,
   BOMB_MS,
   COIN_MS,
   CRAB_MS,
@@ -47,6 +48,7 @@ import {
   DICE_FALL_MS,
   GLYPH_TIMING,
   EXIT_MS,
+  FISH_MS,
   ROLL_MS,
   LOVE_MS,
   LOVE_STAGGER,
@@ -122,6 +124,12 @@ const PILE = [
   [0.2, 0, 9],
 ];
 
+// FISH: how much line is left once the catch is reeled in, and the catch,
+// hung by the mouth from the end of it: body with an eye punched out, tail.
+const REELED = 30;
+const FISH_BODY =
+  "a9 15 0 1 0 0 30a9 15 0 1 0 0 -30zm-5.5 9a1.8 1.8 0 1 0 3.6 0a1.8 1.8 0 1 0 -3.6 0z";
+const FISH_TAIL = "l-8 14h16z";
 const BITE_FLIPS = [
   [1, 1],
   [-1, -1],
@@ -162,6 +170,9 @@ export function ScrabbleTile({
   halo = false,
   diced = false,
   rod = false,
+  caught = false,
+  bubble = 0,
+  hat = 0,
   bites = 0,
   motion,
   onClick,
@@ -177,6 +188,9 @@ export function ScrabbleTile({
   halo?: boolean;
   diced?: boolean;
   rod?: boolean;
+  caught?: boolean; // the rod has landed its fish
+  bubble?: number; // BLOW: nonzero blows one, and a new value another
+  hat?: number; // MAGA, likewise
   bites?: number;
   glyph?: { shape: Glyph; tile: number; delay: number; char?: string };
   motion?: Motion;
@@ -215,6 +229,9 @@ export function ScrabbleTile({
   const grow =
     "y 900ms ease-in-out, height 900ms ease-in-out, rx 900ms ease-in-out, ry 900ms ease-in-out";
   const fill = flash ?? tileFill(look);
+  // FISH: the rod's tip, and how much line is out while it waits.
+  const tip = box.y - 40;
+  const cast = box.height + 34;
   return (
     <svg
       viewBox="0 0 100 100"
@@ -443,9 +460,23 @@ export function ScrabbleTile({
           mask={`url(#${maskId})`}
         />
       )}
+      {hat > 0 && !diced && (
+        <rect
+          key={hat}
+          x={box.x}
+          y={box.y}
+          width={box.width}
+          height="26"
+          fill="#c8102e"
+          opacity="0"
+          mask={`url(#${maskId})`}
+          style={{ animation: `scrabble-maga ${MAGA_MS}ms ease-in-out` }}
+        />
+      )}
       {rod && (
         // A rod out of the top-right corner, the line hanging off its tip and
-        // swinging a little, a float bobbing on the end of it.
+        // swinging a little, a float bobbing on the end of it. Once there's a
+        // catch the float goes under and the line comes up short, fish on.
         <g
           stroke={fill}
           strokeLinecap="round"
@@ -453,20 +484,75 @@ export function ScrabbleTile({
           className="animate-[scrabble-entry_600ms_ease-out]"
           style={{ transition: "stroke 300ms ease-out" }}
         >
-          <path d={`M88 ${box.y + 22}L150 ${box.y - 40}`} strokeWidth="4.5" />
+          <path d={`M88 ${box.y + 22}L150 ${tip}`} strokeWidth="4.5" />
           <g className="scrabble-line">
             <path
-              d={`M150 ${box.y - 40}v${box.height + 34}`}
+              d={`M150 ${tip}v${caught ? REELED : cast}`}
               strokeWidth="1.6"
+              className={caught ? "scrabble-reel-line" : undefined}
+              style={
+                {
+                  transformOrigin: `150px ${tip}px`,
+                  "--slack": cast / REELED,
+                } as React.CSSProperties
+              }
             />
             <circle
-              className="scrabble-float"
+              className={caught ? "scrabble-bite" : "scrabble-float"}
               cx="150"
-              cy={box.y + box.height - 4}
+              cy={tip + cast + 2}
               r="5.5"
               fill={fill}
               stroke="none"
             />
+            {caught && (
+              <g
+                className="scrabble-reel"
+                stroke="none"
+                fill={fill}
+                style={
+                  {
+                    "--drop": `${cast - REELED}px`,
+                    transition: "fill 300ms ease-out",
+                  } as React.CSSProperties
+                }
+              >
+                <g
+                  className="scrabble-wriggle"
+                  style={{ transformOrigin: `150px ${tip + REELED}px` }}
+                >
+                  <path
+                    fillRule="evenodd"
+                    d={`M150 ${tip + REELED}${FISH_BODY}`}
+                  />
+                  <path d={`M150 ${tip + REELED + 26}${FISH_TAIL}`} />
+                </g>
+              </g>
+            )}
+          </g>
+        </g>
+      )}
+      {bubble > 0 && (
+        // Swells where it's blown — the fish's mouth, or the top of the tile —
+        // then lets go.
+        <g
+          key={bubble}
+          fill="none"
+          stroke={fill}
+          strokeLinecap="round"
+          transform={
+            rod && caught
+              ? `translate(158 ${tip + REELED - 2})`
+              : `translate(50 ${box.y - 3})`
+          }
+        >
+          <g
+            className="scrabble-bubble"
+            opacity="0"
+            style={{ animation: `scrabble-bubble ${BLOW_MS}ms ease-in-out` }}
+          >
+            <circle cy="-14" r="14" strokeWidth="2.5" />
+            <path d="M-8 -17a9 9 0 0 1 5 -5" strokeWidth="2" />
           </g>
         </g>
       )}
@@ -718,6 +804,10 @@ export default function ScrabbleDivider({
     id: number;
     hearts: { x: number; tilt: number }[];
   } | null>(null);
+  // One bubble. With a fish on the line it's the fish's, so the tile is the rod's.
+  const [bubble, setBubble] = useState<{ id: number; tile: number } | null>(
+    null,
+  );
   const [exit, setExit] = useState<{ to: Exit; seeds: Seed[] } | null>(null);
   // Set once the last tile is clear of the page: the tiles are swapped for
   // empty spacers, so the hairlines keep their gap.
@@ -829,6 +919,15 @@ export default function ScrabbleDivider({
             tile: Math.floor(Math.random() * RACK_SIZE),
           }));
         break;
+      case "blow":
+        if (reducedMotion()) break;
+        setBubble((b) => ({
+          id: (b?.id ?? 0) + 1,
+          tile: look.catch
+            ? RACK_SIZE - 1
+            : Math.floor(Math.random() * RACK_SIZE),
+        }));
+        break;
       case "love":
         if (reducedMotion()) break;
         setLove((l) => ({
@@ -875,6 +974,27 @@ export default function ScrabbleDivider({
     );
     return () => clearTimeout(t);
   }, [love]);
+
+  useEffect(() => {
+    if (!bubble) return;
+    const t = setTimeout(() => setBubble(null), BLOW_MS);
+    return () => clearTimeout(t);
+  }, [bubble]);
+
+  useEffect(() => {
+    if (!maga) return;
+    const t = setTimeout(() => setMaga(0), MAGA_MS);
+    return () => clearTimeout(t);
+  }, [maga]);
+
+  useEffect(() => {
+    if (!look.fish || look.catch) return;
+    const t = setTimeout(
+      () => setLook((l) => ({ ...l, catch: true })),
+      FISH_MS,
+    );
+    return () => clearTimeout(t);
+  }, [look.fish, look.catch]);
 
   // ROLL tips each tile over its leading bottom corner, a quarter turn at a
   // time, so it travels exactly as far as it turns and bobs like a real square.
@@ -1481,6 +1601,9 @@ export default function ScrabbleDivider({
                   halo={look.good && i === 0}
                   diced={exit?.to === "dice"}
                   rod={look.fish && i === RACK_SIZE - 1}
+                  caught={look.catch}
+                  bubble={bubble?.tile === i ? bubble.id : 0}
+                  hat={maga}
                   bites={look.bites.filter((t) => t === i).length}
                   horns={
                     look.evil && i === 0
@@ -1612,15 +1735,6 @@ export default function ScrabbleDivider({
       {shower && <Weather key={shower.id} shower={shower} color={CHARCOAL} />}
       {acid && <Acid key={acid.id} trip={acid.trip} />}
       {sudo > 0 && <Sudo key={sudo} onClose={() => setSudo(0)} />}
-      {maga > 0 && (
-        <div
-          key={maga}
-          aria-hidden
-          onAnimationEnd={() => setMaga(0)}
-          className="pointer-events-none fixed inset-x-0 top-0 z-50 h-1.5 bg-[#c8102e]"
-          style={{ animation: `scrabble-maga ${MAGA_MS}ms ease-out forwards` }}
-        />
-      )}
     </>
   );
 }
