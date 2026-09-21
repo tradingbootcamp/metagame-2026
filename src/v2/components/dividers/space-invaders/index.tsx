@@ -404,9 +404,11 @@ export default function SpaceInvadersDivider() {
             style={boltSize}
           />
         ))}
-        {/* Catches clicks in the sky above the row while the game is on. */}
+        {/* Catches clicks in the sky above the row while the game is on.
+            touch-none while playing: a drag here steers the ship, so the page
+            must not scroll under it. */}
         {phase === "play" && (
-          <span className="absolute -inset-x-8 -top-16 -bottom-5 touch-pan-y" />
+          <span className="absolute -inset-x-8 -top-16 -bottom-5 touch-none" />
         )}
       </div>
     </DividerRow>

@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import DividerRow from "../DividerRow";
-import { CARD_SET as CARD_SIZE, SHADOW } from "../sizing";
+import { CARD_SET as CARD_SIZE, LAYER, SHADOW } from "../sizing";
 
 // SET cards rendered in the weirdchess/dice language: a solid charcoal card with
 // the symbols punched out as negative space. Colour is the one SET attribute we
@@ -242,7 +242,7 @@ function CardGlyph({
       viewBox="22 6 56 88"
       aria-hidden
       onClick={onClick}
-      className={`${CARD_SIZE} ${SHADOW} shrink-0 touch-manipulation overflow-visible pointer-coarse:cursor-pointer ${shaking ? `animate-[shake_${SHAKE_MS}ms_ease-in-out]` : ""}`}
+      className={`${CARD_SIZE} ${SHADOW} ${LAYER} shrink-0 touch-manipulation overflow-visible pointer-coarse:cursor-pointer ${shaking ? `animate-[shake_${SHAKE_MS}ms_ease-in-out]` : ""}`}
       style={{
         opacity: leaving ? 0 : 1,
         // Only on the way out — coming back the redealt art fades itself in.

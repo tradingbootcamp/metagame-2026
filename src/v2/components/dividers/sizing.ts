@@ -14,3 +14,8 @@ export const CARD = "h-[37px]";
 export const CARD_SET = `${CARD} w-[24px]`; // 56:88 → 23.5px
 export const CARD_SUITS = `${CARD} w-[27px]`; // 260:360 → 26.7px
 export const SHADOW = "drop-shadow-[0_1px_2px_rgba(27,27,27,0.12)]";
+// Anything that animates gets its own compositing layer up front. A glyph whose
+// ink spills past its box (a rotation, a glow) moves the bounds of the layer it
+// shares with its neighbours, and a layer whose origin re-snaps drags
+// everything it paints a pixel sideways.
+export const LAYER = "transform-gpu will-change-transform";

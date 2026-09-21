@@ -5,12 +5,9 @@ import DividerRow from "../DividerRow";
 import { IconGlyph } from "../IconDivider";
 import Crossbow from "./Crossbow";
 import { trackClick, trackEgg } from "../track";
+import { LAYER } from "../sizing";
 import { ICONS } from "./icons";
 
-// Every glyph gets its own compositing layer up front. Rotating one grows its
-// ink past its box, and a layer whose bounds move re-snaps everything it paints
-// — which is the whole row twitching a pixel each time a beat starts or ends.
-const LAYER = "transform-gpu will-change-transform";
 const SPIN = `inline-flex ${LAYER} transition-[rotate,translate,opacity] ease-in`;
 
 // blood · crossbow · demon's trident · clock tower — a nod to Blood on the
