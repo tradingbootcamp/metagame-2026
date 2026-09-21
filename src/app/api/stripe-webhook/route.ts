@@ -176,12 +176,21 @@ export async function POST(request: Request) {
         f.label?.custom?.toLowerCase().includes("discord"),
     )?.text?.value;
 
+    // Optional "Preferred name" custom field — Link prefills the built-in name
+    // field from the buyer's Link account without showing it, so this is the only
+    // name a Link buyer is sure to have typed.
+    const preferredName =
+      full.custom_fields
+        ?.find((f) => f.key === "preferred_name")
+        ?.text?.value?.trim() || undefined;
+
     await recordPurchase({
       // Prefer the PaymentIntent id (the canonical payment) as the upsert key.
       id: paymentIntent?.id ?? full.id,
       // Derived from the same id as the upsert key, so retries can't churn it.
       ticketCode: ticketCode(paymentIntent?.id ?? full.id),
       customerName: full.customer_details?.name ?? undefined,
+      preferredName,
       customerEmail: full.customer_details?.email ?? undefined,
       amount: full.amount_total != null ? full.amount_total / 100 : undefined,
       fee: balanceTxn ? balanceTxn.fee / 100 : undefined,
@@ -209,7 +218,8 @@ export async function POST(request: Request) {
       try {
         await sendTicketConfirmationEmail({
           to: email,
-          purchaserName: full.customer_details?.name ?? undefined,
+          purchaserName:
+            preferredName ?? full.customer_details?.name ?? undefined,
           tierLabel:
             tierLabelForPaymentLinkUrl(
               expanded<Stripe.PaymentLink>(full.payment_link)?.url,

@@ -152,6 +152,7 @@ export type PurchaseRecord = {
   test: boolean; // true for test-mode (sandbox) purchases — checks the Test box
   paymentMethod: "stripe" | "btc";
   customerName?: string;
+  preferredName?: string; // optional "Preferred name" custom field from the Payment Link checkout
   customerEmail?: string;
   amount?: number; // dollars (Airtable currency field)
   btcAmount?: number; // whole BTC paid (only set for BTC purchases)
@@ -201,6 +202,7 @@ export async function recordPurchase(
   };
   if (purchase.btcAmount != null) fields["BTC Amount"] = purchase.btcAmount;
   if (purchase.customerName) fields["Customer Name"] = purchase.customerName;
+  if (purchase.preferredName) fields["Preferred Name"] = purchase.preferredName;
   if (purchase.customerEmail) fields["Customer Email"] = purchase.customerEmail;
   if (purchase.amount != null) fields["Amount"] = purchase.amount;
   if (purchase.fee != null) fields["Balance Transaction Fee"] = purchase.fee;
