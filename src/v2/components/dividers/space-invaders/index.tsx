@@ -66,7 +66,6 @@ const newGame = () => ({
 // the mouse or ←/→ steers, a click or space fires; a tap slides over and fires,
 // and a held drag steers with autofire. Clearing both invaders earns a star
 // under the cannon.
-// Not mounted anywhere yet.
 export default function SpaceInvadersDivider() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [fates, setFates] = useState<Fate[]>(["alive", "alive"]);

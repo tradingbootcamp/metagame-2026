@@ -10,10 +10,10 @@ import CardSuitsDivider from "@/v2/components/dividers/card-suits";
 import CastlingDivider from "@/v2/components/dividers/castling";
 import CatanDivider from "@/v2/components/dividers/catan";
 import DiceDivider from "@/v2/components/dividers/dice";
-import DndDivider from "@/v2/components/dividers/dnd";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
 import ScrabbleDivider from "@/v2/components/dividers/scrabble";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
+import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
 import TetrisDivider from "@/v2/components/dividers/tetris";
 import FaqItem from "@/v2/components/FaqItem";
 import Highlights2025 from "@/v2/components/Highlights2025";
@@ -394,7 +394,7 @@ export default function Home() {
         </div>
       </section>
 
-      <DndDivider />
+      <SpaceInvadersDivider />
 
       {/* the megagame */}
       <section id="megagame" className={`${SECTION} md:py-14`}>
