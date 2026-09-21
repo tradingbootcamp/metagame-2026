@@ -37,9 +37,12 @@ export default function BloodOnTheClocktowerDivider() {
         if (icon.name === "crossbow") {
           return (
             <span key={icon.name} className="relative inline-flex">
+              {/* Three taps on one spot: touch-manipulation stops iOS reading
+                  the second as double-tap-to-zoom and scaling the page. */}
               <span
                 onClick={onCrossbow}
-                className={`${SPIN} duration-300 ${stage ? "rotate-45" : ""}`}
+                style={{ WebkitTapHighlightColor: "transparent" }}
+                className={`${SPIN} touch-manipulation duration-300 select-none pointer-coarse:cursor-pointer ${stage ? "rotate-45" : ""}`}
               >
                 <Crossbow d={icon.d ?? ""} fired={stage === 2} />
               </span>

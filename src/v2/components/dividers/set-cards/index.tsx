@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import DividerRow from "../DividerRow";
-import { CARD as CARD_SIZE, SHADOW } from "../sizing";
+import { CARD_SET as CARD_SIZE, SHADOW } from "../sizing";
 
 // SET cards rendered in the weirdchess/dice language: a solid charcoal card with
 // the symbols punched out as negative space. Colour is the one SET attribute we
@@ -112,9 +112,9 @@ const isSet = (a: Card, b: Card, c: Card) => key(third(a, b)) === key(c);
 
 const pick = <T,>(xs: readonly T[]) =>
   xs[Math.floor(Math.random() * xs.length)];
-// A card in a slot. `seq` keys it (a redeal can put the same card back in the
-// same slot, and it should still fade in as new); `delay` is its fade-in, or
-// null for the four the page loads with.
+// A card in a slot. `seq` keys the art (a redeal can put the same card back in
+// the same slot, and it should still fade in as new); `delay` is its fade-in,
+// or null for the four the page loads with.
 type Slot = { card: Card; seq: number; delay: number | null };
 
 const DECK: Card[] = SHAPE_NAMES.flatMap((shape) =>
@@ -168,6 +168,7 @@ const FIRST: Slot[] = (
 
 function CardGlyph({
   card,
+  seq,
   selected,
   leaving,
   shaking,
@@ -177,6 +178,7 @@ function CardGlyph({
   ref,
 }: {
   card: Card;
+  seq: number;
   selected: boolean;
   leaving: boolean;
   shaking: boolean;
@@ -243,7 +245,8 @@ function CardGlyph({
       className={`${CARD_SIZE} ${SHADOW} shrink-0 touch-manipulation overflow-visible pointer-coarse:cursor-pointer ${shaking ? `animate-[shake_${SHAKE_MS}ms_ease-in-out]` : ""}`}
       style={{
         opacity: leaving ? 0 : 1,
-        transition: `opacity ${EXIT_MS}ms ease-out`,
+        // Only on the way out — coming back the redealt art fades itself in.
+        transition: leaving ? `opacity ${EXIT_MS}ms ease-out` : "none",
         WebkitTapHighlightColor: "transparent",
         ...style,
       }}
@@ -259,8 +262,10 @@ function CardGlyph({
         </filter>
       </defs>
       {/* The deal's fade-in lives here, not on the <svg>: an inline animation
-          there would outrank the shake's class. */}
+          there would outrank the shake's class. `seq` keys this rather than the
+          <svg>, so a redeal remounts the art without relaying out the row. */}
       <g
+        key={seq}
         style={{
           animation:
             delay === null
@@ -400,9 +405,10 @@ export default function SetCardDivider() {
   const inner = (n - 4) / 2;
   const glyph = (i: number, style?: React.CSSProperties) => (
     <CardGlyph
-      key={board[i].seq}
+      key={i}
       ref={i === inner ? first : undefined}
       card={board[i].card}
+      seq={board[i].seq}
       delay={board[i].delay}
       selected={picked.includes(i)}
       leaving={leaving && picked.includes(i)}

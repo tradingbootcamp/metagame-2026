@@ -7,5 +7,10 @@ export const GLYPH = "h-[33px] w-[33px]";
 export const GLYPH_PX = 33;
 export const ICON_GAP = "gap-[34px]";
 export const ICON_GAP_PX = 34;
-export const CARD = "h-[37px] w-auto";
+// Card width is pinned per row, rounded up from that row's viewBox ratio: left
+// to `w-auto` the box is a fraction of a pixel wide and a relayout re-snaps the
+// whole centred row sideways.
+export const CARD = "h-[37px]";
+export const CARD_SET = `${CARD} w-[24px]`; // 56:88 → 23.5px
+export const CARD_SUITS = `${CARD} w-[27px]`; // 260:360 → 26.7px
 export const SHADOW = "drop-shadow-[0_1px_2px_rgba(27,27,27,0.12)]";

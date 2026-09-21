@@ -1,5 +1,5 @@
 import DividerRow from "../DividerRow";
-import { CARD as CARD_SIZE, SHADOW } from "../sizing";
+import { CARD_SUITS as CARD_SIZE, SHADOW } from "../sizing";
 import { SUITS, type Suit } from "./suits";
 
 // Playing-card suits in the SET-card language: a charcoal card with the suit
