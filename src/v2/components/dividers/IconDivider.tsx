@@ -25,12 +25,18 @@ export type GameIcon = {
   strokeWidth?: number;
 };
 
-export function IconGlyph({ icon }: { icon: GameIcon }) {
+export function IconGlyph({
+  icon,
+  className,
+}: {
+  icon: GameIcon;
+  className?: string;
+}) {
   return (
     <svg
       viewBox={icon.viewBox}
       aria-hidden
-      className={`${icon.className ?? GLYPH} ${SHADOW}`}
+      className={`${icon.className ?? GLYPH} ${SHADOW} ${className ?? ""}`}
     >
       {(icon.paths ?? [icon.d ?? ""]).map((d, i) => (
         <path

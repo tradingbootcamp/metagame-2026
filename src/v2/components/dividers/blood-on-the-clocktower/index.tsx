@@ -7,7 +7,11 @@ import Crossbow from "./Crossbow";
 import { trackClick, trackEgg } from "../track";
 import { ICONS } from "./icons";
 
-const SPIN = "inline-flex transition-[rotate,translate,opacity] ease-in";
+// Every glyph gets its own compositing layer up front. Rotating one grows its
+// ink past its box, and a layer whose bounds move re-snaps everything it paints
+// — which is the whole row twitching a pixel each time a beat starts or ends.
+const LAYER = "transform-gpu will-change-transform";
+const SPIN = `inline-flex ${LAYER} transition-[rotate,translate,opacity] ease-in`;
 
 // blood · crossbow · demon's trident · clock tower — a nod to Blood on the
 // Clocktower. Click the crossbow and it swings round onto the trident; click
@@ -48,7 +52,7 @@ export default function BloodOnTheClocktowerDivider() {
               </span>
               <span
                 ref={bolt}
-                className="pointer-events-none absolute top-1/2 left-[22px] h-0.5 w-[11px] -translate-y-1/2 rounded-full bg-[#4d4d4d] opacity-0"
+                className={`pointer-events-none absolute top-1/2 left-[22px] h-0.5 w-[11px] -translate-y-1/2 rounded-full bg-[#4d4d4d] opacity-0 ${LAYER}`}
               />
             </span>
           );
@@ -68,7 +72,7 @@ export default function BloodOnTheClocktowerDivider() {
             </span>
           );
         }
-        return <IconGlyph key={icon.name} icon={icon} />;
+        return <IconGlyph key={icon.name} icon={icon} className={LAYER} />;
       })}
     </DividerRow>
   );
