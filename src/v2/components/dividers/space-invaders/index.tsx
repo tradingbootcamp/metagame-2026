@@ -29,6 +29,10 @@ const ALIENS = [
 const CANNON_SPEED = 240;
 const SHOT_SPEED = 220;
 const BOMB_SPEED = 70;
+// The arcade rule is one shot in the air at a time, which paces the firing on a
+// tall screen. This field is 33px, so a shot into the bunker overhead is spent
+// in a tenth of a second and you can machine-gun it — hence a reload floor too.
+const RELOAD_MS = 600;
 const MARCH_MS = [0, 110, 250];
 
 type Phase = "idle" | "rise" | "play" | "dead" | "won";
@@ -55,6 +59,7 @@ const newGame = () => ({
   march: 0,
   alive: [true, true],
   shot: null as Bolt | null,
+  reloadIn: 0,
   bombs: [] as Bolt[],
   bombIn: 1,
   bunker: BUNKER_ROWS,
@@ -263,9 +268,12 @@ export default function SpaceInvadersDivider() {
       g.cannon = Math.max(0, Math.min(FIELD - BOX, g.cannon));
 
       const arrived = g.target === null || Math.abs(g.target - g.cannon) < 1;
-      if ((g.fire || g.held) && !g.shot && arrived) {
+      g.reloadIn = Math.max(0, g.reloadIn - dt * 1000);
+      // A press during the reload stays pending, so it fires the moment it can.
+      if ((g.fire || g.held) && !g.shot && !g.reloadIn && arrived) {
         g.shot = { x: g.cannon + BOX / 2, y: ART_TOP };
         g.fire = false;
+        g.reloadIn = RELOAD_MS;
       }
       if (g.shot && fly(g.shot, -SHOT_SPEED * dt, shotHits)) g.shot = null;
       g.bombs = g.bombs.filter((b) => !fly(b, BOMB_SPEED * dt, bombHits));
