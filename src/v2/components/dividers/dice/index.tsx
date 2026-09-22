@@ -16,8 +16,8 @@ const CHARCOAL = "#4d4d4d";
 const SIZE = "-m-[8.25px] h-[49.5px] w-[49.5px]";
 const SPIN_MS = 700;
 
-// A numbered face: where its value sits, its tilt (the value's top points out
-// from the vertex the faces share), how big, and the most digits it fits.
+// A numbered face: where its value sits, its tilt, how big, and the most
+// digits it fits.
 type Face = { x: number; y: number; turn: number; size: number; digits?: 1 };
 // A pipped face of the iso cube: centre, plus the two pip-grid step vectors.
 type PipFace = {
@@ -34,12 +34,15 @@ type Die = {
   seams: string; // facet edges, punched out as transparent lines
   faces?: Face[];
   pipFaces?: PipFace[];
+  // Values live on the vertices, not the faces: every visible face shows the
+  // one rolled value at the shared corner.
+  vertex?: true;
   initial: number[];
 };
 
 const DICE: Die[] = [
-  // tetrahedron: three faces meeting at a low centre point. The side faces are
-  // too narrow to turn a value outwards, so those lean up along the face.
+  // tetrahedron seen from above its apex: three faces meeting at a low centre
+  // point. The value sits by that apex on each face, its top pointing in.
   {
     id: "d4",
     sides: 4,
@@ -47,11 +50,12 @@ const DICE: Die[] = [
     silhouette: "M50 12 L86 82 L14 82 Z",
     seams: "M50 12 L50 58 M14 82 L50 58 M86 82 L50 58",
     faces: [
-      { x: 38.5, y: 54, turn: 27, size: 19 },
-      { x: 61.5, y: 54, turn: -27, size: 19 },
-      { x: 50, y: 73, turn: 0, size: 17 },
+      { x: 37.5, y: 50.5, turn: 121, size: 17 },
+      { x: 62.5, y: 50.5, turn: -121, size: 17 },
+      { x: 50, y: 73.5, turn: 0, size: 17 },
     ],
-    initial: [4, 2, 3],
+    vertex: true,
+    initial: [4, 4, 4],
   },
   // cube, iso view: three visible faces of pips
   {
@@ -150,8 +154,8 @@ function roll(die: Die): number[] {
   const slots = die.faces ?? die.pipFaces ?? [];
   const pool = Array.from({ length: die.sides }, (_, i) => i + 1);
   const out: number[] = new Array(slots.length);
-  // A d4 has no opposite faces: every face touches the other three.
-  const opposites = die.sides > 4;
+  if (die.vertex)
+    return out.fill(pool[Math.floor(Math.random() * pool.length)]);
   const take = (ok: (n: number) => boolean) => {
     const options = pool.filter(ok);
     const n = options[Math.floor(Math.random() * options.length)];
@@ -166,8 +170,7 @@ function roll(die: Die): number[] {
   for (const i of order) {
     out[i] = take(
       (n) =>
-        (!opposites || !out.includes(die.sides + 1 - n)) &&
-        (!die.faces?.[i].digits || n < 10),
+        !out.includes(die.sides + 1 - n) && (!die.faces?.[i].digits || n < 10),
     );
   }
   return out;
