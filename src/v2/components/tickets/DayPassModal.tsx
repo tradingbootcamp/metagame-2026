@@ -23,25 +23,29 @@ export default function DayPassModal({ onClose }: { onClose: () => void }) {
             Admission for a single day of Metagame 2026.
           </DialogDescription>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-3 gap-3 max-[420px]:grid-cols-1">
           {dayPasses.map((pass) => {
             const href = dayPassUrl(pass);
             if (!href) return null;
+            const [weekday, monthDay] = pass.date.long.split(", ");
             return (
               <Button
                 key={pass.id}
                 asChild
                 variant="raised"
-                className="h-auto justify-between px-5 py-3"
+                className="h-auto flex-col gap-1 px-3 py-4"
               >
                 <a href={href} target="_blank" rel="noopener noreferrer">
-                  <span className="font-space-mono text-[13px] tracking-[0.12em] text-cream/85 uppercase">
-                    {pass.date.long.replace(/, 2026$/, "")}
+                  <span className="font-space-mono text-[13px] tracking-[0.18em] text-cream/85 uppercase">
+                    {weekday}
                   </span>
                   <span
-                    className={`${HEADING} text-[24px] leading-none text-tan`}
+                    className={`${HEADING} text-[26px] leading-none text-tan`}
                   >
                     ${pass.usd}
+                  </span>
+                  <span className="font-space-mono text-[11px] tracking-[0.08em] text-cream/60 uppercase">
+                    {monthDay}
                   </span>
                 </a>
               </Button>
@@ -49,7 +53,7 @@ export default function DayPassModal({ onClose }: { onClose: () => void }) {
           })}
         </div>
         <p className="text-xs text-cream/55">
-          Day passes are sold in USD via Stripe only.
+          You will be taken to secure Stripe checkout.
         </p>
       </DialogContent>
     </Dialog>

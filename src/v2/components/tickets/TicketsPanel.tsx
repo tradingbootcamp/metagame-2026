@@ -247,6 +247,9 @@ export default function TicketsPanel({
           <span className={`${HEADING} text-[22px] leading-none text-tan`}>
             {dayPasses.map((p) => `$${p.usd}`).join("/")}
           </span>
+          <span className={TILE_NOTE}>
+            {dayPasses.map((p) => p.date.long.slice(0, 3)).join(" · ")}
+          </span>
         </Button>
         {/* Volunteer + financial aid: plain application links, deliberately not
             styled like the purchase tiles. */}
