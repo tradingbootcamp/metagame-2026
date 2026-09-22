@@ -32,7 +32,7 @@ const BOMB_SPEED = 70;
 // The arcade rule is one shot in the air at a time, which paces the firing on a
 // tall screen. This field is 33px, so a shot into the bunker overhead is spent
 // in a tenth of a second and you can machine-gun it — hence a reload floor too.
-const RELOAD_MS = 600;
+const RELOAD_MS = 1000;
 const MARCH_MS = [0, 110, 250];
 
 type Phase = "idle" | "rise" | "play" | "dead" | "won";
