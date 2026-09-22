@@ -60,7 +60,8 @@ const D4_FACES = [
   [0, 1, 3],
   [0, 2, 3],
 ];
-const D4_SIZE = 12;
+// The apex value is the roll, so it gets the bigger type.
+const D4_SIZE = [15, 12, 12, 12];
 
 // One number per corner of each face, tucked into the corner along its
 // bisector with its top pointing at the vertex, just far enough in that the
@@ -70,6 +71,7 @@ function d4Corners(): Face[] {
   for (const face of D4_FACES) {
     face.forEach((corner, i) => {
       const [x, y] = D4_VERTICES[corner];
+      const size = D4_SIZE[corner];
       const [a, b] = [face[(i + 1) % 3], face[(i + 2) % 3]].map((v) => {
         const dx = D4_VERTICES[v][0] - x;
         const dy = D4_VERTICES[v][1] - y;
@@ -81,12 +83,12 @@ function d4Corners(): Face[] {
       const [ux, uy] = [bx / blen, by / blen];
       const half = Math.acos(a[0] * b[0] + a[1] * b[1]) / 2;
       // digit ≈ 0.45em wide, 0.7em tall; seams are 2.5 either side of the edge
-      const d = D4_SIZE * 0.35 + (D4_SIZE * 0.225 + 2.5) / Math.tan(half) + 1.5;
+      const d = size * 0.35 + (size * 0.225 + 2.5) / Math.tan(half) + 1.5;
       out.push({
         x: x + d * ux,
         y: y + d * uy,
         turn: (Math.atan2(ux, -uy) * 180) / Math.PI,
-        size: D4_SIZE,
+        size,
         corner,
       });
     });
