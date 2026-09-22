@@ -41,8 +41,24 @@ export type TicketConfirmationEmail = {
   discountCode?: string;
   /** 6-char ticket code (dashless; rendered as XXX-XXX). */
   ticketCode?: string;
+  /** Set for a day pass: the one admitted day replaces the Fri–Sun dates line. */
+  eventDay?: { long: string; ymd: string };
   test?: boolean;
 };
+
+const VENUE = "Lighthaven%2C+2740+Telegraph+Avenue%2C+Berkeley%2C+CA";
+
+function googleCalendarUrl(dates: string) {
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Metagame+2026&dates=${dates}&ctz=America/Los_Angeles&location=${VENUE}&details=https%3A%2F%2Fmetagame.games`;
+}
+
+/** Google all-day events take an exclusive end date. */
+function nextYmd(ymd: string) {
+  const d = new Date(
+    Date.UTC(+ymd.slice(0, 4), +ymd.slice(4, 6) - 1, +ymd.slice(6, 8) + 1),
+  );
+  return d.toISOString().slice(0, 10).replaceAll("-", "");
+}
 
 /**
  * Pure template: subject + HTML + text bodies. `assetBase` overrides the asset
@@ -60,6 +76,7 @@ export function renderTicketConfirmationEmail(
     receiptUrl,
     discountCode,
     ticketCode,
+    eventDay,
     test = false,
   }: TicketConfirmationEmail,
   assetBase: string = SITE,
@@ -85,6 +102,22 @@ export function renderTicketConfirmationEmail(
   }`;
 
   const subject = `${test ? "TEST: " : ""}Metagame 2026 Ticket`;
+
+  // The shipped .ics is the full three-day event, so day passes get only the
+  // Google link (scoped to their day).
+  const dates = eventDay
+    ? {
+        label: "Date",
+        text: eventDay.long,
+        google: googleCalendarUrl(`${eventDay.ymd}/${nextYmd(eventDay.ymd)}`),
+        ics: null,
+      }
+    : {
+        label: "Dates",
+        text: "Friday, November 6 &ndash; Sunday, November 8, 2026",
+        google: googleCalendarUrl("20261106T140000/20261108T210000"),
+        ics: `${SITE}/metagame-2026.ics`,
+      };
 
   const html = `
       <div style="display: none; max-height: 0; overflow: hidden;">You're coming to Metagame!</div>
@@ -119,7 +152,7 @@ export function renderTicketConfirmationEmail(
 
         <div style="background-color: #f9fafb; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h3 style="margin-top: 0;">Event Information</h3>
-          <p><strong>Dates:</strong> Friday, November 6 &ndash; Sunday, November 8, 2026 <span style="font-size: 13px;">(add to calendar: <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Metagame+2026&dates=20261106T140000/20261108T210000&ctz=America/Los_Angeles&location=Lighthaven%2C+2740+Telegraph+Avenue%2C+Berkeley%2C+CA&details=https%3A%2F%2Fmetagame.games">Google</a> &middot; <a href="${SITE}/metagame-2026.ics">Apple/Outlook</a>)</span></p>
+          <p><strong>${dates.label}:</strong> ${dates.text} <span style="font-size: 13px;">(add to calendar: <a href="${dates.google}">Google</a>${dates.ics ? ` &middot; <a href="${dates.ics}">Apple/Outlook</a>` : ""})</span></p>
           <p><strong>Location:</strong> <a href="https://lighthaven.space">Lighthaven</a>, 2740 Telegraph Avenue, Berkeley, CA</p>
         </div>
 
@@ -156,8 +189,8 @@ ${ticketCode ? `- Ticket code: ${formatTicketCode(ticketCode)}` : ""}
 ${receiptUrl ? `- Receipt: ${receiptUrl}` : ""}
 
 Event Information
-- Dates: Friday, November 6 – Sunday, November 8, 2026
-- Add to calendar: ${SITE}/metagame-2026.ics
+- ${dates.label}: ${dates.text.replace("&ndash;", "–")}
+- Add to calendar: ${dates.ics ?? dates.google}
 - Location: Lighthaven (https://lighthaven.space), 2740 Telegraph Avenue, Berkeley, CA
 
 This is not a puzzle.

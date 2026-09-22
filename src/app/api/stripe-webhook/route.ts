@@ -9,7 +9,10 @@ import {
 import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
 import { ticketCode } from "@/lib/ticket-code";
-import { tierLabelForPaymentLinkUrl } from "@/lib/tickets";
+import {
+  dayPassForPaymentLinkUrl,
+  tierLabelForPaymentLinkUrl,
+} from "@/lib/tickets";
 
 // Signature verification needs the raw body + Node crypto — keep this off the edge.
 export const runtime = "nodejs";
@@ -214,6 +217,7 @@ export async function POST(request: Request) {
     // still-Pending session. Failures are soft: the purchase is already recorded,
     // so log + alert instead of a 500 (which would make Stripe retry the event).
     const email = full.customer_details?.email;
+    const paymentLinkUrl = expanded<Stripe.PaymentLink>(full.payment_link)?.url;
     if (status === "Paid" && email) {
       try {
         await sendTicketConfirmationEmail({
@@ -221,11 +225,10 @@ export async function POST(request: Request) {
           purchaserName:
             preferredName ?? full.customer_details?.name ?? undefined,
           tierLabel:
-            tierLabelForPaymentLinkUrl(
-              expanded<Stripe.PaymentLink>(full.payment_link)?.url,
-            ) ??
+            tierLabelForPaymentLinkUrl(paymentLinkUrl) ??
             ticketType ??
             "Metagame 2026 ticket",
+          eventDay: dayPassForPaymentLinkUrl(paymentLinkUrl)?.date,
           usdPaid:
             full.amount_total != null ? full.amount_total / 100 : undefined,
           usdFull:

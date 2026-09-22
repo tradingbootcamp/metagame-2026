@@ -42,6 +42,14 @@ const VARIANTS = {
     receiptUrl:
       "https://checkout.dev.opennode.com/ca86fc1a-2498-4bae-a55f-0a59c45d558d",
   },
+  daypass: {
+    to: "brian+test@metagame.games",
+    purchaserName: "Brian",
+    tierLabel: "Saturday Day Pass",
+    usdPaid: 200,
+    ticketCode: "D7Q2XM",
+    eventDay: { long: "Saturday, November 7, 2026", ymd: "20261107" },
+  },
   comped: {
     to: "brian+test@metagame.games",
     purchaserName: "Brian",
