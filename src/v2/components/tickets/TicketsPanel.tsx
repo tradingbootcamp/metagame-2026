@@ -241,10 +241,12 @@ export default function TicketsPanel({
           type="button"
           variant="raised"
           onClick={() => setDayPassOpen(true)}
-          className={TILE}
+          // Narrower padding + a 32px line box so the three-price line fits the
+          // shared 210px tile at the same height as the others.
+          className={TILE.replace("px-7", "px-4")}
         >
           <span className={TILE_LABEL}>Day pass</span>
-          <span className={`${HEADING} text-[22px] leading-none text-tan`}>
+          <span className={`${HEADING} text-[22px] leading-[32px] text-tan`}>
             {dayPasses.map((p) => `$${p.usd}`).join("/")}
           </span>
           <span className={TILE_NOTE}>
