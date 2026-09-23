@@ -129,13 +129,11 @@ export default function GradeForm({
   recordId,
   initial,
   metaFields,
-  decisionFields,
   statuses,
 }: {
   recordId: string;
   initial: Record<string, unknown>;
   metaFields: ResolvedField[];
-  decisionFields: ResolvedField[];
   statuses: readonly string[];
 }) {
   const [state, action, pending] = useActionState(
@@ -205,21 +203,9 @@ export default function GradeForm({
         </div>
       </Section>
 
-      <Section title="Decision">
-        <p className="-mt-2 text-sm text-ink/55">
-          Shared pipeline fields, not part of your rubric — everyone sees the
-          same value.
-        </p>
-        <div className="space-y-5">
-          {decisionFields.map((field) => (
-            <Field key={field.field} field={field} initial={initial} />
-          ))}
-        </div>
-      </Section>
-
       <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-cream/95 px-4 py-3 backdrop-blur">
         <label htmlFor={GRADING_STATUS_FIELD} className="text-sm text-ink/70">
-          Status
+          Grading status
         </label>
         <select
           id={GRADING_STATUS_FIELD}

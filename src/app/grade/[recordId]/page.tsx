@@ -2,12 +2,15 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import GradeForm from "./GradeForm";
 import InfoTip from "../InfoTip";
+import { swatch } from "@/lib/airtable-colors";
 import { isConfigured, readSession } from "@/lib/grader-auth";
 import {
   CONTEXT_FIELDS,
   getSubmission,
   hostPicture,
-  DECISION_FIELDS,
+  NEXT_STEPS_FIELD,
+  optionColors,
+  VERDICT_FIELD,
   INTERNAL_FIELDS,
   META_FIELDS,
   resolveDisplayFields,
@@ -27,11 +30,15 @@ function Row({
   label,
   value,
   description,
+  color,
 }: {
   label: string;
   value: string;
   description?: string;
+  /** Airtable colour token — renders the value as its pill instead of plain text. */
+  color?: string;
 }) {
+  const tone = swatch(color);
   return (
     <div>
       <dt className="text-xs font-semibold tracking-wide text-ink/45 uppercase">
@@ -39,7 +46,16 @@ function Row({
         {description && <InfoTip text={description} />}
       </dt>
       <dd className="mt-0.5 text-[15px] whitespace-pre-wrap text-ink/85">
-        {value}
+        {tone ? (
+          <span
+            style={tone}
+            className="inline-block rounded-full px-2.5 py-1 text-xs font-medium"
+          >
+            {value}
+          </span>
+        ) : (
+          value
+        )}
       </dd>
     </div>
   );
@@ -88,13 +104,13 @@ export default async function SubmissionPage(
   if (!submission) notFound();
 
   const picture = hostPicture(submission);
-  const [internalFields, contextFields, metaFields, decisionFields, statuses] =
+  const [internalFields, contextFields, metaFields, statuses, colors] =
     await Promise.all([
       resolveDisplayFields(INTERNAL_FIELDS),
       resolveDisplayFields(CONTEXT_FIELDS),
       resolveEditableFields(META_FIELDS),
-      resolveEditableFields(DECISION_FIELDS),
       resolveGradingStatuses(),
+      optionColors([VERDICT_FIELD, NEXT_STEPS_FIELD]),
     ]);
 
   return (
@@ -130,6 +146,20 @@ export default async function SubmissionPage(
           }
           description="The committee member assigned to grade this proposal, from the Rubric: Grader column in Airtable."
         />
+        {/* Read-only here on purpose: the committee sets these from the
+            overview, not a grader from inside their own rubric. */}
+        <Row
+          label="Verdict"
+          value={submission.verdict ?? "Not set"}
+          color={colors[VERDICT_FIELD][submission.verdict ?? ""]}
+          description="The committee's decision on this session. Set from the overview, not here."
+        />
+        <Row
+          label="Next steps"
+          value={submission.nextSteps ?? "Not set"}
+          color={colors[NEXT_STEPS_FIELD][submission.nextSteps ?? ""]}
+          description="Where this is in the processing pipeline. Set from the overview, not here."
+        />
         {rowsFor(submission, internalFields).map((row) => (
           <Row key={row.label} {...row} />
         ))}
@@ -145,7 +175,6 @@ export default async function SubmissionPage(
         recordId={submission.id}
         initial={submission.fields}
         metaFields={metaFields}
-        decisionFields={decisionFields}
         statuses={statuses}
       />
     </div>
