@@ -4,9 +4,11 @@ import GradeForm from "./GradeForm";
 import InfoTip from "../InfoTip";
 import { isConfigured, readSession } from "@/lib/grader-auth";
 import {
+  CONTEXT_FIELDS,
   getSubmission,
   hostPicture,
-  resolveContextFields,
+  INTERNAL_FIELDS,
+  resolveDisplayFields,
   resolveGradingStatuses,
   resolveMetaFields,
   type Submission,
@@ -41,27 +43,35 @@ function Row({
   );
 }
 
-async function Context({ submission }: { submission: Submission }) {
-  const fields = await resolveContextFields();
-  const rows = fields.flatMap((f) => {
+function Panel({
+  title,
+  children,
+}: {
+  title?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-line bg-white p-5">
+      {title && (
+        <h2 className="font-bebas mb-4 text-xl tracking-wide text-navy">
+          {title}
+        </h2>
+      )}
+      <dl className="space-y-3">{children}</dl>
+    </section>
+  );
+}
+
+function rowsFor(
+  submission: Submission,
+  fields: { field: string; label: string; description?: string }[],
+) {
+  return fields.flatMap((f) => {
     const value = renderValue(submission.fields[f.field]);
     return value === null
       ? []
       : [{ label: f.label, value, description: f.description }];
   });
-
-  return (
-    <dl className="space-y-3">
-      <Row
-        label="Grader"
-        value={submission.graders.map((g) => g.name).join(", ") || "Unassigned"}
-        description="The committee member assigned to grade this proposal, from the Rubric: Grader column in Airtable."
-      />
-      {rows.map((row) => (
-        <Row key={row.label} {...row} />
-      ))}
-    </dl>
-  );
 }
 
 export default async function SubmissionPage(
@@ -75,11 +85,14 @@ export default async function SubmissionPage(
   const submission = await getSubmission(recordId);
   if (!submission) notFound();
 
-  const [picture, metaFields, statuses] = [
-    hostPicture(submission),
-    await resolveMetaFields(),
-    await resolveGradingStatuses(),
-  ];
+  const picture = hostPicture(submission);
+  const [internalFields, contextFields, metaFields, statuses] =
+    await Promise.all([
+      resolveDisplayFields(INTERNAL_FIELDS),
+      resolveDisplayFields(CONTEXT_FIELDS),
+      resolveMetaFields(),
+      resolveGradingStatuses(),
+    ]);
 
   return (
     <div className="space-y-8">
@@ -106,9 +119,24 @@ export default async function SubmissionPage(
         </div>
       </header>
 
-      <section className="rounded-xl border border-line bg-white p-5">
-        <Context submission={submission} />
-      </section>
+      <Panel>
+        <Row
+          label="Grader"
+          value={
+            submission.graders.map((g) => g.name).join(", ") || "Unassigned"
+          }
+          description="The committee member assigned to grade this proposal, from the Rubric: Grader column in Airtable."
+        />
+        {rowsFor(submission, internalFields).map((row) => (
+          <Row key={row.label} {...row} />
+        ))}
+      </Panel>
+
+      <Panel title="Request for Proposals submission">
+        {rowsFor(submission, contextFields).map((row) => (
+          <Row key={row.label} {...row} />
+        ))}
+      </Panel>
 
       <GradeForm
         recordId={submission.id}

@@ -215,6 +215,12 @@ const WRITABLE_FALLBACK: Record<string, Writable> = {
  */
 export const CONTEXT_FIELDS = [
   {
+    field: "Title",
+    label: "Title",
+    description: "Official title for us to put on the schedule.",
+  },
+  { field: "Host", label: "Host", description: "Submitter name." },
+  {
     field: "Description",
     label: "Description",
     description:
@@ -304,6 +310,14 @@ export const CONTEXT_FIELDS = [
     description:
       "For the host’s profile on the Metagame website. Ideally a link to something games-related they do — not necessarily the thing they’re most known for.",
   },
+] as const;
+
+/**
+ * Shown above the host's own answers, because these come from us, not from the
+ * proposal. The Grader itself is handled separately — it's a collaborator field,
+ * already parsed onto `Submission.graders`.
+ */
+export const INTERNAL_FIELDS = [
   {
     field: "Ricki's notes",
     label: "Ricki’s notes",
@@ -521,17 +535,17 @@ export async function resolveGradingStatuses(): Promise<readonly string[]> {
   return schema[GRADING_STATUS_FIELD]?.options ?? GRADING_STATUSES;
 }
 
-/** CONTEXT_FIELDS with live descriptions layered over the committed ones. */
-export async function resolveContextFields(): Promise<
-  { field: string; label: string; description?: string }[]
-> {
+type DisplayField = { field: string; label: string; description?: string };
+
+/** CONTEXT_FIELDS / INTERNAL_FIELDS with live descriptions layered over the committed ones. */
+export async function resolveDisplayFields(
+  fields: readonly { field: string; label: string; description?: string }[],
+): Promise<DisplayField[]> {
   const schema = await fieldSchema();
-  return CONTEXT_FIELDS.map((f) => ({
+  return fields.map((f) => ({
     field: f.field,
     label: f.label,
-    description:
-      schema[f.field]?.description ||
-      ("description" in f ? f.description : undefined),
+    description: schema[f.field]?.description || f.description,
   }));
 }
 
