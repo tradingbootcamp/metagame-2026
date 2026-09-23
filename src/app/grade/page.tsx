@@ -17,7 +17,7 @@ const VIEWS = [
 
 type ViewKey = (typeof VIEWS)[number]["key"];
 
-const SORTS = ["proposal", "grader", "verdict", "status", "grading"] as const;
+const SORTS = ["proposal", "grader", "verdict", "next", "grading"] as const;
 type SortKey = (typeof SORTS)[number];
 
 // Worst-to-best, so ascending puts what still needs attention first.
@@ -35,14 +35,14 @@ const VERDICT_ORDER = [
   "N/A",
 ];
 
-const STATUS_ORDER = [
-  "Not yet processed",
-  "Needs small tweaks",
-  "NEED TO REACH OUT TO SPEAKER TO CONFIRM",
-  "Needs confirm from speaker",
-  "Ready to add to schedule",
-  "On schedule",
-  "Rejected",
+const NEXT_STEPS_ORDER = [
+  "1. Grade",
+  "2. Committee decision",
+  "3. Email speaker with verdict",
+  "4. Assign shepherd",
+  "5. Shepherd meeting",
+  "6. Add to schedule",
+  "7. None! We're good :) ",
   "N/A",
 ];
 
@@ -77,10 +77,10 @@ function compare(a: Submission, b: Submission, sort: SortKey) {
       a.title.localeCompare(b.title)
     );
   }
-  if (sort === "status") {
+  if (sort === "next") {
     return (
-      rank(STATUS_ORDER, a.status) - rank(STATUS_ORDER, b.status) ||
-      a.title.localeCompare(b.title)
+      rank(NEXT_STEPS_ORDER, a.nextSteps) -
+        rank(NEXT_STEPS_ORDER, b.nextSteps) || a.title.localeCompare(b.title)
     );
   }
   return a.title.localeCompare(b.title);
@@ -105,7 +105,7 @@ function GradingPill({ submission }: { submission: Submission }) {
   );
 }
 
-/** Verdict and Status carry long option names, so these read as plain text. */
+/** Verdict and Next steps carry long option names, so these read as plain text. */
 function Cell({ value, tone }: { value: string | null; tone?: string }) {
   if (!value) return <span className="text-sm text-ink/30">—</span>;
   return (
@@ -241,7 +241,7 @@ function Group({
           )}
           <SortLink column="grading" label="Grading" state={state} />
           <SortLink column="verdict" label="Verdict" state={state} />
-          <SortLink column="status" label="Status" state={state} />
+          <SortLink column="next" label="Next steps" state={state} />
         </div>
 
         <ul className="divide-y divide-line">
@@ -286,9 +286,9 @@ function Group({
                   </span>
                   <span className="min-w-0">
                     <span className="mr-1 text-xs text-ink/40 lg:hidden">
-                      Status
+                      Next steps
                     </span>
-                    <Cell value={submission.status} />
+                    <Cell value={submission.nextSteps} />
                   </span>
                 </Link>
               </li>

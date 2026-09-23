@@ -181,10 +181,24 @@ export const META_FIELDS = [
     description:
       "Is this session worth flagging to the Megagame organizers as a potential fit for integrating into the Megagame?",
   },
+  {
+    // Airtable spells it "recomendation"; matched exactly so the write lands.
+    field: "Grader Verdict recomendation",
+    label: "Your verdict recommendation",
+    kind: "select",
+    options: [
+      "This would be great for Metagame!!!",
+      "Nice to have",
+      "Add to unconference schedule",
+      "Bad for Metagame",
+    ],
+    description:
+      "Your recommendation as the grader. The committee's own call lives in Verdict, below.",
+  },
 ] as const;
 
 export const VERDICT_FIELD = "Verdict";
-export const STATUS_FIELD = "Status";
+export const NEXT_STEPS_FIELD = "Next steps";
 
 const VERDICT_OPTIONS = [
   "Confirmed",
@@ -197,14 +211,16 @@ const VERDICT_OPTIONS = [
   "This is running a game, probably fine",
 ] as const;
 
-const STATUS_OPTIONS = [
-  "Not yet processed",
-  "Needs small tweaks",
-  "NEED TO REACH OUT TO SPEAKER TO CONFIRM",
-  "Needs confirm from speaker",
-  "Ready to add to schedule",
-  "On schedule",
-  "Rejected",
+// Numbered in Airtable, so this order is the pipeline order. The trailing space
+// on "7. None!" is in the option name itself — don't trim it or the write fails.
+const NEXT_STEPS_OPTIONS = [
+  "1. Grade",
+  "2. Committee decision",
+  "3. Email speaker with verdict",
+  "4. Assign shepherd",
+  "5. Shepherd meeting",
+  "6. Add to schedule",
+  "7. None! We're good :) ",
   "N/A",
 ] as const;
 
@@ -221,10 +237,10 @@ export const DECISION_FIELDS = [
     description: "What's our decision on this session?",
   },
   {
-    field: STATUS_FIELD,
-    label: "Status",
+    field: NEXT_STEPS_FIELD,
+    label: "Next steps",
     kind: "select",
-    options: STATUS_OPTIONS,
+    options: NEXT_STEPS_OPTIONS,
     description: "Where are we at in the processing pipeline?",
   },
 ] as const;
@@ -383,7 +399,7 @@ export type Submission = {
   graders: Grader[];
   gradingStatus: string | null;
   verdict: string | null;
-  status: string | null;
+  nextSteps: string | null;
   /** True once any of the five rubric metrics has a value. */
   started: boolean;
   fields: Record<string, unknown>;
@@ -409,7 +425,7 @@ function toSubmission(record: AirtableRecord): Submission {
     ),
     gradingStatus: text(fields[GRADING_STATUS_FIELD]),
     verdict: text(fields[VERDICT_FIELD]),
-    status: text(fields[STATUS_FIELD]),
+    nextSteps: text(fields[NEXT_STEPS_FIELD]),
     started: RUBRIC_METRICS.some((m) => Boolean(fields[m.field])),
     fields,
   };
@@ -608,19 +624,33 @@ export async function resolveDisplayFields(
 
 async function writableFields(): Promise<Record<string, Writable>> {
   const schema = await fieldSchema();
+  // When the schema is readable, drop anything Airtable no longer has. Otherwise
+  // one renamed column 422s the whole PATCH and nobody can save at all.
+  const live = Object.keys(schema).length > 0;
+
   return Object.fromEntries(
-    Object.entries(WRITABLE_FALLBACK).map(([field, spec]) => {
-      const live = schema[field]?.options;
-      // Rubric options stay on the committed list: each one is paired with its
-      // guidance text, so a renamed choice should fail loudly, not silently.
-      const isRubric = RUBRIC_METRICS.some((m) => m.field === field);
-      return [
-        field,
-        live && "options" in spec && !isRubric
-          ? { ...spec, options: live }
-          : spec,
-      ];
-    }),
+    Object.entries(WRITABLE_FALLBACK)
+      .filter(([field]) => {
+        if (live && !(field in schema)) {
+          console.warn(
+            `[grade] field "${field}" is gone from Airtable — skipping`,
+          );
+          return false;
+        }
+        return true;
+      })
+      .map(([field, spec]) => {
+        const options = schema[field]?.options;
+        // Rubric options stay on the committed list: each one is paired with its
+        // guidance text, so a renamed choice should fail loudly, not silently.
+        const isRubric = RUBRIC_METRICS.some((m) => m.field === field);
+        return [
+          field,
+          options && "options" in spec && !isRubric
+            ? { ...spec, options }
+            : spec,
+        ];
+      }),
   );
 }
 
