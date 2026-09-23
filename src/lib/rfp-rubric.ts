@@ -183,6 +183,52 @@ export const META_FIELDS = [
   },
 ] as const;
 
+export const VERDICT_FIELD = "Verdict";
+export const STATUS_FIELD = "Status";
+
+const VERDICT_OPTIONS = [
+  "Confirmed",
+  "Probably yes",
+  "Needs modification but could be promising",
+  "Probably no",
+  "Rejected",
+  "N/A",
+  "Sponsorship / product placement potential — send Night Market form",
+  "This is running a game, probably fine",
+] as const;
+
+const STATUS_OPTIONS = [
+  "Not yet processed",
+  "Needs small tweaks",
+  "NEED TO REACH OUT TO SPEAKER TO CONFIRM",
+  "Needs confirm from speaker",
+  "Ready to add to schedule",
+  "On schedule",
+  "Rejected",
+  "N/A",
+] as const;
+
+/**
+ * The call on the proposal, kept apart from the rubric: these are the shared
+ * pipeline columns the whole committee reads, not one grader's scoring.
+ */
+export const DECISION_FIELDS = [
+  {
+    field: VERDICT_FIELD,
+    label: "Verdict",
+    kind: "select",
+    options: VERDICT_OPTIONS,
+    description: "What's our decision on this session?",
+  },
+  {
+    field: STATUS_FIELD,
+    label: "Status",
+    kind: "select",
+    options: STATUS_OPTIONS,
+    description: "Where are we at in the processing pipeline?",
+  },
+] as const;
+
 type Writable =
   | { kind: "select"; options: readonly string[] }
   | { kind: "multiSelect"; options: readonly string[] }
@@ -199,7 +245,7 @@ const WRITABLE_FALLBACK: Record<string, Writable> = {
     ]),
   ),
   ...Object.fromEntries(
-    META_FIELDS.map((f) => [
+    [...META_FIELDS, ...DECISION_FIELDS].map((f) => [
       f.field,
       ("options" in f
         ? { kind: f.kind, options: f.options }
@@ -336,6 +382,8 @@ export type Submission = {
   host: string;
   graders: Grader[];
   gradingStatus: string | null;
+  verdict: string | null;
+  status: string | null;
   /** True once any of the five rubric metrics has a value. */
   started: boolean;
   fields: Record<string, unknown>;
@@ -344,6 +392,8 @@ export type Submission = {
 type AirtableRecord = { id: string; fields: Record<string, unknown> };
 
 type Collaborator = { email?: string; name?: string };
+
+const text = (value: unknown) => (typeof value === "string" ? value : null);
 
 function toSubmission(record: AirtableRecord): Submission {
   const { fields } = record;
@@ -357,10 +407,9 @@ function toSubmission(record: AirtableRecord): Submission {
     graders: raw.flatMap((c) =>
       c?.email ? [{ email: c.email, name: c.name || c.email }] : [],
     ),
-    gradingStatus:
-      typeof fields[GRADING_STATUS_FIELD] === "string"
-        ? (fields[GRADING_STATUS_FIELD] as string)
-        : null,
+    gradingStatus: text(fields[GRADING_STATUS_FIELD]),
+    verdict: text(fields[VERDICT_FIELD]),
+    status: text(fields[STATUS_FIELD]),
     started: RUBRIC_METRICS.some((m) => Boolean(fields[m.field])),
     fields,
   };
@@ -518,14 +567,22 @@ export type ResolvedField = {
   description?: string;
 };
 
-/** META_FIELDS with live options + descriptions layered over the committed ones. */
-export async function resolveMetaFields(): Promise<ResolvedField[]> {
+/** Editable fields with live options + descriptions layered over the committed ones. */
+export async function resolveEditableFields(
+  fields: readonly {
+    field: string;
+    label: string;
+    kind: ResolvedField["kind"];
+    options?: readonly string[];
+    description?: string;
+  }[],
+): Promise<ResolvedField[]> {
   const schema = await fieldSchema();
-  return META_FIELDS.map((f) => ({
+  return fields.map((f) => ({
     field: f.field,
     label: f.label,
     kind: f.kind,
-    options: schema[f.field]?.options ?? ("options" in f ? f.options : []),
+    options: schema[f.field]?.options ?? f.options ?? [],
     description: schema[f.field]?.description || f.description,
   }));
 }

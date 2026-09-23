@@ -7,10 +7,12 @@ import {
   CONTEXT_FIELDS,
   getSubmission,
   hostPicture,
+  DECISION_FIELDS,
   INTERNAL_FIELDS,
+  META_FIELDS,
   resolveDisplayFields,
   resolveGradingStatuses,
-  resolveMetaFields,
+  resolveEditableFields,
   type Submission,
 } from "@/lib/rfp-rubric";
 
@@ -86,11 +88,12 @@ export default async function SubmissionPage(
   if (!submission) notFound();
 
   const picture = hostPicture(submission);
-  const [internalFields, contextFields, metaFields, statuses] =
+  const [internalFields, contextFields, metaFields, decisionFields, statuses] =
     await Promise.all([
       resolveDisplayFields(INTERNAL_FIELDS),
       resolveDisplayFields(CONTEXT_FIELDS),
-      resolveMetaFields(),
+      resolveEditableFields(META_FIELDS),
+      resolveEditableFields(DECISION_FIELDS),
       resolveGradingStatuses(),
     ]);
 
@@ -142,6 +145,7 @@ export default async function SubmissionPage(
         recordId={submission.id}
         initial={submission.fields}
         metaFields={metaFields}
+        decisionFields={decisionFields}
         statuses={statuses}
       />
     </div>

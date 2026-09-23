@@ -49,15 +49,93 @@ function Section({
   );
 }
 
+function Field({
+  field,
+  initial,
+}: {
+  field: ResolvedField;
+  initial: Record<string, unknown>;
+}) {
+  return (
+    <div>
+      <div className="font-medium text-navy">
+        <label htmlFor={field.field}>{field.label}</label>
+        {field.description && <InfoTip text={field.description} />}
+      </div>
+
+      {field.kind === "text" && (
+        <textarea
+          id={field.field}
+          name={field.field}
+          rows={3}
+          defaultValue={asString(initial[field.field])}
+          className={`${inputClass} mt-1`}
+        />
+      )}
+
+      {field.kind === "number" && (
+        <input
+          id={field.field}
+          name={field.field}
+          type="number"
+          min={0}
+          defaultValue={asString(initial[field.field])}
+          className={`${inputClass} mt-1 max-w-40`}
+        />
+      )}
+
+      {field.kind === "select" && (
+        <select
+          id={field.field}
+          name={field.field}
+          defaultValue={asString(initial[field.field])}
+          className={`${inputClass} mt-1`}
+        >
+          <option value="">—</option>
+          {field.options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {field.kind === "multiSelect" && (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {/* Keeps the field in the payload when nothing is ticked, so
+                    unticking everything clears the cell. */}
+          <input type="hidden" name={`${field.field}[]`} value="" />
+          {field.options.map((option) => (
+            <label key={option} className="cursor-pointer">
+              <input
+                type="checkbox"
+                name={`${field.field}[]`}
+                value={option}
+                defaultChecked={asArray(initial[field.field]).includes(option)}
+                className="peer sr-only"
+              />
+              <span className="inline-block rounded-full border border-line px-3 py-1.5 text-sm transition-colors peer-checked:border-navy peer-checked:bg-navy peer-checked:text-cream hover:bg-cream">
+                {option}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GradeForm({
   recordId,
   initial,
   metaFields,
+  decisionFields,
   statuses,
 }: {
   recordId: string;
   initial: Record<string, unknown>;
   metaFields: ResolvedField[];
+  decisionFields: ResolvedField[];
   statuses: readonly string[];
 }) {
   const [state, action, pending] = useActionState(
@@ -122,73 +200,19 @@ export default function GradeForm({
       <Section title="Details">
         <div className="space-y-5">
           {metaFields.map((field) => (
-            <div key={field.field}>
-              <div className="font-medium text-navy">
-                <label htmlFor={field.field}>{field.label}</label>
-                {field.description && <InfoTip text={field.description} />}
-              </div>
+            <Field key={field.field} field={field} initial={initial} />
+          ))}
+        </div>
+      </Section>
 
-              {field.kind === "text" && (
-                <textarea
-                  id={field.field}
-                  name={field.field}
-                  rows={3}
-                  defaultValue={asString(initial[field.field])}
-                  className={`${inputClass} mt-1`}
-                />
-              )}
-
-              {field.kind === "number" && (
-                <input
-                  id={field.field}
-                  name={field.field}
-                  type="number"
-                  min={0}
-                  defaultValue={asString(initial[field.field])}
-                  className={`${inputClass} mt-1 max-w-40`}
-                />
-              )}
-
-              {field.kind === "select" && (
-                <select
-                  id={field.field}
-                  name={field.field}
-                  defaultValue={asString(initial[field.field])}
-                  className={`${inputClass} mt-1`}
-                >
-                  <option value="">—</option>
-                  {field.options.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {field.kind === "multiSelect" && (
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {/* Keeps the field in the payload when nothing is ticked, so
-                      unticking everything clears the cell. */}
-                  <input type="hidden" name={`${field.field}[]`} value="" />
-                  {field.options.map((option) => (
-                    <label key={option} className="cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name={`${field.field}[]`}
-                        value={option}
-                        defaultChecked={asArray(initial[field.field]).includes(
-                          option,
-                        )}
-                        className="peer sr-only"
-                      />
-                      <span className="inline-block rounded-full border border-line px-3 py-1.5 text-sm transition-colors peer-checked:border-navy peer-checked:bg-navy peer-checked:text-cream hover:bg-cream">
-                        {option}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
+      <Section title="Decision">
+        <p className="-mt-2 text-sm text-ink/55">
+          Shared pipeline fields, not part of your rubric — everyone sees the
+          same value.
+        </p>
+        <div className="space-y-5">
+          {decisionFields.map((field) => (
+            <Field key={field.field} field={field} initial={initial} />
           ))}
         </div>
       </Section>

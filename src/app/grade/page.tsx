@@ -17,11 +17,40 @@ const VIEWS = [
 
 type ViewKey = (typeof VIEWS)[number]["key"];
 
-const SORTS = ["proposal", "grader", "status"] as const;
+const SORTS = ["proposal", "grader", "verdict", "status", "grading"] as const;
 type SortKey = (typeof SORTS)[number];
 
 // Worst-to-best, so ascending puts what still needs attention first.
-const STATUS_ORDER = ["Not started", "In Progress", "Blocked", "Done"];
+const GRADING_ORDER = ["Not started", "In Progress", "Blocked", "Done"];
+
+// Airtable's own select order, so sorting reads the way the column does there.
+const VERDICT_ORDER = [
+  "Confirmed",
+  "Probably yes",
+  "This is running a game, probably fine",
+  "Needs modification but could be promising",
+  "Sponsorship / product placement potential — send Night Market form",
+  "Probably no",
+  "Rejected",
+  "N/A",
+];
+
+const STATUS_ORDER = [
+  "Not yet processed",
+  "Needs small tweaks",
+  "NEED TO REACH OUT TO SPEAKER TO CONFIRM",
+  "Needs confirm from speaker",
+  "Ready to add to schedule",
+  "On schedule",
+  "Rejected",
+  "N/A",
+];
+
+/** Blank or unrecognised values sort after everything known. */
+const rank = (order: string[], value: string | null) => {
+  const i = value ? order.indexOf(value) : -1;
+  return i === -1 ? order.length : i;
+};
 
 const first = (value: string | string[] | undefined) =>
   (Array.isArray(value) ? value[0] : value) ?? "";
@@ -36,17 +65,28 @@ function compare(a: Submission, b: Submission, sort: SortKey) {
       a.title.localeCompare(b.title)
     );
   }
+  if (sort === "grading") {
+    return (
+      rank(GRADING_ORDER, a.gradingStatus) -
+        rank(GRADING_ORDER, b.gradingStatus) || a.title.localeCompare(b.title)
+    );
+  }
+  if (sort === "verdict") {
+    return (
+      rank(VERDICT_ORDER, a.verdict) - rank(VERDICT_ORDER, b.verdict) ||
+      a.title.localeCompare(b.title)
+    );
+  }
   if (sort === "status") {
     return (
-      STATUS_ORDER.indexOf(a.gradingStatus ?? "Not started") -
-        STATUS_ORDER.indexOf(b.gradingStatus ?? "Not started") ||
+      rank(STATUS_ORDER, a.status) - rank(STATUS_ORDER, b.status) ||
       a.title.localeCompare(b.title)
     );
   }
   return a.title.localeCompare(b.title);
 }
 
-function StatusPill({ submission }: { submission: Submission }) {
+function GradingPill({ submission }: { submission: Submission }) {
   const status = submission.gradingStatus ?? "Not started";
   const tone =
     status === "Done"
@@ -57,10 +97,32 @@ function StatusPill({ submission }: { submission: Submission }) {
           ? "bg-tan/25 text-navy"
           : "bg-ink/8 text-ink/55";
   return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>
+    <span
+      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}
+    >
       {status}
     </span>
   );
+}
+
+/** Verdict and Status carry long option names, so these read as plain text. */
+function Cell({ value, tone }: { value: string | null; tone?: string }) {
+  if (!value) return <span className="text-sm text-ink/30">—</span>;
+  return (
+    <span
+      className={`block truncate text-sm ${tone ?? "text-ink/70"}`}
+      title={value}
+    >
+      {value}
+    </span>
+  );
+}
+
+function verdictTone(verdict: string | null) {
+  if (verdict === "Confirmed" || verdict === "Probably yes") return "text-moss";
+  if (verdict === "Rejected" || verdict === "Probably no")
+    return "text-meeple-dark";
+  return undefined;
 }
 
 /** Reads as a person, so it can't be mistaken for part of the host's name. */
@@ -151,8 +213,8 @@ function Group({
   // Grader only earns a column in "Everything" — in "mine" it's always you.
   const cols =
     state.view === "all"
-      ? "sm:grid-cols-[minmax(0,1fr)_11rem_8rem]"
-      : "sm:grid-cols-[minmax(0,1fr)_8rem]";
+      ? "lg:grid-cols-[minmax(0,1fr)_10rem_9rem_9rem_7.5rem]"
+      : "lg:grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem]";
 
   return (
     <section>
@@ -163,15 +225,17 @@ function Group({
 
       <div className="overflow-hidden rounded-xl border border-line bg-white">
         <div
-          className={`hidden gap-4 border-b border-line bg-cream/60 px-4 py-2 sm:grid ${cols}`}
+          className={`hidden gap-4 border-b border-line bg-cream/60 px-4 py-2 lg:grid ${cols}`}
         >
           <SortLink column="proposal" label="Proposal" state={state} />
           {state.view === "all" && (
             <SortLink column="grader" label="Grader" state={state} />
           )}
+          <SortLink column="verdict" label="Verdict" state={state} />
+          <SortLink column="status" label="Status" state={state} />
           <SortLink
-            column="status"
-            label="Status"
+            column="grading"
+            label="Grading"
             state={state}
             className="text-right"
           />
@@ -186,7 +250,7 @@ function Group({
               <li key={submission.id}>
                 <Link
                   href={`/grade/${submission.id}`}
-                  className={`grid gap-1.5 px-4 py-3 transition-colors hover:bg-cream sm:items-center sm:gap-4 ${cols}`}
+                  className={`grid gap-1.5 px-4 py-3 transition-colors hover:bg-cream lg:items-center lg:gap-4 ${cols}`}
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-medium text-navy">
@@ -201,11 +265,27 @@ function Group({
                       <GraderChip graders={submission.graders} />
                     </span>
                   )}
-                  <span className="flex items-center gap-2 sm:justify-end">
+                  <span className="min-w-0">
+                    {/* Below lg the columns stack, so they need their own labels. */}
+                    <span className="mr-1 text-xs text-ink/40 lg:hidden">
+                      Verdict
+                    </span>
+                    <Cell
+                      value={submission.verdict}
+                      tone={verdictTone(submission.verdict)}
+                    />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="mr-1 text-xs text-ink/40 lg:hidden">
+                      Status
+                    </span>
+                    <Cell value={submission.status} />
+                  </span>
+                  <span className="flex items-center gap-2 lg:justify-end">
                     <span className="text-xs text-ink/45 tabular-nums">
                       {scored}/{RUBRIC_METRICS.length}
                     </span>
-                    <StatusPill submission={submission} />
+                    <GradingPill submission={submission} />
                   </span>
                 </Link>
               </li>
