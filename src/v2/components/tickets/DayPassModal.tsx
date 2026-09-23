@@ -176,11 +176,15 @@ export default function DayPassModal({ onClose }: { onClose: () => void }) {
             <Button
               type="submit"
               disabled={submitting}
-              className="h-12 w-full text-base"
+              className="h-12 w-full gap-2 text-base"
             >
-              {submitting
-                ? "Starting checkout…"
-                : `Pay ₿${pass.btc} for ${pass.date.long.split(",")[0]}`}
+              {submitting ? (
+                "Starting checkout…"
+              ) : (
+                <>
+                  <FaBitcoin aria-hidden /> Pay &#8383;{pass.btc} on OpenNode
+                </>
+              )}
             </Button>
           </form>
         ) : (
