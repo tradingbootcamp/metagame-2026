@@ -3,10 +3,15 @@ import { connection } from "next/server";
 import { GraderPicker, PasswordForm } from "./SignInForms";
 import { isConfigured, readSession } from "@/lib/grader-auth";
 import type { Grader } from "@/lib/grader-auth";
+import { swatch } from "@/lib/airtable-colors";
 import {
   gradersFrom,
+  GRADING_STATUS_FIELD,
   listSubmissions,
+  NEXT_STEPS_FIELD,
+  optionColors,
   RUBRIC_METRICS,
+  VERDICT_FIELD,
   type Submission,
 } from "@/lib/rfp-rubric";
 
@@ -86,9 +91,18 @@ function compare(a: Submission, b: Submission, sort: SortKey) {
   return a.title.localeCompare(b.title);
 }
 
-function GradingPill({ submission }: { submission: Submission }) {
+function GradingPill({
+  submission,
+  colors,
+}: {
+  submission: Submission;
+  colors: Record<string, string>;
+}) {
   const status = submission.gradingStatus ?? "Not started";
-  const tone =
+  const tone = swatch(colors[status]);
+  // Without the schema scope there are no Airtable colours, so fall back to the
+  // site palette rather than rendering every status identically.
+  const fallback =
     status === "Done"
       ? "bg-moss/15 text-moss"
       : status === "Blocked"
@@ -96,33 +110,47 @@ function GradingPill({ submission }: { submission: Submission }) {
         : status === "In Progress"
           ? "bg-tan/25 text-navy"
           : "bg-ink/8 text-ink/55";
+
   return (
     <span
-      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}
+      style={tone ?? undefined}
+      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${tone ? "" : fallback}`}
     >
       {status}
     </span>
   );
 }
 
-/** Verdict and Next steps carry long option names, so these read as plain text. */
-function Cell({ value, tone }: { value: string | null; tone?: string }) {
+/**
+ * Verdict and Next steps in the colour Airtable gives them. Falls back to plain
+ * text when the schema isn't readable, since the colours come from there.
+ */
+function Cell({
+  value,
+  colors,
+}: {
+  value: string | null;
+  colors: Record<string, string>;
+}) {
   if (!value) return <span className="text-sm text-ink/30">—</span>;
+
+  const tone = swatch(colors[value]);
+  if (!tone) {
+    return (
+      <span className="block truncate text-sm text-ink/70" title={value}>
+        {value}
+      </span>
+    );
+  }
   return (
     <span
-      className={`block truncate text-sm ${tone ?? "text-ink/70"}`}
       title={value}
+      style={tone}
+      className="block truncate rounded-full px-2.5 py-1 text-xs font-medium"
     >
       {value}
     </span>
   );
-}
-
-function verdictTone(verdict: string | null) {
-  if (verdict === "Confirmed" || verdict === "Probably yes") return "text-moss";
-  if (verdict === "Rejected" || verdict === "Probably no")
-    return "text-meeple-dark";
-  return undefined;
 }
 
 /**
@@ -210,10 +238,12 @@ function Group({
   title,
   submissions,
   state,
+  colors,
 }: {
   title: string;
   submissions: Submission[];
   state: SortState;
+  colors: Record<string, Record<string, string>>;
 }) {
   if (submissions.length === 0) return null;
 
@@ -272,7 +302,10 @@ function Group({
                     <span className="text-xs text-ink/45 tabular-nums">
                       {scored}/{RUBRIC_METRICS.length}
                     </span>
-                    <GradingPill submission={submission} />
+                    <GradingPill
+                      submission={submission}
+                      colors={colors[GRADING_STATUS_FIELD]}
+                    />
                   </span>
                   <span className="min-w-0">
                     {/* Below lg the columns stack, so they need their own labels. */}
@@ -281,14 +314,17 @@ function Group({
                     </span>
                     <Cell
                       value={submission.verdict}
-                      tone={verdictTone(submission.verdict)}
+                      colors={colors[VERDICT_FIELD]}
                     />
                   </span>
                   <span className="min-w-0">
                     <span className="mr-1 text-xs text-ink/40 lg:hidden">
                       Next steps
                     </span>
-                    <Cell value={submission.nextSteps} />
+                    <Cell
+                      value={submission.nextSteps}
+                      colors={colors[NEXT_STEPS_FIELD]}
+                    />
                   </span>
                 </Link>
               </li>
@@ -333,6 +369,11 @@ export default async function GradePage(props: PageProps<"/grade">) {
   const dir = first(params.dir) === "desc" ? "desc" : "asc";
   const state: SortState = { sort, dir, view, q: rawQuery };
 
+  const colors = await optionColors([
+    VERDICT_FIELD,
+    NEXT_STEPS_FIELD,
+    GRADING_STATUS_FIELD,
+  ]);
   const me = session.grader.email;
   const byView: Record<ViewKey, Submission[]> = {
     mine: submissions.filter((s) => s.graders.some((g) => g.email === me)),
@@ -398,11 +439,13 @@ export default async function GradePage(props: PageProps<"/grade">) {
             title="To grade"
             submissions={visible.filter((s) => s.gradingStatus !== "Done")}
             state={state}
+            colors={colors}
           />
           <Group
             title="Graded"
             submissions={visible.filter((s) => s.gradingStatus === "Done")}
             state={state}
+            colors={colors}
           />
         </div>
       )}

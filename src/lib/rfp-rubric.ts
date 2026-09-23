@@ -525,12 +525,17 @@ export function hostPicture(
 
 const SCHEMA_TTL_SECONDS = 300;
 
-type FieldSchema = { options?: string[]; description?: string };
+type FieldSchema = {
+  options?: string[];
+  /** Option name → Airtable colour token, e.g. "greenBright". */
+  colors?: Record<string, string>;
+  description?: string;
+};
 
 type MetaField = {
   name: string;
   description?: string;
-  options?: { choices?: { name: string }[] };
+  options?: { choices?: { name: string; color?: string }[] };
 };
 
 async function fieldSchema(): Promise<Record<string, FieldSchema>> {
@@ -565,6 +570,11 @@ async function fieldSchema(): Promise<Record<string, FieldSchema>> {
         f.name,
         {
           options: f.options?.choices?.map((c) => c.name),
+          colors: Object.fromEntries(
+            f.options?.choices
+              ?.filter((c) => c.color)
+              .map((c) => [c.name, c.color as string]) ?? [],
+          ),
           description: f.description,
         },
       ]),
@@ -601,6 +611,20 @@ export async function resolveEditableFields(
     options: schema[f.field]?.options ?? f.options ?? [],
     description: schema[f.field]?.description || f.description,
   }));
+}
+
+/**
+ * Option name → Airtable colour token for the given fields, so a select can be
+ * shown here in the colours it already has in Airtable. Empty without the
+ * schema scope, in which case callers fall back to plain text.
+ */
+export async function optionColors(
+  fields: readonly string[],
+): Promise<Record<string, Record<string, string>>> {
+  const schema = await fieldSchema();
+  return Object.fromEntries(
+    fields.map((field) => [field, schema[field]?.colors ?? {}]),
+  );
 }
 
 export async function resolveGradingStatuses(): Promise<readonly string[]> {
