@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { GraderPicker, PasswordForm } from "./SignInForms";
 import { isConfigured, readSession } from "@/lib/grader-auth";
 import type { Grader } from "@/lib/grader-auth";
+import InlineSelect from "./InlineSelect";
 import { swatch } from "@/lib/airtable-colors";
 import {
   gradersFrom,
@@ -10,6 +11,8 @@ import {
   listSubmissions,
   NEXT_STEPS_FIELD,
   optionColors,
+  resolveEditableFields,
+  DECISION_FIELDS,
   RUBRIC_METRICS,
   VERDICT_FIELD,
   type Submission,
@@ -122,38 +125,6 @@ function GradingPill({
 }
 
 /**
- * Verdict and Next steps in the colour Airtable gives them. Falls back to plain
- * text when the schema isn't readable, since the colours come from there.
- */
-function Cell({
-  value,
-  colors,
-}: {
-  value: string | null;
-  colors: Record<string, string>;
-}) {
-  if (!value) return <span className="text-sm text-ink/30">—</span>;
-
-  const tone = swatch(colors[value]);
-  if (!tone) {
-    return (
-      <span className="block truncate text-sm text-ink/70" title={value}>
-        {value}
-      </span>
-    );
-  }
-  return (
-    <span
-      title={value}
-      style={tone}
-      className="block truncate rounded-full px-2.5 py-1 text-xs font-medium"
-    >
-      {value}
-    </span>
-  );
-}
-
-/**
  * Initials only, so the column stays narrow and the title gets the room. The
  * name shows on hover at lg+; below that the row stacks and it just fits inline.
  */
@@ -239,11 +210,13 @@ function Group({
   submissions,
   state,
   colors,
+  decisionOptions,
 }: {
   title: string;
   submissions: Submission[];
   state: SortState;
   colors: Record<string, Record<string, string>>;
+  decisionOptions: Record<string, string[]>;
 }) {
   if (submissions.length === 0) return null;
 
@@ -279,54 +252,63 @@ function Group({
             const scored = RUBRIC_METRICS.filter(
               (m) => submission.fields[m.field],
             ).length;
+            // Not a whole-row link any more: the row holds dropdowns now, and a
+            // stray click navigating away mid-edit would be worse.
             return (
-              <li key={submission.id}>
-                <Link
-                  href={`/grade/${submission.id}`}
-                  className={`grid gap-1.5 px-4 py-3 transition-colors hover:bg-cream lg:items-center lg:gap-4 ${cols}`}
-                >
+              <li
+                key={submission.id}
+                className={`grid gap-1.5 px-4 py-3 transition-colors hover:bg-cream lg:items-center lg:gap-4 ${cols}`}
+              >
+                <span className="min-w-0">
+                  <Link
+                    href={`/grade/${submission.id}`}
+                    className="block truncate font-medium text-navy hover:text-meeple hover:underline"
+                  >
+                    {submission.title}
+                  </Link>
+                  <span className="block truncate text-sm text-ink/55">
+                    {submission.host}
+                  </span>
+                </span>
+                {state.view === "all" && (
                   <span className="min-w-0">
-                    <span className="block truncate font-medium text-navy">
-                      {submission.title}
-                    </span>
-                    <span className="block truncate text-sm text-ink/55">
-                      {submission.host}
-                    </span>
+                    <GraderChip graders={submission.graders} />
                   </span>
-                  {state.view === "all" && (
-                    <span className="min-w-0">
-                      <GraderChip graders={submission.graders} />
-                    </span>
-                  )}
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="text-xs text-ink/45 tabular-nums">
-                      {scored}/{RUBRIC_METRICS.length}
-                    </span>
-                    <GradingPill
-                      submission={submission}
-                      colors={colors[GRADING_STATUS_FIELD]}
-                    />
+                )}
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="text-xs text-ink/45 tabular-nums">
+                    {scored}/{RUBRIC_METRICS.length}
                   </span>
-                  <span className="min-w-0">
-                    {/* Below lg the columns stack, so they need their own labels. */}
-                    <span className="mr-1 text-xs text-ink/40 lg:hidden">
-                      Verdict
-                    </span>
-                    <Cell
-                      value={submission.verdict}
-                      colors={colors[VERDICT_FIELD]}
-                    />
+                  <GradingPill
+                    submission={submission}
+                    colors={colors[GRADING_STATUS_FIELD]}
+                  />
+                </span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  {/* Below lg the columns stack, so they need their own labels. */}
+                  <span className="shrink-0 text-xs text-ink/40 lg:hidden">
+                    Verdict
                   </span>
-                  <span className="min-w-0">
-                    <span className="mr-1 text-xs text-ink/40 lg:hidden">
-                      Next steps
-                    </span>
-                    <Cell
-                      value={submission.nextSteps}
-                      colors={colors[NEXT_STEPS_FIELD]}
-                    />
+                  <InlineSelect
+                    recordId={submission.id}
+                    field={VERDICT_FIELD}
+                    value={submission.verdict}
+                    options={decisionOptions[VERDICT_FIELD]}
+                    colors={colors[VERDICT_FIELD]}
+                  />
+                </span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="shrink-0 text-xs text-ink/40 lg:hidden">
+                    Next steps
                   </span>
-                </Link>
+                  <InlineSelect
+                    recordId={submission.id}
+                    field={NEXT_STEPS_FIELD}
+                    value={submission.nextSteps}
+                    options={decisionOptions[NEXT_STEPS_FIELD]}
+                    colors={colors[NEXT_STEPS_FIELD]}
+                  />
+                </span>
               </li>
             );
           })}
@@ -369,6 +351,10 @@ export default async function GradePage(props: PageProps<"/grade">) {
   const dir = first(params.dir) === "desc" ? "desc" : "asc";
   const state: SortState = { sort, dir, view, q: rawQuery };
 
+  const decisionFields = await resolveEditableFields(DECISION_FIELDS);
+  const decisionOptions = Object.fromEntries(
+    decisionFields.map((f) => [f.field, [...f.options]]),
+  );
   const colors = await optionColors([
     VERDICT_FIELD,
     NEXT_STEPS_FIELD,
@@ -440,12 +426,14 @@ export default async function GradePage(props: PageProps<"/grade">) {
             submissions={visible.filter((s) => s.gradingStatus !== "Done")}
             state={state}
             colors={colors}
+            decisionOptions={decisionOptions}
           />
           <Group
             title="Graded"
             submissions={visible.filter((s) => s.gradingStatus === "Done")}
             state={state}
             colors={colors}
+            decisionOptions={decisionOptions}
           />
         </div>
       )}

@@ -10,8 +10,10 @@ import {
 import {
   gradersFrom,
   listSubmissions,
+  NEXT_STEPS_FIELD,
   sanitizeGrades,
   saveGrades,
+  VERDICT_FIELD,
 } from "@/lib/rfp-rubric";
 
 export type FormState = { error?: string };
@@ -55,6 +57,36 @@ export async function switchGrader(): Promise<void> {
 export async function signOut(): Promise<void> {
   await endSession();
   revalidatePath("/grade");
+}
+
+/**
+ * One-field save from the overview. Allow-listed to the two pipeline columns, so
+ * this can't be used to write anything else from a list row.
+ */
+export async function setOverviewField(
+  recordId: string,
+  field: string,
+  value: string,
+): Promise<{ error?: string }> {
+  if (!(await readSession())?.grader) return { error: "Your session expired." };
+  if (field !== VERDICT_FIELD && field !== NEXT_STEPS_FIELD) {
+    return { error: "That field isn't editable here." };
+  }
+
+  const fields = await sanitizeGrades({ [field]: value });
+  if (!(field in fields)) return { error: "Unrecognised value." };
+
+  try {
+    await saveGrades(recordId, fields);
+  } catch (err) {
+    console.error("[grade] inline save failed:", err);
+    return { error: "Airtable rejected the change." };
+  }
+
+  // Deliberately not revalidating /grade: re-sorting the list under the cursor
+  // mid-edit is worse than it being one refresh stale.
+  revalidatePath(`/grade/${recordId}`);
+  return {};
 }
 
 export type SaveState = { savedAt?: number; error?: string };
