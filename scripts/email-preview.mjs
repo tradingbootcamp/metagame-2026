@@ -46,7 +46,7 @@ const VARIANTS = {
     to: "brian+test@metagame.games",
     purchaserName: "Brian",
     tierLabel: "Saturday Day Pass",
-    usdPaid: 200,
+    usdPaid: 225,
     ticketCode: "D7Q2XM",
     eventDay: { long: "Saturday, November 7, 2026", ymd: "20261107" },
   },
