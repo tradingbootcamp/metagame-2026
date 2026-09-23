@@ -125,33 +125,40 @@ function verdictTone(verdict: string | null) {
   return undefined;
 }
 
-/** Reads as a person, so it can't be mistaken for part of the host's name. */
+/**
+ * Initials only, so the column stays narrow and the title gets the room. The
+ * name shows on hover at lg+; below that the row stacks and it just fits inline.
+ */
 function GraderChip({ graders }: { graders: Grader[] }) {
-  if (graders.length === 0) {
-    return (
-      <span className="rounded-full border border-dashed border-ink/25 px-2.5 py-1 text-xs text-ink/40">
-        Unassigned
-      </span>
-    );
-  }
-
-  const names = graders.map((g) => g.name).join(", ");
-  const initials = graders[0].name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
+  const assigned = graders.length > 0;
+  const names = assigned ? graders.map((g) => g.name).join(", ") : "Unassigned";
+  const initials = assigned
+    ? graders[0].name
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((word) => word[0])
+        .join("")
+        .toUpperCase()
+    : "–";
 
   return (
-    <span
-      title={`Grader: ${names}`}
-      className="flex w-fit items-center gap-1.5 rounded-full bg-ink/6 py-1 pr-2.5 pl-1 text-xs text-ink/70"
-    >
-      <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-navy text-[9px] font-semibold text-cream">
+    // Full width so the whole cell is the hover target, not just the 24px circle.
+    <span className="group/grader relative inline-flex w-full items-center gap-1.5">
+      <span
+        className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
+          assigned
+            ? "bg-navy text-cream"
+            : "border border-dashed border-ink/30 text-ink/35"
+        }`}
+      >
         {initials}
       </span>
-      <span className="truncate">{names}</span>
+      <span className="truncate text-xs text-ink/70 lg:hidden">{names}</span>
+      {/* Beside the circle, not below it: the list has overflow-hidden for its
+          rounded corners, which would clip anything leaving the row. */}
+      <span className="pointer-events-none absolute top-1/2 left-7 z-20 hidden -translate-y-1/2 rounded-lg bg-navy px-2 py-1 text-xs whitespace-nowrap text-cream opacity-0 shadow-lg transition-opacity group-hover/grader:opacity-100 lg:block">
+        {names}
+      </span>
     </span>
   );
 }
@@ -211,10 +218,11 @@ function Group({
   if (submissions.length === 0) return null;
 
   // Grader only earns a column in "Everything" — in "mine" it's always you.
+  // Everything past the title is sized to its content so the title keeps the rest.
   const cols =
     state.view === "all"
-      ? "lg:grid-cols-[minmax(0,1fr)_10rem_9rem_9rem_7.5rem]"
-      : "lg:grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem]";
+      ? "lg:grid-cols-[minmax(0,1fr)_3.25rem_8.5rem_6.5rem_6.5rem]"
+      : "lg:grid-cols-[minmax(0,1fr)_8.5rem_6.5rem_6.5rem]";
 
   return (
     <section>
@@ -231,14 +239,9 @@ function Group({
           {state.view === "all" && (
             <SortLink column="grader" label="Grader" state={state} />
           )}
+          <SortLink column="grading" label="Grading" state={state} />
           <SortLink column="verdict" label="Verdict" state={state} />
           <SortLink column="status" label="Status" state={state} />
-          <SortLink
-            column="grading"
-            label="Grading"
-            state={state}
-            className="text-right"
-          />
         </div>
 
         <ul className="divide-y divide-line">
@@ -265,6 +268,12 @@ function Group({
                       <GraderChip graders={submission.graders} />
                     </span>
                   )}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="text-xs text-ink/45 tabular-nums">
+                      {scored}/{RUBRIC_METRICS.length}
+                    </span>
+                    <GradingPill submission={submission} />
+                  </span>
                   <span className="min-w-0">
                     {/* Below lg the columns stack, so they need their own labels. */}
                     <span className="mr-1 text-xs text-ink/40 lg:hidden">
@@ -280,12 +289,6 @@ function Group({
                       Status
                     </span>
                     <Cell value={submission.status} />
-                  </span>
-                  <span className="flex items-center gap-2 lg:justify-end">
-                    <span className="text-xs text-ink/45 tabular-nums">
-                      {scored}/{RUBRIC_METRICS.length}
-                    </span>
-                    <GradingPill submission={submission} />
                   </span>
                 </Link>
               </li>
