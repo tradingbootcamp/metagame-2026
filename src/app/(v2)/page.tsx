@@ -547,10 +547,11 @@ export default function Home() {
       <section id="tickets" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
           <SectionHeading eyebrow="Ready to play?" title="Tickets" />
-          <p className={`${PROSE} mb-7 max-w-[600px]`}>
-            One ticket covers all three days.
-            {earlyBird && <> Early-bird pricing ends {EARLY_BIRD_DEADLINE}.</>}
-          </p>
+          {earlyBird && (
+            <p className={`${PROSE} mb-7 max-w-[600px]`}>
+              Early-bird pricing ends {EARLY_BIRD_DEADLINE}.
+            </p>
+          )}
           {/* The panel renders bare toggle + tiles; the column/gap is ours. */}
           <div className="flex max-w-[700px] flex-col items-start gap-6">
             <TicketsPanel
