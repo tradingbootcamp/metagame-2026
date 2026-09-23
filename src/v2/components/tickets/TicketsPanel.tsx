@@ -247,11 +247,11 @@ export default function TicketsPanel({
         >
           <span className={TILE_LABEL}>Day pass</span>
           <span
-            className={`${HEADING} leading-[32px] text-tan ${isBtc ? "text-[17px]" : "text-[22px]"}`}
+            className={`${HEADING} leading-[32px] text-tan ${isBtc ? "text-[15px]" : "text-[22px]"}`}
           >
-            {dayPasses
-              .map((p) => (isBtc ? `\u20BF${p.btc}` : `$${p.usd}`))
-              .join("/")}
+            {isBtc
+              ? `\u20BF${dayPasses.map((p) => p.btc).join("/")}`
+              : dayPasses.map((p) => `$${p.usd}`).join("/")}
           </span>
           <span className={TILE_NOTE}>
             {dayPasses.map((p) => p.date.long.slice(0, 3)).join(" · ")}
