@@ -10,6 +10,7 @@ import {
   verifyWebhookSignature,
 } from "@/lib/opennode";
 import { ticketCode } from "@/lib/ticket-code";
+import { getDayPass } from "@/lib/tickets";
 import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
 
 // HMAC verification + the OpenNode key need Node crypto — keep this off the edge.
@@ -171,6 +172,7 @@ export async function POST(request: Request) {
         tierLabel: meta.ticketLabel
           ? String(meta.ticketLabel)
           : "Metagame 2026 ticket",
+        eventDay: getDayPass(String(meta.ticketId ?? ""))?.date,
         btcPaid: btcAmount,
         btcFull:
           btcAmount != null && meta.btcAmountDiscounted != null

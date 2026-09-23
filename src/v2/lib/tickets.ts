@@ -131,13 +131,15 @@ export function supporterChipUrl(chip: SupporterChip): string | null {
 }
 
 // ── Day passes ──────────────────────────────────────────────────────────────
-// Single-day admission, USD via Stripe only (no BTC rail). Promo codes are off on
-// these links: EARLYBIRD isn't product-restricted and would knock $100 off a $100 pass.
+// Single-day admission. USD via Stripe Payment Links; BTC via the OpenNode modal at
+// a fixed price scaled off Standard's ₿/$ ratio (no discount codes on either rail).
+// Promo codes are off on the links so EARLYBIRD can't take $100 off a $100 pass.
 
 export type DayPass = {
   id: "friday" | "saturday" | "sunday";
   label: string;
   usd: number;
+  btc: number;
   /** The admitted day — drives the confirmation email's date line + calendar link. */
   date: { long: string; ymd: string };
   links: Record<StripeMode, string>;
@@ -148,6 +150,7 @@ export const dayPasses: DayPass[] = [
     id: "friday",
     label: "Friday Day Pass",
     usd: 100,
+    btc: 0.0015,
     date: { long: "Friday, November 6, 2026", ymd: "20261106" },
     links: {
       test: "https://buy.stripe.com/test_fZubJ0gUTgnJfRh9Vgfw40i",
@@ -158,6 +161,7 @@ export const dayPasses: DayPass[] = [
     id: "saturday",
     label: "Saturday Day Pass",
     usd: 225,
+    btc: 0.0034,
     date: { long: "Saturday, November 7, 2026", ymd: "20261107" },
     links: {
       test: "https://buy.stripe.com/test_7sYbJ07kj7Rd5cD7N8fw40j",
@@ -168,6 +172,7 @@ export const dayPasses: DayPass[] = [
     id: "sunday",
     label: "Sunday Day Pass",
     usd: 225,
+    btc: 0.0034,
     date: { long: "Sunday, November 8, 2026", ymd: "20261108" },
     links: {
       test: "https://buy.stripe.com/test_7sYdR8dIHfjF48zd7sfw40k",
@@ -175,6 +180,11 @@ export const dayPasses: DayPass[] = [
     },
   },
 ];
+
+/** Look up a day pass by id; undefined when none matches. */
+export function getDayPass(id: string): DayPass | undefined {
+  return dayPasses.find((p) => p.id === id);
+}
 
 /** Checkout URL for a day pass in the active Stripe mode. */
 export function dayPassUrl(pass: DayPass): string | null {

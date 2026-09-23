@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { getTicket, supporterTier } from "@/lib/tickets";
+import { getDayPass, getTicket, supporterTier } from "@/lib/tickets";
 import { countCodeRedemptions, lookupDiscountCode } from "@/lib/discount-codes";
 import { isEarlyBirdActive } from "@/lib/early-bird";
 import { createCharge, getHostedCheckoutUrl } from "@/lib/opennode";
@@ -76,6 +76,13 @@ export async function POST(request: Request) {
     // usd recorded for the Airtable `Amount` — derive from the floor's USD/BTC ratio
     // so the dollar figure roughly tracks the chosen BTC amount.
     usd = Math.round((btc / supporterTier.floor.btc) * supporterTier.floor.usd);
+  } else if (getDayPass(ticketId)) {
+    // Day pass: fixed BTC price, no discount codes on this rail either.
+    const pass = getDayPass(ticketId)!;
+    ticketIdOut = pass.id;
+    ticketLabel = pass.label;
+    usd = pass.usd;
+    btc = pass.btc;
   } else {
     const ticket = getTicket(ticketId);
     if (!ticket) {

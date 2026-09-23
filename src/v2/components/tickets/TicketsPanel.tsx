@@ -236,7 +236,7 @@ export default function TicketsPanel({
             )}
           </span>
         </Button>
-        {/* Day passes are USD-only, so the tile ignores the currency toggle. */}
+        {/* Day passes: USD → the modal's Stripe links, BTC → its OpenNode form. */}
         <Button
           type="button"
           variant="raised"
@@ -246,8 +246,12 @@ export default function TicketsPanel({
           className={TILE.replace("px-7", "px-4")}
         >
           <span className={TILE_LABEL}>Day pass</span>
-          <span className={`${HEADING} text-[22px] leading-[32px] text-tan`}>
-            {dayPasses.map((p) => `$${p.usd}`).join("/")}
+          <span
+            className={`${HEADING} leading-[32px] text-tan ${isBtc ? "text-[17px]" : "text-[22px]"}`}
+          >
+            {dayPasses
+              .map((p) => (isBtc ? `\u20BF${p.btc}` : `$${p.usd}`))
+              .join("/")}
           </span>
           <span className={TILE_NOTE}>
             {dayPasses.map((p) => p.date.long.slice(0, 3)).join(" · ")}
