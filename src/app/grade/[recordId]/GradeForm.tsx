@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import InfoTip from "../InfoTip";
 import { submitGrades, type SaveState } from "../actions";
 import {
   GRADING_STATUS_FIELD,
@@ -112,15 +113,10 @@ export default function GradeForm({
         <div className="space-y-5">
           {META_FIELDS.map((field) => (
             <div key={field.field}>
-              <label
-                htmlFor={field.field}
-                className="block font-medium text-navy"
-              >
-                {field.label}
-              </label>
-              {"help" in field && field.help && (
-                <p className="mb-1.5 text-sm text-ink/55">{field.help}</p>
-              )}
+              <div className="font-medium text-navy">
+                <label htmlFor={field.field}>{field.label}</label>
+                <InfoTip text={field.description} />
+              </div>
 
               {field.kind === "text" && (
                 <textarea

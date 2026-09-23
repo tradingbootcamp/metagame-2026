@@ -116,56 +116,69 @@ const SPACE_OPTIONS = [
 
 export const GRADING_STATUS_FIELD = "Grading Status";
 
+// `description` is the column's Airtable description, shown behind the ⓘ next to
+// each label. Kept verbatim so the tooltip says what the Airtable field says.
+
 /** The non-rubric fields the grading form writes, in the order they're shown. */
 export const META_FIELDS = [
   {
     field: "Grader notes on quality",
     label: "Notes on quality",
     kind: "text",
-    help: "How does this proposal compare to the bar?",
+    description:
+      "Leave us any notes you'd like on the quality of this proposal / how it compares to the bar.",
   },
   {
     field: "Expected crowd size",
     label: "Expected crowd size",
     kind: "number",
-    help: "Assuming 300 attendees and reasonable scheduling choices.",
+    description:
+      "Assuming 300 conference attendees, and that we make reasonable scheduling choices.",
   },
   {
     field: "Allow dropins?",
     label: "Allow dropins?",
     kind: "select",
     options: DROPIN_OPTIONS,
+    description:
+      "Does this session accommodate people dropping in (e.g. a lecture), or does it require commitment / continued participation (e.g. a game with a set number of players)?",
   },
   {
     field: "Topic areas",
     label: "Topic areas",
     kind: "multiSelect",
     options: TOPIC_OPTIONS,
+    description: "Does this hit on certain subject areas in particular?",
   },
   {
     field: "Lighthaven Space Options",
     label: "Lighthaven spaces that would fit",
     kind: "multiSelect",
     options: SPACE_OPTIONS,
+    description:
+      "Select all the spaces that would be a good fit for this session.",
   },
   {
     field: "Grader Notes for Scheduler",
     label: "Notes for the scheduler",
     kind: "text",
-    help: "Anything the schedule/space coordinator should know — long lead times, odd requirements, hazards.",
+    description:
+      "A space for notes to the schedule/space coordinator about anything you might want to flag — e.g. “this one requires a 12 step application process that needs to start in September” or “they want to hide money in trees around campus”.",
   },
   {
     field: "Shepherd match potential",
     label: "Would you be a good Shepherd for this host?",
     kind: "select",
     options: SHEPHERD_OPTIONS,
-    help: "The Shepherd confirms the session, helps plan it, procures materials, and finds them on campus.",
+    description:
+      "Would you (the Grader) be a good fit to be this speaker’s Shepherd? The Shepherd is the committee member assigned to guide the speaker through everything they need to succeed: emailing them to confirm their session, meeting to help plan it, procuring materials, making sure it lands in the right space, finding them on campus.",
   },
   {
     field: "Megagame integration",
     label: "Megagame integration",
     kind: "text",
-    help: "Worth flagging to the Megagame organizers as a potential fit?",
+    description:
+      "Is this session worth flagging to the Megagame organizers as a potential fit for integrating into the Megagame?",
   },
 ] as const;
 
@@ -193,29 +206,107 @@ const WRITABLE: Record<string, Writable> = {
   ),
 };
 
-/** Fields shown to the grader as read-only context, in display order. */
+/**
+ * Fields shown to the grader as read-only context, in display order. The
+ * description is what the host was asked on the RFP form, which is often the
+ * only way to read their answer correctly.
+ */
 export const CONTEXT_FIELDS = [
-  { field: "Description", label: "Description" },
-  { field: "Session Context", label: "Session context" },
-  { field: "Category", label: "Category" },
-  { field: "Duration", label: "Duration" },
-  { field: "Minimum size", label: "Minimum size" },
-  { field: "Maximum size", label: "Maximum size" },
-  { field: "Age", label: "Age appropriateness" },
-  { field: "Age elaboration", label: "Age notes" },
-  { field: "Space needs", label: "Space needs" },
-  { field: "Timing constraints", label: "Timing constraints" },
-  { field: "Other Constraints", label: "Other constraints" },
-  { field: "Application required?", label: "Application required?" },
-  { field: "Bespoke needs?", label: "Bespoke needs?" },
+  {
+    field: "Description",
+    label: "Description",
+    description:
+      "A brief blurb (2–3 sentences) about the session, to be used on the public-facing schedule.",
+  },
+  {
+    field: "Session Context",
+    label: "Session context",
+    description:
+      "What is your vision, how do you plan to run it, where are you at in the ideation process, etc?",
+  },
+  {
+    field: "Category",
+    label: "Category",
+    description: "What kind of thing is this?",
+  },
+  { field: "Duration", label: "Duration", description: "e.g. “1 hour”." },
+  {
+    field: "Minimum size",
+    label: "Minimum size",
+    description:
+      "Smallest number of attendees that would still allow the host to run this session.",
+  },
+  {
+    field: "Maximum size",
+    label: "Maximum size",
+    description:
+      "Largest number of attendees that would still allow the host to run this session.",
+  },
+  {
+    field: "Age",
+    label: "Age appropriateness",
+    description: "What is the age appropriateness of this event?",
+  },
+  {
+    field: "Age elaboration",
+    label: "Age notes",
+    description: "Additional age appropriateness information.",
+  },
+  {
+    field: "Space needs",
+    label: "Space needs",
+    description:
+      "e.g. “indoors, with a projector or large screen” or “a circular table that seats 7” or “the room must be able to get fully dark” or “there must be a secret trapdoor that can only be opened by speaking in Aramaic during a crescent moon”.",
+  },
+  {
+    field: "Timing constraints",
+    label: "Timing constraints",
+    description:
+      "e.g. “I can’t run this on Friday” or “it must be at nighttime but can happen any night”.",
+  },
+  {
+    field: "Other Constraints",
+    label: "Other constraints",
+    description:
+      "Ability constraints, content warnings, or other things we should be aware of that may limit who might want to attend.",
+  },
+  {
+    field: "Application required?",
+    label: "Application required?",
+    description:
+      "If the host wants to handpick attendees: a link to the application, or information about the process and timeline. Blank means no application.",
+  },
+  {
+    field: "Bespoke needs?",
+    label: "Bespoke needs?",
+    description:
+      "Anything not covered above, like “I want to integrate this into the Megagame somehow” or “this is actually just advertising for my product, which I will also be trying to sell to attendees during this session”.",
+  },
   {
     field: "Interest level in tying this proposal to the Megagame?",
     label: "Interest in the Megagame",
   },
-  { field: "Anything else?", label: "Anything else?" },
-  { field: "Cohost(s)", label: "Cohost(s)" },
-  { field: "Link (host)", label: "Host link" },
-  { field: "Ricki's notes", label: "Ricki’s notes" },
+  {
+    field: "Anything else?",
+    label: "Anything else?",
+    description: "Free space for hosts to provide more information.",
+  },
+  {
+    field: "Cohost(s)",
+    label: "Cohost(s)",
+    description: "If they plan to run this with others, those people’s names.",
+  },
+  {
+    field: "Link (host)",
+    label: "Host link",
+    description:
+      "For the host’s profile on the Metagame website. Ideally a link to something games-related they do — not necessarily the thing they’re most known for.",
+  },
+  {
+    field: "Ricki's notes",
+    label: "Ricki’s notes",
+    description: "Miscellaneous notes from Ricki that might be relevant.",
+  },
 ] as const;
 
 const GRADER_FIELD = "Rubric: Grader";

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import GradeForm from "./GradeForm";
+import InfoTip from "../InfoTip";
 import { isConfigured, readSession } from "@/lib/grader-auth";
 import {
   CONTEXT_FIELDS,
@@ -19,7 +20,9 @@ function renderValue(value: unknown): string | null {
 function Context({ submission }: { submission: Submission }) {
   const rows = CONTEXT_FIELDS.flatMap((f) => {
     const value = renderValue(submission.fields[f.field]);
-    return value === null ? [] : [{ label: f.label as string, value }];
+    if (value === null) return [];
+    const description = "description" in f ? (f.description as string) : null;
+    return [{ label: f.label as string, value, description }];
   });
 
   return (
@@ -28,6 +31,7 @@ function Context({ submission }: { submission: Submission }) {
         <div key={row.label}>
           <dt className="text-xs font-semibold tracking-wide text-ink/45 uppercase">
             {row.label}
+            {row.description && <InfoTip text={row.description} />}
           </dt>
           <dd className="mt-0.5 text-[15px] whitespace-pre-wrap text-ink/85">
             {row.value}
