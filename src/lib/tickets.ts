@@ -132,7 +132,7 @@ export function supporterChipUrl(chip: SupporterChip): string | null {
 
 // ── Day passes ──────────────────────────────────────────────────────────────
 // Single-day admission, USD via Stripe only (no BTC rail). Promo codes are off on
-// these links: EARLYBIRD isn't product-restricted and would knock $100 off an $85 pass.
+// these links: EARLYBIRD isn't product-restricted and would knock $100 off a $100 pass.
 
 export type DayPass = {
   id: "friday" | "saturday" | "sunday";
@@ -147,31 +147,31 @@ export const dayPasses: DayPass[] = [
   {
     id: "friday",
     label: "Friday Day Pass",
-    usd: 85,
+    usd: 100,
     date: { long: "Friday, November 6, 2026", ymd: "20261106" },
     links: {
-      test: "https://buy.stripe.com/test_7sYdR8gUT2wT5cDc3ofw40f",
-      live: "https://buy.stripe.com/00w8wOdIH3AX8oPaZkfw40a",
+      test: "https://buy.stripe.com/test_fZubJ0gUTgnJfRh9Vgfw40i",
+      live: "https://buy.stripe.com/6oU4gy343fjF9sTebwfw40d",
     },
   },
   {
     id: "saturday",
     label: "Saturday Day Pass",
-    usd: 200,
+    usd: 225,
     date: { long: "Saturday, November 7, 2026", ymd: "20261107" },
     links: {
-      test: "https://buy.stripe.com/test_28E8wOfQP7Rd5cDd7sfw40g",
-      live: "https://buy.stripe.com/00wcN43430oLcF5aZkfw40b",
+      test: "https://buy.stripe.com/test_7sYbJ07kj7Rd5cD7N8fw40j",
+      live: "https://buy.stripe.com/4gM4gy3435J56gH9Vgfw40e",
     },
   },
   {
     id: "sunday",
     label: "Sunday Day Pass",
-    usd: 200,
+    usd: 225,
     date: { long: "Sunday, November 8, 2026", ymd: "20261108" },
     links: {
-      test: "https://buy.stripe.com/test_aFacN4343dbxcF58Rcfw40h",
-      live: "https://buy.stripe.com/eVq14m0VV2wT7kL8Rcfw40c",
+      test: "https://buy.stripe.com/test_7sYdR8dIHfjF48zd7sfw40k",
+      live: "https://buy.stripe.com/7sYdR8gUT2wT5cDc3ofw40f",
     },
   },
 ];
