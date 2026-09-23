@@ -76,7 +76,7 @@ export async function submitGrades(
   }
 
   try {
-    await saveGrades(recordId, sanitizeGrades(raw));
+    await saveGrades(recordId, await sanitizeGrades(raw));
   } catch (err) {
     console.error("[grade] failed to save:", err);
     return { error: "Airtable rejected the save. Try again." };

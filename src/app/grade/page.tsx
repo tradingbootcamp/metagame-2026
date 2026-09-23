@@ -10,7 +10,6 @@ import {
 } from "@/lib/rfp-rubric";
 
 const VIEWS = [
-  { key: "todo", label: "To grade" },
   { key: "mine", label: "Assigned to me" },
   { key: "all", label: "Everything" },
 ] as const;
@@ -34,6 +33,60 @@ function StatusPill({ submission }: { submission: Submission }) {
     <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>
       {status}
     </span>
+  );
+}
+
+function Group({
+  title,
+  submissions,
+  view,
+}: {
+  title: string;
+  submissions: Submission[];
+  view: ViewKey;
+}) {
+  if (submissions.length === 0) return null;
+
+  return (
+    <section>
+      <h2 className="font-bebas mb-2 text-lg tracking-wide text-navy">
+        {title}{" "}
+        <span className="text-ink/40 tabular-nums">{submissions.length}</span>
+      </h2>
+      <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
+        {submissions.map((submission) => {
+          const scored = RUBRIC_METRICS.filter(
+            (m) => submission.fields[m.field],
+          ).length;
+          return (
+            <li key={submission.id}>
+              <Link
+                href={`/grade/${submission.id}`}
+                className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-cream"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-medium text-navy">
+                    {submission.title}
+                  </span>
+                  <span className="block truncate text-sm text-ink/55">
+                    {submission.host}
+                    {view === "all" &&
+                      submission.graders.length > 0 &&
+                      ` · ${submission.graders.map((g) => g.name).join(", ")}`}
+                  </span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="text-xs text-ink/45 tabular-nums">
+                    {scored}/{RUBRIC_METRICS.length}
+                  </span>
+                  <StatusPill submission={submission} />
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -62,14 +115,12 @@ export default async function GradePage(props: PageProps<"/grade">) {
 
   const params = await props.searchParams;
   const view = (VIEWS.find((v) => v.key === first(params.view))?.key ??
-    "todo") as ViewKey;
+    "mine") as ViewKey;
   const query = first(params.q).trim().toLowerCase();
 
   const me = session.grader.email;
-  const mine = submissions.filter((s) => s.graders.some((g) => g.email === me));
   const byView: Record<ViewKey, Submission[]> = {
-    todo: mine.filter((s) => s.gradingStatus !== "Done"),
-    mine,
+    mine: submissions.filter((s) => s.graders.some((g) => g.email === me)),
     all: submissions,
   };
   const visible = byView[view].filter(
@@ -78,6 +129,8 @@ export default async function GradePage(props: PageProps<"/grade">) {
       s.title.toLowerCase().includes(query) ||
       s.host.toLowerCase().includes(query),
   );
+  const toGrade = visible.filter((s) => s.gradingStatus !== "Done");
+  const graded = visible.filter((s) => s.gradingStatus === "Done");
 
   return (
     <div className="space-y-5">
@@ -120,43 +173,13 @@ export default async function GradePage(props: PageProps<"/grade">) {
 
       {visible.length === 0 ? (
         <p className="py-8 text-center text-sm text-ink/55">
-          {view === "todo" ? "Nothing left to grade. " : "No proposals match. "}
-          {query && "Try clearing the search."}
+          No proposals match.{query && " Try clearing the search."}
         </p>
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-white">
-          {visible.map((submission) => {
-            const scored = RUBRIC_METRICS.filter(
-              (m) => submission.fields[m.field],
-            ).length;
-            return (
-              <li key={submission.id}>
-                <Link
-                  href={`/grade/${submission.id}`}
-                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-cream"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium text-navy">
-                      {submission.title}
-                    </span>
-                    <span className="block truncate text-sm text-ink/55">
-                      {submission.host}
-                      {view === "all" &&
-                        submission.graders.length > 0 &&
-                        ` · ${submission.graders.map((g) => g.name).join(", ")}`}
-                    </span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    <span className="text-xs text-ink/45 tabular-nums">
-                      {scored}/{RUBRIC_METRICS.length}
-                    </span>
-                    <StatusPill submission={submission} />
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="space-y-6">
+          <Group title="To grade" submissions={toGrade} view={view} />
+          <Group title="Graded" submissions={graded} view={view} />
+        </div>
       )}
     </div>
   );

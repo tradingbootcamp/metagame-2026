@@ -97,6 +97,7 @@ const TOPIC_OPTIONS = [
   "Video games",
   "Physical games",
   "Party Game",
+  "Immersive experience",
 ] as const;
 
 const SPACE_OPTIONS = [
@@ -152,7 +153,7 @@ export const META_FIELDS = [
   },
   {
     field: "Lighthaven Space Options",
-    label: "Lighthaven spaces that would fit",
+    label: "Lighthaven space options",
     kind: "multiSelect",
     options: SPACE_OPTIONS,
     description:
@@ -188,7 +189,8 @@ type Writable =
   | { kind: "text" }
   | { kind: "number" };
 
-const WRITABLE: Record<string, Writable> = {
+/** Committed fallback, used when the schema can't be read (see fieldSchema). */
+const WRITABLE_FALLBACK: Record<string, Writable> = {
   [GRADING_STATUS_FIELD]: { kind: "select", options: GRADING_STATUSES },
   ...Object.fromEntries(
     RUBRIC_METRICS.map((m) => [
@@ -435,12 +437,131 @@ export function hostPicture(
   return first.url ? { url: first.url } : null;
 }
 
+// ── Live field schema ────────────────────────────────────────────────────────
+// Select options and field descriptions are read from Airtable rather than only
+// from the lists above, so adding a Topic area (or editing a description) in
+// Airtable shows up here without a deploy. Needs `schema.bases:read` on the
+// token; without it every call below quietly falls back to the committed lists,
+// which means a brand-new option just won't be offered yet.
+
+const SCHEMA_TTL_SECONDS = 300;
+
+type FieldSchema = { options?: string[]; description?: string };
+
+type MetaField = {
+  name: string;
+  description?: string;
+  options?: { choices?: { name: string }[] };
+};
+
+async function fieldSchema(): Promise<Record<string, FieldSchema>> {
+  const { AIRTABLE_API_KEY } = env;
+  if (!AIRTABLE_API_KEY) return {};
+
+  try {
+    const res = await fetch(
+      `https://api.airtable.com/v0/meta/bases/${airtableConfig.baseId}/tables`,
+      {
+        headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+        next: { revalidate: SCHEMA_TTL_SECONDS },
+      },
+    );
+    if (!res.ok) {
+      // 403 = the token lacks schema.bases:read. Not fatal; grading still works.
+      console.warn(
+        `[grade] schema read failed (${res.status}) — using fallback`,
+      );
+      return {};
+    }
+    const { tables } = (await res.json()) as {
+      tables: { id: string; fields: MetaField[] }[];
+    };
+    const table = tables.find(
+      (t) => t.id === airtableConfig.rfpSubmissionsTableId,
+    );
+    if (!table) return {};
+
+    return Object.fromEntries(
+      table.fields.map((f) => [
+        f.name,
+        {
+          options: f.options?.choices?.map((c) => c.name),
+          description: f.description,
+        },
+      ]),
+    );
+  } catch (err) {
+    console.warn("[grade] schema read failed — using fallback:", err);
+    return {};
+  }
+}
+
+export type ResolvedField = {
+  field: string;
+  label: string;
+  kind: "select" | "multiSelect" | "text" | "number";
+  options: readonly string[];
+  description?: string;
+};
+
+/** META_FIELDS with live options + descriptions layered over the committed ones. */
+export async function resolveMetaFields(): Promise<ResolvedField[]> {
+  const schema = await fieldSchema();
+  return META_FIELDS.map((f) => ({
+    field: f.field,
+    label: f.label,
+    kind: f.kind,
+    options: schema[f.field]?.options ?? ("options" in f ? f.options : []),
+    description: schema[f.field]?.description || f.description,
+  }));
+}
+
+export async function resolveGradingStatuses(): Promise<readonly string[]> {
+  const schema = await fieldSchema();
+  return schema[GRADING_STATUS_FIELD]?.options ?? GRADING_STATUSES;
+}
+
+/** CONTEXT_FIELDS with live descriptions layered over the committed ones. */
+export async function resolveContextFields(): Promise<
+  { field: string; label: string; description?: string }[]
+> {
+  const schema = await fieldSchema();
+  return CONTEXT_FIELDS.map((f) => ({
+    field: f.field,
+    label: f.label,
+    description:
+      schema[f.field]?.description ||
+      ("description" in f ? f.description : undefined),
+  }));
+}
+
+async function writableFields(): Promise<Record<string, Writable>> {
+  const schema = await fieldSchema();
+  return Object.fromEntries(
+    Object.entries(WRITABLE_FALLBACK).map(([field, spec]) => {
+      const live = schema[field]?.options;
+      // Rubric options stay on the committed list: each one is paired with its
+      // guidance text, so a renamed choice should fail loudly, not silently.
+      const isRubric = RUBRIC_METRICS.some((m) => m.field === field);
+      return [
+        field,
+        live && "options" in spec && !isRubric
+          ? { ...spec, options: live }
+          : spec,
+      ];
+    }),
+  );
+}
+
 /**
  * Keep only known grading fields holding values the column actually accepts, so
  * a hand-rolled POST can't write to Verdict or invent a select option. An empty
  * string / empty array / null clears the cell.
  */
-export function sanitizeGrades(input: unknown): Record<string, unknown> {
+export async function sanitizeGrades(
+  input: unknown,
+): Promise<Record<string, unknown>> {
+  const WRITABLE = await writableFields();
   if (!input || typeof input !== "object") return {};
   const out: Record<string, unknown> = {};
 

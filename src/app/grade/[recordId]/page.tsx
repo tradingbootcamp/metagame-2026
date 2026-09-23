@@ -4,9 +4,11 @@ import GradeForm from "./GradeForm";
 import InfoTip from "../InfoTip";
 import { isConfigured, readSession } from "@/lib/grader-auth";
 import {
-  CONTEXT_FIELDS,
   getSubmission,
   hostPicture,
+  resolveContextFields,
+  resolveGradingStatuses,
+  resolveMetaFields,
   type Submission,
 } from "@/lib/rfp-rubric";
 
@@ -17,26 +19,46 @@ function renderValue(value: unknown): string | null {
   return String(value);
 }
 
-function Context({ submission }: { submission: Submission }) {
-  const rows = CONTEXT_FIELDS.flatMap((f) => {
+function Row({
+  label,
+  value,
+  description,
+}: {
+  label: string;
+  value: string;
+  description?: string;
+}) {
+  return (
+    <div>
+      <dt className="text-xs font-semibold tracking-wide text-ink/45 uppercase">
+        {label}
+        {description && <InfoTip text={description} />}
+      </dt>
+      <dd className="mt-0.5 text-[15px] whitespace-pre-wrap text-ink/85">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+async function Context({ submission }: { submission: Submission }) {
+  const fields = await resolveContextFields();
+  const rows = fields.flatMap((f) => {
     const value = renderValue(submission.fields[f.field]);
-    if (value === null) return [];
-    const description = "description" in f ? (f.description as string) : null;
-    return [{ label: f.label as string, value, description }];
+    return value === null
+      ? []
+      : [{ label: f.label, value, description: f.description }];
   });
 
   return (
     <dl className="space-y-3">
+      <Row
+        label="Grader"
+        value={submission.graders.map((g) => g.name).join(", ") || "Unassigned"}
+        description="The committee member assigned to grade this proposal, from the Rubric: Grader column in Airtable."
+      />
       {rows.map((row) => (
-        <div key={row.label}>
-          <dt className="text-xs font-semibold tracking-wide text-ink/45 uppercase">
-            {row.label}
-            {row.description && <InfoTip text={row.description} />}
-          </dt>
-          <dd className="mt-0.5 text-[15px] whitespace-pre-wrap text-ink/85">
-            {row.value}
-          </dd>
-        </div>
+        <Row key={row.label} {...row} />
       ))}
     </dl>
   );
@@ -53,10 +75,11 @@ export default async function SubmissionPage(
   const submission = await getSubmission(recordId);
   if (!submission) notFound();
 
-  const picture = hostPicture(submission);
-  const assigned = submission.graders.some(
-    (g) => g.email === session.grader!.email,
-  );
+  const [picture, metaFields, statuses] = [
+    hostPicture(submission),
+    await resolveMetaFields(),
+    await resolveGradingStatuses(),
+  ];
 
   return (
     <div className="space-y-8">
@@ -83,19 +106,16 @@ export default async function SubmissionPage(
         </div>
       </header>
 
-      {!assigned && (
-        <p className="rounded-lg bg-tan/20 px-4 py-3 text-sm text-navy">
-          This one is assigned to{" "}
-          {submission.graders.map((g) => g.name).join(", ") || "nobody"} — you
-          can still grade it, but check with them first.
-        </p>
-      )}
-
       <section className="rounded-xl border border-line bg-white p-5">
         <Context submission={submission} />
       </section>
 
-      <GradeForm recordId={submission.id} initial={submission.fields} />
+      <GradeForm
+        recordId={submission.id}
+        initial={submission.fields}
+        metaFields={metaFields}
+        statuses={statuses}
+      />
     </div>
   );
 }

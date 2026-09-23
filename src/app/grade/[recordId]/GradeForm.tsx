@@ -5,10 +5,9 @@ import InfoTip from "../InfoTip";
 import { submitGrades, type SaveState } from "../actions";
 import {
   GRADING_STATUS_FIELD,
-  GRADING_STATUSES,
-  META_FIELDS,
   RUBRIC_GRADES,
   RUBRIC_METRICS,
+  type ResolvedField,
   type RubricGrade,
 } from "@/lib/rfp-rubric";
 
@@ -53,9 +52,13 @@ function Section({
 export default function GradeForm({
   recordId,
   initial,
+  metaFields,
+  statuses,
 }: {
   recordId: string;
   initial: Record<string, unknown>;
+  metaFields: ResolvedField[];
+  statuses: readonly string[];
 }) {
   const [state, action, pending] = useActionState(
     submitGrades.bind(null, recordId),
@@ -63,7 +66,14 @@ export default function GradeForm({
   );
 
   return (
-    <form action={action} className="space-y-6">
+    // React resets an uncontrolled form once its action resolves, which snapped
+    // every field back to the defaults captured before the save. Re-keying on
+    // the save remounts the form against `initial` as Airtable now has it.
+    <form
+      key={state.savedAt ?? "initial"}
+      action={action}
+      className="space-y-6"
+    >
       <Section title="Rubric">
         <div className="space-y-6">
           {RUBRIC_METRICS.map((metric) => {
@@ -111,11 +121,11 @@ export default function GradeForm({
 
       <Section title="Details">
         <div className="space-y-5">
-          {META_FIELDS.map((field) => (
+          {metaFields.map((field) => (
             <div key={field.field}>
               <div className="font-medium text-navy">
                 <label htmlFor={field.field}>{field.label}</label>
-                <InfoTip text={field.description} />
+                {field.description && <InfoTip text={field.description} />}
               </div>
 
               {field.kind === "text" && (
@@ -195,7 +205,7 @@ export default function GradeForm({
           }
           className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy"
         >
-          {GRADING_STATUSES.map((status) => (
+          {statuses.map((status) => (
             <option key={status} value={status}>
               {status}
             </option>
