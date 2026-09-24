@@ -2,7 +2,7 @@ import type { StaticImageData } from "next/image";
 import { HATS, type Hat } from "@/v2/hat-trick/hats";
 import games from "../../../public/images/misc_photos/board_game_round_robin_2.jpg";
 import talks from "../../../public/images/misc_photos/jay_dragon.jpg";
-import workshops from "../../../public/images/misc_photos/david_turner.jpg";
+import workshops from "../../../public/images/misc_photos/utility_monster.jpg";
 
 export type HighlightSession = {
   title: string;
@@ -48,7 +48,7 @@ export const HIGHLIGHTS_2025: HighlightGroup[] = [
   {
     label: "Workshops",
     photo: workshops,
-    alt: "David Turner presenting from a lectern in the Lighthaven garden",
+    alt: "Players gathered around a table mid-game at Metagame 2025, cards and scoring strips spread between them",
     sessions: [
       {
         title: "Build Your Own Escape Room",
