@@ -29,6 +29,8 @@ export type Look = {
   tilt: number; // TILT: degrees, the same for every tile
   bites: number[]; // the tile each BITE landed on, in order
   dark: boolean;
+  mono: boolean; // CODE: the letters in a typewriter face, in green
+  huddle: boolean; // RUST: the tiles pulled in close, for a rounder crab
 };
 
 export const BASE_LOOK: Look = {
@@ -53,6 +55,8 @@ export const BASE_LOOK: Look = {
   tilt: 0,
   bites: [],
   dark: false,
+  mono: false,
+  huddle: false,
 };
 
 const set =
@@ -111,7 +115,10 @@ export type Spell =
   | { kind: "warp" }
   | { kind: "tone" }
   | { kind: "stop" }
-  | { kind: "exit"; to: Exit }
+  | { kind: "dict" }
+  | { kind: "bang" }
+  // `rust` dresses the crab as Ferris.
+  | { kind: "exit"; to: Exit; rust?: boolean }
   | { kind: "look"; apply: (l: Look) => Look };
 
 export const SPELLS: Record<string, Spell> = {
@@ -154,6 +161,8 @@ export const SPELLS: Record<string, Spell> = {
   TIME: { kind: "glyph", shape: "time" },
   // Clicking through the alphabet is the point — this is the way out of it.
   TYPE: { kind: "type" },
+  DICT: { kind: "dict" },
+  BANG: { kind: "bang" },
   SUDO: { kind: "sudo" },
   // Takes back the last letter: the one clicked, or the one typed over.
   UNDO: { kind: "undo" },
@@ -172,6 +181,7 @@ export const SPELLS: Record<string, Spell> = {
   WIND: { kind: "exit", to: "wind" },
   // The rack grows legs, claws and eyes, and scuttles off sideways.
   CRAB: { kind: "exit", to: "crab" },
+  RUST: { kind: "exit", to: "crab", rust: true },
   FADE: { kind: "exit", to: "fade" },
   VOID: { kind: "exit", to: "void" },
   // Absolute, not cumulative: GROW then TINY lands on 50% of baseline, not 57%.
@@ -236,6 +246,8 @@ export const SPELLS: Record<string, Spell> = {
   PYRO: { kind: "look", apply: set({ fire: true }) },
   BURN: { kind: "look", apply: set({ fire: true }) },
   // Barely a change, which is the joke. Either spelling.
+  // A terminal: black tiles, green type.
+  CODE: { kind: "look", apply: set({ mono: true, tint: "#0d0d0d" }) },
   GRAY: { kind: "look", apply: set({ tint: GRAY }) },
   GREY: { kind: "look", apply: set({ tint: GRAY }) },
 };
@@ -287,12 +299,28 @@ export const BOMB_MS = 1500;
 export const WIND_MS = 2600;
 export const WARP_MS = 2800;
 export const CRAB_MS = 8400;
+// RUST: Ferris's orange, and the tiles take it too, so he's one colour.
+export const RUST = "#f74c00";
+// How long the tiles take to huddle before Ferris shows (the margin-left
+// transition in index.tsx, delay and all).
+export const HUDDLE_MS = 900;
+// BANG: the pistol slides out, fires, and the flag comes out of the barrel.
+export const BANG_DRAW_MS = 500;
+export const BANG_FIRE_AT = 800;
+export const BANG_STICK_MS = 260;
+export const BANG_UNFURL_MS = 600;
 // The share of that spent sitting there first. Matches the hold at the start
 // of the scrabble-scuttle keyframes.
 export const CRAB_WAIT = 0.26;
-// Four cuts, then the pieces drop.
-export const DICE_CHOP_MS = 950;
-export const DICE_FALL_MS = 520;
+// DICE: a beat, then four unhurried knife strokes, a pause to take it in,
+// and the pieces let go. DICE_CHOP_MS is when they do.
+export const DICE_START_MS = 600;
+export const DICE_STROKE_MS = 220;
+export const DICE_STROKE_GAP = 340;
+export const DICE_HOLD_MS = 700;
+export const DICE_CHOP_MS =
+  DICE_START_MS + 3 * DICE_STROKE_GAP + DICE_STROKE_MS + DICE_HOLD_MS;
+export const DICE_FALL_MS = 750;
 export const VOID_MS = 17200;
 export const EXIT_MS = {
   down: FALL_MS,
@@ -340,6 +368,10 @@ export type Seed = {
   sway: [number, number];
   period: [number, number];
   tilt: number;
+  // DICE: how this tile's nine pieces land, as a nudge to each of PILE's
+  // entries — [cells across, cells down, degrees] — and whether the whole
+  // heap is mirrored, so no two tiles fall the same way.
+  heap: { nudge: [number, number, number][]; flip: 1 | -1 };
 };
 
 const either = () => (Math.random() < 0.5 ? -1 : 1);
@@ -365,6 +397,15 @@ export const seedExit = (n: number, to: Exit): Seed[] => {
               ? Math.random() * 500
               : HOLD_MS + Math.random() * (up ? 900 : 220),
     spin: up ? (Math.random() - 0.5) * 24 : (Math.random() - 0.5) * 220,
+    heap: {
+      flip: either(),
+      nudge: Array.from({ length: 9 }, (_, p) => [
+        (Math.random() - 0.5) * 0.5,
+        // The bottom row (the last three) stays on the ground.
+        p < 6 ? (Math.random() - 0.5) * 0.3 : 0,
+        (Math.random() - 0.5) * 50,
+      ]),
+    },
     drift: (Math.random() - 0.5) * (up ? 120 : 30),
     sway: [
       either() * (9 + Math.random() * 12),

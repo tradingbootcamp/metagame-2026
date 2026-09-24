@@ -7,10 +7,11 @@ import ScrabbleDivider, {
   type ScrabbleHandle,
 } from "@/v2/components/dividers/scrabble";
 import WordEntry from "@/v2/components/dividers/scrabble/WordEntry";
+import { clearFound } from "@/v2/components/dividers/scrabble/found";
 
 // The rack is meant to be slow to spell on (until someone spells TYPE). Here,
 // clicking the label opens the same entry from the start, plus a reset that brings back a
-// rack FALL, RISE or ZOOM has ended.
+// rack FALL, RISE or ZOOM has ended and wipes DICT's book.
 export default function ScrabbleDebug() {
   const rack = useRef<ScrabbleHandle>(null);
   const [open, setOpen] = useState(false);
@@ -24,6 +25,7 @@ export default function ScrabbleDebug() {
 
   const reset = () => {
     setWord("");
+    clearFound();
     rerollRack();
     setGeneration((n) => n + 1);
   };

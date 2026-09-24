@@ -673,6 +673,39 @@ button:not(:disabled) {
 }
 
 /* SUDO: the fake console docks up from the bottom edge of the page. */
+/* BANG: the pistol slides out from behind the tile, kicks when it fires, and
+   the stick shoots out of the barrel, the flag unrolling off its tip. */
+@keyframes scrabble-draw {
+  from {
+    transform: translateX(-60px);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+@keyframes scrabble-recoil {
+  30% {
+    transform: translateX(-7px) rotate(-9deg);
+  }
+}
+
+@keyframes scrabble-stick {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes scrabble-unfurl {
+  from {
+    transform: scaleX(0);
+  }
+  70% {
+    transform: scaleX(1.06);
+  }
+}
+
 @keyframes scrabble-dock {
   from {
     translate: 0 100%;

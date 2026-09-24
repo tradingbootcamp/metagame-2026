@@ -22,9 +22,17 @@ import Weather, { rollShower, showerMs, type Shower } from "./Weather";
 import { trackEgg, type Via } from "../track";
 import { wobble } from "./wobble";
 import WordEntry from "./WordEntry";
+import Dict from "./Dict";
+import { openDict, recordFind, useFound } from "./found";
 import {
   BASE_LOOK,
+  BANG_DRAW_MS,
+  BANG_FIRE_AT,
+  BANG_STICK_MS,
+  BANG_UNFURL_MS,
+  HUDDLE_MS,
   MAGA_MS,
+  RUST,
   CODE,
   CODE_BEAT_MS,
   CODE_ENTRY_MS,
@@ -46,6 +54,9 @@ import {
   CRAB_WAIT,
   DICE_CHOP_MS,
   DICE_FALL_MS,
+  DICE_START_MS,
+  DICE_STROKE_GAP,
+  DICE_STROKE_MS,
   GLYPH_TIMING,
   EXIT_MS,
   FISH_MS,
@@ -93,9 +104,13 @@ import {
 // secret away).
 const CHARCOAL = "#4d4d4d";
 const FONT = "var(--font-space-grotesk), system-ui, sans-serif";
+// CODE swaps the letters into this.
+const MONO = '"Courier New", Courier, monospace';
+const PHOSPHOR = "#39ff6a";
 
 // The dark-mode plate the punched-out letters show through.
 const PLATE = "#161616";
+const GLOW = "drop-shadow-[0_0_5px_rgba(216,80,43,0.85)]";
 
 // How a tile sits at rest: SKEW's slant, GROW/TINY's size, and FLAT squashing
 // it down onto its bottom edge. Every animation that writes its own transform
@@ -130,6 +145,15 @@ const REELED = 30;
 const FISH_BODY =
   "a9 15 0 1 0 0 30a9 15 0 1 0 0 -30zm-5.5 9a1.8 1.8 0 1 0 3.6 0a1.8 1.8 0 1 0 -3.6 0z";
 const FISH_TAIL = "l-8 14h16z";
+// BANG: a pistol, muzzle to the right, its grip rooted at the origin; the
+// stick comes out of the muzzle, and the flag hangs off the stick's tip.
+const PISTOL =
+  "M0 -10h46a3 3 0 0 1 0 12h-24l-7 22h-13l5 -22h-7a3 3 0 0 1 0 -12zM21 2a6 6 0 0 0 0 10h4a6 6 0 0 0 0 -10z";
+const MUZZLE = 46;
+const STICK = 96;
+const FLAG_W = 66;
+// The pistol is drawn at gun scale, then blown up to hand scale.
+const GUN_SCALE = 1.9;
 const BITE_FLIPS = [
   [1, 1],
   [-1, -1],
@@ -168,14 +192,16 @@ export function ScrabbleTile({
   gap = 0,
   horns,
   halo = false,
-  diced = false,
+  diced,
   rod = false,
   caught = false,
   bubble = 0,
   hat = 0,
   bites = 0,
+  bang = 0,
   motion,
   onClick,
+  onContextMenu,
   ref,
 }: {
   letter: string;
@@ -186,18 +212,28 @@ export function ScrabbleTile({
   gap?: number;
   horns?: keyof typeof HORNS;
   halo?: boolean;
-  diced?: boolean;
+  diced?: Seed["heap"]; // DICE: set once the tile is cut up
   rod?: boolean;
   caught?: boolean; // the rod has landed its fish
   bubble?: number; // BLOW: nonzero blows one, and a new value another
   hat?: number; // MAGA, likewise
   bites?: number;
+  bang?: number; // BANG: nonzero draws the pistol, and a new value fires again
   glyph?: { shape: Glyph; tile: number; delay: number; char?: string };
   motion?: Motion;
   onClick?: () => void;
+  onContextMenu?: () => void;
   ref?: Ref<SVGSVGElement>;
 }) {
   const tileId = useId();
+  // DICE: this tile's own heap, PILE with its seed's nudges and mirroring.
+  const pile = diced
+    ? PILE.map(([x, y, r], n) => [
+        diced.flip * (x + diced.nudge[n][0]),
+        y + diced.nudge[n][1],
+        diced.flip * (r + diced.nudge[n][2]),
+      ])
+    : PILE;
   // WebKit doesn't repaint a masked shape when only the mask's contents
   // change (the new letter showed up on the next scroll), so the letter is
   // part of the id: the mask reference itself changes with it.
@@ -237,7 +273,7 @@ export function ScrabbleTile({
       viewBox="0 0 100 100"
       aria-hidden
       className={`${GLYPH} shrink-0 touch-manipulation overflow-visible pointer-coarse:cursor-pointer ${
-        look.glow ? "drop-shadow-[0_0_5px_rgba(216,80,43,0.85)]" : SHADOW
+        look.glow ? "" : SHADOW
       }`}
       style={{
         transform: `${motion?.transform ?? ""} ${restPose(look)}`,
@@ -251,6 +287,13 @@ export function ScrabbleTile({
         }, margin-left 500ms ease-in-out 350ms`,
       }}
       onClick={onClick}
+      onContextMenu={
+        onContextMenu &&
+        ((e) => {
+          e.preventDefault();
+          onContextMenu();
+        })
+      }
       ref={ref}
     >
       {/* The tap target. An <svg> is only hit-tested where it actually paints,
@@ -333,7 +376,7 @@ export function ScrabbleTile({
                 pathLength="1"
                 strokeDasharray="1"
                 style={{
-                  animation: `scrabble-chop 130ms ${i * 190}ms ease-in both`,
+                  animation: `scrabble-chop ${DICE_STROKE_MS}ms ${DICE_START_MS + i * DICE_STROKE_GAP}ms ease-in both`,
                 }}
               />
             );
@@ -345,7 +388,7 @@ export function ScrabbleTile({
             y={54 - up / 2}
             textAnchor="middle"
             dominantBaseline="central"
-            fontFamily={FONT}
+            fontFamily={look.mono ? MONO : FONT}
             fontWeight="700"
             fontSize="58"
             fill="#000"
@@ -382,7 +425,7 @@ export function ScrabbleTile({
                 y={54 - up / 2}
                 textAnchor="middle"
                 dominantBaseline="central"
-                fontFamily={FONT}
+                fontFamily={look.mono ? MONO : FONT}
                 fontWeight="700"
                 fontSize="58"
                 fill="#000"
@@ -397,7 +440,7 @@ export function ScrabbleTile({
                 x={oval ? 74 : round ? 77 : 86}
                 y={oval ? 74 : round ? 80 : 86}
                 textAnchor="end"
-                fontFamily={FONT}
+                fontFamily={look.mono ? MONO : FONT}
                 fontWeight="700"
                 fontSize="24"
                 fill="#000"
@@ -409,225 +452,301 @@ export function ScrabbleTile({
           </>
         )}
       </mask>
-      {diced ? (
-        // The same tile nine times over, each clipped to one cell of the cuts,
-        // so that once they're made the pieces can drop separately.
-        Array.from({ length: 9 }, (_, n) => {
-          const [col, row] = [n % 3, Math.floor(n / 3)];
-          const cell = {
-            x: 4 + (92 * col) / 3,
-            y: box.y + (box.height * row) / 3,
-            width: 92 / 3,
-            height: box.height / 3,
-          };
-          return (
+      {bang > 0 && (
+        <g
+          key={bang}
+          fill={fill}
+          transform={`translate(${box.x + box.width + 4} ${box.y + box.height * 0.3}) scale(${GUN_SCALE})`}
+          style={{ transition: "fill 300ms ease-out" }}
+        >
+          <g
+            style={{
+              transformOrigin: "8px 12px",
+              animation: `scrabble-draw ${BANG_DRAW_MS}ms ease-out both, scrabble-recoil 240ms ${BANG_FIRE_AT}ms ease-out`,
+            }}
+          >
+            <path d={PISTOL} />
+            <path
+              d={`M${MUZZLE} -4h${STICK}`}
+              stroke={fill}
+              strokeWidth="3"
+              strokeLinecap="round"
+              style={{
+                transformOrigin: `${MUZZLE}px 0px`,
+                animation: `scrabble-stick ${BANG_STICK_MS}ms ${BANG_FIRE_AT}ms cubic-bezier(.2,.9,.4,1) both`,
+              }}
+            />
             <g
-              key={n}
-              className="scrabble-crumb"
-              style={
-                {
-                  "--dx": `${PILE[n][0] * cell.width}px`,
-                  "--dy": `${PILE[n][1] * cell.height}px`,
-                  "--rot": `${PILE[n][2]}deg`,
-                  // Bottom row settles first, then what was resting on it.
-                  animation: `scrabble-crumble ${DICE_FALL_MS}ms ${DICE_CHOP_MS + (2 - row) * 110}ms cubic-bezier(.55,0,.85,.4) both`,
-                } as React.CSSProperties
-              }
+              style={{
+                transformOrigin: `${MUZZLE + STICK}px 0px`,
+                animation: `scrabble-unfurl ${BANG_UNFURL_MS}ms ${BANG_FIRE_AT + BANG_STICK_MS}ms cubic-bezier(.3,.8,.4,1) both`,
+              }}
             >
-              <clipPath id={`${maskId}-${n}`}>
-                <rect {...cell} />
-              </clipPath>
-              <g clipPath={`url(#${maskId}-${n})`}>
-                <rect
-                  {...box}
-                  rx={undefined}
-                  ry={undefined}
-                  fill={fill}
-                  mask={`url(#${maskId})`}
-                />
-              </g>
+              <rect
+                x={MUZZLE + STICK - FLAG_W}
+                y="-4"
+                width={FLAG_W}
+                height="34"
+                rx="2"
+              />
+              <text
+                x={MUZZLE + STICK - FLAG_W / 2}
+                y="13"
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontFamily={FONT}
+                fontWeight="700"
+                fontSize="24"
+                fill="var(--color-background)"
+              >
+                BANG
+              </text>
             </g>
-          );
-        })
-      ) : (
+          </g>
+        </g>
+      )}
+      {/* The letters are punched out of the tile, so anything behind it
+          would show through them: this backs them with the page. DARK is
+          the exception — its plate is meant to show — and DICE's pieces
+          carry their own fill. */}
+      {!diced && !look.dark && (
         <rect
           {...box}
-          rx={undefined}
-          ry={undefined}
-          fill={fill}
-          opacity={armed ? 0.6 : 1}
-          style={{ transition: `${grow}, fill 300ms ease-out, opacity 300ms` }}
-          mask={`url(#${maskId})`}
+          x={box.x + 1}
+          y={box.y + 1}
+          width={box.width - 2}
+          height={box.height - 2}
+          fill={look.mono ? PHOSPHOR : "var(--color-background)"}
+          style={{ transition: `${grow}, fill 300ms ease-out` }}
         />
       )}
-      {hat > 0 && !diced && (
-        <rect
-          key={hat}
-          x={box.x}
-          y={box.y}
-          width={box.width}
-          height="26"
-          fill="#c8102e"
-          opacity="0"
-          mask={`url(#${maskId})`}
-          style={{ animation: `scrabble-maga ${MAGA_MS}ms ease-in-out` }}
-        />
-      )}
-      {rod && (
-        // A rod out of the top-right corner, the line hanging off its tip and
-        // swinging a little, a float bobbing on the end of it. Once there's a
-        // catch the float goes under and the line comes up short, fish on.
-        <g
-          stroke={fill}
-          strokeLinecap="round"
-          fill="none"
-          className="animate-[scrabble-entry_600ms_ease-out]"
-          style={{ transition: "stroke 300ms ease-out" }}
-        >
-          <path d={`M88 ${box.y + 22}L150 ${tip}`} strokeWidth="4.5" />
-          <g className="scrabble-line">
-            <path
-              d={`M150 ${tip}v${caught ? REELED : cast}`}
-              strokeWidth="1.6"
-              className={caught ? "scrabble-reel-line" : undefined}
-              style={
-                {
-                  transformOrigin: `150px ${tip}px`,
-                  "--slack": cast / REELED,
-                } as React.CSSProperties
-              }
-            />
-            <circle
-              className={caught ? "scrabble-bite" : "scrabble-float"}
-              cx="150"
-              cy={tip + cast + 2}
-              r="5.5"
-              fill={fill}
-              stroke="none"
-            />
-            {caught && (
+      {/* GLOW sits on the face, not the svg, so it shines through the
+          letters onto the backing rather than around the whole tile. */}
+      <g className={look.glow ? GLOW : undefined}>
+        {diced ? (
+          // The same tile nine times over, each clipped to one cell of the cuts,
+          // so that once they're made the pieces can drop separately.
+          Array.from({ length: 9 }, (_, n) => {
+            const [col, row] = [n % 3, Math.floor(n / 3)];
+            const cell = {
+              x: 4 + (92 * col) / 3,
+              y: box.y + (box.height * row) / 3,
+              width: 92 / 3,
+              height: box.height / 3,
+            };
+            return (
               <g
-                className="scrabble-reel"
-                stroke="none"
-                fill={fill}
+                key={n}
+                className="scrabble-crumb"
                 style={
                   {
-                    "--drop": `${cast - REELED}px`,
-                    transition: "fill 300ms ease-out",
+                    "--dx": `${pile[n][0] * cell.width}px`,
+                    "--dy": `${pile[n][1] * cell.height}px`,
+                    "--rot": `${pile[n][2]}deg`,
+                    // Bottom row settles first, then what was resting on it.
+                    animation: `scrabble-crumble ${DICE_FALL_MS}ms ${DICE_CHOP_MS + (2 - row) * 110}ms cubic-bezier(.55,0,.85,.4) both`,
                   } as React.CSSProperties
                 }
               >
-                <g
-                  className="scrabble-wriggle"
-                  style={{ transformOrigin: `150px ${tip + REELED}px` }}
-                >
-                  <path
-                    fillRule="evenodd"
-                    d={`M150 ${tip + REELED}${FISH_BODY}`}
+                <clipPath id={`${maskId}-${n}`}>
+                  <rect {...cell} />
+                </clipPath>
+                <g clipPath={`url(#${maskId}-${n})`}>
+                  <rect
+                    {...box}
+                    rx={undefined}
+                    ry={undefined}
+                    fill={fill}
+                    mask={`url(#${maskId})`}
                   />
-                  <path d={`M150 ${tip + REELED + 26}${FISH_TAIL}`} />
                 </g>
               </g>
-            )}
-          </g>
-        </g>
-      )}
-      {bubble > 0 && (
-        // Swells against the tile's right side, then lets go.
-        <g
-          key={bubble}
-          fill="none"
-          stroke={fill}
-          strokeLinecap="round"
-          transform={`translate(${box.x + box.width + 2} ${box.y + box.height * 0.25})`}
-        >
-          <g
-            className="scrabble-bubble"
+            );
+          })
+        ) : (
+          <rect
+            {...box}
+            rx={undefined}
+            ry={undefined}
+            fill={fill}
+            opacity={armed ? 0.6 : 1}
+            style={{
+              transition: `${grow}, fill 300ms ease-out, opacity 300ms`,
+            }}
+            mask={`url(#${maskId})`}
+          />
+        )}
+        {hat > 0 && !diced && (
+          <rect
+            key={hat}
+            x={box.x}
+            y={box.y}
+            width={box.width}
+            height="26"
+            fill="#c8102e"
             opacity="0"
-            style={{ animation: `scrabble-bubble ${BLOW_MS}ms ease-in-out` }}
+            mask={`url(#${maskId})`}
+            style={{ animation: `scrabble-maga ${MAGA_MS}ms ease-in-out` }}
+          />
+        )}
+        {rod && (
+          // A rod out of the top-right corner, the line hanging off its tip and
+          // swinging a little, a float bobbing on the end of it. Once there's a
+          // catch the float goes under and the line comes up short, fish on.
+          <g
+            stroke={fill}
+            strokeLinecap="round"
+            fill="none"
+            className="animate-[scrabble-entry_600ms_ease-out]"
+            style={{ transition: "stroke 300ms ease-out" }}
           >
-            <circle cx="14" r="14" strokeWidth="2.5" />
-            <path d="M6 -3a9 9 0 0 1 5 -5" strokeWidth="2" />
+            <path d={`M88 ${box.y + 22}L150 ${tip}`} strokeWidth="4.5" />
+            <g className="scrabble-line">
+              <path
+                d={`M150 ${tip}v${caught ? REELED : cast}`}
+                strokeWidth="1.6"
+                className={caught ? "scrabble-reel-line" : undefined}
+                style={
+                  {
+                    transformOrigin: `150px ${tip}px`,
+                    "--slack": cast / REELED,
+                  } as React.CSSProperties
+                }
+              />
+              <circle
+                className={caught ? "scrabble-bite" : "scrabble-float"}
+                cx="150"
+                cy={tip + cast + 2}
+                r="5.5"
+                fill={fill}
+                stroke="none"
+              />
+              {caught && (
+                <g
+                  className="scrabble-reel"
+                  stroke="none"
+                  fill={fill}
+                  style={
+                    {
+                      "--drop": `${cast - REELED}px`,
+                      transition: "fill 300ms ease-out",
+                    } as React.CSSProperties
+                  }
+                >
+                  <g
+                    className="scrabble-wriggle"
+                    style={{ transformOrigin: `150px ${tip + REELED}px` }}
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d={`M150 ${tip + REELED}${FISH_BODY}`}
+                    />
+                    <path d={`M150 ${tip + REELED + 26}${FISH_TAIL}`} />
+                  </g>
+                </g>
+              )}
+            </g>
           </g>
-        </g>
-      )}
-      {halo && (
-        <ellipse
-          cx="50"
-          cy={box.y - 14}
-          rx="30"
-          ry="8"
-          fill="none"
-          stroke={fill}
-          strokeWidth="5"
-          className="animate-[scrabble-entry_700ms_ease-out]"
-          style={{ transition: "stroke 300ms ease-out, cy 900ms ease-in-out" }}
-        />
-      )}
-      {horns && (
-        // Set in a little on a rounded top, where the corners have gone.
-        <g
-          transform={`translate(0 ${box.y + (rx > 12 ? 7 : 0)})`}
-          fill={fill}
-          className="animate-[scrabble-entry_500ms_ease-out]"
-          style={{ transition: "fill 300ms ease-out" }}
-        >
-          <path
-            d={HORNS[horns]}
-            transform={`translate(${rx > 12 ? 9 : 0} 0)`}
-          />
-          <path
-            d={HORNS[horns]}
-            transform={`translate(${rx > 12 ? 91 : 100} 0) scale(-1 1)`}
-          />
-        </g>
-      )}
-      {horns === "devil" && (
-        <g
-          className="animate-[scrabble-entry_500ms_ease-out]"
-          style={{ transition: "fill 300ms ease-out, stroke 300ms ease-out" }}
-        >
-          <path
-            d={TAIL}
+        )}
+        {bubble > 0 && (
+          // Swells against the tile's right side, then lets go.
+          <g
+            key={bubble}
+            fill="none"
+            stroke={fill}
+            strokeLinecap="round"
+            transform={`translate(${box.x + box.width + 2} ${box.y + box.height * 0.25})`}
+          >
+            <g
+              className="scrabble-bubble"
+              opacity="0"
+              style={{ animation: `scrabble-bubble ${BLOW_MS}ms ease-in-out` }}
+            >
+              <circle cx="14" r="14" strokeWidth="2.5" />
+              <path d="M6 -3a9 9 0 0 1 5 -5" strokeWidth="2" />
+            </g>
+          </g>
+        )}
+        {halo && (
+          <ellipse
+            cx="50"
+            cy={box.y - 14}
+            rx="30"
+            ry="8"
             fill="none"
             stroke={fill}
             strokeWidth="5"
-            strokeLinecap="round"
+            className="animate-[scrabble-entry_700ms_ease-out]"
+            style={{
+              transition: "stroke 300ms ease-out, cy 900ms ease-in-out",
+            }}
           />
-          <path d={TAIL_TIP} fill={fill} />
-        </g>
-      )}
-      {look.fire && (
-        // Inside the tile's own svg, so the flames go wherever it goes. Pulled
-        // in and down a little on a rounded top, to stay on the dome.
-        <g
-          transform={
-            rx > 12
-              ? `translate(50 ${box.y + 12}) scale(.72) translate(-50 0)`
-              : `translate(0 ${box.y + 2})`
-          }
-          className="animate-[scrabble-entry_500ms_ease-out]"
-        >
-          <path
-            d={FLAME}
+        )}
+        {horns && (
+          // Set in a little on a rounded top, where the corners have gone.
+          <g
+            transform={`translate(0 ${box.y + (rx > 12 ? 7 : 0)})`}
             fill={fill}
-            className="scrabble-flame"
+            className="animate-[scrabble-entry_500ms_ease-out]"
             style={{ transition: "fill 300ms ease-out" }}
+          >
+            <path
+              d={HORNS[horns]}
+              transform={`translate(${rx > 12 ? 9 : 0} 0)`}
+            />
+            <path
+              d={HORNS[horns]}
+              transform={`translate(${rx > 12 ? 91 : 100} 0) scale(-1 1)`}
+            />
+          </g>
+        )}
+        {horns === "devil" && (
+          <g
+            className="animate-[scrabble-entry_500ms_ease-out]"
+            style={{ transition: "fill 300ms ease-out, stroke 300ms ease-out" }}
+          >
+            <path
+              d={TAIL}
+              fill="none"
+              stroke={fill}
+              strokeWidth="5"
+              strokeLinecap="round"
+            />
+            <path d={TAIL_TIP} fill={fill} />
+          </g>
+        )}
+        {look.fire && (
+          // Inside the tile's own svg, so the flames go wherever it goes. Pulled
+          // in and down a little on a rounded top, to stay on the dome.
+          <g
+            transform={
+              rx > 12
+                ? `translate(50 ${box.y + 12}) scale(.72) translate(-50 0)`
+                : `translate(0 ${box.y + 2})`
+            }
+            className="animate-[scrabble-entry_500ms_ease-out]"
+          >
+            <path
+              d={FLAME}
+              fill={fill}
+              className="scrabble-flame"
+              style={{ transition: "fill 300ms ease-out" }}
+            />
+          </g>
+        )}
+        {look.fuzz && (
+          <path
+            d={hairs(box, box.rx, look.dead ? 12 : box.rx, oval)}
+            stroke={fill}
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            fill="none"
+            opacity={armed ? 0.6 : 1}
+            className="animate-[scrabble-entry_600ms_ease-out]"
+            style={{ transition: "stroke 300ms ease-out, opacity 300ms" }}
           />
-        </g>
-      )}
-      {look.fuzz && (
-        <path
-          d={hairs(box, box.rx, look.dead ? 12 : box.rx, oval)}
-          stroke={fill}
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          fill="none"
-          opacity={armed ? 0.6 : 1}
-          className="animate-[scrabble-entry_600ms_ease-out]"
-          style={{ transition: "stroke 300ms ease-out, opacity 300ms" }}
-        />
-      )}
+        )}
+      </g>
     </svg>
   );
 }
@@ -710,14 +829,19 @@ const codeSide = (i: number) =>
 const PLATE_PAD = 16;
 // PART: extra room opened up in the middle of the rack.
 const PART_PX = 14;
-const partGap = (look: Look, i: number) =>
-  look.part && i === RACK_SIZE / 2 ? PART_PX : 0;
+// HUDDLE: how much of the gap the tiles close up.
+const HUDDLE_PX = TILE_GAP - 6;
+// The margin a tile carries on its left, over the plate's gap.
+const tileGap = (look: Look, i: number) =>
+  (look.part && i === RACK_SIZE / 2 ? PART_PX : 0) -
+  (look.huddle && i > 0 ? HUDDLE_PX : 0);
 // A tile's centre, from the plate's left edge.
 const tileX = (look: Look, i: number) =>
   PLATE_PAD +
   TILE_PX / 2 +
   i * (TILE_PX + TILE_GAP) +
-  (look.part && i >= RACK_SIZE / 2 ? PART_PX : 0);
+  (look.part && i >= RACK_SIZE / 2 ? PART_PX : 0) -
+  (look.huddle ? i * HUDDLE_PX : 0);
 
 // The rack lives outside React so the first client read can roll a random
 // word while the server renders blanks — no hydration mismatch, no setState
@@ -801,7 +925,13 @@ export default function ScrabbleDivider({
   } | null>(null);
   // Bumped per cast, so BLOW can be cast again with a bubble still in the air.
   const [bubble, setBubble] = useState(0);
-  const [exit, setExit] = useState<{ to: Exit; seeds: Seed[] } | null>(null);
+  const [bang, setBang] = useState(0);
+  const found = useFound();
+  const [exit, setExit] = useState<{
+    to: Exit;
+    seeds: Seed[];
+    rust?: boolean;
+  } | null>(null);
   // Set once the last tile is clear of the page: the tiles are swapped for
   // empty spacers, so the hairlines keep their gap.
   const [gone, setGone] = useState(false);
@@ -916,6 +1046,12 @@ export default function ScrabbleDivider({
         if (reducedMotion()) break;
         setBubble((n) => n + 1);
         break;
+      case "bang":
+        setBang((n) => n + 1);
+        break;
+      case "dict":
+        openDict();
+        break;
       case "love":
         if (reducedMotion()) break;
         setLove((l) => ({
@@ -926,10 +1062,23 @@ export default function ScrabbleDivider({
           })),
         }));
         break;
-      case "exit":
+      case "exit": {
         setArmed(null);
-        setExit({ to: spell.to, seeds: seedExit(RACK_SIZE, spell.to) });
+        const go = () =>
+          setExit({
+            to: spell.to,
+            seeds: seedExit(RACK_SIZE, spell.to),
+            rust: spell.rust,
+          });
+        if (!spell.rust) {
+          go();
+          break;
+        }
+        // The tiles huddle up into Ferris's colour first, then he appears.
+        setLook((l) => ({ ...l, tint: RUST, huddle: true }));
+        setTimeout(go, reducedMotion() ? 0 : HUDDLE_MS);
         break;
+      }
       case "look":
         setLook(spell.apply);
         break;
@@ -1287,6 +1436,7 @@ export default function ScrabbleDivider({
     const spell = SPELLS[word];
     if (spell) {
       trackEgg({ egg: "scrabble", event: "cast", word, via });
+      recordFind(word);
       cast(spell);
     }
   };
@@ -1315,12 +1465,14 @@ export default function ScrabbleDivider({
 
   useImperativeHandle(ref, () => ({ spell }));
 
-  const advance = (i: number) => {
+  // A click steps a tile forward through CYCLE, a right-click back.
+  const advance = (i: number, by: 1 | -1 = 1) => {
     if (exit || stopped) return;
     const next = [...tiles];
     // A played blank is still a blank: clicking it steps on to A like one.
     const from = tiles[i].blank ? "" : tiles[i].letter;
-    const letter = CYCLE[(CYCLE.indexOf(from) + 1) % CYCLE.length];
+    const letter =
+      CYCLE[(CYCLE.indexOf(from) + by + CYCLE.length) % CYCLE.length];
     next[i] = { letter };
     setArmed(letter === "" ? i : null);
     play(next, "click");
@@ -1451,6 +1603,13 @@ export default function ScrabbleDivider({
             />
           </div>
         )}
+        {found.open && (
+          // DICT's book: always beside the rack, sat on the right-hand
+          // hairline just past the tiles, whatever the width.
+          <div className="absolute top-1/2 left-[calc(50%+148px)] z-20 -translate-y-1/2">
+            <Dict words={found.words} />
+          </div>
+        )}
         <DividerRow left={mark("meta")} right={mark("game")}>
           {/* The dark-mode plate: the letters are punched out of the tiles, so
             in dark mode this is what shows through them. Negative margins keep
@@ -1468,11 +1627,7 @@ export default function ScrabbleDivider({
           >
             {exit?.to === "crab" && !gone && !reducedMotion() && (
               <Crab
-                width={
-                  RACK_SIZE * TILE_PX +
-                  (RACK_SIZE - 1) * TILE_GAP +
-                  (look.part ? PART_PX : 0)
-                }
+                width={tileX(look, RACK_SIZE - 1) - tileX(look, 0) + TILE_PX}
                 height={TILE_PX}
                 pad={[PLATE_PAD, 10]}
                 gaps={Array.from({ length: RACK_SIZE - 1 }, (_, i) => [
@@ -1481,6 +1636,7 @@ export default function ScrabbleDivider({
                 ])}
                 color={tileFill(look)}
                 wait={CRAB_MS * CRAB_WAIT}
+                ferris={exit.rust}
               />
             )}
             {/* Blurred so it reads as a shadow pooling under the rack, not a box. */}
@@ -1569,7 +1725,7 @@ export default function ScrabbleDivider({
                 <span
                   key={i}
                   className={`${GLYPH} shrink-0`}
-                  style={{ marginLeft: partGap(look, i) }}
+                  style={{ marginLeft: tileGap(look, i) }}
                 />
               ) : (
                 <ScrabbleTile
@@ -1579,12 +1735,13 @@ export default function ScrabbleDivider({
                   flash={flash ?? undefined}
                   armed={armed === i}
                   look={look}
-                  gap={partGap(look, i)}
+                  gap={tileGap(look, i)}
                   halo={look.good && i === 0}
-                  diced={exit?.to === "dice"}
+                  diced={exit?.to === "dice" ? exit.seeds[i].heap : undefined}
                   rod={look.fish && i === RACK_SIZE - 1}
                   caught={look.catch}
                   bubble={i === RACK_SIZE - 1 ? bubble : 0}
+                  bang={i === RACK_SIZE - 1 ? bang : 0}
                   hat={maga}
                   bites={look.bites.filter((t) => t === i).length}
                   horns={
@@ -1606,6 +1763,7 @@ export default function ScrabbleDivider({
                   }
                   motion={motionFor(i)}
                   onClick={() => advance(i)}
+                  onContextMenu={() => advance(i, -1)}
                   ref={(el) => {
                     tileRefs.current[i] = el;
                   }}
