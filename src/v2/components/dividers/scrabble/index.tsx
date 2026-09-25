@@ -1962,7 +1962,9 @@ export default function ScrabbleDivider({
       </div>
       {shower && <Weather key={shower.id} shower={shower} color={CHARCOAL} />}
       {acid && <Acid key={acid.id} trip={acid.trip} />}
-      {hack > 0 && <Matrix key={hack} onDone={() => setHack(0)} />}
+      {hack > 0 && (
+        <Matrix key={hack} color={CHARCOAL} onDone={() => setHack(0)} />
+      )}
       {sudo > 0 && <Sudo key={sudo} onClose={() => setSudo(0)} />}
     </>
   );

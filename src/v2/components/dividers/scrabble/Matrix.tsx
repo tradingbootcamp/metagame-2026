@@ -2,12 +2,13 @@
 
 import { useEffect, useRef } from "react";
 
-// HACK: digital rain over the whole viewport for HACK_MS. The page dims
-// under it, columns of glyphs fall at their own speeds with a bright
-// head and a fading tail, and the odd glyph in a tail changes as it falls.
-// Drawn on a canvas from a rAF loop; React only mounts and unmounts it. The
-// fade in and out is scrabble-hack in globals.css.
-export const HACK_MS = 5000;
+// HACK: digital rain over the whole viewport for HACK_MS, in the tiles'
+// charcoal on the page as it is. A beat of nothing, then it fades in, columns
+// of glyphs falling at their own speeds with a dark head and a fading tail,
+// the odd glyph in a tail changing as it falls, and it fades back out. Drawn
+// on a canvas from a rAF loop; React only mounts and unmounts it. The fades
+// are scrabble-hack in globals.css.
+export const HACK_MS = 9000;
 
 const CELL = 16;
 const FONT = `${CELL - 2}px ui-monospace, Menlo, monospace`;
@@ -23,7 +24,13 @@ type Column = {
   chars: string[]; // one per row, the column's own text
 };
 
-export default function Matrix({ onDone }: { onDone: () => void }) {
+export default function Matrix({
+  color,
+  onDone,
+}: {
+  color: string;
+  onDone: () => void;
+}) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const done = useRef(onDone);
 
@@ -44,11 +51,12 @@ export default function Matrix({ onDone }: { onDone: () => void }) {
     ctx.scale(dpr, dpr);
     ctx.font = FONT;
     ctx.textBaseline = "top";
+    ctx.fillStyle = color;
     const rows = Math.ceil(H / CELL) + 1;
     const cols: Column[] = Array.from({ length: Math.ceil(W / CELL) }, () => ({
       // Already mid-fall: there's only HACK_MS to fill.
       head: Math.random() * rows * 1.3 - rows * 0.3,
-      speed: 9 + Math.random() * 14,
+      speed: 3 + Math.random() * 5,
       tail: 6 + Math.floor(Math.random() * 18),
       chars: Array.from({ length: rows }, glyph),
     }));
@@ -63,7 +71,7 @@ export default function Matrix({ onDone }: { onDone: () => void }) {
         // Off the bottom, tail and all: start over from above the top.
         if (c.head - c.tail > rows) {
           c.head = -Math.random() * rows * 0.3;
-          c.speed = 9 + Math.random() * 14;
+          c.speed = 3 + Math.random() * 5;
           c.tail = 6 + Math.floor(Math.random() * 18);
         }
         const x = i * CELL;
@@ -72,11 +80,7 @@ export default function Matrix({ onDone }: { onDone: () => void }) {
           const row = headRow - k;
           if (row < 0 || row >= rows) continue;
           if (Math.random() < 0.02) c.chars[row] = glyph();
-          const a = 1 - k / c.tail;
-          ctx.fillStyle =
-            k === 0
-              ? "rgba(200,255,200,0.85)"
-              : `rgba(0,230,70,${(a * 0.6).toFixed(2)})`;
+          ctx.globalAlpha = k === 0 ? 1 : 0.55 * (1 - k / c.tail);
           ctx.fillText(c.chars[row], x, row * CELL);
         }
       });
@@ -88,12 +92,14 @@ export default function Matrix({ onDone }: { onDone: () => void }) {
       cancelAnimationFrame(raf);
       clearTimeout(t);
     };
+    // The colour is read once at mount: a rain that's already falling keeps it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0 z-50 overflow-hidden bg-black/65"
+      className="pointer-events-none fixed inset-0 z-50 overflow-hidden"
       style={{ animation: `scrabble-hack ${HACK_MS}ms linear both` }}
     >
       <canvas ref={canvas} className="size-full" />

@@ -713,14 +713,15 @@ button:not(:disabled) {
 }
 
 /* STAR / MOON: the letter gives way to the glyph, then comes back. */
-/* HACK: the rain eases in over the first second or so and out over the last (Matrix.tsx). */
+/* HACK: a beat of nothing, a slow fade in, a hold, a slower fade out (Matrix.tsx). */
 @keyframes scrabble-hack {
   0%,
+  8%,
   100% {
     opacity: 0;
   }
-  22%,
-  74% {
+  30%,
+  68% {
     opacity: 1;
   }
 }
