@@ -80,7 +80,7 @@ export default function Matrix({
           const row = headRow - k;
           if (row < 0 || row >= rows) continue;
           if (Math.random() < 0.02) c.chars[row] = glyph();
-          ctx.globalAlpha = k === 0 ? 0.6 : 0.32 * (1 - k / c.tail);
+          ctx.globalAlpha = k === 0 ? 0.7 : 0.4 * (1 - k / c.tail);
           ctx.fillText(c.chars[row], x, row * CELL);
         }
       });
@@ -102,7 +102,8 @@ export default function Matrix({
       className="pointer-events-none fixed inset-0 z-50 overflow-hidden"
       style={{ animation: `scrabble-hack ${HACK_MS}ms linear both` }}
     >
-      <canvas ref={canvas} className="size-full" />
+      {/* A touch of blur softens the glyphs' edges into the page. */}
+      <canvas ref={canvas} className="size-full blur-[0.8px]" />
     </div>
   );
 }
