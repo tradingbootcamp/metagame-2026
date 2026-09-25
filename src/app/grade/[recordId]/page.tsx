@@ -6,15 +6,16 @@ import { swatch } from "@/lib/airtable-colors";
 import { isConfigured, readSession } from "@/lib/grader-auth";
 import {
   CONTEXT_FIELDS,
+  DECISION_FIELDS,
   getSubmission,
   hostPicture,
+  NEXT_STEPS_DECIDE,
   NEXT_STEPS_FIELD,
   optionColors,
   VERDICT_FIELD,
   INTERNAL_FIELDS,
   META_FIELDS,
   resolveDisplayFields,
-  resolveGradingStatuses,
   resolveEditableFields,
   type Submission,
 } from "@/lib/rfp-rubric";
@@ -104,14 +105,22 @@ export default async function SubmissionPage(
   if (!submission) notFound();
 
   const picture = hostPicture(submission);
-  const [internalFields, contextFields, metaFields, statuses, colors] =
+  const [internalFields, contextFields, metaFields, decisionFields, colors] =
     await Promise.all([
       resolveDisplayFields(INTERNAL_FIELDS),
       resolveDisplayFields(CONTEXT_FIELDS),
       resolveEditableFields(META_FIELDS),
-      resolveGradingStatuses(),
+      resolveEditableFields(DECISION_FIELDS),
       optionColors([VERDICT_FIELD, NEXT_STEPS_FIELD]),
     ]);
+
+  // Null if Airtable stopped offering the step, so the form drops the prompt
+  // rather than writing a value the column would reject without saying so.
+  const advanceTo = decisionFields
+    .find((f) => f.field === NEXT_STEPS_FIELD)
+    ?.options.includes(NEXT_STEPS_DECIDE)
+    ? NEXT_STEPS_DECIDE
+    : null;
 
   return (
     <div className="space-y-8">
@@ -144,8 +153,9 @@ export default async function SubmissionPage(
           value={submission.grader ?? "Unassigned"}
           description="The committee member assigned to grade this proposal, from the Rubric: Grader column in Airtable."
         />
-        {/* Read-only here on purpose: the committee sets these from the
-            overview, not a grader from inside their own rubric. */}
+        {/* The verdict is the committee's call, made from the overview, not
+            a grader's from inside their own rubric. Next steps is read-only
+            here too, but the save bar below can advance it out of grading. */}
         <Row
           label="Verdict"
           value={submission.verdict ?? "Not set"}
@@ -156,7 +166,7 @@ export default async function SubmissionPage(
           label="Next steps"
           value={submission.nextSteps ?? "Not set"}
           color={colors[NEXT_STEPS_FIELD][submission.nextSteps ?? ""]}
-          description="Where this is in the processing pipeline. Set from the overview, not here."
+          description="Where this is in the processing pipeline. Set from the overview, or advanced past grading when you save below."
         />
         {rowsFor(submission, internalFields).map((row) => (
           <Row key={row.label} {...row} />
@@ -173,7 +183,8 @@ export default async function SubmissionPage(
         recordId={submission.id}
         initial={submission.fields}
         metaFields={metaFields}
-        statuses={statuses}
+        nextSteps={submission.nextSteps}
+        advanceTo={advanceTo}
       />
     </div>
   );
