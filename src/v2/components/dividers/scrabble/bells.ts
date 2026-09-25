@@ -99,7 +99,7 @@ export function ringBell(which: keyof typeof BELLS) {
 
 // GONG: the one sound that isn't synthesised — a tam-tam's shimmer is too
 // much for a handful of oscillators — so it's a sample, fetched on the first
-// cast and kept.
+// cast and kept. CC0, "Meditation Gong" on Wikimedia Commons, trimmed to 8s.
 const GONG_URL = "/sounds/gong.mp3";
 let gong: Promise<AudioBuffer> | null = null;
 
@@ -116,7 +116,7 @@ export function gongSound() {
       const src = ac.createBufferSource();
       src.buffer = buf;
       const env = ac.createGain();
-      env.gain.value = MASTER * 2;
+      env.gain.value = MASTER * 1.5;
       src.connect(env).connect(ac.destination);
       src.start();
     })
