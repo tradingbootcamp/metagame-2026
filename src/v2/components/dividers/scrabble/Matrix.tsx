@@ -2,8 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
-// HACK: digital rain over the whole viewport for HACK_MS. The page goes near
-// black under it, columns of glyphs fall at their own speeds with a bright
+// HACK: digital rain over the whole viewport for HACK_MS. The page dims
+// under it, columns of glyphs fall at their own speeds with a bright
 // head and a fading tail, and the odd glyph in a tail changes as it falls.
 // Drawn on a canvas from a rAF loop; React only mounts and unmounts it. The
 // fade in and out is scrabble-hack in globals.css.
@@ -75,8 +75,8 @@ export default function Matrix({ onDone }: { onDone: () => void }) {
           const a = 1 - k / c.tail;
           ctx.fillStyle =
             k === 0
-              ? "rgba(220,255,220,1)"
-              : `rgba(0,255,70,${(a * 0.9).toFixed(2)})`;
+              ? "rgba(200,255,200,0.85)"
+              : `rgba(0,230,70,${(a * 0.6).toFixed(2)})`;
           ctx.fillText(c.chars[row], x, row * CELL);
         }
       });
@@ -93,7 +93,7 @@ export default function Matrix({ onDone }: { onDone: () => void }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0 z-50 overflow-hidden bg-black/85"
+      className="pointer-events-none fixed inset-0 z-50 overflow-hidden bg-black/65"
       style={{ animation: `scrabble-hack ${HACK_MS}ms linear both` }}
     >
       <canvas ref={canvas} className="size-full" />

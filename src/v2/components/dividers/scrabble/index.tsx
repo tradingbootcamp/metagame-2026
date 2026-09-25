@@ -12,7 +12,14 @@ import {
 import { Heart } from "lucide-react";
 import DividerRow from "../DividerRow";
 import { GLYPH, SHADOW } from "../sizing";
-import { bassSound, coinSound, dialTone, ringBell, singSound } from "./bells";
+import {
+  bassSound,
+  coinSound,
+  dialTone,
+  gongSound,
+  ringBell,
+  singSound,
+} from "./bells";
 import { FLAME } from "./fire";
 import { hairs } from "./fuzz";
 import Crab from "./Crab";
@@ -1092,6 +1099,9 @@ export default function ScrabbleDivider({
         break;
       case "bass":
         bassSound();
+        break;
+      case "gong":
+        gongSound();
         break;
       case "hack":
         if (reducedMotion()) break;

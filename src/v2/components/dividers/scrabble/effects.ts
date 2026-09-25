@@ -99,16 +99,10 @@ export const BITES_TO_FINISH = 6;
 export type Spell =
   | {
       kind: "bell";
-      which:
-        | "bing"
-        | "bong"
-        | "bell"
-        | "ding"
-        | "dong"
-        | "ting"
-        | "ring"
-        | "gong";
+      which: "bing" | "bong" | "bell" | "ding" | "dong" | "ting" | "ring";
     }
+  // The one sampled sound: public/sounds/gong.mp3.
+  | { kind: "gong" }
   // A run of la-la-las up the arpeggio (SING) or back down it (SONG).
   | { kind: "sing"; dir: "up" | "down" }
   // A game of pong behind the tiles, playing itself.
@@ -149,7 +143,7 @@ export const SPELLS: Record<string, Spell> = {
   DONG: { kind: "bell", which: "dong" },
   TING: { kind: "bell", which: "ting" },
   RING: { kind: "bell", which: "ring" },
-  GONG: { kind: "bell", which: "gong" },
+  GONG: { kind: "gong" },
   SING: { kind: "sing", dir: "up" },
   SONG: { kind: "sing", dir: "down" },
   PONG: { kind: "pong" },

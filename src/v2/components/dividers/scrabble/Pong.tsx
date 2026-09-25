@@ -15,6 +15,11 @@ const PADDLE_W = 3;
 const BALL_R = 2.5;
 const SERVE_SPEED = 130; // px/s
 const SPEED_UP = 1.09;
+const MAX_SPEED = SERVE_SPEED * 2;
+// Kept tight: never flatter than MIN_ANGLE off a paddle or a serve, never
+// steeper than MAX_ANGLE, in radians.
+const MIN_ANGLE = 0.12;
+const MAX_ANGLE = 0.5;
 const PADDLE_SPEED = 95; // px/s; slower than a fast ball, so points get lost
 const SERVE_WAIT = 700; // ms between a point and the next serve
 
@@ -47,6 +52,12 @@ export default function Pong({
     scoreR.current?.setAttribute("x", String(W - 12));
     const score = [0, 0];
     const pad = [H / 2, H / 2]; // paddle centres
+    // Where on its paddle each side means to take the ball: rolled afresh
+    // for every approach, so returns come off at all sorts of angles.
+    const aim = [0, 0];
+    const reaim = (i: number) => {
+      aim[i] = (Math.random() - 0.5) * PADDLE_H * 0.7;
+    };
     let x = W / 2;
     let y = H / 2;
     let vx = 0;
@@ -60,9 +71,12 @@ export default function Pong({
     const serve = () => {
       x = W / 2;
       y = H * (0.3 + Math.random() * 0.4);
-      const a = (Math.random() - 0.5) * 0.9;
+      const a =
+        (Math.random() < 0.5 ? -1 : 1) *
+        (MIN_ANGLE + Math.random() * (MAX_ANGLE - MIN_ANGLE) * 0.6);
       vx = toward * SERVE_SPEED * Math.cos(a);
       vy = SERVE_SPEED * Math.sin(a);
+      reaim(toward < 0 ? 0 : 1);
     };
 
     const paint = () => {
@@ -94,7 +108,7 @@ export default function Pong({
       // Each paddle only bothers when the ball is coming its way.
       const step = PADDLE_SPEED * dt;
       const chase = (i: number) => {
-        const d = y - pad[i];
+        const d = y + aim[i] - pad[i];
         pad[i] += Math.abs(d) < step ? d : Math.sign(d) * step;
         pad[i] = Math.max(PADDLE_H / 2, Math.min(H - PADDLE_H / 2, pad[i]));
       };
@@ -113,11 +127,14 @@ export default function Pong({
         // Where on the paddle it lands sets the angle: the ends send it off
         // steeply, as in the original.
         const off = (y - pad[i]) / (PADDLE_H / 2);
-        const speed = Math.hypot(vx, vy) * SPEED_UP;
-        const a = off * 1.1;
+        const speed = Math.min(MAX_SPEED, Math.hypot(vx, vy) * SPEED_UP);
+        const a =
+          Math.sign(off || vy || 1) *
+          Math.min(MAX_ANGLE, Math.max(MIN_ANGLE, Math.abs(off) * MAX_ANGLE));
         vx = (i === 0 ? 1 : -1) * speed * Math.cos(a);
         vy = speed * Math.sin(a);
         x = edge;
+        reaim(i === 0 ? 1 : 0);
       };
       const lEdge = PADDLE_W + BALL_R;
       const rEdge = W - PADDLE_W - BALL_R;

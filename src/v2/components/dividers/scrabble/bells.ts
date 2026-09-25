@@ -1,4 +1,4 @@
-// Bells for the BING / BONG / BELL / DING / DONG / TING / RING / GONG racks,
+// Bells for the BING / BONG / BELL / DING / DONG / TING / RING racks,
 // synthesised with Web Audio so the easter egg costs no assets. A bell is a fundamental plus inharmonic
 // partials, each an exponential decay — the ratios below are what separate a
 // struck bell from a plain beep.
@@ -45,27 +45,8 @@ const strike = (
     delay,
   }));
 
-// A tam-tam: a dense, unpitched crowd of partials over a low fundamental. The
-// strike itself is dull; the shimmer blooms in over the next half second and
-// outlasts the thud, which is the whole character of the thing.
-const GONG_BASE = 82;
-const GONG: Voice[] = [
-  { freq: GONG_BASE, gain: 1, decay: 6, attack: 0.02 },
-  { freq: GONG_BASE * 1.52, gain: 0.55, decay: 5.5, attack: 0.05 },
-  { freq: GONG_BASE * 2.08, gain: 0.5, decay: 5, attack: 0.1 },
-  { freq: GONG_BASE * 2.61, gain: 0.4, decay: 4.6, attack: 0.18 },
-  { freq: GONG_BASE * 3.27, gain: 0.38, decay: 4.2, attack: 0.28 },
-  { freq: GONG_BASE * 3.94, gain: 0.32, decay: 3.9, attack: 0.36 },
-  { freq: GONG_BASE * 4.73, gain: 0.28, decay: 3.6, attack: 0.45 },
-  { freq: GONG_BASE * 5.61, gain: 0.24, decay: 3.3, attack: 0.55 },
-  { freq: GONG_BASE * 6.82, gain: 0.18, decay: 3, attack: 0.65 },
-  { freq: GONG_BASE * 8.11, gain: 0.14, decay: 2.6, attack: 0.75 },
-  { freq: GONG_BASE * 9.7, gain: 0.1, decay: 2.2, attack: 0.85 },
-  { freq: GONG_BASE * 11.9, gain: 0.07, decay: 1.8, attack: 0.95 },
-];
-
 export const BELLS: Record<
-  "bing" | "bong" | "bell" | "ding" | "dong" | "ting" | "ring" | "gong",
+  "bing" | "bong" | "bell" | "ding" | "dong" | "ting" | "ring",
   Voice[]
 > = {
   // A low church-ish bell, one strike, long tail.
@@ -84,7 +65,6 @@ export const BELLS: Record<
   dong: strike(1046.5, 1.2, 0.8),
   // One tubular chime, left to ring.
   ring: strike(880, 2.6, 0.8, { partials: CHIME }),
-  gong: GONG,
 };
 
 let ctx: AudioContext | null = null;
@@ -115,42 +95,52 @@ export function ringBell(which: keyof typeof BELLS) {
     osc.start(t);
     osc.stop(t + v.decay + 0.05);
   }
-  if (which === "gong") thud(ac, t0);
 }
 
-// The mallet landing: a short puff of low noise under the gong's partials.
-function thud(ac: AudioContext, t: number) {
-  const len = Math.floor(ac.sampleRate * 0.25);
-  const buf = ac.createBuffer(1, len, ac.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
-  const src = ac.createBufferSource();
-  src.buffer = buf;
-  const lp = ac.createBiquadFilter();
-  lp.type = "lowpass";
-  lp.frequency.setValueAtTime(900, t);
-  lp.frequency.exponentialRampToValueAtTime(120, t + 0.2);
-  const env = ac.createGain();
-  env.gain.setValueAtTime(MASTER * 1.4, t);
-  env.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
-  src.connect(lp).connect(env).connect(ac.destination);
-  src.start(t);
-  src.stop(t + 0.3);
+// GONG: the one sound that isn't synthesised — a tam-tam's shimmer is too
+// much for a handful of oscillators — so it's a sample, fetched on the first
+// cast and kept.
+const GONG_URL = "/sounds/gong.mp3";
+let gong: Promise<AudioBuffer> | null = null;
+
+export function gongSound() {
+  const AC = window.AudioContext ?? window.webkitAudioContext;
+  if (!AC) return;
+  const ac = (ctx ??= new AC());
+  if (ac.state === "suspended") void ac.resume();
+  gong ??= fetch(GONG_URL)
+    .then((r) => r.arrayBuffer())
+    .then((b) => ac.decodeAudioData(b));
+  gong
+    .then((buf) => {
+      const src = ac.createBufferSource();
+      src.buffer = buf;
+      const env = ac.createGain();
+      env.gain.value = MASTER * 2;
+      src.connect(env).connect(ac.destination);
+      src.start();
+    })
+    .catch(() => {
+      // No file, or one the browser can't decode: the next cast tries again.
+      gong = null;
+    });
 }
 
-// SING / SONG: seven "la"s up or down a major arpeggio. Each la is a sawtooth
+// SING / SONG: seven "la"s up the arpeggio and back (1 3 5 8 5 3 1), or
+// SONG's mirror of it, down from the top. Each la is a sawtooth
 // pushed through two formant filters (an open "ah"), with a quick slide up
 // into the note the way a voice lands on one, and a little vibrato once it's
 // there.
 const LA_MS = 190;
-const ARPEGGIO = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98, 2093];
+const UP = [523.25, 659.25, 783.99, 1046.5, 783.99, 659.25, 523.25];
+const DOWN = [1046.5, 783.99, 659.25, 523.25, 659.25, 783.99, 1046.5];
 
 export function singSound(dir: "up" | "down") {
   const AC = window.AudioContext ?? window.webkitAudioContext;
   if (!AC) return;
   const ac = (ctx ??= new AC());
   if (ac.state === "suspended") void ac.resume();
-  const notes = dir === "up" ? ARPEGGIO : [...ARPEGGIO].reverse();
+  const notes = dir === "up" ? UP : DOWN;
   const t0 = ac.currentTime + 0.02;
   // The vowel is the same for every note, so one pair of formants serves all
   // seven. Sung high, "ah" sits with its mouth a little wider open.
