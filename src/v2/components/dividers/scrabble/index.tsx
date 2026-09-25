@@ -12,10 +12,12 @@ import {
 import { Heart } from "lucide-react";
 import DividerRow from "../DividerRow";
 import { GLYPH, SHADOW } from "../sizing";
-import { coinSound, dialTone, ringBell } from "./bells";
+import { bassSound, coinSound, dialTone, ringBell, singSound } from "./bells";
 import { FLAME } from "./fire";
 import { hairs } from "./fuzz";
 import Crab from "./Crab";
+import Pong from "./Pong";
+import Matrix from "./Matrix";
 import Acid, { ACID_MS, rollTrip, type Trip } from "./Acid";
 import Sudo, { SUDO_MS } from "./Sudo";
 import Weather, { rollShower, showerMs, type Shower } from "./Weather";
@@ -192,6 +194,7 @@ export function ScrabbleTile({
   gap = 0,
   horns,
   halo = false,
+  crown = false,
   diced,
   rod = false,
   caught = false,
@@ -212,6 +215,7 @@ export function ScrabbleTile({
   gap?: number;
   horns?: keyof typeof HORNS;
   halo?: boolean;
+  crown?: boolean;
   diced?: Seed["heap"]; // DICE: set once the tile is cut up
   rod?: boolean;
   caught?: boolean; // the rod has landed its fish
@@ -382,7 +386,7 @@ export function ScrabbleTile({
             );
           })}
         {glyph?.char && (
-          // TIME: a digit, centred, since the score steps aside for it.
+          // TIME / PING: a digit, centred, since the score steps aside for it.
           <text
             x="50"
             y={54 - up / 2}
@@ -390,7 +394,7 @@ export function ScrabbleTile({
             dominantBaseline="central"
             fontFamily={look.mono ? MONO : FONT}
             fontWeight="700"
-            fontSize="58"
+            fontSize={glyph.char.length > 1 ? 40 : 58}
             fill="#000"
             opacity="0"
             style={{
@@ -715,6 +719,28 @@ export function ScrabbleTile({
             <path d={TAIL_TIP} fill={fill} />
           </g>
         )}
+        {crown && (
+          // Sat on the top edge; set in and down a little on a rounded top.
+          <g
+            transform={
+              rx > 12
+                ? `translate(50 ${box.y + 8}) scale(.8) translate(-50 0)`
+                : `translate(0 ${box.y})`
+            }
+            fill={fill}
+            className="animate-[scrabble-entry_500ms_ease-out]"
+            style={{ transition: "fill 300ms ease-out" }}
+          >
+            <path d={CROWN} />
+            {[
+              [17, -31],
+              [50, -38],
+              [83, -31],
+            ].map(([cx, cy]) => (
+              <circle key={cx} cx={cx} cy={cy} r="5" />
+            ))}
+          </g>
+        )}
         {look.fire && (
           // Inside the tile's own svg, so the flames go wherever it goes. Pulled
           // in and down a little on a rounded top, to stay on the dome.
@@ -757,6 +783,8 @@ const HORNS = {
   devil: "M8 12C-10 8-16-12-5-28-6-13 2-3 26 5Z",
   bull: "M6 24C-14 24-28 10-25-14-17 2-5 7 14 5Z",
 };
+// KING: three points and a band, the jewels drawn on top.
+const CROWN = "M17 0V-28L34 -13L50 -35L66 -13L83 -28V0Z";
 // EVIL's tail: out of the bottom-left, an S-bend, and a spade on the end.
 const TAIL = "M8 84C-12 90-30 76-20 60-14 50-24 44-30 38";
 const TAIL_TIP = "M-40 42L-33 22-20 38Z";
@@ -785,10 +813,30 @@ const MOONS = [
 // TIME: the local time as the rack's four digits, 12-hour.
 const clock = () => {
   const now = new Date();
-  return (
-    String(now.getHours() % 12 || 12).padStart(2, "0") +
-    String(now.getMinutes()).padStart(2, "0")
-  );
+  return [
+    ...(String(now.getHours() % 12 || 12).padStart(2, "0") +
+      String(now.getMinutes()).padStart(2, "0")),
+  ];
+};
+
+// PING: the best of three round trips to /api/ping, as the rack's characters:
+// digits then "ms" on the last tile, or seconds past a whole one. A blank
+// tile is a leading space.
+const PINGS = 3;
+const ping = async (): Promise<string[]> => {
+  let best = Infinity;
+  for (let i = 0; i < PINGS; i++) {
+    const t = performance.now();
+    try {
+      await fetch(`/api/ping?t=${Date.now()}`, { cache: "no-store" });
+    } catch {
+      return [..."lost"];
+    }
+    best = Math.min(best, performance.now() - t);
+  }
+  if (best >= 10_000) return [..."slow"];
+  if (best >= 1000) return [...(best / 1000).toFixed(1), "s"];
+  return [...String(Math.round(best)).padStart(RACK_SIZE - 1, " "), "ms"];
 };
 
 const glyphPath = (shape: Glyph, tile: number) =>
@@ -896,12 +944,15 @@ export default function ScrabbleDivider({
   const [glyph, setGlyph] = useState<{
     id: number;
     shape: Glyph;
-    chars?: string;
+    chars?: string[];
   } | null>(null);
   const [shower, setShower] = useState<(Shower & { id: number }) | null>(null);
   // Bumped per cast; the effect below does the flickering.
   const [rand, setRand] = useState(0);
   const [acid, setAcid] = useState<{ id: number; trip: Trip } | null>(null);
+  // PONG / HACK: nonzero while one's on; a recast starts a fresh one.
+  const [pong, setPong] = useState(0);
+  const [hack, setHack] = useState(0);
   const [sudo, setSudo] = useState(0);
   const [stopped, setStopped] = useState(false);
   // TONE runs for minutes: STOP ends it, so does leaving the page, and once an
@@ -1026,6 +1077,25 @@ export default function ScrabbleDivider({
           shape: spell.shape,
           chars: spell.shape === "time" ? clock() : undefined,
         }));
+        break;
+      case "ping":
+        void ping().then((chars) =>
+          setGlyph((g) => ({ id: (g?.id ?? 0) + 1, shape: "ping", chars })),
+        );
+        break;
+      case "pong":
+        if (reducedMotion()) break;
+        setPong((n) => n + 1);
+        break;
+      case "sing":
+        singSound(spell.dir);
+        break;
+      case "bass":
+        bassSound();
+        break;
+      case "hack":
+        if (reducedMotion()) break;
+        setHack((n) => n + 1);
         break;
       case "weather":
         if (reducedMotion()) break;
@@ -1625,6 +1695,13 @@ export default function ScrabbleDivider({
                 : undefined
             }
           >
+            {pong > 0 && !gone && (
+              <Pong
+                key={pong}
+                color={tileFill(look)}
+                onDone={() => setPong(0)}
+              />
+            )}
             {exit?.to === "crab" && !gone && !reducedMotion() && (
               <Crab
                 width={tileX(look, RACK_SIZE - 1) - tileX(look, 0) + TILE_PX}
@@ -1687,7 +1764,7 @@ export default function ScrabbleDivider({
                 />
               </span>
             )}
-            {glyph?.chars && (
+            {glyph?.shape === "time" && (
               <span
                 key={`colon-${glyph.id}`}
                 aria-hidden
@@ -1737,6 +1814,7 @@ export default function ScrabbleDivider({
                   look={look}
                   gap={tileGap(look, i)}
                   halo={look.good && i === 0}
+                  crown={look.crown && i === 0}
                   diced={exit?.to === "dice" ? exit.seeds[i].heap : undefined}
                   rod={look.fish && i === RACK_SIZE - 1}
                   caught={look.catch}
@@ -1874,6 +1952,7 @@ export default function ScrabbleDivider({
       </div>
       {shower && <Weather key={shower.id} shower={shower} color={CHARCOAL} />}
       {acid && <Acid key={acid.id} trip={acid.trip} />}
+      {hack > 0 && <Matrix key={hack} onDone={() => setHack(0)} />}
       {sudo > 0 && <Sudo key={sudo} onClose={() => setSudo(0)} />}
     </>
   );
