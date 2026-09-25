@@ -6,13 +6,14 @@ import { cookies } from "next/headers";
 // control. If that stops being good enough, give each grader their own passcode
 // and check it here; nothing outside this file needs to change.
 //
-// The two are separate steps so the roster (committee names + emails, read from
-// Airtable) is never rendered to someone who hasn't given the password.
+// The two are separate steps so the roster (committee names, read from the
+// assignee column in Airtable) is never rendered to someone who hasn't given
+// the password.
 
 const COOKIE = "mg_grader";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
-export type Grader = { name: string; email: string };
+export type Grader = { name: string };
 /** `grader: null` = password accepted, still need to say who you are. */
 export type Session = { grader: Grader | null };
 
@@ -81,13 +82,10 @@ export async function readSession(): Promise<Session | null> {
       Buffer.from(payload, "base64url").toString(),
     );
     if (typeof exp !== "number" || exp < Date.now()) return null;
-    if (
-      grader !== null &&
-      (typeof grader?.email !== "string" || typeof grader?.name !== "string")
-    ) {
-      return null;
-    }
-    return { grader };
+    if (grader !== null && typeof grader?.name !== "string") return null;
+    // Rebuilt rather than passed through, so cookies issued back when graders
+    // were collaborators drop their stale email instead of carrying it around.
+    return { grader: grader && { name: grader.name } };
   } catch {
     return null;
   }

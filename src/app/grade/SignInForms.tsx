@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import { identify, unlock, type FormState } from "./actions";
-import type { Grader } from "@/lib/grader-auth";
 
 const initial: FormState = {};
 
@@ -54,7 +53,7 @@ export function PasswordForm() {
   );
 }
 
-export function GraderPicker({ graders }: { graders: Grader[] }) {
+export function GraderPicker({ graders }: { graders: string[] }) {
   const [state, action, pending] = useActionState(identify, initial);
 
   return (
@@ -64,9 +63,9 @@ export function GraderPicker({ graders }: { graders: Grader[] }) {
           <option value="" disabled>
             Pick your name
           </option>
-          {graders.map((grader) => (
-            <option key={grader.email} value={grader.email}>
-              {grader.name}
+          {graders.map((name) => (
+            <option key={name} value={name}>
+              {name}
             </option>
           ))}
         </select>
@@ -79,8 +78,8 @@ export function GraderPicker({ graders }: { graders: Grader[] }) {
       </form>
       {graders.length === 0 && (
         <p className="text-sm text-ink/60">
-          Nobody is assigned any proposals yet. Assign a grader in the Airtable
-          “Rubric: Grader” column and they’ll show up here.
+          The Airtable “Rubric: Grader” column has no names to choose from yet.
+          Add them as options on that column and they’ll show up here.
         </p>
       )}
     </Card>

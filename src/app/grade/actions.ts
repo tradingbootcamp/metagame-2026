@@ -8,15 +8,23 @@ import {
   startSession,
 } from "@/lib/grader-auth";
 import {
-  gradersFrom,
   listSubmissions,
   NEXT_STEPS_FIELD,
+  resolveGraderNames,
   sanitizeGrades,
   saveGrades,
+  SHEPHERD_FIELD,
   VERDICT_FIELD,
 } from "@/lib/rfp-rubric";
 
 export type FormState = { error?: string };
+
+/** The only columns the overview's row dropdowns may write. */
+const INLINE_FIELDS: string[] = [
+  VERDICT_FIELD,
+  NEXT_STEPS_FIELD,
+  SHEPHERD_FIELD,
+];
 
 export async function unlock(
   _prev: FormState,
@@ -36,14 +44,12 @@ export async function identify(
 ): Promise<FormState> {
   if (!(await readSession())) return { error: "Your session expired." };
 
-  const email = String(formData.get("grader") ?? "");
+  const name = String(formData.get("grader") ?? "");
   // Resolve against the roster so the cookie can't carry an arbitrary identity.
-  const grader = gradersFrom(await listSubmissions()).find(
-    (g) => g.email === email,
-  );
-  if (!grader) return { error: "Pick your name from the list." };
+  const roster = await resolveGraderNames(await listSubmissions());
+  if (!roster.includes(name)) return { error: "Pick your name from the list." };
 
-  await startSession(grader);
+  await startSession({ name });
   revalidatePath("/grade");
   return {};
 }
@@ -60,7 +66,7 @@ export async function signOut(): Promise<void> {
 }
 
 /**
- * One-field save from the overview. Allow-listed to the two pipeline columns, so
+ * One-field save from the overview. Allow-listed to the pipeline columns, so
  * this can't be used to write anything else from a list row.
  */
 export async function setOverviewField(
@@ -69,7 +75,7 @@ export async function setOverviewField(
   value: string,
 ): Promise<{ error?: string }> {
   if (!(await readSession())?.grader) return { error: "Your session expired." };
-  if (field !== VERDICT_FIELD && field !== NEXT_STEPS_FIELD) {
+  if (!INLINE_FIELDS.includes(field)) {
     return { error: "That field isn't editable here." };
   }
 

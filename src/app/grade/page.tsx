@@ -2,18 +2,18 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { GraderPicker, PasswordForm } from "./SignInForms";
 import { isConfigured, readSession } from "@/lib/grader-auth";
-import type { Grader } from "@/lib/grader-auth";
 import InlineSelect from "./InlineSelect";
 import { swatch } from "@/lib/airtable-colors";
 import {
-  gradersFrom,
   GRADING_STATUS_FIELD,
   listSubmissions,
   NEXT_STEPS_FIELD,
   optionColors,
   resolveEditableFields,
+  resolveGraderNames,
   DECISION_FIELDS,
   RUBRIC_METRICS,
+  SHEPHERD_FIELD,
   VERDICT_FIELD,
   type Submission,
 } from "@/lib/rfp-rubric";
@@ -25,7 +25,14 @@ const VIEWS = [
 
 type ViewKey = (typeof VIEWS)[number]["key"];
 
-const SORTS = ["proposal", "grader", "verdict", "next", "grading"] as const;
+const SORTS = [
+  "proposal",
+  "grader",
+  "verdict",
+  "next",
+  "grading",
+  "shepherd",
+] as const;
 type SortKey = (typeof SORTS)[number];
 
 // Worst-to-best, so ascending puts what still needs attention first.
@@ -63,13 +70,12 @@ const rank = (order: string[], value: string | null) => {
 const first = (value: string | string[] | undefined) =>
   (Array.isArray(value) ? value[0] : value) ?? "";
 
-const graderNames = (s: Submission) => s.graders.map((g) => g.name).join(", ");
-
 function compare(a: Submission, b: Submission, sort: SortKey) {
-  if (sort === "grader") {
+  if (sort === "grader" || sort === "shepherd") {
+    const who = (s: Submission) => (sort === "grader" ? s.grader : s.shepherd);
     // "￿" keeps unassigned rows at the bottom of an ascending sort.
     return (
-      (graderNames(a) || "￿").localeCompare(graderNames(b) || "￿") ||
+      (who(a) || "￿").localeCompare(who(b) || "￿") ||
       a.title.localeCompare(b.title)
     );
   }
@@ -128,11 +134,10 @@ function GradingPill({
  * Initials only, so the column stays narrow and the title gets the room. The
  * name shows on hover at lg+; below that the row stacks and it just fits inline.
  */
-function GraderChip({ graders }: { graders: Grader[] }) {
-  const assigned = graders.length > 0;
-  const names = assigned ? graders.map((g) => g.name).join(", ") : "Unassigned";
-  const initials = assigned
-    ? graders[0].name
+function GraderChip({ grader }: { grader: string | null }) {
+  const name = grader ?? "Unassigned";
+  const initials = grader
+    ? grader
         .split(/\s+/)
         .slice(0, 2)
         .map((word) => word[0])
@@ -145,18 +150,18 @@ function GraderChip({ graders }: { graders: Grader[] }) {
     <span className="group/grader relative inline-flex w-full items-center gap-1.5">
       <span
         className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
-          assigned
+          grader
             ? "bg-navy text-cream"
             : "border border-dashed border-ink/30 text-ink/35"
         }`}
       >
         {initials}
       </span>
-      <span className="truncate text-xs text-ink/70 lg:hidden">{names}</span>
+      <span className="truncate text-xs text-ink/70 lg:hidden">{name}</span>
       {/* Beside the circle, not below it: the list has overflow-hidden for its
           rounded corners, which would clip anything leaving the row. */}
       <span className="pointer-events-none absolute top-1/2 left-7 z-20 hidden -translate-y-1/2 rounded-lg bg-navy px-2 py-1 text-xs whitespace-nowrap text-cream opacity-0 shadow-lg transition-opacity group-hover/grader:opacity-100 lg:block">
-        {names}
+        {name}
       </span>
     </span>
   );
@@ -224,8 +229,8 @@ function Group({
   // Everything past the title is sized to its content so the title keeps the rest.
   const cols =
     state.view === "all"
-      ? "lg:grid-cols-[minmax(0,1fr)_3.25rem_8.5rem_6.5rem_6.5rem]"
-      : "lg:grid-cols-[minmax(0,1fr)_8.5rem_6.5rem_6.5rem]";
+      ? "lg:grid-cols-[minmax(0,1fr)_3.25rem_8.5rem_6.5rem_6.5rem_6.5rem]"
+      : "lg:grid-cols-[minmax(0,1fr)_8.5rem_6.5rem_6.5rem_6.5rem]";
 
   return (
     <section>
@@ -245,6 +250,7 @@ function Group({
           <SortLink column="grading" label="Grading" state={state} />
           <SortLink column="verdict" label="Verdict" state={state} />
           <SortLink column="next" label="Next steps" state={state} />
+          <SortLink column="shepherd" label="Shepherd" state={state} />
         </div>
 
         <ul className="divide-y divide-line">
@@ -272,7 +278,7 @@ function Group({
                 </span>
                 {state.view === "all" && (
                   <span className="min-w-0">
-                    <GraderChip graders={submission.graders} />
+                    <GraderChip grader={submission.grader} />
                   </span>
                 )}
                 <span className="flex min-w-0 items-center gap-2">
@@ -309,6 +315,18 @@ function Group({
                     colors={colors[NEXT_STEPS_FIELD]}
                   />
                 </span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="shrink-0 text-xs text-ink/40 lg:hidden">
+                    Shepherd
+                  </span>
+                  <InlineSelect
+                    recordId={submission.id}
+                    field={SHEPHERD_FIELD}
+                    value={submission.shepherd}
+                    options={decisionOptions[SHEPHERD_FIELD]}
+                    colors={colors[SHEPHERD_FIELD]}
+                  />
+                </span>
               </li>
             );
           })}
@@ -338,7 +356,7 @@ export default async function GradePage(props: PageProps<"/grade">) {
 
   const submissions = await listSubmissions();
   if (!session.grader) {
-    return <GraderPicker graders={gradersFrom(submissions)} />;
+    return <GraderPicker graders={await resolveGraderNames(submissions)} />;
   }
 
   const params = await props.searchParams;
@@ -358,11 +376,12 @@ export default async function GradePage(props: PageProps<"/grade">) {
   const colors = await optionColors([
     VERDICT_FIELD,
     NEXT_STEPS_FIELD,
+    SHEPHERD_FIELD,
     GRADING_STATUS_FIELD,
   ]);
-  const me = session.grader.email;
+  const me = session.grader.name;
   const byView: Record<ViewKey, Submission[]> = {
-    mine: submissions.filter((s) => s.graders.some((g) => g.email === me)),
+    mine: submissions.filter((s) => s.grader === me),
     all: submissions,
   };
   const visible = byView[view]

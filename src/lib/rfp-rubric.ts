@@ -199,6 +199,7 @@ export const META_FIELDS = [
 
 export const VERDICT_FIELD = "Verdict";
 export const NEXT_STEPS_FIELD = "Next steps";
+export const SHEPHERD_FIELD = "Shepherd";
 
 const VERDICT_OPTIONS = [
   "Confirmed",
@@ -242,6 +243,16 @@ export const DECISION_FIELDS = [
     kind: "select",
     options: NEXT_STEPS_OPTIONS,
     description: "Where are we at in the processing pipeline?",
+  },
+  {
+    field: SHEPHERD_FIELD,
+    label: "Shepherd",
+    kind: "select",
+    // No committed list: the names live in Airtable's own choices, which is
+    // also where they're maintained. Empty until some are added there.
+    options: [],
+    description:
+      "Which committee member is guiding this speaker through confirming, planning, and running their session?",
   },
 ] as const;
 
@@ -376,8 +387,8 @@ export const CONTEXT_FIELDS = [
 
 /**
  * Shown above the host's own answers, because these come from us, not from the
- * proposal. The Grader itself is handled separately — it's a collaborator field,
- * already parsed onto `Submission.graders`.
+ * proposal. The Grader itself is handled separately — it's parsed onto
+ * `Submission.grader`.
  */
 export const INTERNAL_FIELDS = [
   {
@@ -390,13 +401,13 @@ export const INTERNAL_FIELDS = [
 const GRADER_FIELD = "Rubric: Grader";
 const PICTURE_FIELD = "Picture (host)";
 
-export type Grader = { name: string; email: string };
-
 export type Submission = {
   id: string;
   title: string;
   host: string;
-  graders: Grader[];
+  /** Assignee. A single select, so one name or nobody. */
+  grader: string | null;
+  shepherd: string | null;
   gradingStatus: string | null;
   verdict: string | null;
   nextSteps: string | null;
@@ -407,22 +418,16 @@ export type Submission = {
 
 type AirtableRecord = { id: string; fields: Record<string, unknown> };
 
-type Collaborator = { email?: string; name?: string };
-
 const text = (value: unknown) => (typeof value === "string" ? value : null);
 
 function toSubmission(record: AirtableRecord): Submission {
   const { fields } = record;
-  const raw = Array.isArray(fields[GRADER_FIELD])
-    ? (fields[GRADER_FIELD] as Collaborator[])
-    : [];
   return {
     id: record.id,
     title: typeof fields.Title === "string" ? fields.Title : "(untitled)",
     host: typeof fields.Host === "string" ? fields.Host : "",
-    graders: raw.flatMap((c) =>
-      c?.email ? [{ email: c.email, name: c.name || c.email }] : [],
-    ),
+    grader: text(fields[GRADER_FIELD]),
+    shepherd: text(fields[SHEPHERD_FIELD]),
     gradingStatus: text(fields[GRADING_STATUS_FIELD]),
     verdict: text(fields[VERDICT_FIELD]),
     nextSteps: text(fields[NEXT_STEPS_FIELD]),
@@ -473,21 +478,6 @@ export async function listSubmissions(): Promise<Submission[]> {
   return records
     .map(toSubmission)
     .sort((a, b) => a.title.localeCompare(b.title));
-}
-
-/**
- * The sign-in roster: everyone assigned at least one proposal. Derived from the
- * table rather than a committed list, so adding a grader is just assigning them
- * a row in Airtable.
- */
-export function gradersFrom(submissions: Submission[]): Grader[] {
-  const byEmail = new Map<string, Grader>();
-  for (const submission of submissions) {
-    for (const grader of submission.graders) {
-      if (!byEmail.has(grader.email)) byEmail.set(grader.email, grader);
-    }
-  }
-  return [...byEmail.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getSubmission(id: string): Promise<Submission | null> {
@@ -625,6 +615,23 @@ export async function optionColors(
   return Object.fromEntries(
     fields.map((field) => [field, schema[field]?.colors ?? {}]),
   );
+}
+
+/**
+ * The sign-in roster: the names the assignee column offers. Read from the
+ * select's own choices, so a committee member with no Airtable account — and
+ * no proposal assigned to them yet — can still pick themselves. Falls back to
+ * the names actually on rows when the schema can't be read.
+ */
+export async function resolveGraderNames(
+  submissions: Submission[],
+): Promise<string[]> {
+  const schema = await fieldSchema();
+  const choices = schema[GRADER_FIELD]?.options;
+  if (choices?.length) return [...choices];
+  return [
+    ...new Set(submissions.flatMap((s) => (s.grader ? [s.grader] : []))),
+  ].sort((a, b) => a.localeCompare(b));
 }
 
 export async function resolveGradingStatuses(): Promise<readonly string[]> {

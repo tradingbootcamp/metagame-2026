@@ -141,9 +141,7 @@ export default async function SubmissionPage(
       <Panel>
         <Row
           label="Grader"
-          value={
-            submission.graders.map((g) => g.name).join(", ") || "Unassigned"
-          }
+          value={submission.grader ?? "Unassigned"}
           description="The committee member assigned to grade this proposal, from the Rubric: Grader column in Airtable."
         />
         {/* Read-only here on purpose: the committee sets these from the
