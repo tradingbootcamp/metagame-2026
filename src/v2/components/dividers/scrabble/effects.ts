@@ -31,6 +31,7 @@ export type Look = {
   dark: boolean;
   mono: boolean; // CODE: the letters in a typewriter face, in green
   huddle: boolean; // RUST: the tiles pulled in close, for a rounder crab
+  crown: boolean; // KING: a crown on the first tile
 };
 
 export const BASE_LOOK: Look = {
@@ -57,6 +58,7 @@ export const BASE_LOOK: Look = {
   dark: false,
   mono: false,
   huddle: false,
+  crown: false,
 };
 
 const set =
@@ -74,7 +76,8 @@ export type Hop = {
 
 export type Weather = "snow" | "rain" | "dust";
 
-export type Glyph = "star" | "moon" | "time";
+// TIME and PING write characters on the tiles rather than shapes.
+export type Glyph = "star" | "moon" | "time" | "ping";
 
 export type Exit =
   | "down"
@@ -98,6 +101,17 @@ export type Spell =
       kind: "bell";
       which: "bing" | "bong" | "bell" | "ding" | "dong" | "ting" | "ring";
     }
+  // The one sampled sound: public/sounds/gong.mp3.
+  | { kind: "gong" }
+  // A run of la-la-las up the arpeggio (SING) or back down it (SONG).
+  | { kind: "sing"; dir: "up" | "down" }
+  // A game of pong behind the tiles, playing itself.
+  | { kind: "pong" }
+  | { kind: "bass" }
+  // Digital rain over the page for a few seconds.
+  | { kind: "hack" }
+  // The round trip to the site, on the tiles: "42ms".
+  | { kind: "ping" }
   | { kind: "maga" }
   | { kind: "mark"; side: Side }
   | { kind: "turn"; turns: number }
@@ -129,6 +143,14 @@ export const SPELLS: Record<string, Spell> = {
   DONG: { kind: "bell", which: "dong" },
   TING: { kind: "bell", which: "ting" },
   RING: { kind: "bell", which: "ring" },
+  GONG: { kind: "gong" },
+  SING: { kind: "sing", dir: "up" },
+  SONG: { kind: "sing", dir: "down" },
+  PONG: { kind: "pong" },
+  PING: { kind: "ping" },
+  // Five seconds of sub-bass, wobbling.
+  BASS: { kind: "bass" },
+  HACK: { kind: "hack" },
   // A dial tone, for five minutes. STOP is the only way to end it early.
   TONE: { kind: "tone" },
   MAGA: { kind: "maga" },
@@ -230,6 +252,7 @@ export const SPELLS: Record<string, Spell> = {
   GOOD: { kind: "look", apply: set({ good: true }) },
   HOLY: { kind: "look", apply: set({ good: true }) },
   HALO: { kind: "look", apply: set({ good: true }) },
+  KING: { kind: "look", apply: set({ crown: true }) },
   // Devil horns and a tail, on the first tile only.
   EVIL: { kind: "look", apply: set({ evil: true }) },
   // Cow horns, on the last tile only.
@@ -339,6 +362,7 @@ export const GLYPH_TIMING: Record<Glyph, { ms: number; stagger: number }> = {
   star: { ms: 1300, stagger: 150 },
   moon: { ms: 3200, stagger: 260 },
   time: { ms: 4500, stagger: 0 },
+  ping: { ms: 4000, stagger: 0 },
 };
 export const COIN_MS = 650;
 export const BLOW_MS = 3600;

@@ -1,5 +1,5 @@
-// Bells for the BING / BONG / BELL / DING / DONG / TING / RING racks, synthesised with Web Audio so the
-// easter egg costs no assets. A bell is a fundamental plus inharmonic
+// Bells for the BING / BONG / BELL / DING / DONG / TING / RING racks,
+// synthesised with Web Audio so the easter egg costs no assets. A bell is a fundamental plus inharmonic
 // partials, each an exponential decay — the ratios below are what separate a
 // struck bell from a plain beep.
 type Voice = {
@@ -7,6 +7,7 @@ type Voice = {
   gain: number;
   decay: number;
   delay?: number;
+  attack?: number; // seconds to full level; a struck bell's default is near-instant
 };
 
 // Ratios and relative levels of a struck bell's partials (hum, prime, tierce,
@@ -85,12 +86,122 @@ export function ringBell(which: keyof typeof BELLS) {
     osc.frequency.value = v.freq;
     // exponentialRamp can't touch zero, hence the near-silent endpoints.
     env.gain.setValueAtTime(0.0001, t);
-    env.gain.exponentialRampToValueAtTime(v.gain * MASTER, t + 0.006);
+    env.gain.exponentialRampToValueAtTime(
+      v.gain * MASTER,
+      t + (v.attack ?? 0.006),
+    );
     env.gain.exponentialRampToValueAtTime(0.0001, t + v.decay);
     osc.connect(env).connect(ac.destination);
     osc.start(t);
     osc.stop(t + v.decay + 0.05);
   }
+}
+
+// GONG: the one sound that isn't synthesised — a tam-tam's shimmer is too
+// much for a handful of oscillators — so it's a sample, fetched on the first
+// cast and kept.
+const GONG_URL = "/sounds/gong.mp3";
+let gong: Promise<AudioBuffer> | null = null;
+
+export function gongSound() {
+  const AC = window.AudioContext ?? window.webkitAudioContext;
+  if (!AC) return;
+  const ac = (ctx ??= new AC());
+  if (ac.state === "suspended") void ac.resume();
+  gong ??= fetch(GONG_URL)
+    .then((r) => r.arrayBuffer())
+    .then((b) => ac.decodeAudioData(b));
+  gong
+    .then((buf) => {
+      const src = ac.createBufferSource();
+      src.buffer = buf;
+      const env = ac.createGain();
+      env.gain.value = MASTER * 1.5;
+      src.connect(env).connect(ac.destination);
+      src.start();
+    })
+    .catch(() => {
+      // No file, or one the browser can't decode: the next cast tries again.
+      gong = null;
+    });
+}
+
+// SING / SONG: seven "la"s up the arpeggio and back (1 3 5 8 5 3 1), or
+// SONG's mirror of it, down from the top. Each la is a sawtooth
+// pushed through two formant filters (an open "ah"), with a quick slide up
+// into the note the way a voice lands on one, and a little vibrato once it's
+// there.
+const LA_MS = 190;
+const UP = [523.25, 659.25, 783.99, 1046.5, 783.99, 659.25, 523.25];
+const DOWN = [1046.5, 783.99, 659.25, 523.25, 659.25, 783.99, 1046.5];
+
+export function singSound(dir: "up" | "down") {
+  const AC = window.AudioContext ?? window.webkitAudioContext;
+  if (!AC) return;
+  const ac = (ctx ??= new AC());
+  if (ac.state === "suspended") void ac.resume();
+  const notes = dir === "up" ? UP : DOWN;
+  const t0 = ac.currentTime + 0.02;
+  // The vowel is the same for every note, so one set of formants serves all
+  // seven: a soft, round "ah", with a low-pass over the lot so nothing rasps.
+  const out = ac.createGain();
+  out.gain.value = MASTER * 0.7;
+  const lp = ac.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 2400;
+  lp.Q.value = 0.5;
+  lp.connect(out).connect(ac.destination);
+  const formants: BiquadFilterNode[] = [];
+  for (const [f, q, g] of [
+    [750, 2.5, 1],
+    [1150, 3, 0.5],
+    [2500, 4, 0.12],
+  ]) {
+    const bp = ac.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = f;
+    bp.Q.value = q;
+    const gn = ac.createGain();
+    gn.gain.value = g;
+    bp.connect(gn).connect(lp);
+    formants.push(bp);
+  }
+  notes.forEach((freq, i) => {
+    const t = t0 + (i * LA_MS) / 1000;
+    const last = i === notes.length - 1;
+    // Each la overlaps the next a little: legato, not a row of pokes.
+    const dur = (last ? 0.6 : LA_MS / 1000) + 0.07;
+    const env = ac.createGain();
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(1, t + 0.06);
+    env.gain.setValueAtTime(1, t + dur - 0.09);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    formants.forEach((bp) => env.connect(bp));
+    const vib = ac.createOscillator();
+    vib.frequency.value = 5;
+    const depth = ac.createGain();
+    depth.gain.setValueAtTime(0, t);
+    depth.gain.linearRampToValueAtTime(freq * 0.008, t + 0.15);
+    vib.connect(depth);
+    // Mostly triangle, a whisper of sawtooth for the vowel to bite on.
+    for (const [type, gain] of [
+      ["triangle", 1],
+      ["sawtooth", 0.18],
+    ] as const) {
+      const osc = ac.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq * 0.965, t);
+      osc.frequency.exponentialRampToValueAtTime(freq, t + 0.05);
+      depth.connect(osc.frequency);
+      const g = ac.createGain();
+      g.gain.value = gain;
+      osc.connect(g).connect(env);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    }
+    vib.start(t);
+    vib.stop(t + dur + 0.02);
+  });
 }
 
 // COIN: two square-wave notes, B5 then a held E6 — the shape of every
@@ -113,6 +224,56 @@ export function coinSound() {
   osc.connect(env).connect(ac.destination);
   osc.start(t);
   osc.stop(t + 0.6);
+}
+
+// BASS: five seconds of sub-bass, wubba wubba. Two detuned saws and a sine
+// an octave under, through a low-pass whose cutoff an LFO swings open and
+// shut — the wobble is the filter, not the pitch — and the LFO winds up as it
+// goes, so the wubs come faster toward the end.
+const BASS_S = 5;
+
+export function bassSound() {
+  const AC = window.AudioContext ?? window.webkitAudioContext;
+  if (!AC) return;
+  const ac = (ctx ??= new AC());
+  if (ac.state === "suspended") void ac.resume();
+  const t = ac.currentTime + 0.02;
+  const end = t + BASS_S;
+  const lp = ac.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 400;
+  lp.Q.value = 9;
+  const wob = ac.createOscillator();
+  wob.frequency.setValueAtTime(1.5, t);
+  wob.frequency.linearRampToValueAtTime(3, t + 2.5);
+  wob.frequency.linearRampToValueAtTime(7, end);
+  const depth = ac.createGain();
+  depth.gain.value = 330;
+  wob.connect(depth).connect(lp.frequency);
+  const env = ac.createGain();
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(MASTER * 0.9, t + 0.08);
+  env.gain.setValueAtTime(MASTER * 0.9, end - 0.6);
+  env.gain.exponentialRampToValueAtTime(0.0001, end);
+  lp.connect(env).connect(ac.destination);
+  const oscs = [
+    [55, "sawtooth", 0.5, 6],
+    [55, "sawtooth", 0.5, -6],
+    [27.5, "sine", 1, 0],
+  ] as const;
+  for (const [freq, type, gain, detune] of oscs) {
+    const osc = ac.createOscillator();
+    osc.type = type;
+    osc.frequency.value = freq;
+    osc.detune.value = detune;
+    const g = ac.createGain();
+    g.gain.value = gain;
+    osc.connect(g).connect(lp);
+    osc.start(t);
+    osc.stop(end + 0.05);
+  }
+  wob.start(t);
+  wob.stop(end + 0.05);
 }
 
 // TONE: a North American dial tone, 350 + 440 Hz, for five minutes or until
