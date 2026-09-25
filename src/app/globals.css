@@ -713,15 +713,15 @@ button:not(:disabled) {
 }
 
 /* STAR / MOON: the letter gives way to the glyph, then comes back. */
-/* HACK: a beat of nothing, a slow fade in, a hold, a slower fade out (Matrix.tsx). */
+/* HACK: a long beat of nothing, a slow fade in, a short hold, a fade out (Matrix.tsx). */
 @keyframes scrabble-hack {
   0%,
-  8%,
+  19%,
   100% {
     opacity: 0;
   }
-  30%,
-  68% {
+  56%,
+  75% {
     opacity: 1;
   }
 }

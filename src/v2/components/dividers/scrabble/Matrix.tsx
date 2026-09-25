@@ -8,10 +8,10 @@ import { useEffect, useRef } from "react";
 // the odd glyph in a tail changing as it falls, and it fades back out. Drawn
 // on a canvas from a rAF loop; React only mounts and unmounts it. The fades
 // are scrabble-hack in globals.css.
-export const HACK_MS = 9000;
+export const HACK_MS = 8000;
 
 const CELL = 16;
-const FONT = `${CELL - 2}px ui-monospace, Menlo, monospace`;
+const FONT = `300 ${CELL - 3}px ui-monospace, Menlo, monospace`;
 // Half-width katakana and digits, as in the film.
 const GLYPHS =
   "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789Z:・=*+<>";
@@ -80,7 +80,7 @@ export default function Matrix({
           const row = headRow - k;
           if (row < 0 || row >= rows) continue;
           if (Math.random() < 0.02) c.chars[row] = glyph();
-          ctx.globalAlpha = k === 0 ? 1 : 0.55 * (1 - k / c.tail);
+          ctx.globalAlpha = k === 0 ? 0.6 : 0.32 * (1 - k / c.tail);
           ctx.fillText(c.chars[row], x, row * CELL);
         }
       });
