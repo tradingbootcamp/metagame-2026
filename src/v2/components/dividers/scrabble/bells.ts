@@ -142,16 +142,20 @@ export function singSound(dir: "up" | "down") {
   if (ac.state === "suspended") void ac.resume();
   const notes = dir === "up" ? UP : DOWN;
   const t0 = ac.currentTime + 0.02;
-  // The vowel is the same for every note, so one pair of formants serves all
-  // seven. Sung high, "ah" sits with its mouth a little wider open.
+  // The vowel is the same for every note, so one set of formants serves all
+  // seven: a soft, round "ah", with a low-pass over the lot so nothing rasps.
   const out = ac.createGain();
-  out.gain.value = MASTER * 0.5;
-  out.connect(ac.destination);
+  out.gain.value = MASTER * 0.7;
+  const lp = ac.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 2400;
+  lp.Q.value = 0.5;
+  lp.connect(out).connect(ac.destination);
   const formants: BiquadFilterNode[] = [];
   for (const [f, q, g] of [
-    [800, 6, 1],
-    [1250, 8, 0.6],
-    [2600, 10, 0.25],
+    [750, 2.5, 1],
+    [1150, 3, 0.5],
+    [2500, 4, 0.12],
   ]) {
     const bp = ac.createBiquadFilter();
     bp.type = "bandpass";
@@ -159,33 +163,43 @@ export function singSound(dir: "up" | "down") {
     bp.Q.value = q;
     const gn = ac.createGain();
     gn.gain.value = g;
-    bp.connect(gn).connect(out);
+    bp.connect(gn).connect(lp);
     formants.push(bp);
   }
   notes.forEach((freq, i) => {
     const t = t0 + (i * LA_MS) / 1000;
     const last = i === notes.length - 1;
-    const dur = last ? 0.5 : LA_MS / 1000;
-    const osc = ac.createOscillator();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(freq * 0.94, t);
-    osc.frequency.exponentialRampToValueAtTime(freq, t + 0.04);
-    const vib = ac.createOscillator();
-    vib.frequency.value = 5.5;
-    const depth = ac.createGain();
-    depth.gain.setValueAtTime(0, t);
-    depth.gain.linearRampToValueAtTime(freq * 0.012, t + 0.12);
-    vib.connect(depth).connect(osc.frequency);
+    // Each la overlaps the next a little: legato, not a row of pokes.
+    const dur = (last ? 0.6 : LA_MS / 1000) + 0.07;
     const env = ac.createGain();
     env.gain.setValueAtTime(0.0001, t);
-    env.gain.exponentialRampToValueAtTime(1, t + 0.03);
-    env.gain.setValueAtTime(1, t + dur - 0.05);
+    env.gain.exponentialRampToValueAtTime(1, t + 0.06);
+    env.gain.setValueAtTime(1, t + dur - 0.09);
     env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(env);
     formants.forEach((bp) => env.connect(bp));
-    osc.start(t);
+    const vib = ac.createOscillator();
+    vib.frequency.value = 5;
+    const depth = ac.createGain();
+    depth.gain.setValueAtTime(0, t);
+    depth.gain.linearRampToValueAtTime(freq * 0.008, t + 0.15);
+    vib.connect(depth);
+    // Mostly triangle, a whisper of sawtooth for the vowel to bite on.
+    for (const [type, gain] of [
+      ["triangle", 1],
+      ["sawtooth", 0.18],
+    ] as const) {
+      const osc = ac.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq * 0.965, t);
+      osc.frequency.exponentialRampToValueAtTime(freq, t + 0.05);
+      depth.connect(osc.frequency);
+      const g = ac.createGain();
+      g.gain.value = gain;
+      osc.connect(g).connect(env);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    }
     vib.start(t);
-    osc.stop(t + dur + 0.02);
     vib.stop(t + dur + 0.02);
   });
 }
