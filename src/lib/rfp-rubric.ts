@@ -188,6 +188,7 @@ export const META_FIELDS = [
   },
 ] as const;
 
+export const GRADER_FIELD = "Rubric: Grader";
 export const VERDICT_FIELD = "Verdict";
 export const NEXT_STEPS_FIELD = "Next steps";
 export const SHEPHERD_FIELD = "Shepherd";
@@ -222,10 +223,20 @@ const NEXT_STEPS_OPTIONS = [
 ] as const;
 
 /**
- * The call on the proposal, kept apart from the rubric: these are the shared
- * pipeline columns the whole committee reads, not one grader's scoring.
+ * Kept apart from the rubric: the shared columns the whole committee reads and
+ * edits from the overview, not one grader's scoring. Each renders as a pill
+ * there, so they all need resolved options and colours.
  */
 export const DECISION_FIELDS = [
+  {
+    field: GRADER_FIELD,
+    label: "Grader",
+    kind: "select",
+    // Like Shepherd: the roster lives in Airtable's own choices, which is also
+    // where it's maintained.
+    options: [],
+    description: "Which committee member is grading this proposal?",
+  },
   {
     field: VERDICT_FIELD,
     label: "Verdict",
@@ -393,7 +404,6 @@ export const INTERNAL_FIELDS = [
   },
 ] as const;
 
-const GRADER_FIELD = "Rubric: Grader";
 const PICTURE_FIELD = "Picture (host)";
 
 export type Submission = {

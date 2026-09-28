@@ -8,6 +8,7 @@ import {
   startSession,
 } from "@/lib/grader-auth";
 import {
+  GRADER_FIELD,
   listSubmissions,
   NEXT_STEPS_FIELD,
   resolveGraderNames,
@@ -21,6 +22,7 @@ export type FormState = { error?: string };
 
 /** The only columns the overview's row dropdowns may write. */
 const INLINE_FIELDS: string[] = [
+  GRADER_FIELD,
   VERDICT_FIELD,
   NEXT_STEPS_FIELD,
   SHEPHERD_FIELD,
