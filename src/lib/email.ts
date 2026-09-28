@@ -19,6 +19,7 @@ function getResend(): Resend | null {
 
 const FROM = "Metagame 2026 <tickets@metagame.games>";
 const TEAM = "team@metagame.games";
+const CORE = "core@metagame.games";
 // Email clients load images over the network, so assets must point at the
 // deployed site regardless of which environment sent the email.
 const SITE = "https://metagame.games";
@@ -216,7 +217,7 @@ export async function sendTicketConfirmationEmail(
   const { error } = await resend.emails.send({
     from: FROM,
     to: data.to,
-    bcc: [TEAM],
+    bcc: [CORE],
     replyTo: [TEAM],
     subject,
     html,
