@@ -4,6 +4,7 @@ import { GraderPicker, PasswordForm } from "./SignInForms";
 import { isConfigured, readSession } from "@/lib/grader-auth";
 import InlineSelect from "./InlineSelect";
 import {
+  GRADER_FIELD,
   listSubmissions,
   NEXT_STEPS_FIELD,
   NEXT_STEPS_GRADE,
@@ -11,7 +12,6 @@ import {
   resolveEditableFields,
   resolveGraderNames,
   DECISION_FIELDS,
-  RUBRIC_METRICS,
   SHEPHERD_FIELD,
   VERDICT_FIELD,
   type Submission,
@@ -24,14 +24,7 @@ const VIEWS = [
 
 type ViewKey = (typeof VIEWS)[number]["key"];
 
-const SORTS = [
-  "proposal",
-  "grader",
-  "verdict",
-  "next",
-  "grading",
-  "shepherd",
-] as const;
+const SORTS = ["proposal", "grader", "verdict", "next", "shepherd"] as const;
 type SortKey = (typeof SORTS)[number];
 
 // Airtable's own select order, so sorting reads the way the column does there.
@@ -66,9 +59,6 @@ const rank = (order: string[], value: string | null) => {
 const first = (value: string | string[] | undefined) =>
   (Array.isArray(value) ? value[0] : value) ?? "";
 
-const scoredCount = (s: Submission) =>
-  RUBRIC_METRICS.filter((m) => s.fields[m.field]).length;
-
 /**
  * Grading is tracked by the pipeline column now, not a separate status: a
  * proposal is still with its grader until someone moves it past "1. Grade".
@@ -85,10 +75,6 @@ function compare(a: Submission, b: Submission, sort: SortKey) {
       a.title.localeCompare(b.title)
     );
   }
-  if (sort === "grading") {
-    // Ascending puts the least-scored first, i.e. what still needs attention.
-    return scoredCount(a) - scoredCount(b) || a.title.localeCompare(b.title);
-  }
   if (sort === "verdict") {
     return (
       rank(VERDICT_ORDER, a.verdict) - rank(VERDICT_ORDER, b.verdict) ||
@@ -102,43 +88,6 @@ function compare(a: Submission, b: Submission, sort: SortKey) {
     );
   }
   return a.title.localeCompare(b.title);
-}
-
-/**
- * Initials only, so the column stays narrow and the title gets the room. The
- * name shows on hover at lg+; below that the row stacks and it just fits inline.
- */
-function GraderChip({ grader }: { grader: string | null }) {
-  const name = grader ?? "Unassigned";
-  const initials = grader
-    ? grader
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((word) => word[0])
-        .join("")
-        .toUpperCase()
-    : "–";
-
-  return (
-    // Full width so the whole cell is the hover target, not just the 24px circle.
-    <span className="group/grader relative inline-flex w-full items-center gap-1.5">
-      <span
-        className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
-          grader
-            ? "bg-navy text-cream"
-            : "border border-dashed border-ink/30 text-ink/35"
-        }`}
-      >
-        {initials}
-      </span>
-      <span className="truncate text-xs text-ink/70 lg:hidden">{name}</span>
-      {/* Beside the circle, not below it: the list has overflow-hidden for its
-          rounded corners, which would clip anything leaving the row. */}
-      <span className="pointer-events-none absolute top-1/2 left-7 z-20 hidden -translate-y-1/2 rounded-lg bg-navy px-2 py-1 text-xs whitespace-nowrap text-cream opacity-0 shadow-lg transition-opacity group-hover/grader:opacity-100 lg:block">
-        {name}
-      </span>
-    </span>
-  );
 }
 
 type SortState = {
@@ -203,8 +152,8 @@ function Group({
   // Everything past the title is sized to its content so the title keeps the rest.
   const cols =
     state.view === "all"
-      ? "lg:grid-cols-[minmax(0,1fr)_3.25rem_4.5rem_6.5rem_6.5rem_6.5rem]"
-      : "lg:grid-cols-[minmax(0,1fr)_4.5rem_6.5rem_6.5rem_6.5rem]";
+      ? "lg:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem_6.5rem]"
+      : "lg:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem]";
 
   return (
     <section>
@@ -221,7 +170,6 @@ function Group({
           {state.view === "all" && (
             <SortLink column="grader" label="Grader" state={state} />
           )}
-          <SortLink column="grading" label="Scored" state={state} />
           <SortLink column="verdict" label="Verdict" state={state} />
           <SortLink column="next" label="Next steps" state={state} />
           <SortLink column="shepherd" label="Shepherd" state={state} />
@@ -248,21 +196,21 @@ function Group({
                   </span>
                 </span>
                 {state.view === "all" && (
-                  <span className="min-w-0">
-                    <GraderChip grader={submission.grader} />
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    {/* Below lg the columns stack, so they need their own labels. */}
+                    <span className="shrink-0 text-xs text-ink/40 lg:hidden">
+                      Grader
+                    </span>
+                    <InlineSelect
+                      recordId={submission.id}
+                      field={GRADER_FIELD}
+                      value={submission.grader}
+                      options={decisionOptions[GRADER_FIELD]}
+                      colors={colors[GRADER_FIELD]}
+                    />
                   </span>
                 )}
                 <span className="flex min-w-0 items-center gap-1.5">
-                  {/* The count is cryptic on its own once the row stacks. */}
-                  <span className="shrink-0 text-xs text-ink/40 lg:hidden">
-                    Scored
-                  </span>
-                  <span className="text-xs text-ink/45 tabular-nums">
-                    {scoredCount(submission)}/{RUBRIC_METRICS.length}
-                  </span>
-                </span>
-                <span className="flex min-w-0 items-center gap-1.5">
-                  {/* Below lg the columns stack, so they need their own labels. */}
                   <span className="shrink-0 text-xs text-ink/40 lg:hidden">
                     Verdict
                   </span>
@@ -345,6 +293,7 @@ export default async function GradePage(props: PageProps<"/grade">) {
     decisionFields.map((f) => [f.field, [...f.options]]),
   );
   const colors = await optionColors([
+    GRADER_FIELD,
     VERDICT_FIELD,
     NEXT_STEPS_FIELD,
     SHEPHERD_FIELD,
