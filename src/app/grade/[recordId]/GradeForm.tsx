@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import InfoTip from "../InfoTip";
 import { submitGrades, type SaveState } from "../actions";
 import {
-  GRADING_STATUS_FIELD,
+  NEXT_STEPS_FIELD,
+  NEXT_STEPS_GRADE,
   RUBRIC_GRADES,
   RUBRIC_METRICS,
   type ResolvedField,
@@ -129,17 +130,35 @@ export default function GradeForm({
   recordId,
   initial,
   metaFields,
-  statuses,
+  nextSteps,
+  advanceTo,
 }: {
   recordId: string;
   initial: Record<string, unknown>;
   metaFields: ResolvedField[];
-  statuses: readonly string[];
+  /** The proposal's current pipeline step. */
+  nextSteps: string | null;
+  /** Where a finished grader moves it, or null if Airtable dropped the step. */
+  advanceTo: string | null;
 }) {
   const [state, action, pending] = useActionState(
     submitGrades.bind(null, recordId),
     initialState,
   );
+
+  // The prompt tracks the rubric until the grader overrides it by hand: saving
+  // with all five scored is a finished grade, saving partway through isn't.
+  const [complete, setComplete] = useState(() =>
+    RUBRIC_METRICS.every((m) => Boolean(initial[m.field])),
+  );
+  const [override, setOverride] = useState<boolean | null>(null);
+
+  // Only offered while it's still sitting in grading — past that, moving it
+  // back to the committee's queue would walk the pipeline backwards.
+  const advanceOption =
+    advanceTo !== null && (nextSteps === null || nextSteps === NEXT_STEPS_GRADE)
+      ? advanceTo
+      : null;
 
   return (
     // React resets an uncontrolled form once its action resolves, which snapped
@@ -148,6 +167,10 @@ export default function GradeForm({
     <form
       key={state.savedAt ?? "initial"}
       action={action}
+      onChange={(event) => {
+        const data = new FormData(event.currentTarget);
+        setComplete(RUBRIC_METRICS.every((m) => data.get(m.field)));
+      }}
       className="space-y-6"
     >
       <Section title="Rubric">
@@ -204,23 +227,21 @@ export default function GradeForm({
       </Section>
 
       <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-cream/95 px-4 py-3 backdrop-blur">
-        <label htmlFor={GRADING_STATUS_FIELD} className="text-sm text-ink/70">
-          Grading status
-        </label>
-        <select
-          id={GRADING_STATUS_FIELD}
-          name={GRADING_STATUS_FIELD}
-          defaultValue={
-            asString(initial[GRADING_STATUS_FIELD]) || "In Progress"
-          }
-          className="rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy"
-        >
-          {statuses.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
+        {advanceOption && (
+          // Unchecked boxes are left out of the form data entirely, so not
+          // ticking this leaves Next steps alone rather than clearing it.
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-ink/70">
+            <input
+              type="checkbox"
+              name={NEXT_STEPS_FIELD}
+              value={advanceOption}
+              checked={override ?? complete}
+              onChange={(event) => setOverride(event.target.checked)}
+              className="size-4 accent-meeple"
+            />
+            Done grading — move to “{advanceOption}”
+          </label>
+        )}
         <button
           type="submit"
           disabled={pending}

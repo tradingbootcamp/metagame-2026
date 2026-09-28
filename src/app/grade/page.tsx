@@ -3,11 +3,10 @@ import { connection } from "next/server";
 import { GraderPicker, PasswordForm } from "./SignInForms";
 import { isConfigured, readSession } from "@/lib/grader-auth";
 import InlineSelect from "./InlineSelect";
-import { swatch } from "@/lib/airtable-colors";
 import {
-  GRADING_STATUS_FIELD,
   listSubmissions,
   NEXT_STEPS_FIELD,
+  NEXT_STEPS_GRADE,
   optionColors,
   resolveEditableFields,
   resolveGraderNames,
@@ -34,9 +33,6 @@ const SORTS = [
   "shepherd",
 ] as const;
 type SortKey = (typeof SORTS)[number];
-
-// Worst-to-best, so ascending puts what still needs attention first.
-const GRADING_ORDER = ["Not started", "In Progress", "Blocked", "Done"];
 
 // Airtable's own select order, so sorting reads the way the column does there.
 const VERDICT_ORDER = [
@@ -70,6 +66,16 @@ const rank = (order: string[], value: string | null) => {
 const first = (value: string | string[] | undefined) =>
   (Array.isArray(value) ? value[0] : value) ?? "";
 
+const scoredCount = (s: Submission) =>
+  RUBRIC_METRICS.filter((m) => s.fields[m.field]).length;
+
+/**
+ * Grading is tracked by the pipeline column now, not a separate status: a
+ * proposal is still with its grader until someone moves it past "1. Grade".
+ */
+const awaitingGrade = (s: Submission) =>
+  s.nextSteps === null || s.nextSteps === NEXT_STEPS_GRADE;
+
 function compare(a: Submission, b: Submission, sort: SortKey) {
   if (sort === "grader" || sort === "shepherd") {
     const who = (s: Submission) => (sort === "grader" ? s.grader : s.shepherd);
@@ -80,10 +86,8 @@ function compare(a: Submission, b: Submission, sort: SortKey) {
     );
   }
   if (sort === "grading") {
-    return (
-      rank(GRADING_ORDER, a.gradingStatus) -
-        rank(GRADING_ORDER, b.gradingStatus) || a.title.localeCompare(b.title)
-    );
+    // Ascending puts the least-scored first, i.e. what still needs attention.
+    return scoredCount(a) - scoredCount(b) || a.title.localeCompare(b.title);
   }
   if (sort === "verdict") {
     return (
@@ -98,36 +102,6 @@ function compare(a: Submission, b: Submission, sort: SortKey) {
     );
   }
   return a.title.localeCompare(b.title);
-}
-
-function GradingPill({
-  submission,
-  colors,
-}: {
-  submission: Submission;
-  colors: Record<string, string>;
-}) {
-  const status = submission.gradingStatus ?? "Not started";
-  const tone = swatch(colors[status]);
-  // Without the schema scope there are no Airtable colours, so fall back to the
-  // site palette rather than rendering every status identically.
-  const fallback =
-    status === "Done"
-      ? "bg-moss/15 text-moss"
-      : status === "Blocked"
-        ? "bg-salmon/20 text-meeple-dark"
-        : status === "In Progress"
-          ? "bg-tan/25 text-navy"
-          : "bg-ink/8 text-ink/55";
-
-  return (
-    <span
-      style={tone ?? undefined}
-      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${tone ? "" : fallback}`}
-    >
-      {status}
-    </span>
-  );
 }
 
 /**
@@ -229,8 +203,8 @@ function Group({
   // Everything past the title is sized to its content so the title keeps the rest.
   const cols =
     state.view === "all"
-      ? "lg:grid-cols-[minmax(0,1fr)_3.25rem_8.5rem_6.5rem_6.5rem_6.5rem]"
-      : "lg:grid-cols-[minmax(0,1fr)_8.5rem_6.5rem_6.5rem_6.5rem]";
+      ? "lg:grid-cols-[minmax(0,1fr)_3.25rem_4.5rem_6.5rem_6.5rem_6.5rem]"
+      : "lg:grid-cols-[minmax(0,1fr)_4.5rem_6.5rem_6.5rem_6.5rem]";
 
   return (
     <section>
@@ -247,7 +221,7 @@ function Group({
           {state.view === "all" && (
             <SortLink column="grader" label="Grader" state={state} />
           )}
-          <SortLink column="grading" label="Grading" state={state} />
+          <SortLink column="grading" label="Scored" state={state} />
           <SortLink column="verdict" label="Verdict" state={state} />
           <SortLink column="next" label="Next steps" state={state} />
           <SortLink column="shepherd" label="Shepherd" state={state} />
@@ -255,9 +229,6 @@ function Group({
 
         <ul className="divide-y divide-line">
           {submissions.map((submission) => {
-            const scored = RUBRIC_METRICS.filter(
-              (m) => submission.fields[m.field],
-            ).length;
             // Not a whole-row link any more: the row holds dropdowns now, and a
             // stray click navigating away mid-edit would be worse.
             return (
@@ -281,14 +252,14 @@ function Group({
                     <GraderChip grader={submission.grader} />
                   </span>
                 )}
-                <span className="flex min-w-0 items-center gap-2">
-                  <span className="text-xs text-ink/45 tabular-nums">
-                    {scored}/{RUBRIC_METRICS.length}
+                <span className="flex min-w-0 items-center gap-1.5">
+                  {/* The count is cryptic on its own once the row stacks. */}
+                  <span className="shrink-0 text-xs text-ink/40 lg:hidden">
+                    Scored
                   </span>
-                  <GradingPill
-                    submission={submission}
-                    colors={colors[GRADING_STATUS_FIELD]}
-                  />
+                  <span className="text-xs text-ink/45 tabular-nums">
+                    {scoredCount(submission)}/{RUBRIC_METRICS.length}
+                  </span>
                 </span>
                 <span className="flex min-w-0 items-center gap-1.5">
                   {/* Below lg the columns stack, so they need their own labels. */}
@@ -377,7 +348,6 @@ export default async function GradePage(props: PageProps<"/grade">) {
     VERDICT_FIELD,
     NEXT_STEPS_FIELD,
     SHEPHERD_FIELD,
-    GRADING_STATUS_FIELD,
   ]);
   const me = session.grader.name;
   const byView: Record<ViewKey, Submission[]> = {
@@ -442,14 +412,14 @@ export default async function GradePage(props: PageProps<"/grade">) {
         <div className="space-y-6">
           <Group
             title="To grade"
-            submissions={visible.filter((s) => s.gradingStatus !== "Done")}
+            submissions={visible.filter(awaitingGrade)}
             state={state}
             colors={colors}
             decisionOptions={decisionOptions}
           />
           <Group
             title="Graded"
-            submissions={visible.filter((s) => s.gradingStatus === "Done")}
+            submissions={visible.filter((s) => !awaitingGrade(s))}
             state={state}
             colors={colors}
             decisionOptions={decisionOptions}

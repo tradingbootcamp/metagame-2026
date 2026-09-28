@@ -64,13 +64,6 @@ export const RUBRIC_METRICS = [
   },
 ] as const;
 
-export const GRADING_STATUSES = [
-  "Not started",
-  "In Progress",
-  "Done",
-  "Blocked",
-] as const;
-
 const DROPIN_OPTIONS = [
   "Dropins welcome",
   "Need to attend the entire block",
@@ -114,8 +107,6 @@ const SPACE_OPTIONS = [
   "2E1 Gyroscope (E, 2nd floor, Max 30)",
   "Other",
 ] as const;
-
-export const GRADING_STATUS_FIELD = "Grading Status";
 
 // `description` is the column's Airtable description, shown behind the ⓘ next to
 // each label. Kept verbatim so the tooltip says what the Airtable field says.
@@ -212,6 +203,11 @@ const VERDICT_OPTIONS = [
   "This is running a game, probably fine",
 ] as const;
 
+/** Where a proposal waits while it's still with its grader. */
+export const NEXT_STEPS_GRADE = "1. Grade";
+/** Where a grader's save moves it once the rubric is done. */
+export const NEXT_STEPS_DECIDE = "2. Committee decision";
+
 // Numbered in Airtable, so this order is the pipeline order. The trailing space
 // on "7. None!" is in the option name itself — don't trim it or the write fails.
 const NEXT_STEPS_OPTIONS = [
@@ -264,7 +260,6 @@ type Writable =
 
 /** Committed fallback, used when the schema can't be read (see fieldSchema). */
 const WRITABLE_FALLBACK: Record<string, Writable> = {
-  [GRADING_STATUS_FIELD]: { kind: "select", options: GRADING_STATUSES },
   ...Object.fromEntries(
     RUBRIC_METRICS.map((m) => [
       m.field,
@@ -408,7 +403,6 @@ export type Submission = {
   /** Assignee. A single select, so one name or nobody. */
   grader: string | null;
   shepherd: string | null;
-  gradingStatus: string | null;
   verdict: string | null;
   nextSteps: string | null;
   /** True once any of the five rubric metrics has a value. */
@@ -428,7 +422,6 @@ function toSubmission(record: AirtableRecord): Submission {
     host: typeof fields.Host === "string" ? fields.Host : "",
     grader: text(fields[GRADER_FIELD]),
     shepherd: text(fields[SHEPHERD_FIELD]),
-    gradingStatus: text(fields[GRADING_STATUS_FIELD]),
     verdict: text(fields[VERDICT_FIELD]),
     nextSteps: text(fields[NEXT_STEPS_FIELD]),
     started: RUBRIC_METRICS.some((m) => Boolean(fields[m.field])),
@@ -632,11 +625,6 @@ export async function resolveGraderNames(
   return [
     ...new Set(submissions.flatMap((s) => (s.grader ? [s.grader] : []))),
   ].sort((a, b) => a.localeCompare(b));
-}
-
-export async function resolveGradingStatuses(): Promise<readonly string[]> {
-  const schema = await fieldSchema();
-  return schema[GRADING_STATUS_FIELD]?.options ?? GRADING_STATUSES;
 }
 
 type DisplayField = { field: string; label: string; description?: string };
