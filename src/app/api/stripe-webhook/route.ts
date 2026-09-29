@@ -135,7 +135,7 @@ export async function POST(request: Request) {
     // One retrieve with expands yields ticket type, receipt URL, and Stripe's fee/net.
     const full = await stripe.checkout.sessions.retrieve(session.id, {
       expand: [
-        "payment_link",
+        ...(session.payment_link ? ["payment_link"] : []),
         "line_items.data.price.product",
         "payment_intent.latest_charge.balance_transaction",
         "discounts.promotion_code",
