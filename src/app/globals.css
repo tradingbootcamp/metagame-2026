@@ -189,12 +189,14 @@ button:not(:disabled) {
   }
 }
 
+/* A 20-long dash with a gap longer than the road, run from just before it to
+   just past it: a dash left touching either end still draws its round cap. */
 @keyframes catan-trail {
   from {
-    stroke-dashoffset: 20;
+    stroke-dashoffset: 22;
   }
   to {
-    stroke-dashoffset: -100;
+    stroke-dashoffset: -102;
   }
 }
 

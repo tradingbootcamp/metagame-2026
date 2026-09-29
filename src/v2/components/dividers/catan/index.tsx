@@ -78,10 +78,12 @@ function Board({ s }: { s: CatanState }) {
   const paths = live ? EDGES.map((_, e) => e).filter((e) => canRoad(s, e)) : [];
 
   return (
+    // Drawn about its origin, the row's centre. Not 0×0: an SVG with no size
+    // doesn't render at all, overflow or not.
     <svg
       aria-hidden
-      width="0"
-      height="0"
+      width="1"
+      height="1"
       className="absolute top-1/2 left-1/2 overflow-visible"
       style={{ animation: `catan-in 500ms ease-out ${GROW_MS - 200}ms both` }}
     >
@@ -140,7 +142,7 @@ function Board({ s }: { s: CatanState }) {
           strokeWidth={5}
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeDasharray="20 100"
+          strokeDasharray="20 200"
           style={{ animation: "catan-trail 1400ms ease-in-out 2 both" }}
         />
       )}
