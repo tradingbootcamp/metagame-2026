@@ -8,6 +8,7 @@
 // copies roll for the rivals beneath the row, and the dice sit out until the
 // pieces land.
 import { useEffect, useRef, useState } from "react";
+import { rolled } from "../catan/game";
 import DividerRow from "../DividerRow";
 import { ICON_GAP, SHADOW } from "../sizing";
 import { trackClick } from "../track";
@@ -343,7 +344,10 @@ function DiceGlyph({ die }: { die: Die }) {
     trackClick("dice");
     setSpins((n) => n + 1);
     clearTimeout(swap.current);
-    swap.current = setTimeout(() => setValues(next), SPIN_MS / 2);
+    swap.current = setTimeout(() => {
+      setValues(next);
+      rolled(next[0]);
+    }, SPIN_MS / 2);
   };
 
   return <DieSvg die={die} values={values} spins={spins} onClick={onClick} />;

@@ -175,6 +175,29 @@ button:not(:disabled) {
   }
 }
 
+/* Catan divider (src/v2/components/dividers/catan): the board drawn in, a
+   tile paying out, and the longest road lighting up. */
+@keyframes catan-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes catan-pay {
+  40% {
+    transform: scale(1.4);
+  }
+}
+
+@keyframes catan-trail {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
 /* Scrabble divider (src/v2/components/dividers/scrabble). The invisible rect
    that catches taps on a tile: pointer-events has to be spelled out, since the
    rect paints nothing. A mouse gets the tile's own 30px box; tapping one tile
