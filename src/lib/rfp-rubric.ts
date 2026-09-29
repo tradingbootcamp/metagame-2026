@@ -108,6 +108,13 @@ const SPACE_OPTIONS = [
   "Other",
 ] as const;
 
+const PANEL_OPTIONS = [
+  "Professional GM",
+  "Game publishers, or with publishing experience",
+  "Designing Serious Games",
+  "Interviewee for dungeon court",
+] as const;
+
 // `description` is the column's Airtable description, shown behind the ⓘ next to
 // each label. Kept verbatim so the tooltip says what the Airtable field says.
 
@@ -171,6 +178,14 @@ export const META_FIELDS = [
     kind: "text",
     description:
       "Is this session worth flagging to the Megagame organizers as a potential fit for integrating into the Megagame?",
+  },
+  {
+    field: "Potential Panels",
+    label: "Potential panels",
+    kind: "multiSelect",
+    options: PANEL_OPTIONS,
+    description:
+      "These are panels we are considering running this year, please select any you think this speaker may be interested in and qualified for",
   },
   {
     // Airtable spells it "recomendation"; matched exactly so the write lands.
