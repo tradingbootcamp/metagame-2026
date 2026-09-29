@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { identify, unlock, type FormState } from "./actions";
+import { SOMEONE_ELSE } from "@/lib/grader-identity";
 
 const initial: FormState = {};
 
@@ -68,7 +69,12 @@ export function GraderPicker({ graders }: { graders: string[] }) {
               {name}
             </option>
           ))}
+          <option value={SOMEONE_ELSE}>{SOMEONE_ELSE}</option>
         </select>
+        <p className="text-sm text-ink/55">
+          “{SOMEONE_ELSE}” gets the same access as anyone here — it just leaves
+          “Assigned to me” empty, since there’s no name to match rows against.
+        </p>
         <button type="submit" disabled={pending} className={buttonClass}>
           {pending ? "One sec…" : "Start grading"}
         </button>
@@ -78,8 +84,9 @@ export function GraderPicker({ graders }: { graders: string[] }) {
       </form>
       {graders.length === 0 && (
         <p className="text-sm text-ink/60">
-          The Airtable “Rubric: Grader” column has no names to choose from yet.
-          Add them as options on that column and they’ll show up here.
+          The Airtable “Rubric: Grader” and “Shepherd” columns have no names to
+          choose from yet. Add them as options on either column and they’ll show
+          up here.
         </p>
       )}
     </Card>

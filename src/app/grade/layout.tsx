@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { signOut, switchGrader } from "./actions";
 import { readSession } from "@/lib/grader-auth";
+import { identityLabel } from "@/lib/grader-identity";
 
 export const metadata: Metadata = {
   title: "Session Rubric — Metagame",
@@ -27,10 +28,10 @@ export default async function GradeLayout({
           </Link>
           {session && (
             <div className="flex items-center gap-3 text-sm text-ink/60">
-              {session.grader && (
+              {session.identity && (
                 <form action={switchGrader}>
                   <button type="submit" className="hover:text-meeple">
-                    {session.grader.name}
+                    {identityLabel(session.identity)}
                   </button>
                 </form>
               )}

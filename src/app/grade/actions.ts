@@ -7,6 +7,7 @@ import {
   readSession,
   startSession,
 } from "@/lib/grader-auth";
+import { SOMEONE_ELSE } from "@/lib/grader-identity";
 import {
   GRADER_FIELD,
   listSubmissions,
@@ -47,11 +48,16 @@ export async function identify(
   if (!(await readSession())) return { error: "Your session expired." };
 
   const name = String(formData.get("grader") ?? "");
-  // Resolve against the roster so the cookie can't carry an arbitrary identity.
-  const roster = await resolveGraderNames(await listSubmissions());
-  if (!roster.includes(name)) return { error: "Pick your name from the list." };
-
-  await startSession({ name });
+  if (name === SOMEONE_ELSE) {
+    await startSession({ kind: "anon" });
+  } else {
+    // Resolve against the roster so the cookie can't carry an arbitrary identity.
+    const roster = await resolveGraderNames(await listSubmissions());
+    if (!roster.includes(name)) {
+      return { error: "Pick your name from the list." };
+    }
+    await startSession({ kind: "grader", name });
+  }
   revalidatePath("/grade");
   return {};
 }
@@ -76,7 +82,8 @@ export async function setOverviewField(
   field: string,
   value: string,
 ): Promise<{ error?: string }> {
-  if (!(await readSession())?.grader) return { error: "Your session expired." };
+  if (!(await readSession())?.identity)
+    return { error: "Your session expired." };
   if (!INLINE_FIELDS.includes(field)) {
     return { error: "That field isn't editable here." };
   }
@@ -104,7 +111,8 @@ export async function submitGrades(
   _prev: SaveState,
   formData: FormData,
 ): Promise<SaveState> {
-  if (!(await readSession())?.grader) return { error: "Your session expired." };
+  if (!(await readSession())?.identity)
+    return { error: "Your session expired." };
 
   // Multi-selects arrive as repeated entries (with a leading empty one, so an
   // all-unchecked group still clears the cell); everything else is single.

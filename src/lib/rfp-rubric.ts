@@ -621,20 +621,26 @@ export async function optionColors(
 }
 
 /**
- * The sign-in roster: the names the assignee column offers. Read from the
- * select's own choices, so a committee member with no Airtable account — and
- * no proposal assigned to them yet — can still pick themselves. Falls back to
- * the names actually on rows when the schema can't be read.
+ * The sign-in roster: every name the Grader or Shepherd column offers. Read
+ * from the selects' own choices, so a committee member with no Airtable account
+ * — and no proposal assigned to them yet — can still pick themselves, and so
+ * someone who only ever shepherds isn't locked out. Falls back to the names
+ * actually on rows when the schema can't be read.
  */
 export async function resolveGraderNames(
   submissions: Submission[],
 ): Promise<string[]> {
   const schema = await fieldSchema();
-  const choices = schema[GRADER_FIELD]?.options;
-  if (choices?.length) return [...choices];
-  return [
-    ...new Set(submissions.flatMap((s) => (s.grader ? [s.grader] : []))),
-  ].sort((a, b) => a.localeCompare(b));
+  const choices = [
+    ...(schema[GRADER_FIELD]?.options ?? []),
+    ...(schema[SHEPHERD_FIELD]?.options ?? []),
+  ];
+  const names = choices.length
+    ? choices
+    : submissions.flatMap((s) => [s.grader, s.shepherd]);
+  return [...new Set(names.filter((n): n is string => Boolean(n)))].sort(
+    (a, b) => a.localeCompare(b),
+  );
 }
 
 type DisplayField = { field: string; label: string; description?: string };
