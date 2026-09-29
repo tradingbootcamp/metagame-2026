@@ -2,7 +2,8 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { FaBitcoin } from "react-icons/fa";
-import { dayPasses, dayPassUrl } from "@/v2/lib/tickets";
+import { readFirstTouchUtm, withFirstTouchUtm } from "@/lib/utm";
+import { dayPasses, stripeCheckoutHref } from "@/v2/lib/tickets";
 import {
   subscribeCurrency,
   getCurrencySnapshot,
@@ -76,6 +77,7 @@ export default function DayPassModal({ onClose }: { onClose: () => void }) {
           name,
           email,
           ...(discord.trim() ? { discord: discord.trim() } : {}),
+          ...readFirstTouchUtm(),
         }),
       });
       const data = await res.json();
@@ -191,8 +193,13 @@ export default function DayPassModal({ onClose }: { onClose: () => void }) {
           <>
             <div className="grid grid-cols-3 gap-3 max-[420px]:grid-cols-1">
               {dayPasses.map((p) => {
-                const href = dayPassUrl(p);
-                if (!href) return null;
+                const href = stripeCheckoutHref({
+                  tier: "day-pass",
+                  day: p.id,
+                });
+                const addUtm = (e: React.MouseEvent<HTMLAnchorElement>) => {
+                  e.currentTarget.href = withFirstTouchUtm(href);
+                };
                 return (
                   <Button
                     key={p.id}
@@ -200,7 +207,13 @@ export default function DayPassModal({ onClose }: { onClose: () => void }) {
                     variant="raised"
                     className={DAY_TILE}
                   >
-                    <a href={href} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={href}
+                      onClick={addUtm}
+                      onAuxClick={addUtm}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       {tileBody(p)}
                     </a>
                   </Button>

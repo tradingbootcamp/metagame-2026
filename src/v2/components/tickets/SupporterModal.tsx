@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { FaBitcoin } from "react-icons/fa";
-import { supporterTier, supporterChipUrl } from "@/v2/lib/tickets";
+import { readFirstTouchUtm, withFirstTouchUtm } from "@/lib/utm";
+import { stripeCheckoutHref, supporterTier } from "@/v2/lib/tickets";
 import {
   subscribeCurrency,
   getCurrencySnapshot,
@@ -82,8 +83,6 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
     return () => clearTimeout(t);
   }, [btcAmount, floor.btc]);
 
-  const stripeHref = supporterChipUrl(chip);
-
   async function payWithBtc(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -107,6 +106,7 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
           ...(discord.trim() ? { discord: discord.trim() } : {}),
           // Server re-validates this is ≥ floor before charging.
           btc: amount,
+          ...readFirstTouchUtm(),
         }),
       });
       const data = await res.json();
@@ -132,9 +132,13 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
   }
 
   function checkoutAtStripe() {
-    if (stripeHref) {
-      window.open(stripeHref, "_blank", "noopener,noreferrer");
-    }
+    window.open(
+      withFirstTouchUtm(
+        stripeCheckoutHref({ tier: "supporter", chip: chip.usd }),
+      ),
+      "_blank",
+      "noopener,noreferrer",
+    );
   }
 
   // Quick-pick amount chips — placed differently per mode (USD: above the copy;

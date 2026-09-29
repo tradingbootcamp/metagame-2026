@@ -8,12 +8,12 @@ import SupporterModal from "@/v2/components/tickets/SupporterModal";
 import { Button } from "@/v2/components/ui/button";
 import {
   dayPasses,
-  fullPriceTicketUrl,
   getTicket,
+  stripeCheckoutHref,
   supporterTier,
-  ticketUrl,
 } from "@/v2/lib/tickets";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
+import { withFirstTouchUtm } from "@/lib/utm";
 import { FINANCIAL_AID_FORM_URL, VOLUNTEER_FORM_URL } from "@/v2/lib/links";
 import {
   subscribeCurrency,
@@ -33,12 +33,20 @@ const TILE_LABEL =
 const TILE_NOTE =
   "font-space-mono text-[11px] tracking-[0.08em] uppercase whitespace-nowrap text-cream/60";
 
-// The tickets UI for the home page's tickets section: a currency toggle over the early-bird ticket (USD → Stripe Payment Link;
+// The tickets UI for the home page's tickets section: a currency toggle over the early-bird ticket (USD → Stripe Checkout;
 // BTC → the OpenNode BtcModal) and the pay-what-you-want supporter tile, both
 // driven by the shared currency store, with the supporter/BTC flows stacking on
 // top. Renders bare inner content — the navy panel box comes from the modal's
 // DialogContent or the section wrapper.
 const subscribeNever = () => () => {};
+
+const STANDARD_HREF = stripeCheckoutHref({ tier: "standard" });
+
+// UTMs live in localStorage, so they're added at click time (not render) to keep
+// the server-rendered href stable.
+function addUtm(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.currentTarget.href = withFirstTouchUtm(STANDARD_HREF);
+}
 
 export default function TicketsPanel({
   showHeading = true,
@@ -66,8 +74,6 @@ export default function TicketsPanel({
     () => earlyBird,
   );
   const standard = getTicket("standard");
-  const earlyBirdHref = standard ? ticketUrl(standard) : null;
-  const standardHref = standard ? fullPriceTicketUrl(standard) : null;
   const [supporterOpen, setSupporterOpen] = useState(false);
   const [dayPassOpen, setDayPassOpen] = useState(false);
   // /#supporter deep-links into the modal (e.g. from /sponsor); the tile's id
@@ -166,29 +172,29 @@ export default function TicketsPanel({
               <span className={TILE_NOTE}>until {EARLY_BIRD_DEADLINE}</span>
             </Button>
           ) : (
-            earlyBirdHref && (
-              <Button asChild variant="raised" className={TILE}>
-                <a
-                  href={earlyBirdHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <span className={TILE_LABEL}>Early-bird</span>
-                  <span className="flex items-baseline gap-2.5 leading-none">
-                    <span className="text-[18px] font-bold text-cream/40 line-through">
-                      ${standard.prices.full.usd}
-                    </span>
-                    <span className={`${HEADING} text-[30px] text-tan`}>
-                      ${standard.prices.earlyBird.usd}
-                    </span>
+            <Button asChild variant="raised" className={TILE}>
+              <a
+                href={STANDARD_HREF}
+                onClick={addUtm}
+                onAuxClick={addUtm}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className={TILE_LABEL}>Early-bird</span>
+                <span className="flex items-baseline gap-2.5 leading-none">
+                  <span className="text-[18px] font-bold text-cream/40 line-through">
+                    ${standard.prices.full.usd}
                   </span>
-                  <span className={TILE_NOTE}>until {EARLY_BIRD_DEADLINE}</span>
-                </a>
-              </Button>
-            )
+                  <span className={`${HEADING} text-[30px] text-tan`}>
+                    ${standard.prices.earlyBird.usd}
+                  </span>
+                </span>
+                <span className={TILE_NOTE}>until {EARLY_BIRD_DEADLINE}</span>
+              </a>
+            </Button>
           ))}
-        {/* Full price, no promo code: for after the deadline, or for anyone
-            who'd rather not use one. */}
+        {/* Full price. In USD it's the same checkout as early-bird (which the
+            route discounts until the deadline), so it only shows after it. */}
         {standard &&
           (isBtc ? (
             <Button
@@ -203,10 +209,12 @@ export default function TicketsPanel({
               </span>
             </Button>
           ) : (
-            standardHref && (
+            !earlyBirdActive && (
               <Button asChild variant="raised" className={TILE}>
                 <a
-                  href={standardHref}
+                  href={STANDARD_HREF}
+                  onClick={addUtm}
+                  onAuxClick={addUtm}
                   target="_blank"
                   rel="noopener noreferrer"
                 >

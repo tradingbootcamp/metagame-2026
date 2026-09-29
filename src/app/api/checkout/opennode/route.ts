@@ -4,6 +4,7 @@ import { getDayPass, getTicket, supporterTier } from "@/lib/tickets";
 import { countCodeRedemptions, lookupDiscountCode } from "@/lib/discount-codes";
 import { isEarlyBirdActive } from "@/lib/early-bird";
 import { createCharge, getHostedCheckoutUrl } from "@/lib/opennode";
+import { pickUtm, type Utm } from "@/lib/utm";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FIELD_LEN = 200;
 
 export async function POST(request: Request) {
-  let body: {
+  let body: Utm & {
     ticketId?: string;
     name?: string;
     email?: string;
@@ -149,6 +150,7 @@ export async function POST(request: Request) {
     email: email.trim(),
     // Optional Discord handle — only ride it along when the buyer supplied one.
     ...(discord?.trim() ? { discord: discord.trim() } : {}),
+    ...pickUtm((key) => body[key as keyof Utm]),
     usd,
     btc,
     discountCode: appliedCode,

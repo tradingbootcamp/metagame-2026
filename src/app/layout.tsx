@@ -7,6 +7,7 @@ import {
   Space_Mono,
 } from "next/font/google";
 import BootSync from "@/v2/components/BootSync";
+import UtmCapture from "@/v2/components/UtmCapture";
 import { PUZZLE_BOOT_SCRIPT } from "@/v2/puzzle/boot";
 import "./globals.css";
 
@@ -102,6 +103,7 @@ export default function RootLayout({
       </head>
       <body className="flex min-h-full flex-col">
         <BootSync />
+        <UtmCapture />
         {children}
       </body>
     </html>

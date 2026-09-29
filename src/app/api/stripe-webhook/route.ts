@@ -11,8 +11,10 @@ import { getStripe } from "@/lib/stripe";
 import { ticketCode } from "@/lib/ticket-code";
 import {
   dayPassForPaymentLinkUrl,
+  tierForCheckoutMetadata,
   tierLabelForPaymentLinkUrl,
 } from "@/lib/tickets";
+import { pickUtm } from "@/lib/utm";
 
 // Signature verification needs the raw body + Node crypto — keep this off the edge.
 export const runtime = "nodejs";
@@ -205,6 +207,7 @@ export async function POST(request: Request) {
       amountDiscount,
       receiptUrl: charge?.receipt_url ?? undefined,
       discordHandle: discord ?? undefined,
+      utm: pickUtm((key) => full.metadata?.[key]),
       status,
       paymentMethod: "stripe",
       // Flag Test if it's a sandbox checkout (livemode=false) OR used an in-prod test
@@ -218,6 +221,9 @@ export async function POST(request: Request) {
     // so log + alert instead of a 500 (which would make Stripe retry the event).
     const email = full.customer_details?.email;
     const paymentLinkUrl = expanded<Stripe.PaymentLink>(full.payment_link)?.url;
+    // Sessions from /api/checkout/stripe carry the tier in metadata; purchases
+    // through an old Payment Link are matched by its URL instead.
+    const tier = tierForCheckoutMetadata(full.metadata);
     if (status === "Paid" && email) {
       try {
         await sendTicketConfirmationEmail({
@@ -225,10 +231,13 @@ export async function POST(request: Request) {
           purchaserName:
             preferredName ?? full.customer_details?.name ?? undefined,
           tierLabel:
+            tier?.label ??
             tierLabelForPaymentLinkUrl(paymentLinkUrl) ??
             ticketType ??
             "Metagame 2026 ticket",
-          eventDay: dayPassForPaymentLinkUrl(paymentLinkUrl)?.date,
+          eventDay: tier
+            ? tier.day
+            : dayPassForPaymentLinkUrl(paymentLinkUrl)?.date,
           usdPaid:
             full.amount_total != null ? full.amount_total / 100 : undefined,
           usdFull:
