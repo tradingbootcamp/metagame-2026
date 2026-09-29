@@ -118,7 +118,7 @@ export function getDayPass(id: string): DayPass | undefined {
 /** Our Stripe checkout route for a USD ticket; it redirects to Stripe. */
 export function stripeCheckoutHref(
   params:
-    | { tier: "standard" }
+    | { tier: "standard"; code?: "own" }
     | { tier: "supporter"; chip: number }
     | { tier: "day-pass"; day: DayPass["id"] },
 ): string {

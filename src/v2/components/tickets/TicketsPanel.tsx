@@ -40,13 +40,14 @@ const TILE_NOTE =
 // DialogContent or the section wrapper.
 const subscribeNever = () => () => {};
 
-const STANDARD_HREF = stripeCheckoutHref({ tier: "standard" });
+const EARLY_BIRD_HREF = stripeCheckoutHref({ tier: "standard" });
+const FULL_PRICE_HREF = stripeCheckoutHref({ tier: "standard", code: "own" });
 
 // UTMs live in localStorage, so they're added at click time (not render) to keep
 // the server-rendered href stable.
-function addUtm(e: React.MouseEvent<HTMLAnchorElement>) {
-  e.currentTarget.href = withFirstTouchUtm(STANDARD_HREF);
-}
+const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+  e.currentTarget.href = withFirstTouchUtm(href);
+};
 
 export default function TicketsPanel({
   showHeading = true,
@@ -174,9 +175,9 @@ export default function TicketsPanel({
           ) : (
             <Button asChild variant="raised" className={TILE}>
               <a
-                href={STANDARD_HREF}
-                onClick={addUtm}
-                onAuxClick={addUtm}
+                href={EARLY_BIRD_HREF}
+                onClick={addUtm(EARLY_BIRD_HREF)}
+                onAuxClick={addUtm(EARLY_BIRD_HREF)}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -193,8 +194,8 @@ export default function TicketsPanel({
               </a>
             </Button>
           ))}
-        {/* Full price. In USD it's the same checkout as early-bird (which the
-            route discounts until the deadline), so it only shows after it. */}
+        {/* Full price, no promo auto-applied: for after the deadline, or for
+            anyone bringing their own code. */}
         {standard &&
           (isBtc ? (
             <Button
@@ -209,24 +210,22 @@ export default function TicketsPanel({
               </span>
             </Button>
           ) : (
-            !earlyBirdActive && (
-              <Button asChild variant="raised" className={TILE}>
-                <a
-                  href={STANDARD_HREF}
-                  onClick={addUtm}
-                  onAuxClick={addUtm}
-                  target="_blank"
-                  rel="noopener noreferrer"
+            <Button asChild variant="raised" className={TILE}>
+              <a
+                href={FULL_PRICE_HREF}
+                onClick={addUtm(FULL_PRICE_HREF)}
+                onAuxClick={addUtm(FULL_PRICE_HREF)}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className={TILE_LABEL}>Standard</span>
+                <span
+                  className={`${HEADING} text-[30px] leading-none text-tan`}
                 >
-                  <span className={TILE_LABEL}>Standard</span>
-                  <span
-                    className={`${HEADING} text-[30px] leading-none text-tan`}
-                  >
-                    ${standard.prices.full.usd}
-                  </span>
-                </a>
-              </Button>
-            )
+                  ${standard.prices.full.usd}
+                </span>
+              </a>
+            </Button>
           ))}
         <Button
           type="button"
