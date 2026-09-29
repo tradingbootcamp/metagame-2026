@@ -6,6 +6,7 @@ import david from "../../../public/images/speakers/david_turner.jpg";
 import elli from "../../../public/images/speakers/elli_furedy.jpg";
 import lexi from "../../../public/images/speakers/lexi_kohanski.jpg";
 import peihGee from "../../../public/images/speakers/peih_gee_law.jpg";
+import randy from "../../../public/images/speakers/randy_lubin.jpg";
 import raph from "../../../public/images/speakers/raph_damico.jpg";
 import tommy from "../../../public/images/team/tommy.jpg";
 import type { Person } from "./team";
@@ -73,5 +74,11 @@ export const SPEAKERS: Person[] = [
     title: "Laughing Kaiju",
     titleUrl: "https://laughingkaiju.com/about/",
     photo: raph,
+  },
+  {
+    name: "Randy Lubin",
+    title: "Leveraged Play",
+    titleUrl: "https://leveragedplay.com/",
+    photo: randy,
   },
 ];
