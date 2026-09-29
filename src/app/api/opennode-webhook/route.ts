@@ -11,6 +11,7 @@ import {
 } from "@/lib/opennode";
 import { ticketCode } from "@/lib/ticket-code";
 import { getDayPass } from "@/lib/tickets";
+import { pickUtm } from "@/lib/utm";
 import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
 
 // HMAC verification + the OpenNode key need Node crypto — keep this off the edge.
@@ -154,6 +155,7 @@ export async function POST(request: Request) {
       settledFiatValue:
         charge.fiat_value != null ? charge.fiat_value / 100 : undefined,
       btcNetwork,
+      utm: pickUtm((key) => meta[key]),
     });
   } catch (err) {
     // 500 → OpenNode retries; recordPurchase upserts on ID, so a retry can't dupe.

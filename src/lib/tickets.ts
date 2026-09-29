@@ -1,7 +1,8 @@
-// Stripe Payment Links are public, no-auth checkout URLs — no secret key or API
-// call is involved, so both test- and live-mode links are safe to commit. Live
-// links serve only in production; local dev and Vercel previews use the sandbox
-// (test_) links so testing never fires a real charge.
+// USD checkout goes through /api/checkout/stripe, which creates a Checkout Session
+// from the Price IDs below. Price IDs aren't secrets, so both modes are committed;
+// live serves only in production, and local dev + Vercel previews use the sandbox.
+// The old Payment Links stay live (and matched by the webhook) for anyone holding
+// one.
 //
 // BTC prices are hardcoded (no live conversion). The actual BTC charge is now
 // code-driven: full price by default, lowered by a validated Airtable discount
@@ -14,7 +15,7 @@ export type StripeMode = "test" | "live";
 // buttons + modals), and Next only inlines NEXT_PUBLIC_ vars into the browser bundle.
 // Plain VERCEL_ENV is undefined client-side, which silently pinned every link to test.
 // Vercel auto-exposes NEXT_PUBLIC_VERCEL_ENV for Next.js projects.
-const stripeMode: StripeMode =
+export const stripeMode: StripeMode =
   process.env.NEXT_PUBLIC_VERCEL_ENV === "production" ? "live" : "test";
 
 /** A price point in both currencies. usd = dollars, btc = whole bitcoin. */
@@ -30,8 +31,9 @@ export type TicketTier = {
     full: Price; // pre-discount, shown struck-through for anchoring
     earlyBird: Price; // what they pay once the promo / BTC discount applies
   };
-  promoCode?: string; // Stripe promotion code, prefilled into the checkout URL
+  promoCode?: string; // Stripe promotion code auto-applied during early-bird
   links: Record<StripeMode, string>;
+  priceIds: Record<StripeMode, string>;
 };
 
 export const ticketTiers: TicketTier[] = [
@@ -51,6 +53,10 @@ export const ticketTiers: TicketTier[] = [
       test: "https://buy.stripe.com/test_7sY8wO7kj5J5cF56J4fw402",
       live: "https://buy.stripe.com/fZu8wO5cb2wT5cD6J4fw405",
     },
+    priceIds: {
+      test: "price_1TjWcrCtO443EG3nD39mtOlw",
+      live: "price_1TjWI3CtO443EG3njBAhYYWO",
+    },
   },
 ];
 
@@ -61,14 +67,15 @@ export function getTicket(id: string): TicketTier | undefined {
 
 // ── Supporter tier ──────────────────────────────────────────────────────────
 // A pay-what-you-want tier (floor $525 / ₿0.0087) sitting alongside the standard
-// ticket. USD checkout uses one Stripe Payment Link per quick-pick amount; BTC
-// checkout goes through the OpenNode modal with an editable amount.
+// ticket. USD checkout uses one custom-amount Stripe price per quick-pick amount;
+// BTC checkout goes through the OpenNode modal with an editable amount.
 
 /** One quick-pick amount: a USD Stripe preset + its hardcoded BTC equivalent. */
 export type SupporterChip = {
   usd: number; // Stripe price preset (dollars)
   btc: number; // ~equivalent whole BTC, hardcoded
   links: Record<StripeMode, string>; // Payment Link for this chip's custom-amount Stripe price
+  priceIds: Record<StripeMode, string>; // custom-amount price whose preset is this chip
 };
 
 export type SupporterTier = {
@@ -92,6 +99,10 @@ export const supporterTier: SupporterTier = {
         test: "https://buy.stripe.com/test_00wcN43430oLcF5aZkfw40b",
         live: "https://buy.stripe.com/4gM9AS5cb1sP8oP6J4fw406",
       },
+      priceIds: {
+        test: "price_1Tme4HCtO443EG3nSx8R2VB1",
+        live: "price_1TmdmWCtO443EG3nFy8f4XKA",
+      },
     },
     {
       usd: 650,
@@ -99,6 +110,10 @@ export const supporterTier: SupporterTier = {
       links: {
         test: "https://buy.stripe.com/test_eVq14m0VV2wT7kL8Rcfw40c",
         live: "https://buy.stripe.com/bJeaEW1ZZ2wT48z8Rcfw407",
+      },
+      priceIds: {
+        test: "price_1Tme4HCtO443EG3nsiPyocey",
+        live: "price_1Tmdx6CtO443EG3njyqbwa6J",
       },
     },
     {
@@ -108,6 +123,10 @@ export const supporterTier: SupporterTier = {
         test: "https://buy.stripe.com/test_6oU4gy343fjF9sTebwfw40d",
         live: "https://buy.stripe.com/3cIeVc9sr4F1dJ91oKfw408",
       },
+      priceIds: {
+        test: "price_1Tme4HCtO443EG3nIn5Biukt",
+        live: "price_1TmdoLCtO443EG3n2lA6EkVY",
+      },
     },
     {
       usd: 1024,
@@ -115,6 +134,10 @@ export const supporterTier: SupporterTier = {
       links: {
         test: "https://buy.stripe.com/test_4gM4gy3435J56gH9Vgfw40e",
         live: "https://buy.stripe.com/4gMaEWcED7RdeNdgjEfw409",
+      },
+      priceIds: {
+        test: "price_1Tme4HCtO443EG3n9Llt5UFZ",
+        live: "price_1TmdxyCtO443EG3nT07mUEyW",
       },
     },
   ],
@@ -131,9 +154,9 @@ export function supporterChipUrl(chip: SupporterChip): string | null {
 }
 
 // ── Day passes ──────────────────────────────────────────────────────────────
-// Single-day admission. USD via Stripe Payment Links; BTC via the OpenNode modal at
+// Single-day admission. USD via Stripe Checkout; BTC via the OpenNode modal at
 // a fixed price scaled off Standard's ₿/$ ratio (no discount codes on either rail).
-// Promo codes are off on the links so EARLYBIRD can't take $100 off a $100 pass.
+// Promo codes are off for these so EARLYBIRD can't take $100 off a $100 pass.
 
 export type DayPass = {
   id: "friday" | "saturday" | "sunday";
@@ -143,6 +166,7 @@ export type DayPass = {
   /** The admitted day — drives the confirmation email's date line + calendar link. */
   date: { long: string; ymd: string };
   links: Record<StripeMode, string>;
+  priceIds: Record<StripeMode, string>;
 };
 
 export const dayPasses: DayPass[] = [
@@ -156,6 +180,10 @@ export const dayPasses: DayPass[] = [
       test: "https://buy.stripe.com/test_fZubJ0gUTgnJfRh9Vgfw40i",
       live: "https://buy.stripe.com/6oU4gy343fjF9sTebwfw40d",
     },
+    priceIds: {
+      test: "price_1UIdmLCtO443EG3nQIZ4R1Lc",
+      live: "price_1UIdmdCtO443EG3nPMl8uydB",
+    },
   },
   {
     id: "saturday",
@@ -167,6 +195,10 @@ export const dayPasses: DayPass[] = [
       test: "https://buy.stripe.com/test_7sYbJ07kj7Rd5cD7N8fw40j",
       live: "https://buy.stripe.com/4gM4gy3435J56gH9Vgfw40e",
     },
+    priceIds: {
+      test: "price_1UIdmOCtO443EG3nR9Bz9z81",
+      live: "price_1UIdmgCtO443EG3neSp7TgeI",
+    },
   },
   {
     id: "sunday",
@@ -177,6 +209,10 @@ export const dayPasses: DayPass[] = [
     links: {
       test: "https://buy.stripe.com/test_7sYdR8dIHfjF48zd7sfw40k",
       live: "https://buy.stripe.com/7sYdR8gUT2wT5cDc3ofw40f",
+    },
+    priceIds: {
+      test: "price_1UIdmRCtO443EG3n1GmE29fK",
+      live: "price_1UIdmjCtO443EG3nIuTujyLM",
     },
   },
 ];
@@ -197,6 +233,25 @@ export function dayPassForPaymentLinkUrl(
 ): DayPass | undefined {
   if (!url) return undefined;
   return dayPasses.find((p) => Object.values(p.links).includes(url));
+}
+
+export const DAY_PASS_TIER = "day-pass";
+
+/**
+ * Tier label + admitted day from the metadata /api/checkout/stripe puts on a
+ * Checkout Session. Undefined for sessions it didn't create (old Payment Links).
+ */
+export function tierForCheckoutMetadata(
+  metadata: Record<string, string> | null | undefined,
+): { label: string; day?: DayPass["date"] } | undefined {
+  const tier = metadata?.tier;
+  if (tier === DAY_PASS_TIER) {
+    const pass = getDayPass(metadata?.day ?? "");
+    return pass && { label: pass.label, day: pass.date };
+  }
+  if (tier === supporterTier.id) return { label: supporterTier.label };
+  const ticket = tier ? getTicket(tier) : undefined;
+  return ticket && { label: ticket.label };
 }
 
 /**

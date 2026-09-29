@@ -1,6 +1,7 @@
 import { env } from "@/env";
 import { airtableConfig } from "@/lib/airtable-config";
 import { EMAIL_LIST_VALUE, type InterestValue } from "@/lib/interests";
+import type { Utm } from "@/lib/utm";
 import type { EggEvent } from "@/v2/components/dividers/track";
 
 export type SignupResult = { stored: boolean; reason?: string };
@@ -174,6 +175,7 @@ export type PurchaseRecord = {
   networkFeeBtc?: number;
   settledFiatValue?: number;
   btcNetwork?: "On-chain" | "Lightning";
+  utm?: Utm; // first-touch UTMs the buyer landed with
 };
 
 /**
@@ -231,6 +233,10 @@ export async function recordPurchase(
   if (purchase.settledFiatValue != null)
     fields["Settled Fiat Value"] = purchase.settledFiatValue;
   if (purchase.btcNetwork) fields["BTC Network"] = purchase.btcNetwork;
+  if (purchase.utm?.utm_source) fields["UTM Source"] = purchase.utm.utm_source;
+  if (purchase.utm?.utm_medium) fields["UTM Medium"] = purchase.utm.utm_medium;
+  if (purchase.utm?.utm_campaign)
+    fields["UTM Campaign"] = purchase.utm.utm_campaign;
 
   const res = await fetch(
     `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.purchasesTableId)}`,
