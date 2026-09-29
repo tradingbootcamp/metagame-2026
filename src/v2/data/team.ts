@@ -8,6 +8,7 @@ import davidHolt from "../../../public/images/team/david_holt.jpg";
 import jisk from "../../../public/images/team/jisk.jpg";
 import john from "../../../public/images/team/john_bromels.jpg";
 import kai from "../../../public/images/team/kai.jpg";
+import michael from "../../../public/images/team/michael_sheely.jpg";
 import patrick from "../../../public/images/team/patrick.jpg";
 import ricki from "../../../public/images/team/ricki.jpg";
 import sparr from "../../../public/images/team/sparr.jpg";
@@ -68,6 +69,7 @@ export const TEAM: Person[] = [
   },
   { name: "Sparr Risher", title: "Generalist", photo: sparr },
   { name: "Kai Geffen", title: "Generalist", photo: kai },
+  { name: "Michael Sheely", title: "Generalist", photo: michael },
   {
     name: "Damon Pourtahmaseb-Sasi",
     title: "Community Health Liaison",

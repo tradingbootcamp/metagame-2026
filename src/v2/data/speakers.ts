@@ -3,6 +3,7 @@ import andrew from "../../../public/images/speakers/andrew_nathenson.jpg";
 import caro from "../../../public/images/speakers/caro_murphy.jpg";
 import chris from "../../../public/images/speakers/chris_grace.jpg";
 import david from "../../../public/images/speakers/david_turner.jpg";
+import elli from "../../../public/images/speakers/elli_furedy.jpg";
 import lexi from "../../../public/images/speakers/lexi_kohanski.jpg";
 import peihGee from "../../../public/images/speakers/peih_gee_law.jpg";
 import tommy from "../../../public/images/team/tommy.jpg";
@@ -59,5 +60,11 @@ export const SPEAKERS: Person[] = [
     title: "Semantle",
     titleUrl: "https://semantle.com/",
     photo: david,
+  },
+  {
+    name: "Elli Furedy",
+    title: "Alleycat Asset Acquisitions",
+    titleUrl: "https://www.alleycat.agency/",
+    photo: elli,
   },
 ];
