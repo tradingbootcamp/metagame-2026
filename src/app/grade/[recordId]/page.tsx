@@ -98,7 +98,7 @@ export default async function SubmissionPage(
 ) {
   if (!isConfigured()) redirect("/grade");
   const session = await readSession();
-  if (!session?.grader) redirect("/grade");
+  if (!session?.identity) redirect("/grade");
 
   const { recordId } = await props.params;
   const submission = await getSubmission(recordId);

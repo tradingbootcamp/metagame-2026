@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import type { Identity } from "./grader-identity";
 
 // One shared password gets you in; the "I am" dropdown says who you are. Identity
 // is therefore self-asserted — it drives the "assigned to me" filter, not access
@@ -13,9 +14,8 @@ import { cookies } from "next/headers";
 const COOKIE = "mg_grader";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
-export type Grader = { name: string };
-/** `grader: null` = password accepted, still need to say who you are. */
-export type Session = { grader: Grader | null };
+/** `identity: null` = password accepted, still need to say who you are. */
+export type Session = { identity: Identity | null };
 
 const b64url = (buf: Buffer) => buf.toString("base64url");
 
@@ -42,13 +42,13 @@ export function checkPassword(input: string): boolean {
   return Boolean(expected) && matches(input, expected!);
 }
 
-export async function startSession(grader: Grader | null): Promise<void> {
+export async function startSession(identity: Identity | null): Promise<void> {
   const secret = process.env.GRADER_SESSION_SECRET;
   if (!secret) throw new Error("GRADER_SESSION_SECRET is not set");
 
   const payload = b64url(
     Buffer.from(
-      JSON.stringify({ grader, exp: Date.now() + MAX_AGE_SECONDS * 1000 }),
+      JSON.stringify({ identity, exp: Date.now() + MAX_AGE_SECONDS * 1000 }),
     ),
   );
   const store = await cookies();
@@ -66,6 +66,14 @@ export async function endSession(): Promise<void> {
   store.delete({ name: COOKIE, path: "/grade" });
 }
 
+/** Rebuilt rather than trusted, so a tampered payload can't invent a shape. */
+function parseIdentity(value: unknown): Identity | null {
+  if (!value || typeof value !== "object") return null;
+  const { kind, name } = value as { kind?: unknown; name?: unknown };
+  if (kind === "anon") return { kind: "anon" };
+  return typeof name === "string" ? { kind: "grader", name } : null;
+}
+
 export async function readSession(): Promise<Session | null> {
   const secret = process.env.GRADER_SESSION_SECRET;
   if (!secret) return null;
@@ -78,14 +86,13 @@ export async function readSession(): Promise<Session | null> {
   if (!matches(signature, sign(payload, secret))) return null;
 
   try {
-    const { grader, exp } = JSON.parse(
+    const { identity, grader, exp } = JSON.parse(
       Buffer.from(payload, "base64url").toString(),
     );
     if (typeof exp !== "number" || exp < Date.now()) return null;
-    if (grader !== null && typeof grader?.name !== "string") return null;
-    // Rebuilt rather than passed through, so cookies issued back when graders
-    // were collaborators drop their stale email instead of carrying it around.
-    return { grader: grader && { name: grader.name } };
+    // `grader` is the pre-"Someone else" shape, `{ name }`; reading it too
+    // keeps sessions issued before this change signed in.
+    return { identity: parseIdentity(identity ?? grader) };
   } catch {
     return null;
   }

@@ -2,12 +2,13 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { GraderPicker, PasswordForm } from "./SignInForms";
 import { isConfigured, readSession } from "@/lib/grader-auth";
+import { identityName } from "@/lib/grader-identity";
+import InfoTip from "./InfoTip";
 import InlineSelect from "./InlineSelect";
 import {
   GRADER_FIELD,
   listSubmissions,
   NEXT_STEPS_FIELD,
-  NEXT_STEPS_GRADE,
   optionColors,
   resolveEditableFields,
   resolveGraderNames,
@@ -24,7 +25,14 @@ const VIEWS = [
 
 type ViewKey = (typeof VIEWS)[number]["key"];
 
-const SORTS = ["proposal", "grader", "verdict", "next", "shepherd"] as const;
+const SORTS = [
+  "proposal",
+  "host",
+  "grader",
+  "verdict",
+  "next",
+  "shepherd",
+] as const;
 type SortKey = (typeof SORTS)[number];
 
 // Airtable's own select order, so sorting reads the way the column does there.
@@ -59,14 +67,22 @@ const rank = (order: string[], value: string | null) => {
 const first = (value: string | string[] | undefined) =>
   (Array.isArray(value) ? value[0] : value) ?? "";
 
-/**
- * Grading is tracked by the pipeline column now, not a separate status: a
- * proposal is still with its grader until someone moves it past "1. Grade".
- */
-const awaitingGrade = (s: Submission) =>
-  s.nextSteps === null || s.nextSteps === NEXT_STEPS_GRADE;
+// The list is grouped by pipeline step, so the headings drop the numbering the
+// option names carry. Anything not named here just loses its "N. " prefix.
+const GROUP_LABELS: Record<string, string> = {
+  "1. Grade": "To grade",
+  "7. None! We're good :) ": "All set",
+};
+
+const groupLabel = (step: string | null) =>
+  step === null
+    ? "Not triaged yet"
+    : (GROUP_LABELS[step] ?? step.replace(/^\d+\.\s*/, "").trim());
 
 function compare(a: Submission, b: Submission, sort: SortKey) {
+  if (sort === "host") {
+    return a.host.localeCompare(b.host) || a.title.localeCompare(b.title);
+  }
   if (sort === "grader" || sort === "shepherd") {
     const who = (s: Submission) => (sort === "grader" ? s.grader : s.shepherd);
     // "￿" keeps unassigned rows at the bottom of an ascending sort.
@@ -139,21 +155,24 @@ function Group({
   state,
   colors,
   decisionOptions,
+  descriptions,
 }: {
   title: string;
   submissions: Submission[];
   state: SortState;
   colors: Record<string, Record<string, string>>;
   decisionOptions: Record<string, string[]>;
+  /** Airtable column descriptions, shown behind the ⓘ in the header. */
+  descriptions: Record<string, string | undefined>;
 }) {
   if (submissions.length === 0) return null;
 
-  // Grader only earns a column in "Everything" — in "mine" it's always you.
-  // Everything past the title is sized to its content so the title keeps the rest.
-  const cols =
-    state.view === "all"
-      ? "lg:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem_6.5rem]"
-      : "lg:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem]";
+  const shepherdInfo = descriptions[SHEPHERD_FIELD];
+
+  // Everything past the title is sized to its content so the title keeps the
+  // rest. Grader earns a column in both views now: "Assigned to me" also holds
+  // rows you only shepherd, so it isn't always you any more.
+  const cols = "lg:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem_6.5rem]";
 
   return (
     <section>
@@ -166,13 +185,24 @@ function Group({
         <div
           className={`hidden gap-4 border-b border-line bg-cream/60 px-4 py-2 lg:grid ${cols}`}
         >
-          <SortLink column="proposal" label="Proposal" state={state} />
-          {state.view === "all" && (
-            <SortLink column="grader" label="Grader" state={state} />
-          )}
+          {/* One cell, two sorts: the rows stack title over host, so the
+              header offers each of them separately. */}
+          <span className="flex items-center gap-1.5">
+            <SortLink column="proposal" label="Proposal" state={state} />
+            <span aria-hidden className="text-ink/25">
+              |
+            </span>
+            <SortLink column="host" label="Host" state={state} />
+          </span>
+          <SortLink column="grader" label="Grader" state={state} />
           <SortLink column="verdict" label="Verdict" state={state} />
           <SortLink column="next" label="Next steps" state={state} />
-          <SortLink column="shepherd" label="Shepherd" state={state} />
+          {/* Last column, so the ⓘ can spill into the row's right padding
+              rather than forcing the header to wrap. */}
+          <span className="flex items-center whitespace-nowrap">
+            <SortLink column="shepherd" label="Shepherd" state={state} />
+            {shepherdInfo && <InfoTip text={shepherdInfo} />}
+          </span>
         </div>
 
         <ul className="divide-y divide-line">
@@ -195,21 +225,19 @@ function Group({
                     {submission.host}
                   </span>
                 </span>
-                {state.view === "all" && (
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    {/* Below lg the columns stack, so they need their own labels. */}
-                    <span className="shrink-0 text-xs text-ink/40 lg:hidden">
-                      Grader
-                    </span>
-                    <InlineSelect
-                      recordId={submission.id}
-                      field={GRADER_FIELD}
-                      value={submission.grader}
-                      options={decisionOptions[GRADER_FIELD]}
-                      colors={colors[GRADER_FIELD]}
-                    />
+                <span className="flex min-w-0 items-center gap-1.5">
+                  {/* Below lg the columns stack, so they need their own labels. */}
+                  <span className="shrink-0 text-xs text-ink/40 lg:hidden">
+                    Grader
                   </span>
-                )}
+                  <InlineSelect
+                    recordId={submission.id}
+                    field={GRADER_FIELD}
+                    value={submission.grader}
+                    options={decisionOptions[GRADER_FIELD]}
+                    colors={colors[GRADER_FIELD]}
+                  />
+                </span>
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="shrink-0 text-xs text-ink/40 lg:hidden">
                     Verdict
@@ -274,13 +302,18 @@ export default async function GradePage(props: PageProps<"/grade">) {
   if (!session) return <PasswordForm />;
 
   const submissions = await listSubmissions();
-  if (!session.grader) {
+  if (!session.identity) {
     return <GraderPicker graders={await resolveGraderNames(submissions)} />;
   }
 
+  // Null for "Someone else": no name to match rows against, so there's nothing
+  // for "Assigned to me" to hold and the tab is dropped rather than shown empty.
+  const me = identityName(session.identity);
+  const views = me === null ? VIEWS.filter((v) => v.key !== "mine") : VIEWS;
+
   const params = await props.searchParams;
-  const view = (VIEWS.find((v) => v.key === first(params.view))?.key ??
-    "mine") as ViewKey;
+  const view = (views.find((v) => v.key === first(params.view))?.key ??
+    views[0].key) as ViewKey;
   const rawQuery = first(params.q);
   const query = rawQuery.trim().toLowerCase();
   const sort = (SORTS.find((s) => s === first(params.sort)) ??
@@ -292,15 +325,18 @@ export default async function GradePage(props: PageProps<"/grade">) {
   const decisionOptions = Object.fromEntries(
     decisionFields.map((f) => [f.field, [...f.options]]),
   );
+  const descriptions = Object.fromEntries(
+    decisionFields.map((f) => [f.field, f.description]),
+  );
   const colors = await optionColors([
     GRADER_FIELD,
     VERDICT_FIELD,
     NEXT_STEPS_FIELD,
     SHEPHERD_FIELD,
   ]);
-  const me = session.grader.name;
   const byView: Record<ViewKey, Submission[]> = {
-    mine: submissions.filter((s) => s.grader === me),
+    // Shepherding a session counts as yours too, not just grading it.
+    mine: submissions.filter((s) => s.grader === me || s.shepherd === me),
     all: submissions,
   };
   const visible = byView[view]
@@ -312,10 +348,25 @@ export default async function GradePage(props: PageProps<"/grade">) {
     )
     .sort((a, b) => (dir === "asc" ? 1 : -1) * compare(a, b, sort));
 
+  // One section per pipeline step, in pipeline order, untriaged rows first —
+  // those are the newest submissions and the easiest to lose track of. Any
+  // step Airtable has gained since NEXT_STEPS_ORDER was written gets a section
+  // of its own at the end, rather than its rows vanishing from the page.
+  const steps: (string | null)[] = [
+    ...[null, ...NEXT_STEPS_ORDER].filter((step) =>
+      visible.some((s) => s.nextSteps === step),
+    ),
+    ...new Set(
+      visible
+        .map((s) => s.nextSteps)
+        .filter((step) => step !== null && !NEXT_STEPS_ORDER.includes(step)),
+    ),
+  ];
+
   return (
     <div className="space-y-5">
       <nav className="flex flex-wrap items-center gap-2">
-        {VIEWS.map((v) => (
+        {views.map((v) => (
           <Link
             key={v.key}
             href={{ pathname: "/grade", query: { view: v.key } }}
@@ -359,20 +410,17 @@ export default async function GradePage(props: PageProps<"/grade">) {
         </p>
       ) : (
         <div className="space-y-6">
-          <Group
-            title="To grade"
-            submissions={visible.filter(awaitingGrade)}
-            state={state}
-            colors={colors}
-            decisionOptions={decisionOptions}
-          />
-          <Group
-            title="Graded"
-            submissions={visible.filter((s) => !awaitingGrade(s))}
-            state={state}
-            colors={colors}
-            decisionOptions={decisionOptions}
-          />
+          {steps.map((step) => (
+            <Group
+              key={step ?? "untriaged"}
+              title={groupLabel(step)}
+              submissions={visible.filter((s) => s.nextSteps === step)}
+              state={state}
+              colors={colors}
+              decisionOptions={decisionOptions}
+              descriptions={descriptions}
+            />
+          ))}
         </div>
       )}
     </div>
