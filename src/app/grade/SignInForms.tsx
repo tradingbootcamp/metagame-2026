@@ -71,10 +71,6 @@ export function GraderPicker({ graders }: { graders: string[] }) {
           ))}
           <option value={SOMEONE_ELSE}>{SOMEONE_ELSE}</option>
         </select>
-        <p className="text-sm text-ink/55">
-          “{SOMEONE_ELSE}” gets the same access as anyone here — it just leaves
-          “Assigned to me” empty, since there’s no name to match rows against.
-        </p>
         <button type="submit" disabled={pending} className={buttonClass}>
           {pending ? "One sec…" : "Start grading"}
         </button>
