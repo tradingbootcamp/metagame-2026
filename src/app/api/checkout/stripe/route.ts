@@ -107,7 +107,7 @@ async function promoParams(
 /**
  * GET /api/checkout/stripe?tier=standard[&code=own]
  *   | ?tier=supporter&chip=<usd> | ?tier=day-pass&day=<friday|saturday|sunday>
- *   [&utm_source=…&utm_medium=…&utm_campaign=…]
+ *   [&utm_source=…&utm_medium=…&utm_campaign=…&first_visit=…&posthog_id=…]
  * Creates a hosted Checkout Session and redirects to it.
  */
 export async function GET(request: Request) {

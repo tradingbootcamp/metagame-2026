@@ -1,32 +1,48 @@
-// First-touch UTM attribution: the UTMs a visitor first landed with ride along
-// into checkout (Stripe session metadata / OpenNode charge metadata) and end up
-// on their Airtable purchase row.
+import posthog from "posthog-js";
 
-export const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign"] as const;
+// First-touch attribution: the UTMs a visitor first landed with, when they
+// first visited, and their PostHog id ride along into checkout (Stripe session
+// metadata / OpenNode charge metadata) and end up on their Airtable purchase row.
+
+const LANDING_KEYS = ["utm_source", "utm_medium", "utm_campaign"] as const;
+export const UTM_KEYS = [...LANDING_KEYS, "first_visit", "posthog_id"] as const;
 
 export type Utm = Partial<Record<(typeof UTM_KEYS)[number], string>>;
 
 const STORAGE_KEY = "first-touch-utm";
+const FIRST_VISIT_KEY = "first-visit";
 const MAX_LEN = 200;
 
 /** The UTM values `get` returns, trimmed and capped; blanks and non-strings dropped. */
-export function pickUtm(get: (key: string) => unknown): Utm {
+export function pickUtm(
+  get: (key: string) => unknown,
+  keys: readonly (keyof Utm)[] = UTM_KEYS,
+): Utm {
   const utm: Utm = {};
-  for (const key of UTM_KEYS) {
+  for (const key of keys) {
     const value = get(key);
     if (typeof value === "string" && value.trim()) {
       utm[key] = value.trim().slice(0, MAX_LEN);
     }
   }
+  // Client-supplied, and Airtable rejects the whole row on a bad date.
+  if (utm.first_visit) {
+    const date = new Date(utm.first_visit);
+    if (isNaN(date.getTime())) delete utm.first_visit;
+    else utm.first_visit = date.toISOString();
+  }
   return utm;
 }
 
-/** Store the landing URL's UTMs, unless an earlier visit already did. */
+/** Store the landing URL's UTMs and the visit time, unless an earlier visit already did. */
 export function captureFirstTouchUtm(search: string): void {
   try {
+    if (!localStorage.getItem(FIRST_VISIT_KEY)) {
+      localStorage.setItem(FIRST_VISIT_KEY, new Date().toISOString());
+    }
     if (localStorage.getItem(STORAGE_KEY)) return;
     const params = new URLSearchParams(search);
-    const utm = pickUtm((key) => params.get(key));
+    const utm = pickUtm((key) => params.get(key), LANDING_KEYS);
     if (Object.keys(utm).length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(utm));
     }
@@ -36,12 +52,21 @@ export function captureFirstTouchUtm(search: string): void {
 }
 
 export function readFirstTouchUtm(): Utm {
+  let stored: Record<string, unknown> = {};
+  let firstVisit: string | null = null;
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
-    return pickUtm((key) => stored?.[key]);
-  } catch {
-    return {};
-  }
+    stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}") ?? {};
+    firstVisit = localStorage.getItem(FIRST_VISIT_KEY);
+  } catch {}
+  let posthogId: string | undefined;
+  try {
+    // Only set when PostHog initialized (NEXT_PUBLIC_POSTHOG_KEY present).
+    if (posthog.__loaded) posthogId = posthog.get_distinct_id();
+  } catch {}
+  return pickUtm(
+    (key) =>
+      ({ first_visit: firstVisit, posthog_id: posthogId })[key] ?? stored[key],
+  );
 }
 
 /** `href` with the stored first-touch UTMs set as query params. Client-only. */

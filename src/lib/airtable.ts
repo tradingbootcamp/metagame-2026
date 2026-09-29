@@ -175,7 +175,7 @@ export type PurchaseRecord = {
   networkFeeBtc?: number;
   settledFiatValue?: number;
   btcNetwork?: "On-chain" | "Lightning";
-  utm?: Utm; // first-touch UTMs the buyer landed with
+  utm?: Utm; // first-touch attribution: landing UTMs, first visit, PostHog id
 };
 
 /**
@@ -237,6 +237,9 @@ export async function recordPurchase(
   if (purchase.utm?.utm_medium) fields["UTM Medium"] = purchase.utm.utm_medium;
   if (purchase.utm?.utm_campaign)
     fields["UTM Campaign"] = purchase.utm.utm_campaign;
+  if (purchase.utm?.first_visit)
+    fields["First Visit"] = purchase.utm.first_visit;
+  if (purchase.utm?.posthog_id) fields["PostHog ID"] = purchase.utm.posthog_id;
 
   const res = await fetch(
     `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.purchasesTableId)}`,
