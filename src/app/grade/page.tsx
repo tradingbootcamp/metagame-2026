@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { GraderPicker, PasswordForm } from "./SignInForms";
 import { isConfigured, readSession } from "@/lib/grader-auth";
 import { identityName } from "@/lib/grader-identity";
+import InfoTip from "./InfoTip";
 import InlineSelect from "./InlineSelect";
 import {
   GRADER_FIELD,
@@ -154,14 +155,19 @@ function Group({
   state,
   colors,
   decisionOptions,
+  descriptions,
 }: {
   title: string;
   submissions: Submission[];
   state: SortState;
   colors: Record<string, Record<string, string>>;
   decisionOptions: Record<string, string[]>;
+  /** Airtable column descriptions, shown behind the ⓘ in the header. */
+  descriptions: Record<string, string | undefined>;
 }) {
   if (submissions.length === 0) return null;
+
+  const shepherdInfo = descriptions[SHEPHERD_FIELD];
 
   // Everything past the title is sized to its content so the title keeps the
   // rest. Grader earns a column in both views now: "Assigned to me" also holds
@@ -191,7 +197,12 @@ function Group({
           <SortLink column="grader" label="Grader" state={state} />
           <SortLink column="verdict" label="Verdict" state={state} />
           <SortLink column="next" label="Next steps" state={state} />
-          <SortLink column="shepherd" label="Shepherd" state={state} />
+          {/* Last column, so the ⓘ can spill into the row's right padding
+              rather than forcing the header to wrap. */}
+          <span className="flex items-center whitespace-nowrap">
+            <SortLink column="shepherd" label="Shepherd" state={state} />
+            {shepherdInfo && <InfoTip text={shepherdInfo} />}
+          </span>
         </div>
 
         <ul className="divide-y divide-line">
@@ -314,6 +325,9 @@ export default async function GradePage(props: PageProps<"/grade">) {
   const decisionOptions = Object.fromEntries(
     decisionFields.map((f) => [f.field, [...f.options]]),
   );
+  const descriptions = Object.fromEntries(
+    decisionFields.map((f) => [f.field, f.description]),
+  );
   const colors = await optionColors([
     GRADER_FIELD,
     VERDICT_FIELD,
@@ -404,6 +418,7 @@ export default async function GradePage(props: PageProps<"/grade">) {
               state={state}
               colors={colors}
               decisionOptions={decisionOptions}
+              descriptions={descriptions}
             />
           ))}
         </div>

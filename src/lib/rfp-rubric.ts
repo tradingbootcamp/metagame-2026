@@ -259,7 +259,7 @@ export const DECISION_FIELDS = [
     // also where they're maintained. Empty until some are added there.
     options: [],
     description:
-      "Which committee member is guiding this speaker through confirming, planning, and running their session?",
+      "The individual responsible for emailing, meeting with, following up with, and ensuring this speaker has a good experience on an ongoing basis",
   },
 ] as const;
 
