@@ -61,6 +61,18 @@ const ENV_SPEC: EnvSpec[] = [
       "Random string used to sign the /grade session cookie. Rotating it signs everyone out.",
   },
   {
+    name: "ADMIN_PASSWORD",
+    required: false,
+    description:
+      "Shared password for the team tools under /admin (tracking links). Without it (and ADMIN_SESSION_SECRET) the page says it isn't configured.",
+  },
+  {
+    name: "ADMIN_SESSION_SECRET",
+    required: false,
+    description:
+      "Random string used to sign the /admin session cookie. Rotating it signs everyone out.",
+  },
+  {
     name: "OPENNODE_ENV",
     required: false,
     description:
