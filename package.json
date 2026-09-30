@@ -10,6 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "node --test \"src/**/*.test.ts\"",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check",
     "prepare": "git config core.hooksPath .githooks || true",
     "email:min": "node scripts/announcement-bootcamp.mjs && node scripts/email-minify.mjs"
