@@ -87,13 +87,14 @@ const PAWNS = [
 ];
 
 // K · B · N · R, the kingside back rank. Fianchetto the bishop (g2) and develop
-// the knight (f3), then the king castles; a blocked king shakes. Castled, the
-// row resets itself after a beat, or at once on a click.
+// the knight (f3), then the king castles. Castling is a king move: a blocked
+// king, or any rook click, is a wrong move that shakes and undoes the setup.
+// Castled, the row resets itself after a beat, or at once on a click.
 export default function CastlingDivider() {
   const [bishop, setBishop] = useState(false);
   const [knight, setKnight] = useState(false);
   const [castled, setCastled] = useState(false);
-  const [shaking, setShaking] = useState(false);
+  const [shaking, setShaking] = useState<"king" | "rook" | null>(null);
   const [king, bishopIcon, knightIcon, rook] = ICONS;
   const kingRef = useRef<HTMLSpanElement>(null);
   const rookRef = useRef<HTMLSpanElement>(null);
@@ -126,13 +127,20 @@ export default function CastlingDivider() {
     };
   }, [castled]);
 
+  const wrong = (piece: "king" | "rook") => {
+    reset();
+    setShaking(piece);
+  };
+
   const onKing = () => {
     if (castled) reset();
     else if (bishop && knight) {
       setCastled(true);
       trackEgg({ egg: "chess", event: "castle" });
-    } else setShaking(true);
+    } else wrong("king");
   };
+
+  const onRook = () => (castled ? reset() : wrong("rook"));
 
   return (
     <DividerRow game="chess">
@@ -171,9 +179,9 @@ export default function CastlingDivider() {
           icon={king}
           move={{ dx: 2, dy: 0 }}
           moved={castled}
-          shaking={shaking}
+          shaking={shaking === "king"}
           onClick={onKing}
-          onShakeEnd={() => setShaking(false)}
+          onShakeEnd={() => setShaking(null)}
         />
         <Piece
           icon={bishopIcon}
@@ -192,7 +200,9 @@ export default function CastlingDivider() {
           icon={rook}
           move={{ dx: -2, dy: 0 }}
           moved={castled}
-          onClick={onKing}
+          shaking={shaking === "rook"}
+          onClick={onRook}
+          onShakeEnd={() => setShaking(null)}
         />
       </span>
     </DividerRow>
