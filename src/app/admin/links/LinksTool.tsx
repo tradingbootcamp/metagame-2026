@@ -2,7 +2,13 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { createLink, type CreateState } from "./actions";
-import { buttonClass, fieldClass, smallButtonClass } from "./ui";
+import {
+  buttonClass,
+  fieldClass,
+  smallButtonClass,
+  selectClass,
+  selectStyle,
+} from "./ui";
 import {
   defaultCampaign,
   GO_PREFIX,
@@ -145,7 +151,8 @@ export default function LinksTool({
               Start from a template
             </span>
             <select
-              className={fieldClass}
+              className={selectClass}
+              style={selectStyle}
               value=""
               onChange={(e) => {
                 const t = templates.find((l) => l.id === e.target.value);
@@ -175,7 +182,8 @@ export default function LinksTool({
                 aria-label="Destination page"
                 value={draft.page}
                 onChange={set("page")}
-                className={fieldClass}
+                className={selectClass}
+                style={selectStyle}
               >
                 {SITE_PAGES.map((p) => (
                   <option key={p.path} value={p.path}>
@@ -338,12 +346,13 @@ function SelectField({
       error={error}
     >
       <input type="hidden" name={field} value={effective} />
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2">
         <select
           aria-label={label}
           value={value}
           onChange={onChange}
-          className={fieldClass}
+          className={selectClass}
+          style={selectStyle}
         >
           {choices.map((c) => (
             <option key={c} value={c}>
@@ -467,7 +476,9 @@ function Library({
   onUseTemplate: (link: TrackingLink) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [creator, setCreator] = useState(me);
+  const [creator, setCreator] = useState(() =>
+    links.some((l) => l.createdBy === me) ? me : "",
+  );
   const creators = useMemo(
     () =>
       Array.from(new Set(links.map((l) => l.createdBy).filter(Boolean))).sort(),
@@ -510,7 +521,8 @@ function Library({
           <select
             value={creator}
             onChange={(e) => setCreator(e.target.value)}
-            className={`${fieldClass} w-40`}
+            className={selectClass}
+            style={selectStyle}
           >
             <option value="">Everyone</option>
             {creators.map((c) => (
