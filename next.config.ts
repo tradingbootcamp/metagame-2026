@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { validateEnv } from "./src/env";
+import { RFP_FORM_URL } from "./src/v2/lib/links";
 
 // Warn (don't fail) on missing required env vars at build / dev start.
 validateEnv();
@@ -16,9 +17,11 @@ const nextConfig: NextConfig = {
       ],
     },
   ],
-  // Key dates used to be its own page.
   redirects: async () => [
+    // Key dates used to be its own page.
     { source: "/key-dates", destination: "/#key-dates", permanent: true },
+    // Short link to the session-proposal (RFP) Airtable form.
+    { source: "/propose", destination: RFP_FORM_URL, permanent: false },
   ],
   // Let LAN devices (phones) load /_next dev assets; without this the Network URL serves HTML but never hydrates.
   allowedDevOrigins: ["10.*.*.*", "192.168.*.*", "157.230.177.203"],
