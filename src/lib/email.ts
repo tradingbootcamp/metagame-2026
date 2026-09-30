@@ -124,7 +124,7 @@ export function renderTicketConfirmationEmail(
       <div style="display: none; max-height: 0; overflow: hidden;">You're coming to Metagame!</div>
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="text-align: center; margin: 24px 0;">
-          <img src="${assetBase}/dice_logo.png" alt="METAGAME" width="360" style="max-width: 100%; height: auto;" />
+          <img src="${assetBase}/images/dice_logo.png" alt="METAGAME" width="360" style="max-width: 100%; height: auto;" />
         </div>
 
         <h1 style="color: #333; text-align: center;">Ready to play.</h1>
@@ -286,7 +286,7 @@ export async function sendContactEmail({
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="text-align: center; margin: 24px 0 8px;">
-          <img src="${SITE}/dice_logo.png" alt="METAGAME" width="240" style="max-width: 100%; height: auto;" />
+          <img src="${SITE}/images/dice_logo.png" alt="METAGAME" width="240" style="max-width: 100%; height: auto;" />
         </div>
         <h1 style="color: #333; text-align: center; font-size: 22px;">Website Contact Form Submitted</h1>
         <p style="color: #888; font-size: 13px; text-align: center;">Reply to this email to answer them.</p>

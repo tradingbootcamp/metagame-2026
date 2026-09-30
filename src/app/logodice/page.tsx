@@ -13,10 +13,10 @@ export default function LogoDicePage() {
         <p className="mb-2 font-mono text-sm text-neutral-500">SVG rebuild</p>
         <LogoDice highlight={true} className="w-full max-w-4xl" />
         <p className="mt-8 mb-2 font-mono text-sm text-neutral-500">
-          original logo.png
+          original dice_logo.png
         </p>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/images/logo.png" alt="" className="w-full max-w-4xl" />
+        <img src="/images/dice_logo.png" alt="" className="w-full max-w-4xl" />
       </section>
       <section className="bg-neutral-900 p-8">
         <p className="mb-2 font-mono text-sm text-neutral-400">on dark</p>
