@@ -235,9 +235,6 @@ export default function StackEditor() {
             </tbody>
           </table>
 
-          <p className="mt-2 font-space-mono text-xs tracking-[0.08em] text-ink/60 uppercase">
-            All hats, in this order
-          </p>
           <Tower table={table} />
         </aside>
       </div>
@@ -245,30 +242,63 @@ export default function StackEditor() {
   );
 }
 
-// Every hat piled up in hats.ts order, with room above for however tall it
-// gets.
+// Every hat piled up, in hats.ts order or shuffled, with room above for
+// however tall it gets.
 function Tower({ table }: { table: StackTable }) {
   const WIDTH = 220;
+  const [order, setOrder] = useState(IDS);
+  const shuffle = () => {
+    const next = [...IDS];
+    for (let i = next.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [next[i], next[j]] = [next[j], next[i]];
+    }
+    setOrder(next);
+  };
   const placed = placeHats(
-    IDS.map((h) => HATS[h]),
+    order.map((h) => HATS[h]),
     table,
   );
   const highest = Math.min(
     ...placed.map((p) => p.cy - p.width / hatAspect(p.hat) / 2),
   );
   const unitPx = (WIDTH * 0.86) / 100;
+  const shuffled = order.some((h, i) => h !== IDS[i]);
   return (
-    <div
-      className="relative aspect-square rounded-2xl border border-dashed border-navy/40 bg-white"
-      style={{
-        width: WIDTH,
-        marginTop: Math.max(0, -(highest + 14) * unitPx) + 40,
-      }}
-    >
-      <div className="absolute inset-x-[7%] top-[14%] bottom-0">
-        {placed.map((p) => (
-          <WornHat key={p.hat.id} {...p} />
-        ))}
+    <div className="mt-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="font-space-mono text-xs tracking-[0.08em] text-ink/60 uppercase">
+          All hats, {shuffled ? "shuffled" : "in hats.ts order"}
+        </p>
+        <button
+          type="button"
+          onClick={shuffle}
+          className="rounded border border-navy/30 bg-white px-2 py-1 text-xs hover:border-navy"
+        >
+          Randomize order
+        </button>
+        {shuffled && (
+          <button
+            type="button"
+            onClick={() => setOrder(IDS)}
+            className="rounded border border-navy/30 bg-white px-2 py-1 text-xs hover:border-navy"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+      <div
+        className="relative aspect-square rounded-2xl border border-dashed border-navy/40 bg-white"
+        style={{
+          width: WIDTH,
+          marginTop: Math.max(0, -(highest + 14) * unitPx) + 40,
+        }}
+      >
+        <div className="absolute inset-x-[7%] top-[14%] bottom-0">
+          {placed.map((p) => (
+            <WornHat key={p.hat.id} {...p} />
+          ))}
+        </div>
       </div>
     </div>
   );
