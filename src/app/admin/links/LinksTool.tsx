@@ -240,7 +240,7 @@ export default function LinksTool({
           <Field
             label="Location"
             required
-            hint="The specific server, list, subreddit, or event the link goes in (utm_content)."
+            hint="The exact place it's posted, e.g. Puzzle World, r/boardgames, Bay Area Puzzlers newsletter."
             error={err("placement")}
           >
             {combobox("placement", "Location", placements)}
@@ -248,7 +248,7 @@ export default function LinksTool({
           <Field
             label="Platform"
             required
-            hint="Discord, email, DM… (utm_source)."
+            hint="Kind of channel, e.g. discord, email, dm, website."
             error={err("source")}
           >
             {combobox("source", "Platform", options.source)}
@@ -256,25 +256,16 @@ export default function LinksTool({
           <Field
             label="Medium"
             required
-            hint="What kind of post (utm_medium)."
+            hint="Kind of post, e.g. community post, newsletter, dm, physical poster."
             error={err("medium")}
           >
             {combobox("medium", "Medium", options.medium)}
           </Field>
-          <Field
-            label="Campaign"
-            hint="Always the current one (utm_campaign)."
-            error={err("campaign")}
-          >
-            <input type="hidden" name="campaign" value={draft.campaign} />
-            <p className="py-2 font-mono text-base text-ink/70">
-              {draft.campaign}
-            </p>
-          </Field>
+          <input type="hidden" name="campaign" value={draft.campaign} />
           <Field
             label="Short name"
             required
-            hint="The part after /go/ in the shared link. Follows the location until you edit it."
+            hint="The part after /go/, e.g. puzzle-world. Follows the location until you edit it."
             error={err("slug")}
           >
             <input
@@ -298,7 +289,7 @@ export default function LinksTool({
           </Field>
           <Field
             label="Label"
-            hint="Link's name in our system. Follows location and platform until you edit it."
+            hint="Name in our list, e.g. Puzzle World · discord. Follows location and platform until you edit it."
           >
             <input
               name="internalName"
@@ -319,7 +310,9 @@ export default function LinksTool({
               {pending ? "Creating…" : "Create and copy link"}
             </button>
             <p aria-live="polite" className="min-h-5 text-sm text-meeple">
-              {state.error && !state.field ? state.error : null}
+              {state.error && (!state.field || state.field === "campaign")
+                ? state.error
+                : null}
             </p>
           </div>
         </form>
