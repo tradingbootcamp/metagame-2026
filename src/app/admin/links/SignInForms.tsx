@@ -1,0 +1,63 @@
+"use client";
+
+import { useActionState } from "react";
+import { identify, unlock, type FormState } from "./actions";
+import { buttonClass, Card, fieldClass } from "./ui";
+
+const initial: FormState = {};
+
+export function PasswordForm() {
+  const [state, action, pending] = useActionState(unlock, initial);
+
+  return (
+    <Card title="Team tools">
+      <form action={action} className="space-y-3">
+        <input
+          type="password"
+          name="password"
+          autoComplete="current-password"
+          placeholder="Password"
+          required
+          autoFocus
+          className={fieldClass}
+        />
+        <button type="submit" disabled={pending} className={buttonClass}>
+          {pending ? "Checking…" : "Enter"}
+        </button>
+        <p aria-live="polite" className="min-h-5 text-sm text-meeple">
+          {state.error}
+        </p>
+      </form>
+    </Card>
+  );
+}
+
+export function NameForm() {
+  const [state, action, pending] = useActionState(identify, initial);
+
+  return (
+    <Card title="Who are you?">
+      <form action={action} className="space-y-3">
+        <input
+          type="text"
+          name="name"
+          autoComplete="name"
+          placeholder="Your name"
+          required
+          autoFocus
+          maxLength={60}
+          className={fieldClass}
+        />
+        <p className="text-sm text-ink/60">
+          Labels the links you create so you can find them again.
+        </p>
+        <button type="submit" disabled={pending} className={buttonClass}>
+          {pending ? "One sec…" : "Continue"}
+        </button>
+        <p aria-live="polite" className="min-h-5 text-sm text-meeple">
+          {state.error}
+        </p>
+      </form>
+    </Card>
+  );
+}
