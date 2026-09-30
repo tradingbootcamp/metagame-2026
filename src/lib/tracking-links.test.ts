@@ -2,11 +2,22 @@ import { describe, expect, it } from "vitest";
 import {
   buildDestinationUrl,
   defaultCampaign,
-  matchSitePage,
   isAllowedDestination,
+  matchSitePage,
   normalizeSlug,
+  slugify,
+  snapToOption,
+  suggestSlug,
   validateSlug,
+  type LinkOptions,
 } from "./tracking-links";
+
+const opts = (campaign: string[] = []): LinkOptions => ({
+  source: [],
+  medium: [],
+  campaign,
+  placement: [],
+});
 
 describe("normalizeSlug", () => {
   it("lowercases and hyphenates whitespace", () => {
@@ -95,19 +106,13 @@ describe("buildDestinationUrl", () => {
 
 describe("defaultCampaign", () => {
   it("prefers metagame-2026 when Airtable lists it", () => {
-    expect(
-      defaultCampaign({
-        source: [],
-        medium: [],
-        campaign: ["other", "metagame-2026"],
-      }),
-    ).toBe("metagame-2026");
+    expect(defaultCampaign(opts(["other", "metagame-2026"]))).toBe(
+      "metagame-2026",
+    );
   });
   it("falls back to the first listed choice, or empty", () => {
-    expect(
-      defaultCampaign({ source: [], medium: [], campaign: ["x", "y"] }),
-    ).toBe("x");
-    expect(defaultCampaign({ source: [], medium: [], campaign: [] })).toBe("");
+    expect(defaultCampaign(opts(["x", "y"]))).toBe("x");
+    expect(defaultCampaign(opts())).toBe("");
   });
 });
 
@@ -122,6 +127,45 @@ describe("matchSitePage", () => {
   it("returns null for anything else", () => {
     expect(matchSitePage("https://metagame.games/tickets?x=1", origin)).toBe(
       null,
+    );
+  });
+});
+
+describe("slugify", () => {
+  it("lowercases, hyphenates, strips punctuation, keeps underscores", () => {
+    expect(slugify("Puzzle World")).toBe("puzzle-world");
+    expect(slugify("Metagame 2026 (Nov 6–8)")).toBe("metagame-2026-nov-68");
+    expect(slugify("  a_b -- c ")).toBe("a_b-c");
+    expect(slugify("!!!")).toBe("");
+  });
+});
+
+describe("suggestSlug", () => {
+  it("uses the placement, stepping past taken names", () => {
+    expect(suggestSlug("Puzzle World", new Set())).toBe("puzzle-world");
+    expect(suggestSlug("Puzzle World", new Set(["puzzle-world"]))).toBe(
+      "puzzle-world-2",
+    );
+    expect(
+      suggestSlug("Puzzle World", new Set(["puzzle-world", "puzzle-world-2"])),
+    ).toBe("puzzle-world-3");
+    expect(suggestSlug("", new Set())).toBe("");
+  });
+  it("always yields a valid slug", () => {
+    const slug = suggestSlug("x".repeat(60), new Set(["x".repeat(48)]));
+    expect(validateSlug(slug)).toBeNull();
+  });
+});
+
+describe("snapToOption", () => {
+  it("adopts the option's spelling on a case-insensitive match", () => {
+    expect(snapToOption(" puzzle world ", ["Puzzle World"])).toBe(
+      "Puzzle World",
+    );
+  });
+  it("keeps a new value as typed", () => {
+    expect(snapToOption("Board Game Arena ", ["Puzzle World"])).toBe(
+      "Board Game Arena",
     );
   });
 });

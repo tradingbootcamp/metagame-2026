@@ -26,13 +26,33 @@ export type NewTrackingLink = Omit<
 
 export const GO_PREFIX = "/go/";
 
-// The three UTM selects mirror single-select columns in Airtable; their choice
-// lists are the source of truth. Open selects also take a typed value, which
-// `typecast` on create turns into a new choice.
-export const UTM_SELECT_FIELDS = ["source", "medium", "campaign"] as const;
+// The UTM fields mirror single-select columns in Airtable; their choice lists
+// are the source of truth. Open fields also take a typed value, which `typecast`
+// on create turns into a new choice. Values are stored as typed ("Puzzle World")
+// and only slugified when the redirect writes the utm_* params.
+export const UTM_SELECT_FIELDS = [
+  "source",
+  "medium",
+  "campaign",
+  "placement",
+] as const;
 export type UtmSelectField = (typeof UTM_SELECT_FIELDS)[number];
-export const OPEN_SELECTS: ReadonlySet<UtmSelectField> = new Set(["source"]);
+export const OPEN_SELECTS: ReadonlySet<UtmSelectField> = new Set([
+  "source",
+  "medium",
+  "placement",
+]);
 export type LinkOptions = Record<UtmSelectField, string[]>;
+export const UTM_VALUE_MAX = 100;
+
+/** The option whose spelling matches case-insensitively, else the value as typed. */
+export function snapToOption(
+  value: string,
+  options: readonly string[],
+): string {
+  const needle = value.trim().toLowerCase();
+  return options.find((o) => o.toLowerCase() === needle) ?? value.trim();
+}
 
 /** Preselected when Airtable still lists it; otherwise the first choice wins. */
 const PREFERRED_CAMPAIGN = "metagame-2026";
@@ -93,15 +113,23 @@ export function validateSlug(slug: string): string | null {
   return null;
 }
 
-/** UTM value: trimmed, lowercased, whitespace → hyphens. Empty when nothing's left. */
-export function normalizeUtmValue(input: string): string {
-  return normalizeSlug(input).slice(0, 100);
+/** Display text → URL-safe token: "Puzzle World" → "puzzle-world". Underscores survive for utm values. */
+export function slugify(input: string): string {
+  return normalizeSlug(input)
+    .replace(/[^a-z0-9_-]/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
-export function validateUtmValue(value: string): string | null {
-  return /^[a-z0-9_-]+$/.test(value)
-    ? null
-    : "Use only letters, digits, hyphens, and underscores.";
+/** Short name from a placement, stepping past ones already in use: puzzle-world, puzzle-world-2, … */
+export function suggestSlug(seed: string, taken: ReadonlySet<string>): string {
+  const base = slugify(seed).replace(/_/g, "-").slice(0, SLUG_MAX);
+  if (!base) return "";
+  if (!taken.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const candidate = `${base.slice(0, SLUG_MAX - String(n).length - 1)}-${n}`;
+    if (!taken.has(candidate)) return candidate;
+  }
 }
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
@@ -141,10 +169,11 @@ export function buildDestinationUrl(
 ): string {
   const url = new URL(link.destination);
   for (const key of UTM_PARAMS) url.searchParams.delete(key);
-  url.searchParams.set("utm_source", link.source);
-  url.searchParams.set("utm_medium", link.medium);
+  url.searchParams.set("utm_source", slugify(link.source));
+  url.searchParams.set("utm_medium", slugify(link.medium));
   url.searchParams.set("utm_campaign", link.campaign);
-  if (link.placement) url.searchParams.set("utm_content", link.placement);
+  if (link.placement)
+    url.searchParams.set("utm_content", slugify(link.placement));
   url.searchParams.set("utm_term", link.slug);
   return url.toString();
 }
@@ -264,27 +293,46 @@ const FIELD_NAMES: Record<UtmSelectField, string> = {
   source: "Source",
   medium: "Medium",
   campaign: "Campaign",
+  placement: "Placement",
 };
 const SCHEMA_TTL_SECONDS = 300;
+const CRM_NAME_FIELD = "Server Name";
 
 type MetaField = {
   name: string;
   options?: { choices?: { name: string }[] };
 };
 
-/** Choice lists of the three select columns. Throws when the schema can't be read: there's no sensible stand-in. */
+const cached = (): RequestInit => ({
+  headers: { Authorization: `Bearer ${env.AIRTABLE_API_KEY}` },
+  next: { revalidate: SCHEMA_TTL_SECONDS },
+});
+
+/**
+ * Choice lists of the select columns; placement also offers every Discord server
+ * from the outreach CRM. Throws when Airtable can't be read: there's no sensible
+ * stand-in for the lists.
+ */
 export async function loadLinkOptions(): Promise<LinkOptions> {
-  const { AIRTABLE_API_KEY } = env;
-  if (!AIRTABLE_API_KEY) throw new Error("Airtable is not configured");
-  const res = await fetch(
-    `https://api.airtable.com/v0/meta/bases/${airtableConfig.baseId}/tables`,
-    {
-      headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
-      next: { revalidate: SCHEMA_TTL_SECONDS },
-    },
-  );
-  if (!res.ok) throw new Error(`Airtable schema read failed (${res.status})`);
-  const { tables } = (await res.json()) as {
+  if (!env.AIRTABLE_API_KEY) throw new Error("Airtable is not configured");
+  const [schemaRes, crmRes] = await Promise.all([
+    fetch(
+      `https://api.airtable.com/v0/meta/bases/${airtableConfig.baseId}/tables`,
+      cached(),
+    ),
+    fetch(
+      `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.discordOutreachTableId)}?${new URLSearchParams(
+        { "fields[]": CRM_NAME_FIELD, pageSize: "100" },
+      )}`,
+      cached(),
+    ),
+  ]);
+  if (!schemaRes.ok)
+    throw new Error(`Airtable schema read failed (${schemaRes.status})`);
+  if (!crmRes.ok)
+    throw new Error(`Discord Outreach CRM read failed (${crmRes.status})`);
+
+  const { tables } = (await schemaRes.json()) as {
     tables: { id: string; fields: MetaField[] }[];
   };
   const table = tables.find(
@@ -295,10 +343,25 @@ export async function loadLinkOptions(): Promise<LinkOptions> {
     table.fields
       .find((f) => f.name === FIELD_NAMES[field])
       ?.options?.choices?.map((c) => c.name) ?? [];
+
+  const crm = (await crmRes.json()) as { records: AirtableRecord[] };
+  const servers = crm.records
+    .map((r) => r.fields[CRM_NAME_FIELD])
+    .filter((v): v is string => typeof v === "string" && v.trim() !== "");
+  const placement = choices("placement");
+  const seen = new Set(placement.map((p) => p.toLowerCase()));
+  for (const s of servers) {
+    if (!seen.has(s.toLowerCase())) {
+      placement.push(s);
+      seen.add(s.toLowerCase());
+    }
+  }
+
   return {
     source: choices("source"),
     medium: choices("medium"),
     campaign: choices("campaign"),
+    placement,
   };
 }
 

@@ -16,12 +16,13 @@ import {
   loadLinkOptions,
   normalizeSlug,
   OPEN_SELECTS,
+  snapToOption,
   UTM_SELECT_FIELDS,
-  normalizeUtmValue,
+  UTM_VALUE_MAX,
   shortUrl,
   validateSlug,
-  validateUtmValue,
   type TrackingLink,
+  type UtmSelectField,
 } from "@/lib/tracking-links";
 
 const PATH = "/admin/links";
@@ -91,26 +92,17 @@ export async function createLink(
     };
   }
 
-  const utm = {
-    source: normalizeUtmValue(str(formData, "source")),
-    medium: normalizeUtmValue(str(formData, "medium")),
-    campaign: normalizeUtmValue(str(formData, "campaign")),
-    placement: normalizeUtmValue(str(formData, "placement")),
-  };
-  for (const [field, value] of Object.entries(utm)) {
-    if (!value) {
-      if (field === "placement") continue;
-      return { field, error: "Required." };
-    }
-    const problem = validateUtmValue(value);
-    if (problem) return { field, error: problem };
-  }
   const options = await loadLinkOptions();
+  const utm = {} as Record<UtmSelectField, string>;
   for (const field of UTM_SELECT_FIELDS) {
-    if (OPEN_SELECTS.has(field)) continue;
-    if (!options[field].includes(utm[field])) {
+    const value = snapToOption(str(formData, field), options[field]);
+    if (!value) return { field, error: "Required." };
+    if (value.length > UTM_VALUE_MAX)
+      return { field, error: `At most ${UTM_VALUE_MAX} characters.` };
+    if (!OPEN_SELECTS.has(field) && !options[field].includes(value)) {
       return { field, error: `Pick a ${field} from the list.` };
     }
+    utm[field] = value;
   }
 
   const slug = normalizeSlug(str(formData, "slug"));
