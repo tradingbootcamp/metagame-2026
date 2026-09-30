@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDestinationUrl,
+  defaultCampaign,
+  matchSitePage,
   isAllowedDestination,
   normalizeSlug,
   validateSlug,
@@ -88,5 +90,38 @@ describe("buildDestinationUrl", () => {
   it("omits utm_content without a placement", () => {
     const url = new URL(buildDestinationUrl({ ...link, placement: "" }));
     expect(url.searchParams.has("utm_content")).toBe(false);
+  });
+});
+
+describe("defaultCampaign", () => {
+  it("prefers metagame-2026 when Airtable lists it", () => {
+    expect(
+      defaultCampaign({
+        source: [],
+        medium: [],
+        campaign: ["other", "metagame-2026"],
+      }),
+    ).toBe("metagame-2026");
+  });
+  it("falls back to the first listed choice, or empty", () => {
+    expect(
+      defaultCampaign({ source: [], medium: [], campaign: ["x", "y"] }),
+    ).toBe("x");
+    expect(defaultCampaign({ source: [], medium: [], campaign: [] })).toBe("");
+  });
+});
+
+describe("matchSitePage", () => {
+  const origin = "https://metagame.games";
+  it("finds the listed page for a saved destination", () => {
+    expect(matchSitePage("https://metagame.games/#tickets", origin)).toBe(
+      "/#tickets",
+    );
+    expect(matchSitePage("https://metagame.games/", origin)).toBe("/");
+  });
+  it("returns null for anything else", () => {
+    expect(matchSitePage("https://metagame.games/tickets?x=1", origin)).toBe(
+      null,
+    );
   });
 });

@@ -3,7 +3,7 @@ import { NameForm, PasswordForm } from "./SignInForms";
 import LinksTool from "./LinksTool";
 import { isConfigured, readSession } from "@/lib/admin-auth";
 import { siteOriginFromHeaders } from "@/lib/site-origin";
-import { listTrackingLinks } from "@/lib/tracking-links";
+import { listTrackingLinks, loadLinkOptions } from "@/lib/tracking-links";
 
 export default async function AdminLinksPage() {
   // Per-request on every branch, or the unconfigured/password branch gets
@@ -23,9 +23,17 @@ export default async function AdminLinksPage() {
   if (!session) return <PasswordForm />;
   if (!session.identity) return <NameForm />;
 
-  const [links, origin] = await Promise.all([
+  const [links, options, origin] = await Promise.all([
     listTrackingLinks(),
+    loadLinkOptions(),
     siteOriginFromHeaders(),
   ]);
-  return <LinksTool links={links} origin={origin} me={session.identity.name} />;
+  return (
+    <LinksTool
+      links={links}
+      options={options}
+      origin={origin}
+      me={session.identity.name}
+    />
+  );
 }

@@ -24,9 +24,50 @@ export type NewTrackingLink = Omit<
   "id" | "createdAt" | "active" | "template"
 >;
 
-export const MEDIUMS = ["community", "email", "social", "referral"] as const;
-export const DEFAULT_CAMPAIGN = "metagame-2026";
 export const GO_PREFIX = "/go/";
+
+// The three UTM selects mirror single-select columns in Airtable; their choice
+// lists are the source of truth. Open selects also take a typed value, which
+// `typecast` on create turns into a new choice.
+export const UTM_SELECT_FIELDS = ["source", "medium", "campaign"] as const;
+export type UtmSelectField = (typeof UTM_SELECT_FIELDS)[number];
+export const OPEN_SELECTS: ReadonlySet<UtmSelectField> = new Set(["source"]);
+export type LinkOptions = Record<UtmSelectField, string[]>;
+
+/** Preselected when Airtable still lists it; otherwise the first choice wins. */
+const PREFERRED_CAMPAIGN = "metagame-2026";
+export function defaultCampaign(options: LinkOptions): string {
+  return options.campaign.includes(PREFERRED_CAMPAIGN)
+    ? PREFERRED_CAMPAIGN
+    : (options.campaign[0] ?? "");
+}
+
+/** Destinations offered in the form; anything else goes through "Custom URL". */
+export const SITE_PAGES = [
+  { path: "/", label: "Homepage" },
+  { path: "/#tickets", label: "Tickets" },
+  { path: "/#speakers", label: "Speakers" },
+  { path: "/#get-involved", label: "Get involved" },
+  { path: "/#faq", label: "FAQ" },
+  { path: "/sponsor", label: "Sponsor" },
+  { path: "/childcare", label: "Childcare" },
+  { path: "/team", label: "Team" },
+  { path: "/last-year", label: "Last year" },
+] as const;
+
+export const sitePageUrl = (origin: string, path: string) =>
+  `${origin.replace(/\/$/, "")}${path}`;
+
+/** The SITE_PAGES path a saved destination corresponds to, if any. */
+export function matchSitePage(
+  destination: string,
+  origin: string,
+): string | null {
+  const page = SITE_PAGES.find(
+    (p) => sitePageUrl(origin, p.path) === destination,
+  );
+  return page?.path ?? null;
+}
 
 const SLUG_MIN = 3;
 const SLUG_MAX = 48;
@@ -213,9 +254,52 @@ export async function createTrackingLink(
   if (link.internalName) fields["Internal Name"] = link.internalName;
   const created = (await airtable(tableUrl(), {
     method: "POST",
-    body: JSON.stringify({ records: [{ fields }] }),
+    // typecast: a new Source value becomes a choice instead of a 422.
+    body: JSON.stringify({ records: [{ fields }], typecast: true }),
   })) as { records: AirtableRecord[] };
   return toLink(created.records[0]);
+}
+
+const FIELD_NAMES: Record<UtmSelectField, string> = {
+  source: "Source",
+  medium: "Medium",
+  campaign: "Campaign",
+};
+const SCHEMA_TTL_SECONDS = 300;
+
+type MetaField = {
+  name: string;
+  options?: { choices?: { name: string }[] };
+};
+
+/** Choice lists of the three select columns. Throws when the schema can't be read: there's no sensible stand-in. */
+export async function loadLinkOptions(): Promise<LinkOptions> {
+  const { AIRTABLE_API_KEY } = env;
+  if (!AIRTABLE_API_KEY) throw new Error("Airtable is not configured");
+  const res = await fetch(
+    `https://api.airtable.com/v0/meta/bases/${airtableConfig.baseId}/tables`,
+    {
+      headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` },
+      next: { revalidate: SCHEMA_TTL_SECONDS },
+    },
+  );
+  if (!res.ok) throw new Error(`Airtable schema read failed (${res.status})`);
+  const { tables } = (await res.json()) as {
+    tables: { id: string; fields: MetaField[] }[];
+  };
+  const table = tables.find(
+    (t) => t.id === airtableConfig.trackingLinksTableId,
+  );
+  if (!table) throw new Error("Tracking Links table not found in schema");
+  const choices = (field: UtmSelectField) =>
+    table.fields
+      .find((f) => f.name === FIELD_NAMES[field])
+      ?.options?.choices?.map((c) => c.name) ?? [];
+  return {
+    source: choices("source"),
+    medium: choices("medium"),
+    campaign: choices("campaign"),
+  };
 }
 
 // Redirect lookups are cached briefly per server instance: a link posted in a

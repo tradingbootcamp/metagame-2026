@@ -4,17 +4,28 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { createLink, type CreateState } from "./actions";
 import { buttonClass, fieldClass, smallButtonClass } from "./ui";
 import {
-  DEFAULT_CAMPAIGN,
+  defaultCampaign,
   GO_PREFIX,
-  MEDIUMS,
+  matchSitePage,
   normalizeSlug,
+  OPEN_SELECTS,
   shortUrl,
+  SITE_PAGES,
+  sitePageUrl,
+  type LinkOptions,
   type TrackingLink,
+  type UtmSelectField,
 } from "@/lib/tracking-links";
 
+const CUSTOM = "__custom__";
+
 type Draft = {
-  destination: string;
+  /** A SITE_PAGES path, or CUSTOM. */
+  page: string;
+  customDestination: string;
   source: string;
+  /** Typed value used when `source` is CUSTOM. */
+  customSource: string;
   medium: string;
   campaign: string;
   placement: string;
@@ -22,39 +33,60 @@ type Draft = {
   internalName: string;
 };
 
-const emptyDraft = (origin: string): Draft => ({
-  destination: `${origin}/`,
-  source: "",
-  medium: MEDIUMS[0],
-  campaign: DEFAULT_CAMPAIGN,
+const emptyDraft = (options: LinkOptions): Draft => ({
+  page: SITE_PAGES[0].path,
+  customDestination: "",
+  source: options.source[0] ?? CUSTOM,
+  customSource: "",
+  medium: options.medium[0] ?? "",
+  campaign: defaultCampaign(options),
   placement: "",
   slug: "",
   internalName: "",
 });
 
-const fromTemplate = (link: TrackingLink, prev: Draft): Draft => ({
-  ...prev,
-  destination: link.destination,
-  source: link.source,
-  medium: link.medium,
-  campaign: link.campaign,
-  placement: link.placement,
-  slug: "",
-});
+/** Select a listed value, or fall through to the custom slot for one that isn't. */
+const pick = (value: string, choices: string[]) =>
+  choices.includes(value)
+    ? { choice: value, custom: "" }
+    : { choice: CUSTOM, custom: value };
+
+const fromTemplate = (
+  link: TrackingLink,
+  prev: Draft,
+  options: LinkOptions,
+  origin: string,
+): Draft => {
+  const page = matchSitePage(link.destination, origin);
+  const source = pick(link.source, options.source);
+  return {
+    ...prev,
+    page: page ?? CUSTOM,
+    customDestination: page ? "" : link.destination,
+    source: source.choice,
+    customSource: source.custom,
+    medium: link.medium,
+    campaign: link.campaign,
+    placement: link.placement,
+    slug: "",
+  };
+};
 
 const initial: CreateState = {};
 
 export default function LinksTool({
   links: initialLinks,
+  options,
   origin,
   me,
 }: {
   links: TrackingLink[];
+  options: LinkOptions;
   origin: string;
   me: string;
 }) {
   const [state, action, pending] = useActionState(createLink, initial);
-  const [draft, setDraft] = useState<Draft>(() => emptyDraft(origin));
+  const [draft, setDraft] = useState<Draft>(() => emptyDraft(options));
   const [links, setLinks] = useState(initialLinks);
   const formRef = useRef<HTMLFormElement>(null);
   const lastCreated = useRef<string | null>(null);
@@ -80,13 +112,22 @@ export default function LinksTool({
       setDraft((prev) => ({ ...prev, [key]: e.target.value }));
 
   const applyTemplate = (link: TrackingLink) => {
-    setDraft((prev) => fromTemplate(link, prev));
+    setDraft((prev) => fromTemplate(link, prev, options, origin));
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const templates = links.filter((l) => l.template);
   const previewSlug = normalizeSlug(draft.slug);
-  const err = (field: string) => (state.field === field ? state.error : null);
+  const err = (field: string) =>
+    state.field === field ? (state.error ?? null) : null;
+  const destination =
+    draft.page === CUSTOM
+      ? draft.customDestination
+      : sitePageUrl(origin, draft.page);
+  const source = draft.source === CUSTOM ? draft.customSource : draft.source;
+  const placements = Array.from(
+    new Set(links.map((l) => l.placement).filter(Boolean)),
+  ).sort();
 
   return (
     <div className="space-y-10">
@@ -124,54 +165,68 @@ export default function LinksTool({
         <form action={action} className="grid gap-4 md:grid-cols-2">
           <Field
             label="Destination"
+            hint={draft.page === CUSTOM ? undefined : destination}
             error={err("destination")}
             className="md:col-span-2"
           >
-            <input
-              name="destination"
-              type="url"
-              required
-              value={draft.destination}
-              onChange={set("destination")}
-              className={fieldClass}
-            />
+            <input type="hidden" name="destination" value={destination} />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <select
+                aria-label="Destination page"
+                value={draft.page}
+                onChange={set("page")}
+                className={fieldClass}
+              >
+                {SITE_PAGES.map((p) => (
+                  <option key={p.path} value={p.path}>
+                    {p.label} · {p.path}
+                  </option>
+                ))}
+                <option value={CUSTOM}>Custom URL…</option>
+              </select>
+              {draft.page === CUSTOM && (
+                <input
+                  type="url"
+                  required
+                  autoFocus
+                  placeholder={`${origin}/…`}
+                  aria-label="Custom destination URL"
+                  value={draft.customDestination}
+                  onChange={set("customDestination")}
+                  className={fieldClass}
+                />
+              )}
+            </div>
           </Field>
-          <Field
+          <SelectField
+            field="source"
             label="Source"
-            hint="e.g. discord, newsletter"
+            choices={options.source}
+            value={draft.source}
+            custom={draft.customSource}
+            effective={source}
+            onChange={set("source")}
+            onCustomChange={set("customSource")}
             error={err("source")}
-          >
-            <input
-              name="source"
-              required
-              value={draft.source}
-              onChange={set("source")}
-              className={fieldClass}
-            />
-          </Field>
-          <Field label="Medium" error={err("medium")}>
-            <select
-              name="medium"
-              value={draft.medium}
-              onChange={set("medium")}
-              className={fieldClass}
-            >
-              {MEDIUMS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Campaign" error={err("campaign")}>
-            <input
-              name="campaign"
-              required
-              value={draft.campaign}
-              onChange={set("campaign")}
-              className={fieldClass}
-            />
-          </Field>
+          />
+          <SelectField
+            field="medium"
+            label="Medium"
+            choices={options.medium}
+            value={draft.medium}
+            effective={draft.medium}
+            onChange={set("medium")}
+            error={err("medium")}
+          />
+          <SelectField
+            field="campaign"
+            label="Campaign"
+            choices={options.campaign}
+            value={draft.campaign}
+            effective={draft.campaign}
+            onChange={set("campaign")}
+            error={err("campaign")}
+          />
           <Field
             label="Placement"
             hint="Which community or message. Optional."
@@ -179,10 +234,16 @@ export default function LinksTool({
           >
             <input
               name="placement"
+              list="placement-options"
               value={draft.placement}
               onChange={set("placement")}
               className={fieldClass}
             />
+            <datalist id="placement-options">
+              {placements.map((p) => (
+                <option key={p} value={p} />
+              ))}
+            </datalist>
           </Field>
           <Field
             label="Short name"
@@ -237,6 +298,73 @@ export default function LinksTool({
         onUseTemplate={applyTemplate}
       />
     </div>
+  );
+}
+
+/**
+ * A UTM select backed by the Airtable choice list. Open fields get an "Other…"
+ * entry that reveals a text input; the hidden input carries whichever applies.
+ */
+function SelectField({
+  field,
+  label,
+  choices,
+  value,
+  custom = "",
+  effective,
+  onChange,
+  onCustomChange,
+  error,
+}: {
+  field: UtmSelectField;
+  label: string;
+  choices: string[];
+  value: string;
+  custom?: string;
+  effective: string;
+  onChange: React.ChangeEventHandler<HTMLSelectElement>;
+  onCustomChange?: React.ChangeEventHandler<HTMLInputElement>;
+  error: string | null;
+}) {
+  const open = OPEN_SELECTS.has(field);
+  return (
+    <Field
+      label={label}
+      hint={
+        choices.length === 0
+          ? `No ${label} choices in Airtable yet.`
+          : undefined
+      }
+      error={error}
+    >
+      <input type="hidden" name={field} value={effective} />
+      <div className="flex flex-col gap-2">
+        <select
+          aria-label={label}
+          value={value}
+          onChange={onChange}
+          className={fieldClass}
+        >
+          {choices.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+          {open && <option value={CUSTOM}>Other…</option>}
+        </select>
+        {open && value === CUSTOM && (
+          <input
+            required
+            autoFocus
+            placeholder="New value"
+            aria-label={`Other ${label}`}
+            value={custom}
+            onChange={onCustomChange}
+            className={fieldClass}
+          />
+        )}
+      </div>
+    </Field>
   );
 }
 

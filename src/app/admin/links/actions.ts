@@ -10,11 +10,12 @@ import {
 import { siteOriginFromHeaders } from "@/lib/site-origin";
 import {
   createTrackingLink,
-  DEFAULT_CAMPAIGN,
   findTrackingLink,
   isAllowedDestination,
-  MEDIUMS,
+  loadLinkOptions,
   normalizeSlug,
+  OPEN_SELECTS,
+  UTM_SELECT_FIELDS,
   normalizeUtmValue,
   shortUrl,
   validateSlug,
@@ -84,10 +85,10 @@ export async function createLink(
     };
   }
 
-  const utm: Record<"source" | "medium" | "campaign" | "placement", string> = {
+  const utm = {
     source: normalizeUtmValue(str(formData, "source")),
     medium: normalizeUtmValue(str(formData, "medium")),
-    campaign: normalizeUtmValue(str(formData, "campaign")) || DEFAULT_CAMPAIGN,
+    campaign: normalizeUtmValue(str(formData, "campaign")),
     placement: normalizeUtmValue(str(formData, "placement")),
   };
   for (const [field, value] of Object.entries(utm)) {
@@ -98,8 +99,12 @@ export async function createLink(
     const problem = validateUtmValue(value);
     if (problem) return { field, error: problem };
   }
-  if (!(MEDIUMS as readonly string[]).includes(utm.medium)) {
-    return { field: "medium", error: "Pick a medium from the list." };
+  const options = await loadLinkOptions();
+  for (const field of UTM_SELECT_FIELDS) {
+    if (OPEN_SELECTS.has(field)) continue;
+    if (!options[field].includes(utm[field])) {
+      return { field, error: `Pick a ${field} from the list.` };
+    }
   }
 
   const slug = normalizeSlug(str(formData, "slug"));
