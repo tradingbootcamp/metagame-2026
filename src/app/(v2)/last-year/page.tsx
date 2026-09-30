@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import ContentPage from "@/v2/components/ContentPage";
 import LastYearSchedule from "@/v2/components/schedule/LastYearSchedule";
 import { HEADING } from "@/v2/components/styles";
 import { Button } from "@/v2/components/ui/button";
+import HatImage from "@/v2/hat-trick/HatImage";
+import { HATS } from "@/v2/hat-trick/hats";
 import { LAST_YEAR_SITE_URL } from "@/v2/lib/links";
 import megachess from "../../../../public/images/megachess.jpg";
 
@@ -32,10 +33,11 @@ export default function LastYearPage() {
       }
       wide
     >
-      <Image
+      <HatImage
         src={megachess}
         alt="Giant purple and orange chess pieces mid-game on the Lighthaven lawn, with a laptop scoreboard reading 'Purple to move'"
-        className="mb-14 h-auto w-full max-w-[820px] rounded-2xl border border-navy/10 shadow-[0_8px_24px_rgba(23,48,89,0.08)]"
+        hats={[HATS.bishop]}
+        className="mb-14 aspect-[4/3] w-full max-w-[820px] rounded-2xl border border-navy/10 shadow-[0_8px_24px_rgba(23,48,89,0.08)]"
         sizes="(min-width: 1024px) 820px, 100vw"
       />
 

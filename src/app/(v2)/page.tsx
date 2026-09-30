@@ -46,6 +46,8 @@ import {
   RFP_FORM_URL,
   VOLUNTEER_FORM_URL,
 } from "@/v2/lib/links";
+import HatImage from "@/v2/hat-trick/HatImage";
+import { HATS } from "@/v2/hat-trick/hats";
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
@@ -434,10 +436,11 @@ export default function Home() {
               </Button>
             </div>
             <figure className="w-full max-w-[560px]">
-              <Image
+              <HatImage
                 src={megagameChess}
                 alt="Giant orange and blue chess pieces, a knight in front"
-                className="h-auto w-full lg:[mask-image:linear-gradient(to_right,transparent,black_30%)]"
+                hats={[HATS.bishop]}
+                className="aspect-[4/3] w-full lg:[--fade:linear-gradient(to_right,transparent,black_30%)]"
                 sizes="(min-width: 1024px) 560px, 100vw"
               />
               <figcaption className="mt-3 text-center text-sm text-ink/70 italic">

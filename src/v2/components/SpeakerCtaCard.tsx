@@ -1,18 +1,21 @@
 "use client";
 
 import HatPile from "@/v2/hat-trick/HatPile";
-import { HAT_TRICK_CODE, HAT_TRICK_TARGET, HATS } from "@/v2/hat-trick/hats";
+import { FACTION_HATS, HAT_TRICK_CODE, HATS } from "@/v2/hat-trick/hats";
 import { useHatTrick } from "@/v2/hat-trick/store";
 import { HEADING } from "./styles";
 
 // The empty seat at the end of the speaker lineup: a silhouette in the same
 // footprint as a PersonCard, inviting the reader to propose a session. It's
 // also where Hat Trick's hats land: each one grabbed from a photo stacks on
-// the silhouette's head, and three of them earn the coupon code.
+// the silhouette's head, and the three faction hats earn the coupon code.
 export default function SpeakerCtaCard({ href }: { href: string }) {
   const { collected } = useHatTrick();
   const worn = collected.map((id) => HATS[id]);
-  const done = worn.length >= HAT_TRICK_TARGET;
+  const done = FACTION_HATS.every((id) => collected.includes(id));
+  // The factions and the Crown are listed by name; the rest just counted.
+  const named = worn.filter((h) => FACTION_HATS.includes(h.id) || h.requires);
+  const others = worn.length - named.length;
 
   // The margin version has room to list the hats; the on-card one doesn't.
   const score = (list: boolean) =>
@@ -21,7 +24,7 @@ export default function SpeakerCtaCard({ href }: { href: string }) {
         <p className={`${HEADING} text-navy`}>Hat count: {worn.length}</p>
         {list && (
           <ul className="mt-1 text-sm text-ink/70">
-            {worn.map((h) => (
+            {named.map((h) => (
               <li key={h.id} className="flex items-center gap-1.5">
                 {/* The Crown is the bonus after the three, not a box to tick. */}
                 {h.requires?.length ? (
@@ -34,11 +37,12 @@ export default function SpeakerCtaCard({ href }: { href: string }) {
                 {h.name.replace(/ hat$/, "")}
               </li>
             ))}
+            {others > 0 && <li>Other: {others}</li>}
           </ul>
         )}
         {done && list && (
           <p className="mt-2 text-sm text-ink/70">
-            Use coupon code{" "}
+            You found the hat of all 3 factions! Use coupon code{" "}
             <span className="font-space-mono font-bold text-meeple">
               {HAT_TRICK_CODE}
             </span>{" "}

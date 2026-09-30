@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useHatTrick } from "@/v2/hat-trick/store";
 import DividerRow from "../DividerRow";
 import { IconGlyph } from "../IconDivider";
 import { GLYPH, GLYPH_PX, ICON_GAP, ICON_GAP_PX, LAYER } from "../sizing";
@@ -43,6 +44,7 @@ const RESET_MS = 900;
 // (race.ts): a click on any die above rolls for everyone.
 export default function MonopolyDivider() {
   const race = useRace();
+  const { collect } = useHatTrick();
   const boxRef = useRef<HTMLSpanElement>(null);
   const pieceRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const flagRef = useRef<HTMLSpanElement>(null);
@@ -180,6 +182,8 @@ export default function MonopolyDivider() {
   }, [racing]);
 
   const onToken = (i: number) => {
+    // Hat Trick: the top hat token counts as a hat, but stays in the race.
+    if (ICONS[i].name === "monopoly-hat") collect("topHat");
     if (race.moving) return;
     if (racing) {
       // Any token between rolls calls the race off.

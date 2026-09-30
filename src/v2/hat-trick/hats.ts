@@ -1,15 +1,34 @@
 import type { StaticImageData } from "next/image";
 import type { CSSProperties } from "react";
 import election from "../../../public/images/carousel/2_election.jpg";
+import crossword from "../../../public/images/carousel/4_crossword.jpg";
+import topHat from "../../../public/images/hats/monopoly-top-hat.svg";
+import megagameChess from "../../../public/images/megagame-chess.jpg";
+import megachess from "../../../public/images/megachess.jpg";
 import roundRobin from "../../../public/images/misc_photos/board_game_round_robin_2.jpg";
+import elli from "../../../public/images/speakers/elli_furedy.jpg";
+import peihGee from "../../../public/images/speakers/peih_gee_law.jpg";
+import raph from "../../../public/images/speakers/raph_damico.jpg";
 import brendan from "../../../public/images/team/brendan.jpg";
 import jisk from "../../../public/images/team/jisk.jpg";
 
 // Hat Trick: hats hidden in photos around the site. Click one and it leaves
 // its photo for the head of the "You?" silhouette in the speaker lineup.
-// Three hats earns the coupon code.
+// The three faction hats earn the coupon code.
 
-export type HatId = "wizard" | "crown" | "pirate" | "sequin";
+export type HatId =
+  | "wizard"
+  | "crown"
+  | "pirate"
+  | "sequin"
+  | "peihGee"
+  | "elli"
+  | "raph"
+  | "bishop"
+  | "topHat"
+  | "skyCap"
+  | "navyCap"
+  | "redHat";
 
 export type Hat = {
   id: HatId;
@@ -17,6 +36,9 @@ export type Hat = {
   image: StaticImageData;
   // Outline of the hat in its photo, as [x, y] percentages of the image.
   points: [number, number][];
+  // The same hat in other photos, each with its own outline. Taking it from
+  // any one of them takes it from all.
+  elsewhere?: { image: StaticImageData; points: [number, number][] }[];
   // Hats that must already be worn before this one can be taken.
   requires?: HatId[];
   // How it sits on the silhouette: width as a percentage of the card square,
@@ -33,7 +55,7 @@ export type Hat = {
   };
 };
 
-export const HAT_TRICK_TARGET = 3;
+export const FACTION_HATS: HatId[] = ["wizard", "pirate", "sequin"];
 export const HAT_TRICK_CODE = "HATTRICK";
 
 export const HATS: Record<HatId, Hat> = {
@@ -77,7 +99,7 @@ export const HATS: Record<HatId, Hat> = {
     id: "crown",
     name: "Crown",
     image: election,
-    requires: ["wizard", "pirate", "sequin"],
+    requires: FACTION_HATS,
     points: [
       [60.2, 23.8],
       [60.4, 24.2],
@@ -209,10 +231,352 @@ export const HATS: Record<HatId, Hat> = {
     ],
     wear: { width: 58.5, bottom: 37.3, shiftX: -0.7, lift: -6 },
   },
+  peihGee: {
+    id: "peihGee",
+    name: "Safari hat",
+    image: peihGee,
+    points: [
+      [55.0, 15.2],
+      [60.0, 15.0],
+      [65.0, 15.6],
+      [70.0, 17.5],
+      [75.0, 20.2],
+      [79.5, 24.0],
+      [82.8, 28.5],
+      [84.5, 34.0],
+      [85.0, 39.0],
+      [84.5, 44.0],
+      [83.0, 48.0],
+      [81.0, 50.0],
+      [79.0, 49.5],
+      [78.3, 47.0],
+      [77.5, 42.0],
+      [76.0, 36.0],
+      [74.5, 30.0],
+      [72.0, 25.0],
+      [68.0, 22.0],
+      [63.0, 20.5],
+      [58.0, 20.5],
+      [53.0, 22.0],
+      [50.5, 24.0],
+      [50.0, 27.0],
+      [49.0, 31.0],
+      [47.5, 35.0],
+      [46.5, 37.5],
+      [45.5, 37.0],
+      [44.5, 33.0],
+      [44.5, 29.0],
+      [45.0, 25.0],
+      [45.5, 22.0],
+      [47.0, 19.0],
+      [49.5, 17.0],
+      [52.0, 15.8],
+    ],
+    wear: { width: 70, bottom: 62, shiftX: 4, lift: -30 },
+  },
+  elli: {
+    id: "elli",
+    name: "Neon wide-brim hat",
+    image: elli,
+    points: [
+      [44.5, 7.5],
+      [45.5, 4.5],
+      [48.0, 3.5],
+      [51.0, 4.0],
+      [53.5, 5.5],
+      [58.0, 5.0],
+      [63.0, 4.8],
+      [68.0, 5.3],
+      [72.0, 6.5],
+      [75.0, 9.0],
+      [77.5, 11.5],
+      [79.0, 14.5],
+      [79.5, 18.0],
+      [79.0, 22.0],
+      [78.0, 27.0],
+      [76.0, 31.0],
+      [73.5, 33.5],
+      [72.0, 34.0],
+      [71.5, 30.0],
+      [71.5, 25.0],
+      [70.0, 21.0],
+      [66.0, 19.5],
+      [62.0, 17.5],
+      [55.0, 17.0],
+      [47.0, 17.0],
+      [41.0, 18.0],
+      [38.0, 19.5],
+      [36.5, 22.0],
+      [37.0, 27.0],
+      [37.5, 33.0],
+      [36.0, 35.0],
+      [33.0, 33.5],
+      [30.0, 31.0],
+      [27.5, 27.5],
+      [26.5, 23.5],
+      [27.5, 20.0],
+      [30.0, 17.0],
+      [33.5, 14.0],
+      [37.5, 11.5],
+      [41.5, 9.0],
+    ],
+    wear: { width: 72, bottom: 42, lift: -10 },
+  },
+  raph: {
+    id: "raph",
+    name: "Bush hat",
+    image: raph,
+    points: [
+      [32.0, 23.0],
+      [37.0, 17.5],
+      [42.0, 14.0],
+      [48.0, 11.3],
+      [52.0, 10.3],
+      [55.0, 11.5],
+      [59.0, 15.5],
+      [63.0, 20.0],
+      [66.0, 22.5],
+      [72.0, 22.2],
+      [80.0, 21.3],
+      [86.5, 21.5],
+      [86.0, 24.0],
+      [83.5, 27.5],
+      [81.5, 32.0],
+      [80.5, 37.0],
+      [79.0, 42.0],
+      [76.5, 46.0],
+      [76.0, 43.0],
+      [75.0, 38.0],
+      [73.5, 33.0],
+      [70.0, 30.0],
+      [64.0, 28.5],
+      [55.0, 27.5],
+      [45.0, 28.0],
+      [38.0, 30.0],
+      [33.0, 33.0],
+      [30.0, 36.5],
+      [28.5, 41.0],
+      [27.0, 46.0],
+      [26.0, 50.0],
+      [26.5, 55.0],
+      [28.0, 59.0],
+      [30.5, 63.0],
+      [32.0, 67.5],
+      [27.0, 66.5],
+      [21.0, 63.0],
+      [17.0, 59.0],
+      [14.5, 53.0],
+      [13.3, 46.0],
+      [13.5, 39.0],
+      [15.0, 33.5],
+      [18.5, 28.5],
+      [23.0, 25.5],
+      [28.0, 24.0],
+    ],
+    wear: { width: 68, bottom: 51, rotate: 8, shiftX: -2, lift: -18 },
+  },
+  bishop: {
+    id: "bishop",
+    name: "Bishop's mitre",
+    image: megachess,
+    points: [
+      [63.1, 34.3],
+      [63.5, 33.0],
+      [64.3, 32.3],
+      [65.3, 32.1],
+      [66.3, 32.5],
+      [67.0, 33.5],
+      [67.2, 34.6],
+      [66.5, 35.3],
+      [66.2, 36.2],
+      [67.4, 37.2],
+      [68.5, 38.4],
+      [69.3, 40.0],
+      [69.9, 42.0],
+      [70.3, 44.5],
+      [70.4, 46.5],
+      [70.2, 48.5],
+      [69.6, 50.3],
+      [68.6, 51.7],
+      [67.3, 52.6],
+      [65.5, 52.8],
+      [63.5, 52.8],
+      [61.5, 52.3],
+      [60.5, 51.5],
+      [59.8, 50.0],
+      [59.3, 48.0],
+      [59.2, 46.0],
+      [59.4, 44.0],
+      [59.8, 42.5],
+      [60.3, 41.6],
+      [61.2, 42.2],
+      [62.2, 43.5],
+      [62.8, 42.5],
+      [62.6, 40.5],
+      [62.2, 38.3],
+      [63.0, 37.5],
+      [64.3, 36.8],
+      [64.6, 35.6],
+      [63.5, 35.0],
+    ],
+    // Also on the home page, where the knight hides part of it.
+    elsewhere: [
+      {
+        image: megagameChess,
+        points: [
+          [25.3, 24.0],
+          [25.8, 22.0],
+          [27.5, 20.7],
+          [29.5, 20.3],
+          [31.5, 20.7],
+          [33.0, 22.2],
+          [33.4, 24.0],
+          [32.8, 26.0],
+          [31.5, 27.3],
+          [31.3, 28.8],
+          [33.0, 30.0],
+          [35.0, 32.0],
+          [37.0, 35.0],
+          [38.7, 38.0],
+          [39.8, 40.5],
+          [36.5, 41.3],
+          [35.5, 43.5],
+          [34.5, 45.8],
+          [32.0, 47.0],
+          [30.5, 48.0],
+          [30.5, 54.5],
+          [32.5, 57.0],
+          [33.5, 58.5],
+          [33.3, 62.0],
+          [28.0, 62.5],
+          [23.5, 62.3],
+          [22.0, 60.0],
+          [20.5, 57.0],
+          [19.5, 54.0],
+          [19.0, 50.0],
+          [19.0, 46.0],
+          [19.5, 42.0],
+          [20.5, 38.5],
+          [22.0, 35.0],
+          [24.0, 32.0],
+          [26.0, 30.0],
+          [27.6, 28.8],
+          [27.5, 27.3],
+          [26.0, 26.0],
+        ],
+      },
+    ],
+    wear: { width: 38, bottom: 33 },
+  },
+  topHat: {
+    id: "topHat",
+    name: "Top hat",
+    image: topHat,
+    points: [
+      [0.0, 0.0],
+      [100.0, 0.0],
+      [100.0, 100.0],
+      [0.0, 100.0],
+    ],
+    wear: { width: 60, bottom: 33 },
+  },
+  skyCap: {
+    id: "skyCap",
+    name: "Sky-blue cap",
+    image: crossword,
+    points: [
+      [36.3, 23.0],
+      [37.5, 21.3],
+      [39.5, 20.5],
+      [42.0, 20.2],
+      [44.0, 20.8],
+      [45.2, 21.8],
+      [45.0, 23.2],
+      [43.0, 23.5],
+      [41.0, 24.5],
+      [40.2, 26.0],
+      [39.8, 27.5],
+      [39.5, 29.5],
+      [38.0, 30.8],
+      [36.3, 31.3],
+      [36.0, 29.5],
+      [35.8, 27.0],
+      [35.9, 25.0],
+    ],
+    wear: { width: 45, bottom: 31, rotate: -15, shiftX: 4 },
+  },
+  navyCap: {
+    id: "navyCap",
+    name: "Navy cap",
+    image: crossword,
+    points: [
+      [41.0, 24.5],
+      [43.0, 23.5],
+      [45.0, 23.2],
+      [47.0, 23.8],
+      [49.0, 25.0],
+      [50.5, 26.5],
+      [51.0, 28.0],
+      [51.5, 30.0],
+      [51.0, 31.0],
+      [49.0, 30.5],
+      [47.0, 30.5],
+      [45.0, 30.7],
+      [43.0, 31.0],
+      [41.0, 32.0],
+      [40.5, 33.2],
+      [38.0, 33.5],
+      [35.2, 33.0],
+      [36.0, 31.8],
+      [38.0, 30.8],
+      [39.5, 29.5],
+      [39.8, 27.5],
+      [40.2, 26.0],
+    ],
+    wear: { width: 58, bottom: 33, shiftX: -4 },
+  },
+  redHat: {
+    id: "redHat",
+    name: "Red fedora",
+    image: crossword,
+    points: [
+      [49.3, 23.8],
+      [51.0, 24.0],
+      [53.3, 24.6],
+      [53.8, 23.0],
+      [54.5, 22.0],
+      [55.5, 21.4],
+      [57.0, 21.4],
+      [58.5, 22.2],
+      [60.0, 23.3],
+      [61.2, 24.7],
+      [61.8, 26.5],
+      [61.7, 28.5],
+      [61.5, 30.3],
+      [62.3, 31.5],
+      [62.7, 33.5],
+      [61.8, 33.8],
+      [60.0, 32.4],
+      [58.0, 30.9],
+      [56.0, 29.3],
+      [54.0, 27.6],
+      [52.0, 26.0],
+      [50.0, 24.8],
+    ],
+    wear: { width: 60, bottom: 34, rotate: -25 },
+  },
 };
 
 export const isHatId = (v: unknown): v is HatId =>
   typeof v === "string" && v in HATS;
+
+// The hat as it appears in `image`: its own outline there, or the matching
+// `elsewhere` one.
+export function hatIn(hat: Hat, image: StaticImageData): Hat {
+  if (image.src === hat.image.src) return hat;
+  const spot = hat.elsewhere?.find((e) => e.image.src === image.src);
+  return spot ? { ...hat, points: spot.points } : hat;
+}
 
 export const polygon = (pts: [number, number][]) =>
   `polygon(${pts.map(([x, y]) => `${x}% ${y}%`).join(", ")})`;

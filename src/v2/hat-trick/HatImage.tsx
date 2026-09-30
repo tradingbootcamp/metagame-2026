@@ -2,7 +2,7 @@
 
 import Image, { type StaticImageData } from "next/image";
 import { useState, type CSSProperties } from "react";
-import { hatBox, polygon, type Hat } from "./hats";
+import { hatBox, hatIn, polygon, type Hat } from "./hats";
 import { useHatTrick } from "./store";
 
 // A photo with hats hidden in it. Hover a hat and it grows a little; click it
@@ -17,7 +17,7 @@ import { useHatTrick } from "./store";
 export default function HatImage({
   src,
   alt,
-  hats,
+  hats: hidden,
   className = "",
   style,
   sizes,
@@ -34,6 +34,7 @@ export default function HatImage({
   priority?: boolean;
 }) {
   const { collected, collect } = useHatTrick();
+  const hats = hidden.map((h) => hatIn(h, src));
   // A locked hat shakes when clicked, like a wrong pick on the dividers.
   const [shaking, setShaking] = useState<string | null>(null);
   const taken = hats.filter((h) => collected.includes(h.id));

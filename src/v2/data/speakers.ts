@@ -9,6 +9,7 @@ import peihGee from "../../../public/images/speakers/peih_gee_law.jpg";
 import randy from "../../../public/images/speakers/randy_lubin.jpg";
 import raph from "../../../public/images/speakers/raph_damico.jpg";
 import tommy from "../../../public/images/team/tommy.jpg";
+import { HATS } from "@/v2/hat-trick/hats";
 import type { Person } from "./team";
 
 // Featured speakers, in display order on the home page.
@@ -30,6 +31,7 @@ export const SPEAKERS: Person[] = [
     title: "REPOD",
     titleUrl: "https://roomescapeartist.com/reality-escape-pod/",
     photo: peihGee,
+    hats: [HATS.peihGee],
   },
   {
     name: "Tommy Honton",
@@ -68,12 +70,14 @@ export const SPEAKERS: Person[] = [
     title: "Alleycat Asset Acquisitions",
     titleUrl: "https://www.alleycat.agency/",
     photo: elli,
+    hats: [HATS.elli],
   },
   {
     name: "Raph D’Amico",
     title: "Laughing Kaiju",
     titleUrl: "https://laughingkaiju.com/about/",
     photo: raph,
+    hats: [HATS.raph],
   },
   {
     name: "Randy Lubin",

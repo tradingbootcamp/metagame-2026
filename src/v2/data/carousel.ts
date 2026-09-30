@@ -18,7 +18,11 @@ export const CAROUSEL = [
     hats: [HATS.crown],
   },
   { src: cards, alt: "A card game in progress" },
-  { src: crossword, alt: "A group solving a crossword" },
+  {
+    src: crossword,
+    alt: "A group solving a crossword",
+    hats: [HATS.skyCap, HATS.navyCap, HATS.redHat],
+  },
   { src: jigsawSudoku, alt: "A jigsaw sudoku puzzle" },
   { src: fairyLights, alt: "Evening games under fairy lights" },
   { src: codex, alt: "Two players studying their cards over a game of Codex" },
