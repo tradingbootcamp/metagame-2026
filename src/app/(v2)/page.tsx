@@ -533,9 +533,11 @@ export default function Home() {
                 title="Night Market"
               />
               <p className={PROSE}>
-                Apply for an expo booth and exchange goods and services with
-                fellow game aficionados.
+                Come browse our cozy fairylight adorned market for a wide
+                variety of booths offering anything related to play. This is an
+                open to the public event on Friday evening.
               </p>
+              <p className={PROSE}>Have something you want to offer?</p>
               <Button asChild variant="default" className="mt-6 w-fit">
                 <a
                   href={NIGHT_MARKET_FORM_URL}
