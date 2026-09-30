@@ -128,6 +128,14 @@ export default function Combobox({
               </li>
             );
           })}
+          {open && !addRow && (
+            <li
+              aria-hidden
+              className="border-t border-line px-3 py-1.5 text-xs text-ink/50 italic"
+            >
+              Not listed? Type a new one to add it.
+            </li>
+          )}
         </ul>
       )}
     </div>
