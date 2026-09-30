@@ -202,6 +202,7 @@ export default function LinksTool({
         <form action={action} className="grid gap-4 md:grid-cols-2">
           <Field
             label="Destination"
+            required
             hint={draft.page === CUSTOM ? undefined : destination}
             error={err("destination")}
             className="md:col-span-2"
@@ -238,6 +239,7 @@ export default function LinksTool({
           </Field>
           <Field
             label="Placement"
+            required
             hint="Which server, list, or message the link goes in."
             error={err("placement")}
           >
@@ -245,15 +247,21 @@ export default function LinksTool({
           </Field>
           <Field
             label="Source"
+            required
             hint="Where the click comes from."
             error={err("source")}
           >
             {combobox("source", "Source", options.source)}
           </Field>
-          <Field label="Medium" hint="What kind of post." error={err("medium")}>
+          <Field
+            label="Medium"
+            required
+            hint="What kind of post."
+            error={err("medium")}
+          >
             {combobox("medium", "Medium", options.medium)}
           </Field>
-          <Field label="Campaign" error={err("campaign")}>
+          <Field label="Campaign" required error={err("campaign")}>
             <input type="hidden" name="campaign" value={draft.campaign} />
             <select
               aria-label="Campaign"
@@ -271,6 +279,7 @@ export default function LinksTool({
           </Field>
           <Field
             label="Short name"
+            required
             hint="The part after /go/ in the shared link. Follows the placement until you edit it."
             error={err("slug")}
           >
@@ -344,18 +353,28 @@ function Field({
   label,
   hint,
   error,
+  required,
   className = "",
   children,
 }: {
   label: string;
   hint?: string;
   error?: string | null;
+  required?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <label className={`block text-sm ${className}`}>
-      <span className="mb-1 block text-ink/70">{label}</span>
+      <span className="mb-1 block text-ink/70">
+        {label}
+        {required && (
+          <span aria-hidden className="text-meeple">
+            {" "}
+            *
+          </span>
+        )}
+      </span>
       {children}
       <span
         aria-live="polite"
