@@ -342,8 +342,8 @@ export default function SetCardDivider() {
     const icons = centre.current!.closest("[data-puzzle-game]")!;
     const row = icons.parentElement!;
     const side = fit(row.clientWidth, cardWidth, pitch);
-    // The spread runs out over the star's slot and the hairline, which gives
-    // way (and keeps the gap it had to the star's slot).
+    // The spread runs out over the hairline, which gives way (and keeps the
+    // gap it had to the icons).
     const hairline = row.firstElementChild!.getBoundingClientRect().right;
     const reach = centre.current!.getBoundingClientRect().left - hairline;
     const keep = icons.getBoundingClientRect().left - hairline;

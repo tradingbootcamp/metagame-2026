@@ -1,7 +1,8 @@
 // The hero puzzle. One of seven games is "current"; its version of the library
 // photo is the hero backdrop. Pressing Enter while hovering that game's
-// section divider earns it a star and picks a new current game; Enter over
-// any other divider is a wrong guess: the row shakes and every star is wiped.
+// section divider earns it a star (the divider flies away) and picks a new
+// current game; Enter over any other divider is a wrong guess: the row shakes
+// and every star is wiped (the flown dividers come back).
 // It's keyboard-only on purpose — the dividers' own click minigames never
 // see the puzzle. A star for all seven games swaps the backdrop for the win
 // image.

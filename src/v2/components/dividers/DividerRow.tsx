@@ -4,10 +4,11 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
-import { Star } from "lucide-react";
 import { ICON_GAP } from "./sizing";
 import {
   getServerSnapshot,
@@ -18,7 +19,7 @@ import {
 } from "@/v2/puzzle/store";
 
 // Wrap rows in this to take them out of the puzzle (the /dividers gallery):
-// Enter neither guesses nor shakes, and no stars render.
+// Enter neither guesses nor shakes, and nothing flies away.
 const NoPuzzleContext = createContext(false);
 export function NoPuzzle({ children }: { children: React.ReactNode }) {
   return (
@@ -27,14 +28,14 @@ export function NoPuzzle({ children }: { children: React.ReactNode }) {
 }
 
 // Layout shell every section divider shares: two hairlines flanking the icons.
-// With `game` set the row is a puzzle target (src/v2/puzzle/store.ts): a star
-// appears either side of the icons once the game is found. Rows with no
-// `game` are decoys that earn no stars. A guess is Enter pressed while the
-// pointer is over the row — never a click, so the rows' own minigames are
-// untouched. A wrong pick shakes the row. Deliberately no pointer cursor or
-// label — it's a secret. `overhang` is for a row whose
-// icons have spread out past the stars (Set): the stars hide, and each hairline
-// is clipped back that many px from its inner end.
+// With `game` set the row is a puzzle target (src/v2/puzzle/store.ts): once the
+// game is found the whole row flies up off the screen, back to the library,
+// leaving its space behind. Rows with no `game` are decoys. A guess is Enter
+// pressed while the pointer is over the row — never a click, so the rows' own
+// minigames are untouched. A wrong pick shakes the row, and every row that had
+// flown fades back in. Deliberately no pointer cursor or label — it's a secret.
+// `overhang` is for a row whose icons have spread out over the hairlines
+// (Set): each hairline is clipped back that many px from its inner end.
 // `left`/`right` hang a mark on the hairlines, centred and out of the flow.
 export default function DividerRow({
   children,
@@ -54,6 +55,15 @@ export default function DividerRow({
   const [hovered, setHovered] = useState(false);
   const off = useContext(NoPuzzleContext);
   const found = Boolean(game && !off && state.stars[game]);
+  const flyer = useRef<HTMLDivElement>(null);
+
+  // Far enough to clear the top of the viewport from wherever the row sits.
+  useLayoutEffect(() => {
+    const el = flyer.current;
+    if (!found || !el) return;
+    const bottom = Math.max(0, el.getBoundingClientRect().bottom);
+    el.style.setProperty("--fly", `${-(bottom + 100)}px`);
+  }, [found]);
 
   useEffect(() => {
     if (!hovered || off) return;
@@ -66,20 +76,6 @@ export default function DividerRow({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [hovered, off, game]);
-
-  // Stars always take up their space so earning one doesn't shift the icons.
-  // The negative margin pulls a star in from the icons' wide gap, so its slot
-  // doesn't push the hairline far out.
-  const star = (side: "left" | "right") => (
-    <Star
-      aria-hidden
-      size={22}
-      strokeWidth={2}
-      className={`pointer-events-none shrink-0 fill-meeple text-meeple transition-opacity duration-300 ${
-        side === "left" ? "-mr-[22px] md:-mr-3" : "-ml-[22px] md:-ml-3"
-      } ${found && overhang === undefined ? "opacity-100" : "opacity-0"}`}
-    />
-  );
 
   // The mark is the line's sibling, not its child: the clip would take it too.
   const line = (side: "left" | "right", mark?: React.ReactNode) => (
@@ -98,23 +94,36 @@ export default function DividerRow({
     </span>
   );
 
+  // Only the inner row moves, so the outer one keeps its space and hover.
+  // Flown, it hides once it's off screen: otherwise it would hang over
+  // whatever is that far up the page. Coming back, the transform snaps home
+  // unseen and only the opacity eases in.
   return (
     <div
-      className="flex scroll-mt-16 items-center justify-center gap-3 py-6 md:scroll-mt-24 md:gap-[22px] md:py-10"
+      className="scroll-mt-16 py-6 md:scroll-mt-24 md:py-10"
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
-      {line("left", left)}
       <div
-        data-puzzle-game={game}
-        onAnimationEnd={() => setShaking(false)}
-        className={`flex items-center ${ICON_GAP} ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
+        ref={flyer}
+        inert={found}
+        className={`flex items-center justify-center gap-3 md:gap-[22px] ${found ? FLOWN : "transition-opacity duration-500"}`}
       >
-        {game && !off && star("left")}
-        {children}
-        {game && !off && star("right")}
+        {line("left", left)}
+        <div
+          data-puzzle-game={game}
+          onAnimationEnd={() => setShaking(false)}
+          className={`flex items-center ${ICON_GAP} ${shaking ? "animate-[shake_400ms_ease-in-out]" : ""}`}
+        >
+          {children}
+        </div>
+        {line("right", right)}
       </div>
-      {line("right", right)}
     </div>
   );
 }
+
+const FLOWN =
+  "pointer-events-none invisible opacity-0 [transform:translateY(var(--fly))] " +
+  "[transition:transform_600ms_cubic-bezier(0.55,0.085,0.68,0.53),opacity_0s_600ms,visibility_0s_600ms] " +
+  "motion-reduce:[transform:none] motion-reduce:[transition:opacity_400ms,visibility_0s_400ms]";
