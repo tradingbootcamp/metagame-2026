@@ -22,7 +22,6 @@ export function formatWear(wear: Wear) {
   ];
   if (wear.rotate) fields.push(`rotate: ${round1(wear.rotate)}`);
   if (wear.shiftX) fields.push(`shiftX: ${round1(wear.shiftX)}`);
-  if (wear.sink !== undefined) fields.push(`sink: ${round1(wear.sink)}`);
   return `{ ${fields.join(", ")} }`;
 }
 

@@ -2,7 +2,7 @@
 
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { HEADING } from "@/v2/components/styles";
-import HatPile, { DEFAULT_SINK } from "@/v2/hat-trick/HatPile";
+import HatPile from "@/v2/hat-trick/HatPile";
 import type { Hat, HatId } from "@/v2/hat-trick/hats";
 import { round1, type Wear } from "./format";
 
@@ -23,13 +23,6 @@ const FIELDS: {
     min: 0,
     max: 100,
     hint: "brim's height, when worn first",
-  },
-  {
-    key: "sink",
-    label: "Sink",
-    min: 0,
-    max: 90,
-    hint: "% of its height that drops over the hat below",
   },
   { key: "rotate", label: "Rotate", min: -45, max: 45, hint: "degrees" },
   { key: "shiftX", label: "Shift X", min: -30, max: 30, hint: "+ is right" },
@@ -58,7 +51,6 @@ export default function PlacementPreview({
     x: number;
     y: number;
     bottom: number;
-    sink: number;
     shiftX: number;
   } | null>(null);
 
@@ -74,7 +66,6 @@ export default function PlacementPreview({
       x: e.clientX,
       y: e.clientY,
       bottom: wear.bottom,
-      sink: wear.sink ?? DEFAULT_SINK,
       shiftX: wear.shiftX ?? 0,
     };
   };
@@ -87,10 +78,8 @@ export default function PlacementPreview({
     const dy = (e.clientY - d.y) / unit;
     onWearChange({
       ...wear,
-      // Worn first, dragging moves the brim; on a pile it changes the sink.
-      ...(wornFirst
-        ? { bottom: clamp(round1(d.bottom + dy), 0, 100) }
-        : { sink: clamp(round1(d.sink + dy), 0, 90) }),
+      // On a pile the hat is placed by stacking.json, so only the brim moves.
+      ...(wornFirst ? { bottom: clamp(round1(d.bottom + dy), 0, 100) } : {}),
       shiftX: clamp(round1(d.shiftX + (e.clientX - d.x) / unit), -30, 30),
     });
   };
@@ -132,15 +121,14 @@ export default function PlacementPreview({
       </div>
       <p className="text-xs text-ink/60">
         {ready
-          ? "Drag the hat on the card to set Bottom (worn first) or Sink (on a pile) and Shift X, or use the sliders."
+          ? "Drag the hat on the card to set Bottom and Shift X, or use the sliders. On a pile it sits where /dev/hats/stack puts it."
           : "The outline needs at least 3 points before the hat can be worn."}
       </p>
 
       <div className="flex flex-col gap-2">
         {FIELDS.map(({ key, label, min, max, hint }) => {
-          const value = wear[key] ?? (key === "sink" ? DEFAULT_SINK : 0);
-          const dim =
-            (key === "bottom" && !wornFirst) || (key === "sink" && wornFirst);
+          const value = wear[key] ?? 0;
+          const dim = (key === "bottom" || key === "shiftX") && !wornFirst;
           return (
             <label
               key={key}
@@ -149,7 +137,7 @@ export default function PlacementPreview({
               }`}
               title={
                 dim
-                  ? "Bottom only applies when this hat is worn first; on a pile it sits on the hat below."
+                  ? "Only applies when this hat is worn first; on a pile it sits where /dev/hats/stack puts it."
                   : hint
               }
             >
