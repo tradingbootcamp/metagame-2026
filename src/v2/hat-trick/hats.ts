@@ -43,15 +43,15 @@ export type Hat = {
   requires?: HatId[];
   // How it sits on the silhouette: width as a percentage of the card square,
   // where its bottom edge lands (percent from the top) as the first hat worn,
-  // an optional tilt, and `lift`: when worn on another hat, how far its bottom
-  // edge sits above that hat's vertical center (same units; negative sinks
-  // it). Unset means a modest default that scales with the hat below.
+  // an optional tilt, and `sink`: when worn on another hat, the percent of
+  // this hat's own height that drops down over that hat's top (more for a
+  // brim that wraps around a head). Unset means a quarter.
   wear: {
     width: number;
     bottom: number;
     rotate?: number;
     shiftX?: number;
-    lift?: number;
+    sink?: number;
   };
 };
 
@@ -93,7 +93,7 @@ export const HATS: Record<HatId, Hat> = {
       [64.2, 21.3],
       [66.3, 18.6],
     ],
-    wear: { width: 75.5, bottom: 63.1, rotate: 38.5, shiftX: 5.9, lift: -27 },
+    wear: { width: 75.5, bottom: 63.1, rotate: 38.5, shiftX: 5.9 },
   },
   crown: {
     id: "crown",
@@ -151,7 +151,7 @@ export const HATS: Record<HatId, Hat> = {
       [58.5, 28.6],
       [59.9, 24.5],
     ],
-    wear: { width: 55, bottom: 33.3, rotate: 2, shiftX: 7.7, lift: 3.5 },
+    wear: { width: 55, bottom: 33.3, rotate: 2, shiftX: 7.7, sink: 15 },
   },
   pirate: {
     id: "pirate",
@@ -229,17 +229,23 @@ export const HATS: Record<HatId, Hat> = {
       [66.1, 10.8],
       [59.8, 9.0],
     ],
-    wear: { width: 58.5, bottom: 37.3, shiftX: -0.7, lift: -6 },
+    wear: { width: 58.5, bottom: 37.3, shiftX: -0.7, sink: 30 },
   },
   peihGee: {
     id: "peihGee",
     name: "Safari hat",
     image: peihGee,
     points: [
-      [55.0, 15.2],
-      [60.0, 15.0],
-      [65.0, 15.6],
-      [70.0, 17.5],
+      [54.0, 15.6],
+      [54.5, 12.5],
+      [57.0, 10.3],
+      [60.5, 9.5],
+      [65.0, 9.5],
+      [69.0, 10.0],
+      [71.8, 11.5],
+      [73.0, 13.5],
+      [73.3, 16.5],
+      [74.0, 19.6],
       [75.0, 20.2],
       [79.5, 24.0],
       [82.8, 28.5],
@@ -272,7 +278,7 @@ export const HATS: Record<HatId, Hat> = {
       [49.5, 17.0],
       [52.0, 15.8],
     ],
-    wear: { width: 70, bottom: 62, shiftX: 4, lift: -30 },
+    wear: { width: 70, bottom: 62, shiftX: 4, sink: 45 },
   },
   elli: {
     id: "elli",
@@ -320,7 +326,7 @@ export const HATS: Record<HatId, Hat> = {
       [37.5, 11.5],
       [41.5, 9.0],
     ],
-    wear: { width: 72, bottom: 42, lift: -10 },
+    wear: { width: 72, bottom: 42, sink: 35 },
   },
   raph: {
     id: "raph",
@@ -373,7 +379,7 @@ export const HATS: Record<HatId, Hat> = {
       [23.0, 25.5],
       [28.0, 24.0],
     ],
-    wear: { width: 68, bottom: 51, rotate: 8, shiftX: -2, lift: -18 },
+    wear: { width: 68, bottom: 51, rotate: 8, shiftX: -2, sink: 40 },
   },
   bishop: {
     id: "bishop",
@@ -466,7 +472,7 @@ export const HATS: Record<HatId, Hat> = {
         ],
       },
     ],
-    wear: { width: 38, bottom: 33 },
+    wear: { width: 38, bottom: 33, sink: 15 },
   },
   topHat: {
     id: "topHat",
@@ -533,7 +539,7 @@ export const HATS: Record<HatId, Hat> = {
       [39.8, 27.5],
       [40.2, 26.0],
     ],
-    wear: { width: 58, bottom: 33, shiftX: -4 },
+    wear: { width: 58, bottom: 33, shiftX: -4, sink: 30 },
   },
   redHat: {
     id: "redHat",
@@ -563,7 +569,7 @@ export const HATS: Record<HatId, Hat> = {
       [52.0, 26.0],
       [50.0, 24.8],
     ],
-    wear: { width: 60, bottom: 34, rotate: -25 },
+    wear: { width: 60, bottom: 34, rotate: -25, sink: 30 },
   },
 };
 

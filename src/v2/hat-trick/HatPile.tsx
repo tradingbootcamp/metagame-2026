@@ -5,19 +5,22 @@ import { hatAspect, hatCutoutStyle, type Hat } from "./hats";
 // bottom-aligned, so its 100-unit box starts 14% down and is inset 7% each
 // side; hat positions are in that box's units.
 //
-// Stack: the first hat sits on the head; each later one perches on the hat
-// below, a bit smaller, its bottom edge `lift` units above that hat's center.
+// Stack: the first hat sits on the head; each later one perches on top of the
+// hat below, a little smaller, with `sink` percent of its own height dropped
+// over that hat. The rest pokes out above, so every hat raises the tower.
+export const DEFAULT_SINK = 25;
+const MAX_SINK = 90;
+const SHRINK = 0.92;
+
 export default function HatPile({ hats }: { hats: Hat[] }) {
   const stack = hats.reduce<
     { hat: Hat; width: number; top: number; bottom: number }[]
   >((acc, hat, i) => {
-    const width = hat.wear.width * 0.85 ** i;
+    const width = hat.wear.width * SHRINK ** i;
     const height = width / hatAspect(hat);
     const below = acc[acc.length - 1];
-    const bottom = below
-      ? (below.top + below.bottom) / 2 -
-        (hat.wear.lift ?? (below.bottom - below.top) * 0.18)
-      : hat.wear.bottom;
+    const sink = Math.min(hat.wear.sink ?? DEFAULT_SINK, MAX_SINK);
+    const bottom = below ? below.top + (height * sink) / 100 : hat.wear.bottom;
     return [...acc, { hat, width, top: bottom - height, bottom }];
   }, []);
 

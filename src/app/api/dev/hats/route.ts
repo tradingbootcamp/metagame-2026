@@ -25,7 +25,7 @@ const isPoint = (p: unknown): p is Point =>
 const isWear = (w: unknown): w is Wear =>
   typeof w === "object" &&
   w !== null &&
-  ["width", "bottom", "rotate", "shiftX", "lift"].every((k) => {
+  ["width", "bottom", "rotate", "shiftX", "sink"].every((k) => {
     const v = (w as Record<string, unknown>)[k];
     return v === undefined || (typeof v === "number" && Number.isFinite(v));
   }) &&
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
     bottom: round1(wear.bottom),
     ...(wear.rotate ? { rotate: round1(wear.rotate) } : {}),
     ...(wear.shiftX ? { shiftX: round1(wear.shiftX) } : {}),
-    ...(wear.lift !== undefined ? { lift: round1(wear.lift) } : {}),
+    ...(wear.sink !== undefined ? { sink: round1(wear.sink) } : {}),
   };
   const next =
     src.slice(0, start) +
