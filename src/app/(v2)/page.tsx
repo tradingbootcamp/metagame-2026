@@ -537,8 +537,9 @@ export default function Home() {
               />
               <p className={PROSE}>
                 Come browse our cozy fairylight adorned market for a wide
-                variety of booths offering anything related to play. This is an
-                open to the public event on Friday evening.
+                variety of booths offering fun and interesting things to play,
+                experience and consume. This is an open to the public event on
+                Friday evening.
               </p>
               <p className={PROSE}>Have something you want to offer?</p>
               <Button asChild variant="default" className="mt-6 w-fit">
