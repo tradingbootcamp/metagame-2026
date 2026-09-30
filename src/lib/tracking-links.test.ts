@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDestinationUrl,
-  generateSlug,
   isAllowedDestination,
   normalizeSlug,
   validateSlug,
@@ -31,32 +30,6 @@ describe("validateSlug", () => {
     expect(validateSlug("a".repeat(49))).not.toBeNull();
     expect(validateSlug("-abc")).not.toBeNull();
     expect(validateSlug("abc-")).not.toBeNull();
-  });
-});
-
-describe("generateSlug", () => {
-  const suffix = () => "k7m2";
-  it("builds prefix-suffix from the seed", () => {
-    expect(generateSlug("Puzzle World announcement", suffix)).toBe(
-      "puzzle-world-announcement-k7m2",
-    );
-  });
-  it("caps at 32 characters", () => {
-    const slug = generateSlug(
-      "a very long placement name that goes on and on",
-      suffix,
-    );
-    expect(slug.length).toBeLessThanOrEqual(32);
-    expect(slug.endsWith("-k7m2")).toBe(true);
-    expect(validateSlug(slug)).toBeNull();
-  });
-  it("falls back when the seed has nothing usable", () => {
-    expect(generateSlug("!!!", suffix)).toBe("link-k7m2");
-  });
-  it("produces valid slugs with the real suffix", () => {
-    for (let i = 0; i < 50; i++) {
-      expect(validateSlug(generateSlug("discord"))).toBeNull();
-    }
   });
 });
 

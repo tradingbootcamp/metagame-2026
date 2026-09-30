@@ -12,7 +12,6 @@ import {
   createTrackingLink,
   DEFAULT_CAMPAIGN,
   findTrackingLink,
-  generateSlug,
   isAllowedDestination,
   MEDIUMS,
   normalizeSlug,
@@ -103,21 +102,12 @@ export async function createLink(
     return { field: "medium", error: "Pick a medium from the list." };
   }
 
-  let slug = normalizeSlug(str(formData, "slug"));
-  if (slug) {
-    const problem = validateSlug(slug);
-    if (problem) return { field: "slug", error: problem };
-    if (await findTrackingLink(slug)) {
-      return { field: "slug", error: "That short name is already taken." };
-    }
-  } else {
-    // Generated slugs carry a random suffix, so one retry is plenty.
-    for (let attempt = 0; attempt < 3; attempt++) {
-      slug = generateSlug(utm.placement || utm.source);
-      if (!(await findTrackingLink(slug))) break;
-      if (attempt === 2)
-        return { error: "Couldn't find a free short name. Try again." };
-    }
+  const slug = normalizeSlug(str(formData, "slug"));
+  if (!slug) return { field: "slug", error: "Required." };
+  const slugProblem = validateSlug(slug);
+  if (slugProblem) return { field: "slug", error: slugProblem };
+  if (await findTrackingLink(slug)) {
+    return { field: "slug", error: "That short name is already taken." };
   }
 
   const link = await createTrackingLink({

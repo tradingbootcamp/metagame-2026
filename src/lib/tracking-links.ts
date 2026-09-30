@@ -30,7 +30,6 @@ export const GO_PREFIX = "/go/";
 
 const SLUG_MIN = 3;
 const SLUG_MAX = 48;
-const AUTO_SLUG_MAX = 32;
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 const UTM_PARAMS = [
   "utm_source",
@@ -51,29 +50,6 @@ export function validateSlug(slug: string): string | null {
   if (!SLUG_RE.test(slug))
     return "Short name can only use lowercase letters, digits, and hyphens (not at the ends).";
   return null;
-}
-
-/** Readable prefix from the placement (or source) plus a random suffix for collision resistance. */
-export function generateSlug(
-  seed: string,
-  random: () => string = randomSuffix,
-): string {
-  const suffix = random();
-  const budget = AUTO_SLUG_MAX - suffix.length - 1;
-  const prefix = normalizeSlug(seed)
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-{2,}/g, "-")
-    .slice(0, budget)
-    .replace(/^-+|-+$/g, "");
-  return prefix ? `${prefix}-${suffix}` : `link-${suffix}`;
-}
-
-function randomSuffix(): string {
-  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
-  let out = "";
-  for (let i = 0; i < 4; i++)
-    out += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return out;
 }
 
 /** UTM value: trimmed, lowercased, whitespace → hyphens. Empty when nothing's left. */

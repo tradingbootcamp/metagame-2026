@@ -59,7 +59,7 @@ export default function LinksTool({
   const formRef = useRef<HTMLFormElement>(null);
   const lastCreated = useRef<string | null>(null);
 
-  // A fresh create lands in the library immediately and resets the form; the
+  // A fresh create lands in the existing list immediately and resets the form; the
   // server's revalidated list catches up on the next navigation.
   useEffect(() => {
     const created = state.created?.link;
@@ -85,7 +85,7 @@ export default function LinksTool({
   };
 
   const templates = links.filter((l) => l.template);
-  const previewSlug = normalizeSlug(draft.slug) || "…";
+  const previewSlug = normalizeSlug(draft.slug);
   const err = (field: string) => (state.field === field ? state.error : null);
 
   return (
@@ -186,22 +186,23 @@ export default function LinksTool({
           </Field>
           <Field
             label="Short name"
-            hint="Optional — generated from the placement if blank."
+            hint="The part after /go/ in the shared link."
             error={err("slug")}
           >
             <input
               name="slug"
+              required
               value={draft.slug}
               onChange={set("slug")}
               className={fieldClass}
             />
-            <p className="mt-1 truncate font-mono text-xs text-ink/60">
+            <p className="mt-1 truncate font-mono text-sm text-ink/60">
               {origin}
               {GO_PREFIX}
-              {previewSlug}
+              <strong className="text-navy">{previewSlug || "[___]"}</strong>
             </p>
           </Field>
-          <Field label="Internal name" hint="Library label only. Optional.">
+          <Field label="Label" hint="Link's name in our system.">
             <input
               name="internalName"
               maxLength={120}
@@ -338,7 +339,7 @@ function Library({
   onUseTemplate: (link: TrackingLink) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [creator, setCreator] = useState("");
+  const [creator, setCreator] = useState(me);
   const creators = useMemo(
     () =>
       Array.from(new Set(links.map((l) => l.createdBy).filter(Boolean))).sort(),
@@ -367,7 +368,7 @@ function Library({
     <section>
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <h2 className="font-bebas text-2xl tracking-wide text-navy">
-          Library{" "}
+          Existing{" "}
           <span className="text-base text-ink/50">({shown.length})</span>
         </h2>
         <div className="flex gap-2">
@@ -394,7 +395,9 @@ function Library({
       </div>
 
       {shown.length === 0 ? (
-        <p className="text-sm text-ink/60">No links yet.</p>
+        <p className="text-sm text-ink/60">
+          {creator || q ? "No links match." : "No links yet."}
+        </p>
       ) : (
         <ul className="divide-y divide-line rounded-xl border border-line bg-white">
           {shown.map((l) => (
