@@ -1,7 +1,7 @@
 import { useId, type CSSProperties, type ReactNode } from "react";
 import { letterPaths } from "@/v2/lib/dice-letter-paths";
 
-// Parametric SVG rebuild of the METAGAME dice wordmark (images/logo.png in the
+// Parametric SVG rebuild of the METAGAME dice wordmark (images/dice_logo.png in the
 // mock). Each die is a true-isometric cube: the side "faces" are the dice-letter
 // glyphs themselves (full-bleed rounded squares with cutouts) sheared onto the
 // cube, with a white copy offset behind so it peeks through the cutouts — the
