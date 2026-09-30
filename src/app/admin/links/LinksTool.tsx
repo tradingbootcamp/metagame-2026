@@ -238,49 +238,43 @@ export default function LinksTool({
             </div>
           </Field>
           <Field
-            label="Placement"
+            label="Location"
             required
-            hint="Which server, list, or message the link goes in."
+            hint="The specific server, list, subreddit, or event the link goes in (utm_content)."
             error={err("placement")}
           >
-            {combobox("placement", "Placement", placements)}
+            {combobox("placement", "Location", placements)}
           </Field>
           <Field
-            label="Source"
+            label="Platform"
             required
-            hint="Where the click comes from."
+            hint="Discord, email, DM… (utm_source)."
             error={err("source")}
           >
-            {combobox("source", "Source", options.source)}
+            {combobox("source", "Platform", options.source)}
           </Field>
           <Field
             label="Medium"
             required
-            hint="What kind of post."
+            hint="What kind of post (utm_medium)."
             error={err("medium")}
           >
             {combobox("medium", "Medium", options.medium)}
           </Field>
-          <Field label="Campaign" required error={err("campaign")}>
+          <Field
+            label="Campaign"
+            hint="Always the current one (utm_campaign)."
+            error={err("campaign")}
+          >
             <input type="hidden" name="campaign" value={draft.campaign} />
-            <select
-              aria-label="Campaign"
-              value={draft.campaign}
-              onChange={set("campaign")}
-              className={selectClass}
-              style={selectStyle}
-            >
-              {options.campaign.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            <p className="py-2 font-mono text-base text-ink/70">
+              {draft.campaign}
+            </p>
           </Field>
           <Field
             label="Short name"
             required
-            hint="The part after /go/ in the shared link. Follows the placement until you edit it."
+            hint="The part after /go/ in the shared link. Follows the location until you edit it."
             error={err("slug")}
           >
             <input
@@ -304,7 +298,7 @@ export default function LinksTool({
           </Field>
           <Field
             label="Label"
-            hint="Link's name in our system. Follows placement and source until you edit it."
+            hint="Link's name in our system. Follows location and platform until you edit it."
           >
             <input
               name="internalName"
