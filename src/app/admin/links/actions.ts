@@ -12,6 +12,7 @@ import {
   createTrackingLink,
   findTrackingLink,
   isAllowedDestination,
+  listTrackingLinks,
   loadLinkOptions,
   normalizeSlug,
   OPEN_SELECTS,
@@ -44,11 +45,16 @@ export async function identify(
   formData: FormData,
 ): Promise<FormState> {
   if (!(await readSession())) return { error: "Your session expired." };
-  const name = String(formData.get("name") ?? "")
+  const typed = String(formData.get("name") ?? "")
     .trim()
+    .replace(/\s+/g, " ")
     .slice(0, 60);
-  if (!name) return { error: "Enter your name." };
-  await startSession({ name });
+  if (!typed) return { error: "Enter your name." };
+  // "brian" and "Brian" are one person: reuse the spelling already on their links.
+  const existing = (await listTrackingLinks()).find(
+    (l) => l.createdBy.toLowerCase() === typed.toLowerCase(),
+  );
+  await startSession({ name: existing?.createdBy ?? typed });
   revalidatePath(PATH);
   return {};
 }
