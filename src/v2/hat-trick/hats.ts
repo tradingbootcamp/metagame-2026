@@ -2,6 +2,7 @@ import type { StaticImageData } from "next/image";
 import type { CSSProperties } from "react";
 import election from "../../../public/images/carousel/2_election.jpg";
 import crossword from "../../../public/images/carousel/4_crossword.jpg";
+import fairyLights from "../../../public/images/carousel/6_fairy_lights.jpg";
 import topHat from "../../../public/images/hats/monopoly-top-hat.svg";
 import megagameChess from "../../../public/images/megagame-chess.jpg";
 import megachess from "../../../public/images/megachess.jpg";
@@ -28,7 +29,8 @@ export type HatId =
   | "topHat"
   | "skyCap"
   | "navyCap"
-  | "redHat";
+  | "redHat"
+  | "beanie";
 
 export type Hat = {
   id: HatId;
@@ -580,6 +582,32 @@ export const HATS: Record<HatId, Hat> = {
       [50.0, 24.8],
     ],
     wear: { width: 60, bottom: 34, rotate: -25 },
+  },
+  beanie: {
+    id: "beanie",
+    name: "Beanie",
+    image: fairyLights,
+    points: [
+      [69.8, 48.3],
+      [70.1, 47.2],
+      [70.9, 46.3],
+      [72.2, 45.6],
+      [73.4, 45.1],
+      [74.7, 45.1],
+      [75.8, 45.7],
+      [76.5, 46.7],
+      [76.8, 48.1],
+      [76.9, 49.7],
+      [76.7, 51.1],
+      [76.3, 52.3],
+      [75.7, 53.1],
+      [74.8, 53.3],
+      [74.1, 52.5],
+      [73.1, 50.8],
+      [71.8, 49.3],
+      [70.5, 48.8],
+    ],
+    wear: { width: 50, bottom: 30 },
   },
 };
 

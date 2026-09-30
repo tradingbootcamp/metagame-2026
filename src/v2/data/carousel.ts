@@ -24,6 +24,10 @@ export const CAROUSEL = [
     hats: [HATS.skyCap, HATS.navyCap, HATS.redHat],
   },
   { src: jigsawSudoku, alt: "A jigsaw sudoku puzzle" },
-  { src: fairyLights, alt: "Evening games under fairy lights" },
+  {
+    src: fairyLights,
+    alt: "Evening games under fairy lights",
+    hats: [HATS.beanie],
+  },
   { src: codex, alt: "Two players studying their cards over a game of Codex" },
 ];
