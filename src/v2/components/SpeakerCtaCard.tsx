@@ -10,7 +10,7 @@ import { HEADING } from "./styles";
 // also where Hat Trick's hats land: each one grabbed from a photo stacks on
 // the silhouette's head, and the three faction hats earn the coupon code.
 export default function SpeakerCtaCard({ href }: { href: string }) {
-  const { collected } = useHatTrick();
+  const { collected, reset } = useHatTrick();
   const worn = collected.map((id) => HATS[id]);
   const done = FACTION_HATS.every((id) => collected.includes(id));
   // The factions and the Crown are listed by name; the rest just counted.
@@ -49,6 +49,7 @@ export default function SpeakerCtaCard({ href }: { href: string }) {
             for $33 off your ticket price
           </p>
         )}
+        {list && <GiveBack onClick={reset} className="mt-3" />}
         {done && !list && (
           <p className="mt-1 font-space-mono text-xs tracking-[0.08em] text-ink/60 uppercase">
             Coupon code:{" "}
@@ -102,6 +103,14 @@ export default function SpeakerCtaCard({ href }: { href: string }) {
       >
         <HatPile hats={worn} />
       </div>
+      {/* Below 2xl the score sits inside the card's link, which can't hold a
+          button, so the reset goes in the corner. */}
+      {worn.length > 0 && (
+        <GiveBack
+          onClick={reset}
+          className="absolute top-2 right-2 z-20 rounded bg-white/90 px-1.5 py-0.5 2xl:hidden"
+        />
+      )}
       {/* Score beside the card, in the page margin, on wide screens. */}
       {score(true) && (
         <div className="absolute top-0 left-full ml-4 hidden w-36 text-base 2xl:block">
@@ -109,5 +118,23 @@ export default function SpeakerCtaCard({ href }: { href: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+function GiveBack({
+  onClick,
+  className = "",
+}: {
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`font-space-mono text-xs tracking-[0.08em] text-ink/60 uppercase underline underline-offset-2 transition-colors hover:text-navy ${className}`}
+    >
+      Give them back
+    </button>
   );
 }

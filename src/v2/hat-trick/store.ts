@@ -87,5 +87,7 @@ export function useHatTrick() {
     );
     return true;
   }, []);
-  return { collected, collect };
+  // Every hat goes back to its photo.
+  const reset = useCallback(() => set([]), []);
+  return { collected, collect, reset };
 }
