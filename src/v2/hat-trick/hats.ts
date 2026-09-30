@@ -43,15 +43,11 @@ export type Hat = {
   elsewhere?: { image: StaticImageData; points: [number, number][] }[];
   // Hats that must already be worn before this one can be taken.
   requires?: HatId[];
-  // How it sits on the silhouette: width as a percentage of the card square,
-  // where its bottom edge lands (percent from the top) and its sideways shift
-  // as the first hat worn, and an optional tilt. On top of another hat it's
-  // placed by stacking.json instead (see HatPile).
+  // Its size when worn, as a percentage of the card square, and an optional
+  // tilt. Where it sits comes from stacking.json (see HatPile).
   wear: {
     width: number;
-    bottom: number;
     rotate?: number;
-    shiftX?: number;
   };
 };
 
@@ -93,7 +89,7 @@ export const HATS: Record<HatId, Hat> = {
       [64.2, 21.3],
       [66.3, 18.6],
     ],
-    wear: { width: 75.5, bottom: 63.1, rotate: 38.5, shiftX: 5.9 },
+    wear: { width: 75.5, rotate: 38.5 },
   },
   crown: {
     id: "crown",
@@ -151,7 +147,7 @@ export const HATS: Record<HatId, Hat> = {
       [58.5, 28.6],
       [59.9, 24.5],
     ],
-    wear: { width: 55, bottom: 33.3, rotate: 2, shiftX: 7.7 },
+    wear: { width: 55, rotate: 2 },
   },
   pirate: {
     id: "pirate",
@@ -187,7 +183,7 @@ export const HATS: Record<HatId, Hat> = {
       [55.2, 21.4],
       [57.1, 18.8],
     ],
-    wear: { width: 81.5, bottom: 28.7, rotate: -4, shiftX: -2.9 },
+    wear: { width: 81.5, rotate: -4 },
   },
   sequin: {
     id: "sequin",
@@ -229,7 +225,7 @@ export const HATS: Record<HatId, Hat> = {
       [66.1, 10.8],
       [59.8, 9.0],
     ],
-    wear: { width: 58.5, bottom: 37.3, shiftX: -0.7 },
+    wear: { width: 58.5 },
   },
   peihGee: {
     id: "peihGee",
@@ -278,7 +274,7 @@ export const HATS: Record<HatId, Hat> = {
       [49.5, 17.0],
       [52.0, 15.8],
     ],
-    wear: { width: 70, bottom: 62, shiftX: 4 },
+    wear: { width: 70 },
   },
   elli: {
     id: "elli",
@@ -338,7 +334,7 @@ export const HATS: Record<HatId, Hat> = {
       [37.5, 11.5],
       [41.5, 9.0],
     ],
-    wear: { width: 72, bottom: 42 },
+    wear: { width: 72 },
   },
   raph: {
     id: "raph",
@@ -391,7 +387,7 @@ export const HATS: Record<HatId, Hat> = {
       [23.0, 25.5],
       [28.0, 24.0],
     ],
-    wear: { width: 68, bottom: 51, rotate: 8, shiftX: -2 },
+    wear: { width: 68, rotate: 8 },
   },
   bishop: {
     id: "bishop",
@@ -484,7 +480,7 @@ export const HATS: Record<HatId, Hat> = {
         ],
       },
     ],
-    wear: { width: 38, bottom: 33 },
+    wear: { width: 38 },
   },
   topHat: {
     id: "topHat",
@@ -496,7 +492,7 @@ export const HATS: Record<HatId, Hat> = {
       [100.0, 100.0],
       [0.0, 100.0],
     ],
-    wear: { width: 60, bottom: 33 },
+    wear: { width: 60 },
   },
   skyCap: {
     id: "skyCap",
@@ -521,7 +517,7 @@ export const HATS: Record<HatId, Hat> = {
       [35.8, 27.0],
       [35.9, 25.0],
     ],
-    wear: { width: 45, bottom: 31, rotate: 32, shiftX: 4 },
+    wear: { width: 45, rotate: 32 },
   },
   navyCap: {
     id: "navyCap",
@@ -551,7 +547,7 @@ export const HATS: Record<HatId, Hat> = {
       [39.8, 27.5],
       [40.2, 26.0],
     ],
-    wear: { width: 58, bottom: 33, shiftX: -4 },
+    wear: { width: 58 },
   },
   redHat: {
     id: "redHat",
@@ -581,7 +577,7 @@ export const HATS: Record<HatId, Hat> = {
       [52.0, 26.0],
       [50.0, 24.8],
     ],
-    wear: { width: 60, bottom: 34, rotate: -25 },
+    wear: { width: 60, rotate: -25 },
   },
   beanie: {
     id: "beanie",
@@ -607,7 +603,7 @@ export const HATS: Record<HatId, Hat> = {
       [71.8, 49.3],
       [70.5, 48.8],
     ],
-    wear: { width: 50, bottom: 30 },
+    wear: { width: 50 },
   },
 };
 

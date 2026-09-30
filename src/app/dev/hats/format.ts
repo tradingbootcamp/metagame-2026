@@ -16,12 +16,8 @@ export function formatPoints(points: Point[], indent = "    ") {
 }
 
 export function formatWear(wear: Wear) {
-  const fields = [
-    `width: ${round1(wear.width)}`,
-    `bottom: ${round1(wear.bottom)}`,
-  ];
+  const fields = [`width: ${round1(wear.width)}`];
   if (wear.rotate) fields.push(`rotate: ${round1(wear.rotate)}`);
-  if (wear.shiftX) fields.push(`shiftX: ${round1(wear.shiftX)}`);
   return `{ ${fields.join(", ")} }`;
 }
 

@@ -7,17 +7,19 @@ import stacking from "./stacking.json";
 // bottom-aligned, so its 100-unit box starts 14% down and is inset 7% each
 // side; hat positions are in that box's units.
 //
-// Stack: the first hat sits on the head by its `wear`; each later one, full
-// size, sits where stacking.json puts it relative to the hat below
-// (hand-placed per pair at /dev/hats/stack). A pair not placed yet just
-// stacks box on box.
+// Stack: every hat sits where stacking.json puts it relative to what's below
+// it, the silhouette's head for the first one and the hat below for the rest
+// (hand-placed per pair at /dev/hats/stack). A pair not placed yet just sits
+// on the head, or box on box.
 
-// [bottom][top] -> offset of the top hat's center from the bottom hat's, as
-// placed with the bottom hat worn first.
+// [bottom][top] -> offset of the top hat's center from the bottom hat's
+// center, or from the top of the head (YOU) for the `you` row.
+export type StackBase = HatId | "you";
 export type StackTable = Partial<
-  Record<HatId, Partial<Record<HatId, [number, number]>>>
+  Record<StackBase, Partial<Record<HatId, [number, number]>>>
 >;
 export const STACKING = stacking as StackTable;
+export const YOU = { cx: 50, cy: 8 };
 
 export type PlacedHat = { hat: Hat; width: number; cx: number; cy: number };
 
@@ -26,13 +28,14 @@ export function placeHats(hats: Hat[], table = STACKING): PlacedHat[] {
     const width = hat.wear.width;
     const height = width / hatAspect(hat);
     const below = acc[acc.length - 1];
-    const saved = below && table[below.hat.id]?.[hat.id];
-    const cx = saved ? below.cx + saved[0] : 50 + (hat.wear.shiftX ?? 0);
+    const saved = table[below ? below.hat.id : "you"]?.[hat.id];
+    const base = below ?? YOU;
+    const cx = base.cx + (saved?.[0] ?? 0);
     const cy = saved
-      ? below.cy + saved[1]
+      ? base.cy + saved[1]
       : below
         ? below.cy - (below.height + height) / 2
-        : hat.wear.bottom - height / 2;
+        : 30 - height / 2;
     return [...acc, { hat, width, cx, cy, height }];
   }, []);
 }

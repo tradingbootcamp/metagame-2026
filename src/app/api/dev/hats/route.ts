@@ -25,12 +25,11 @@ const isPoint = (p: unknown): p is Point =>
 const isWear = (w: unknown): w is Wear =>
   typeof w === "object" &&
   w !== null &&
-  ["width", "bottom", "rotate", "shiftX"].every((k) => {
+  ["width", "rotate"].every((k) => {
     const v = (w as Record<string, unknown>)[k];
     return v === undefined || (typeof v === "number" && Number.isFinite(v));
   }) &&
-  typeof (w as Record<string, unknown>).width === "number" &&
-  typeof (w as Record<string, unknown>).bottom === "number";
+  typeof (w as Record<string, unknown>).width === "number";
 
 export async function POST(req: Request) {
   if (process.env.NODE_ENV === "production") {
@@ -79,9 +78,7 @@ export async function POST(req: Request) {
   const rounded = points.map(([x, y]) => [round1(x), round1(y)] as Point);
   const cleanWear: Wear = {
     width: round1(wear.width),
-    bottom: round1(wear.bottom),
     ...(wear.rotate ? { rotate: round1(wear.rotate) } : {}),
-    ...(wear.shiftX ? { shiftX: round1(wear.shiftX) } : {}),
   };
   const next =
     src.slice(0, start) +

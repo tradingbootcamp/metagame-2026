@@ -7,6 +7,8 @@ import {
   placeHats,
   STACKING,
   WornHat,
+  YOU,
+  type StackBase,
   type StackTable,
 } from "@/v2/hat-trick/HatPile";
 import {
@@ -17,9 +19,12 @@ import {
 } from "@/v2/hat-trick/hats";
 
 const IDS = Object.keys(HATS) as HatId[];
-const PAIRS = IDS.flatMap((b) =>
+// "you" is the silhouette's head: where each hat sits when it's worn first.
+const BASES: StackBase[] = ["you", ...IDS];
+const PAIRS = BASES.flatMap((b) =>
   IDS.filter((t) => t !== b).map((t) => [b, t] as const),
 );
+const baseName = (b: StackBase) => (b === "you" ? "you" : HATS[b].name);
 // The save rewrites stacking.json, which can hot-reload this page; keep the
 // place in the list across that.
 const KEY = "hat-stack-editor-pair";
@@ -49,10 +54,12 @@ export default function StackEditor() {
   }, [index]);
 
   const [bottomId, topId] = PAIRS[index];
-  const bottom = HATS[bottomId];
+  const bottom = bottomId === "you" ? null : HATS[bottomId];
   const top = HATS[topId];
   const saved = table[bottomId]?.[topId];
-  const [base, auto] = placeHats([bottom, top], table);
+  const placed = placeHats(bottom ? [bottom, top] : [top], table);
+  const base = bottom ? placed[0] : YOU;
+  const auto = placed[placed.length - 1];
   const done = PAIRS.filter(([b, t]) => table[b]?.[t]).length;
 
   const go = (i: number) => setIndex((i + PAIRS.length) % PAIRS.length);
@@ -117,8 +124,9 @@ export default function StackEditor() {
           <h1 className={`${HEADING} text-2xl text-navy`}>Hat Stack Editor</h1>
           <p className="mt-1 text-sm text-ink/70">
             Move the top hat with the mouse and click to place it on the bottom
-            one. Saves to stacking.json and moves on to the next open pair.
-            &larr;/&rarr; step through pairs; Backspace clears this one.
+            one (or on the head, for the &ldquo;you&rdquo; row). Saves to
+            stacking.json and moves on to the next open pair. &larr;/&rarr; step
+            through pairs; Backspace clears this one.
           </p>
         </div>
         <nav className="flex flex-wrap items-center gap-3 text-sm">
@@ -135,7 +143,7 @@ export default function StackEditor() {
         <section className="flex flex-col items-center">
           <p className="text-sm">
             <span className="font-bold">{top.name}</span> on{" "}
-            <span className="font-bold">{bottom.name}</span>
+            <span className="font-bold">{baseName(bottomId)}</span>
             <span className="text-ink/60">
               {" "}
               · pair {index + 1} of {PAIRS.length}
@@ -163,7 +171,7 @@ export default function StackEditor() {
                 ref={box}
                 className="pointer-events-none absolute inset-x-[7%] top-[14%] bottom-0"
               >
-                <WornHat {...base} />
+                {bottom && <WornHat {...placed[0]} />}
                 {saved && mouse && (
                   <WornHat
                     hat={top}
@@ -205,10 +213,10 @@ export default function StackEditor() {
               </tr>
             </thead>
             <tbody>
-              {IDS.map((b) => (
+              {BASES.map((b) => (
                 <tr key={b}>
-                  <th title={HATS[b].name} className="p-0.5">
-                    <Thumb id={b} />
+                  <th title={baseName(b)} className="p-0.5">
+                    {b === "you" ? <YouThumb /> : <Thumb id={b} />}
                   </th>
                   {IDS.map((t) => {
                     if (b === t) return <td key={t} />;
@@ -219,7 +227,7 @@ export default function StackEditor() {
                       <td key={t}>
                         <button
                           type="button"
-                          title={`${HATS[t].name} on ${HATS[b].name}`}
+                          title={`${HATS[t].name} on ${baseName(b)}`}
                           onClick={() => go(i)}
                           className={`block size-7 rounded border ${
                             i === index
@@ -309,5 +317,14 @@ function Thumb({ id }: { id: HatId }) {
     <div className="flex size-7 items-center justify-center">
       <div className="w-7" style={hatCutoutStyle(HATS[id])} />
     </div>
+  );
+}
+
+function YouThumb() {
+  return (
+    <svg viewBox="0 0 100 100" className="size-7 fill-navy/40">
+      <circle cx="50" cy="38" r="22" />
+      <path d="M14 100c0-22 16-36 36-36s36 14 36 36z" />
+    </svg>
   );
 }
