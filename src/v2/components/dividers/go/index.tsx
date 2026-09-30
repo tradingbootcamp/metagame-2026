@@ -1,6 +1,5 @@
 // Go divider — four named shapes on a 4×4 corner of board: bamboo joint,
-// tiger's mouth (with a stone in the mouth), atari, and ponnuki. Drawn here, nothing to credit. Not
-// mounted anywhere yet.
+// tiger's mouth (with a stone in the mouth), atari, and ponnuki. Drawn here, nothing to credit.
 import DividerRow from "../DividerRow";
 import { GLYPH, SHADOW } from "../sizing";
 

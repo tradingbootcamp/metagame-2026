@@ -46,3 +46,7 @@ export const LAST_YEAR_SITE_URL = "https://2025.metagame.games";
 export const PODCAST_EPISODE_URL =
   "https://www.complexsystemspodcast.com/episodes/narrative-mastery-character-bleed-in-games-with-ricki-heicklen/";
 export const TEAM_EMAIL = "team@metagame.games";
+
+// Night Market expo booth application Airtable form.
+export const NIGHT_MARKET_FORM_URL =
+  "https://airtable.com/appROpPV6XUP4CSqX/pagWzXdF8eA6PfDXs/form";

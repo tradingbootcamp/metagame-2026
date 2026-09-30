@@ -10,6 +10,7 @@ import CardSuitsDivider from "@/v2/components/dividers/card-suits";
 import CastlingDivider from "@/v2/components/dividers/castling";
 import CatanDivider from "@/v2/components/dividers/catan";
 import DiceDivider from "@/v2/components/dividers/dice";
+import GoDivider from "@/v2/components/dividers/go";
 import MonopolyDivider from "@/v2/components/dividers/monopoly";
 import ScrabbleDivider from "@/v2/components/dividers/scrabble";
 import SetCardDivider from "@/v2/components/dividers/set-cards";
@@ -41,6 +42,7 @@ import {
   PODCAST_EPISODE_URL,
   LIGHTHAVEN_URL,
   MEGAGAME_PROPOSAL_FORM_URL,
+  NIGHT_MARKET_FORM_URL,
   RFP_FORM_URL,
   VOLUNTEER_FORM_URL,
 } from "@/v2/lib/links";
@@ -48,6 +50,7 @@ import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
 import megagameChess from "../../../public/images/megagame-chess.jpg";
+import nightMarketCooks from "../../../public/images/email/night_market_cooks.jpg";
 
 // Re-render hourly so the early-bird gate flips at the deadline and the key
 // dates' "Today" stop advances without a deploy.
@@ -519,6 +522,46 @@ export default function Home() {
       </section>
 
       <BloodOnTheClocktowerDivider />
+
+      {/* night market */}
+      <section id="night-market" className={`${SECTION} md:py-14`}>
+        <div className={CONTAINER}>
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+            <div className="max-w-[600px]">
+              <SectionHeading
+                eyebrow="Got something to trade?"
+                title="Night Market"
+              />
+              <p className={PROSE}>
+                Apply for an expo booth and exchange goods and services with
+                fellow game aficionados.
+              </p>
+              <Button asChild variant="default" className="mt-6 w-fit">
+                <a
+                  href={NIGHT_MARKET_FORM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Apply for a booth
+                </a>
+              </Button>
+            </div>
+            <figure className="w-full max-w-[560px]">
+              <Image
+                src={nightMarketCooks}
+                alt="“Too Many Cooks” at the Night Market"
+                className="h-auto w-full rounded-2xl"
+                sizes="(min-width: 1024px) 560px, 100vw"
+              />
+              <figcaption className="mt-3 text-center text-sm text-ink/70 italic">
+                &ldquo;Too Many Cooks&rdquo; at the Night Market
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <GoDivider />
 
       {/* highlights from 2025 */}
       <section id="highlights" className={`${SECTION} md:py-14`}>
