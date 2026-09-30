@@ -51,6 +51,19 @@ export function captureFirstTouchUtm(search: string): void {
   }
 }
 
+/**
+ * Drop utm_* from the address bar once they've been read. PostHog captured them
+ * at init, and in history_change mode it only re-fires a pageview when the
+ * pathname changes, so a query-only replaceState is silent.
+ */
+export function stripUtmFromUrl(): void {
+  const url = new URL(window.location.href);
+  const had = [...url.searchParams.keys()].filter((k) => k.startsWith("utm_"));
+  if (had.length === 0) return;
+  for (const k of had) url.searchParams.delete(k);
+  window.history.replaceState(window.history.state, "", url);
+}
+
 export function readFirstTouchUtm(): Utm {
   let stored: Record<string, unknown> = {};
   let firstVisit: string | null = null;
