@@ -19,4 +19,8 @@ export const airtableConfig = {
   rfpSubmissionsTableId: "tbl31UWBj60gQemuw",
   /** "Egg Tracking" table — easter eggs found on the dividers. */
   eggTrackingTableId: "tblpz5jxmWsC6R4av",
+  /** "Tracking Links" table — short links served at /go/{slug}. */
+  trackingLinksTableId: "tblcujqHGF3UeD4wU",
+  /** "Discord Outreach CRM" table — server names double as tracking-link placements. */
+  discordOutreachTableId: "tbl5BLBZKuUTuB0Bw",
 } as const;

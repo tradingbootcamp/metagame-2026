@@ -237,6 +237,9 @@ export async function recordPurchase(
   if (purchase.utm?.utm_medium) fields["UTM Medium"] = purchase.utm.utm_medium;
   if (purchase.utm?.utm_campaign)
     fields["UTM Campaign"] = purchase.utm.utm_campaign;
+  if (purchase.utm?.utm_content)
+    fields["UTM Content"] = purchase.utm.utm_content;
+  if (purchase.utm?.utm_term) fields["UTM Term"] = purchase.utm.utm_term;
   if (purchase.utm?.first_visit)
     fields["First Visit"] = purchase.utm.first_visit;
   if (purchase.utm?.posthog_id) fields["PostHog ID"] = purchase.utm.posthog_id;

@@ -4,7 +4,13 @@ import posthog from "posthog-js";
 // first visited, and their PostHog id ride along into checkout (Stripe session
 // metadata / OpenNode charge metadata) and end up on their Airtable purchase row.
 
-const LANDING_KEYS = ["utm_source", "utm_medium", "utm_campaign"] as const;
+const LANDING_KEYS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+] as const;
 export const UTM_KEYS = [...LANDING_KEYS, "first_visit", "posthog_id"] as const;
 
 export type Utm = Partial<Record<(typeof UTM_KEYS)[number], string>>;
