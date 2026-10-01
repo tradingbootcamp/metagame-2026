@@ -61,7 +61,7 @@ export default function ContactModal({
           >
             Contact {toName}
           </DialogTitle>
-          {to !== TEAM_EMAIL && (
+          {to !== TEAM_EMAIL && to.includes("@") && (
             <DialogDescription className="mt-1.5 text-[15px] text-cream/80">
               {to}
             </DialogDescription>

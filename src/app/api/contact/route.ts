@@ -1,15 +1,7 @@
 import { NextResponse } from "next/server";
 import { sendContactEmail } from "@/lib/email";
-import { ADVISORS, TEAM } from "@/v2/data/team";
+import { resolveRecipient } from "@/lib/contact-recipients";
 import { TEAM_EMAIL } from "@/v2/lib/links";
-
-// Addresses the form may deliver to: the team inbox plus anyone listed with an
-// email on /team. Anything else is rejected so the endpoint can't be used as
-// an open relay.
-const ALLOWED_RECIPIENTS = new Set([
-  TEAM_EMAIL,
-  ...[...TEAM, ...ADVISORS].flatMap((p) => (p.email ? [p.email] : [])),
-]);
 
 const MAX = { name: 200, email: 254, subject: 200, message: 5000 };
 
@@ -32,11 +24,14 @@ export async function POST(request: Request) {
 
   const str = (v: unknown, max: number) =>
     typeof v === "string" ? v.trim().slice(0, max) : "";
-  const name = str(body.name, MAX.name);
+  // Single-line fields end up in mail headers; no line breaks.
+  const line = (v: unknown, max: number) =>
+    str(v, max).replace(/[\r\n]+/g, " ");
+  const name = line(body.name, MAX.name);
   const email = str(body.email, MAX.email);
-  const subject = str(body.subject, MAX.subject);
+  const subject = line(body.subject, MAX.subject);
   const message = str(body.message, MAX.message);
-  const to = str(body.to, MAX.email) || TEAM_EMAIL;
+  const to = resolveRecipient(str(body.to, MAX.email) || TEAM_EMAIL);
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -47,7 +42,7 @@ export async function POST(request: Request) {
   if (!message) {
     return NextResponse.json({ error: "Message is required" }, { status: 400 });
   }
-  if (!ALLOWED_RECIPIENTS.has(to)) {
+  if (!to) {
     return NextResponse.json({ error: "Invalid recipient" }, { status: 400 });
   }
 

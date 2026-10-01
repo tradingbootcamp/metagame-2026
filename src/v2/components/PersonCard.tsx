@@ -21,6 +21,7 @@ export default function PersonCard({
   titleUrl,
   photo,
   email,
+  contactKey,
   hats,
   compact = false,
 }: Person & { compact?: boolean }) {
@@ -76,15 +77,18 @@ export default function PersonCard({
             title
           )}
         </p>
-        {email && !compact && (
+        {(email || contactKey) && !compact && (
           <ContactLink
-            to={email}
+            to={email ?? contactKey}
             toName={name.split(" ")[0]}
             className="mt-auto pt-1.5 text-sm font-semibold text-navy underline underline-offset-2 hover:text-meeple sm:pt-2"
           >
             {/* The address is wider than a three-up phone card. */}
-            <Mail aria-label={`Email ${name}`} className="size-4 sm:hidden" />
-            <span className="hidden sm:inline">{email}</span>
+            <Mail
+              aria-label={`Email ${name}`}
+              className={`size-4 ${email ? "sm:hidden" : "sm:size-5"}`}
+            />
+            {email && <span className="hidden sm:inline">{email}</span>}
           </ContactLink>
         )}
       </div>

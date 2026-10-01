@@ -43,6 +43,12 @@ const ENV_SPEC: EnvSpec[] = [
       "Resend API key — sends ticket-confirmation + admin-alert emails from the Stripe webhook. Without it email sends no-op with a warning.",
   },
   {
+    name: "PRIVATE_CONTACT_EMAILS",
+    required: false,
+    description:
+      "key=address pairs, comma-separated — unpublished contact-form recipients for team members with a contactKey (src/v2/data/team.ts). Without it their form sends are rejected.",
+  },
+  {
     name: "OPENNODE_KEY",
     required: false,
     description:

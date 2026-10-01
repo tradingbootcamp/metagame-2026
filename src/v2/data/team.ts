@@ -27,6 +27,9 @@ export type Person = {
   titleUrl?: string;
   photo?: StaticImageData;
   email?: string;
+  // Contactable without publishing an address: a key into the server-only
+  // PRIVATE_CONTACT_EMAILS env var (this repo is public).
+  contactKey?: string;
   // Hat Trick: hats hidden in this photo (see src/v2/hat-trick).
   hats?: Hat[];
 };
