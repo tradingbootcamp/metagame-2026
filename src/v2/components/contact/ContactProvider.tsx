@@ -16,6 +16,8 @@ export type ContactOptions = {
   subject?: string;
   /** Recipient; defaults to the team inbox. Must be one the API allows. */
   to?: string;
+  /** Who `to` is, for the modal title ("Contact Ricki"). */
+  toName?: string;
 };
 
 const ContactContext = createContext<(opts?: ContactOptions) => void>(() => {});

@@ -79,6 +79,7 @@ export default function PersonCard({
         {email && !compact && (
           <ContactLink
             to={email}
+            toName={name.split(" ")[0]}
             className="mt-auto pt-1.5 text-sm font-semibold text-navy underline underline-offset-2 hover:text-meeple sm:pt-2"
           >
             {/* The address is wider than a three-up phone card. */}

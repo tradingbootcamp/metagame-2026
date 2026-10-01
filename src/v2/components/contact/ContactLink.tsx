@@ -11,12 +11,13 @@ export default function ContactLink({
   children,
   subject,
   to,
+  toName,
 }: ContactOptions & { className?: string; children: ReactNode }) {
   const open = useContact();
   return (
     <button
       type="button"
-      onClick={() => open({ subject, to })}
+      onClick={() => open({ subject, to, toName })}
       className={cn("cursor-pointer text-left", className)}
     >
       {children}
