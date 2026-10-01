@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   markPurchaseFailedIfExists,
   recordPurchase,
+  type PurchaseRecord,
   type PurchaseStatus,
 } from "@/lib/airtable";
 import {
@@ -9,6 +10,7 @@ import {
   getHostedCheckoutUrl,
   verifyWebhookSignature,
 } from "@/lib/opennode";
+import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
 import { getDayPass } from "@/lib/tickets";
 import { pickUtm } from "@/lib/utm";
@@ -122,7 +124,7 @@ export async function POST(request: Request) {
       : undefined;
 
   try {
-    await recordPurchase({
+    const purchase: PurchaseRecord = {
       id: charge.id,
       // Derived from the same id as the upsert key, so retries can't churn it.
       ticketCode: ticketCode(charge.id),
@@ -156,7 +158,9 @@ export async function POST(request: Request) {
         charge.fiat_value != null ? charge.fiat_value / 100 : undefined,
       btcNetwork,
       utm: pickUtm((key) => meta[key]),
-    });
+    };
+    await recordPurchase(purchase);
+    await capturePurchase(purchase);
   } catch (err) {
     // 500 → OpenNode retries; recordPurchase upserts on ID, so a retry can't dupe.
     console.error("[opennode-webhook] failed to record purchase:", err);
