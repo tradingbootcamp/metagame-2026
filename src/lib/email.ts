@@ -44,8 +44,8 @@ export type TicketConfirmationEmail = {
   ticketCode?: string;
   /** Set for a day pass: the one admitted day replaces the Fri–Sun dates line. */
   eventDay?: { long: string; ymd: string };
-  /** This purchase put the buyer on the mailing list — adds a line saying so. */
-  addedToMailingList?: boolean;
+  /** Set when this purchase put the buyer on the mailing list: adds a line saying so, linking here to opt out. */
+  mailingListOptOutUrl?: string;
   test?: boolean;
 };
 
@@ -80,7 +80,7 @@ export function renderTicketConfirmationEmail(
     discountCode,
     ticketCode,
     eventDay,
-    addedToMailingList = false,
+    mailingListOptOutUrl,
     test = false,
   }: TicketConfirmationEmail,
   assetBase: string = SITE,
@@ -133,7 +133,7 @@ export function renderTicketConfirmationEmail(
 
         <p>Have questions? Check out our <a href="${SITE}/#faq">FAQ</a>. More questions? Reply to this email.</p>
 
-        ${addedToMailingList ? `<p>We've added you to the Metagame mailing list for news about this and future events &mdash; you can unsubscribe from any of those emails.</p>` : ""}
+        ${mailingListOptOutUrl ? `<p>We've also added you to the Metagame mailing list for news about this and future events &mdash; <a href="${mailingListOptOutUrl}">opt out here</a> if you'd rather not get those.</p>` : ""}
 
         <p>See you at Metagame 2026!</p>
 
@@ -173,9 +173,9 @@ Please join our Discord server, where much future relevant communication will ta
 
 Have questions? Check out our FAQ (${SITE}/#faq). More questions? Reply to this email.
 ${
-  addedToMailingList
+  mailingListOptOutUrl
     ? `
-We've added you to the Metagame mailing list for news about this and future events — you can unsubscribe from any of those emails.
+We've also added you to the Metagame mailing list for news about this and future events. Opt out here if you'd rather not get those: ${mailingListOptOutUrl}
 `
     : ""
 }

@@ -13,6 +13,7 @@ import {
 } from "@/lib/opennode";
 import { ticketCode } from "@/lib/ticket-code";
 import { getDayPass } from "@/lib/tickets";
+import { mailingListOptOutUrl } from "@/lib/purchase-buyer";
 import { pickUtm } from "@/lib/utm";
 import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
 
@@ -207,7 +208,9 @@ export async function POST(request: Request) {
         // shows the payment details and serves as one.
         receiptUrl: getHostedCheckoutUrl(charge.id, charge),
         ticketCode: ticketCode(charge.id),
-        addedToMailingList,
+        mailingListOptOutUrl: addedToMailingList
+          ? mailingListOptOutUrl({ chargeId: charge.id })
+          : undefined,
         test: meta.test === true || meta.test === "true",
       });
     } catch (err) {

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { signupCreatedAt } from "@/lib/airtable";
 import { getStripe } from "@/lib/stripe";
 import ContentPage from "@/v2/components/ContentPage";
-import ThanksOptOut from "@/v2/components/tickets/ThanksOptOut";
+import MailingListOptOut from "@/v2/components/tickets/MailingListOptOut";
 import { Button } from "@/v2/components/ui/button";
 
 export const metadata: Metadata = {
@@ -58,7 +58,16 @@ export default async function ThanksPage({
     >
       <div className="flex max-w-[640px] flex-col items-start gap-8">
         {buyer ? (
-          <ThanksOptOut sessionId={buyer.sessionId} email={buyer.email} />
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-base text-ink">
+              We also added {buyer.email} to the Metagame mailing list for news
+              about this and future events.
+            </p>
+            <MailingListOptOut
+              purchase={{ sessionId: buyer.sessionId }}
+              email={buyer.email}
+            />
+          </div>
         ) : null}
         <Button asChild variant="navy">
           <Link href="/">Back to the site</Link>

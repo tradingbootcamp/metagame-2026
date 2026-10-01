@@ -19,6 +19,8 @@ const VARIANTS = {
     usdFull: 425,
     discountCode: "EARLYBIRD",
     ticketCode: "T549ND",
+    mailingListOptOutUrl:
+      "https://metagame.games/mailing-list/opt-out?session_id=cs_test_123",
     receiptUrl:
       "https://pay.stripe.com/receipts/payment/CAcQARoXChVhY2N0XzFRZVFkMUN0TzQ0M0VHM24o85Kk1AYyBje6uF01PzosFuW6Gl6shlxk8803XXwStlJ3OPQw4aJQaLVcl0X5XmA4B9KybbZRmQNQTd8",
   },

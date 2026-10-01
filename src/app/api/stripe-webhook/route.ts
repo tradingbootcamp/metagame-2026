@@ -16,6 +16,7 @@ import {
   tierForCheckoutMetadata,
   tierLabelForPaymentLinkUrl,
 } from "@/lib/tickets";
+import { mailingListOptOutUrl } from "@/lib/purchase-buyer";
 import { pickUtm } from "@/lib/utm";
 
 // Signature verification needs the raw body + Node crypto — keep this off the edge.
@@ -269,7 +270,9 @@ export async function POST(request: Request) {
           receiptUrl: charge?.receipt_url ?? undefined,
           discountCode: couponCode,
           ticketCode: ticketCode(paymentIntent?.id ?? full.id),
-          addedToMailingList,
+          mailingListOptOutUrl: addedToMailingList
+            ? mailingListOptOutUrl({ sessionId: full.id })
+            : undefined,
           test: !event.livemode || isTestCoupon,
         });
       } catch (err) {

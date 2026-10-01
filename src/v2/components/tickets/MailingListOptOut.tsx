@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import type { PurchaseRef } from "@/lib/purchase-buyer";
 import { Button } from "@/v2/components/ui/button";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-export default function ThanksOptOut({
-  sessionId,
+export default function MailingListOptOut({
+  purchase,
   email,
 }: {
-  sessionId: string;
+  purchase: PurchaseRef;
   email: string;
 }) {
   const [status, setStatus] = useState<Status>("idle");
@@ -20,7 +21,7 @@ export default function ThanksOptOut({
       const res = await fetch("/api/mailing-list/opt-out", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify(purchase),
       });
       if (!res.ok) throw new Error("Request failed");
       setStatus("success");
@@ -40,10 +41,6 @@ export default function ThanksOptOut({
 
   return (
     <div className="flex flex-col items-start gap-2">
-      <p className="text-base text-ink">
-        We also added {email} to the Metagame mailing list for news about this
-        and future events.
-      </p>
       <Button
         type="button"
         variant="navy"

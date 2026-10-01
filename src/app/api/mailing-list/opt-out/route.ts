@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { unsubscribeSignup } from "@/lib/airtable";
-import { getStripe } from "@/lib/stripe";
+import { purchaseBuyer, type PurchaseRef } from "@/lib/purchase-buyer";
 
 export const runtime = "nodejs";
 
 /**
- * POST { sessionId } — opt a ticket buyer out of the mailing list. Keyed on the
- * Checkout Session rather than an email so only the buyer's own address can be
- * unsubscribed from /thanks.
+ * POST { sessionId } | { chargeId } — opt a ticket buyer out of the mailing
+ * list. Keyed on the purchase rather than an email so only the buyer's own
+ * address can be unsubscribed.
  */
 export async function POST(request: Request) {
-  let body: { sessionId?: unknown };
+  let body: { sessionId?: unknown; chargeId?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -19,34 +19,21 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  const { sessionId } = body;
-  if (typeof sessionId !== "string" || !sessionId) {
-    return NextResponse.json({ error: "Missing session" }, { status: 400 });
+  const { sessionId, chargeId } = body;
+  let ref: PurchaseRef;
+  if (typeof sessionId === "string" && sessionId) ref = { sessionId };
+  else if (typeof chargeId === "string" && chargeId) ref = { chargeId };
+  else {
+    return NextResponse.json({ error: "Missing purchase" }, { status: 400 });
   }
 
-  const stripe = getStripe();
-  if (!stripe) {
-    return NextResponse.json(
-      { error: "Opt-out is temporarily unavailable" },
-      { status: 503 },
-    );
-  }
-
-  let email: string | null | undefined;
-  let livemode: boolean;
-  try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    email = session.customer_details?.email;
-    livemode = session.livemode;
-  } catch {
-    return NextResponse.json({ error: "Unknown session" }, { status: 404 });
-  }
-  if (!email) {
-    return NextResponse.json({ error: "Unknown session" }, { status: 404 });
+  const buyer = await purchaseBuyer(ref);
+  if (!buyer) {
+    return NextResponse.json({ error: "Unknown purchase" }, { status: 404 });
   }
 
   try {
-    const result = await unsubscribeSignup(email, { test: !livemode });
+    const result = await unsubscribeSignup(buyer.email, { test: buyer.test });
     if (!result.stored && process.env.NODE_ENV === "production") {
       console.error(
         "[opt-out] Airtable not configured in production — opt-out not stored",
