@@ -86,11 +86,11 @@ export default function SpeakerCtaCard({ href }: { href: string }) {
             </div>
           )}
         </div>
-        <div className="px-4 py-3 text-center">
-          <h3 className={`${HEADING} text-lg text-navy`}>You?</h3>
-          <p className="mt-1 font-space-mono text-xs tracking-[0.08em] text-ink/60 uppercase transition-colors group-hover:text-navy">
+        <div className="px-1 py-2 text-center sm:px-4 sm:py-3">
+          <h3 className={`${HEADING} text-xs text-navy sm:text-lg`}>You?</h3>
+          <p className="mt-1 font-space-mono text-[9px] text-ink/60 uppercase transition-colors group-hover:text-navy sm:text-xs sm:tracking-[0.08em]">
             <span className="underline underline-offset-2">
-              Submit a proposal &rarr;
+              Submit a proposal<span className="hidden sm:inline"> &rarr;</span>
             </span>
           </p>
         </div>
