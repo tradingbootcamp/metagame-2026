@@ -10,7 +10,8 @@ import {
   supporterTier,
   type TicketTier,
 } from "@/lib/tickets";
-import { pickUtm } from "@/lib/utm";
+import { PREFERRED_CAMPAIGN, slugify } from "@/lib/tracking-links";
+import { pickUtm, type Utm } from "@/lib/utm";
 
 export const runtime = "nodejs";
 
@@ -71,44 +72,63 @@ function resolvePurchase(params: URLSearchParams): Purchase | undefined {
   );
 }
 
+/** Attribution for a comp-tool code's purchase, read off the code itself. */
+function compUtm(promo: Stripe.PromotionCode): Utm {
+  if (promo.metadata?.source !== "comp-tool") return {};
+  const purpose = slugify(promo.metadata.purpose ?? "");
+  return {
+    utm_source: "comp-tool",
+    utm_medium: "comp-link",
+    utm_campaign: PREFERRED_CAMPAIGN,
+    ...(purpose ? { utm_content: purpose } : {}),
+  };
+}
+
 /**
- * During early-bird the promo is applied for the buyer (no code box); after it,
- * or on the unlisted `code=own` link for partner/comp codes, the box is shown.
+ * A `promo` on the link (/buy/CODE) is applied for the buyer, as is the tier's
+ * own code during early-bird; Stripe then shows no code box. Otherwise — or on
+ * the unlisted `code=own` link, or when the code isn't redeemable — the box is shown.
  */
 async function promoParams(
   stripe: Stripe,
   ticket: TicketTier,
-  ownCode: boolean,
-): Promise<
-  Pick<
+  params: URLSearchParams,
+): Promise<{
+  session: Pick<
     Stripe.Checkout.SessionCreateParams,
     "discounts" | "allow_promotion_codes"
-  >
-> {
-  if (ownCode || !ticket.promoCode || !isEarlyBirdActive()) {
-    return { allow_promotion_codes: true };
-  }
+  >;
+  utm: Utm;
+}> {
+  const box = { session: { allow_promotion_codes: true }, utm: {} };
+  const linked = params.get("promo")?.trim();
+  const earlyBird =
+    params.get("code") !== "own" && isEarlyBirdActive()
+      ? ticket.promoCode
+      : undefined;
+  const code = linked || earlyBird;
+  if (!code) return box;
   const {
     data: [promo],
-  } = await stripe.promotionCodes.list({
-    code: ticket.promoCode,
-    active: true,
-    limit: 1,
-  });
+  } = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
   if (!promo) {
     console.warn(
-      `[checkout/stripe] no active ${ticket.promoCode} promotion code — showing the code box instead`,
+      `[checkout/stripe] no active ${code} promotion code — showing the code box instead`,
     );
-    return { allow_promotion_codes: true };
+    return box;
   }
-  return { discounts: [{ promotion_code: promo.id }] };
+  return {
+    session: { discounts: [{ promotion_code: promo.id }] },
+    utm: linked ? compUtm(promo) : {},
+  };
 }
 
 /**
- * GET /api/checkout/stripe?tier=standard[&code=own]
+ * GET /api/checkout/stripe?tier=standard[&code=own | &promo=<code>]
  *   | ?tier=supporter&chip=<usd> | ?tier=day-pass&day=<friday|saturday|sunday>
  *   [&utm_source=…&utm_medium=…&utm_campaign=…&first_visit=…&posthog_id=…]
- * Creates a hosted Checkout Session and redirects to it.
+ * Creates a hosted Checkout Session and redirects to it. /buy and /buy/<code>
+ * redirect here (next.config.ts).
  */
 export async function GET(request: Request) {
   const stripe = getStripe();
@@ -126,17 +146,21 @@ export async function GET(request: Request) {
 
   const origin = resolveOrigin(request);
   try {
+    const promo = purchase.ticket
+      ? await promoParams(stripe, purchase.ticket, params)
+      : undefined;
+    const utm = pickUtm((k) => params.get(k));
+    // UTMs on the link itself win over the ones a comp code implies.
+    const tagged = Object.keys(utm).some((k) => k.startsWith("utm_"));
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [{ price: purchase.price, quantity: 1 }],
-      ...(purchase.ticket
-        ? await promoParams(
-            stripe,
-            purchase.ticket,
-            params.get("code") === "own",
-          )
-        : {}),
-      metadata: { ...purchase.metadata, ...pickUtm((k) => params.get(k)) },
+      ...promo?.session,
+      metadata: {
+        ...purchase.metadata,
+        ...(tagged ? {} : promo?.utm),
+        ...utm,
+      },
       custom_fields: CUSTOM_FIELDS,
       name_collection: { individual: { enabled: true, optional: false } },
       success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,

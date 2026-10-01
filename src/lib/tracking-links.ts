@@ -55,7 +55,7 @@ export function snapToOption(
 }
 
 /** Preselected when Airtable still lists it; otherwise the first choice wins. */
-const PREFERRED_CAMPAIGN = "metagame-2026";
+export const PREFERRED_CAMPAIGN = "metagame-2026";
 export function defaultCampaign(options: LinkOptions): string {
   return options.campaign.includes(PREFERRED_CAMPAIGN)
     ? PREFERRED_CAMPAIGN
