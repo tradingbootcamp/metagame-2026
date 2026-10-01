@@ -44,6 +44,8 @@ export type TicketConfirmationEmail = {
   ticketCode?: string;
   /** Set for a day pass: the one admitted day replaces the Fri–Sun dates line. */
   eventDay?: { long: string; ymd: string };
+  /** This purchase put the buyer on the mailing list — adds a line saying so. */
+  addedToMailingList?: boolean;
   test?: boolean;
 };
 
@@ -78,6 +80,7 @@ export function renderTicketConfirmationEmail(
     discountCode,
     ticketCode,
     eventDay,
+    addedToMailingList = false,
     test = false,
   }: TicketConfirmationEmail,
   assetBase: string = SITE,
@@ -130,7 +133,7 @@ export function renderTicketConfirmationEmail(
 
         <p>Have questions? Check out our <a href="${SITE}/#faq">FAQ</a>. More questions? Reply to this email.</p>
 
-        <p>We've added you to the Metagame mailing list for news about this and future events &mdash; you can unsubscribe from any of those emails.</p>
+        ${addedToMailingList ? `<p>We've added you to the Metagame mailing list for news about this and future events &mdash; you can unsubscribe from any of those emails.</p>` : ""}
 
         <p>See you at Metagame 2026!</p>
 
@@ -169,9 +172,13 @@ Your Metagame 2026 ticket is confirmed. We're excited to see you there!
 Please join our Discord server, where much future relevant communication will take place: ${SOCIAL_LINKS.DISCORD}
 
 Have questions? Check out our FAQ (${SITE}/#faq). More questions? Reply to this email.
-
+${
+  addedToMailingList
+    ? `
 We've added you to the Metagame mailing list for news about this and future events — you can unsubscribe from any of those emails.
-
+`
+    : ""
+}
 See you at Metagame 2026!
 
 Ticket Details

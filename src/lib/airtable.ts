@@ -19,6 +19,7 @@ const NAME_FIELD = "Name";
 const NOTES_FIELD = "Notes";
 // Marks dev/test submissions so they're filterable from real signups.
 const TEST_FIELD = "Test";
+const UNSUBSCRIBE_FIELD = "Unsubscribe";
 
 type SignupFields = {
   name?: string;
@@ -79,6 +80,88 @@ export async function recordSignup(
       typecast: true,
     }),
   });
+
+  if (!res.ok) {
+    throw new Error(`Airtable responded ${res.status}: ${await res.text()}`);
+  }
+
+  return { stored: true };
+}
+
+/**
+ * When an email first landed on the signups table, or null if it never has.
+ * Case-insensitive, and counts unsubscribed rows — ticket purchases use this to
+ * leave anyone who's already been on the list alone.
+ */
+export async function signupCreatedAt(email: string): Promise<Date | null> {
+  const { AIRTABLE_API_KEY } = env;
+  if (!AIRTABLE_API_KEY) return null;
+
+  const literal = email
+    .trim()
+    .toLowerCase()
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'");
+  const query = new URLSearchParams({
+    filterByFormula: `LOWER(TRIM({${airtableConfig.signupEmailField}}))='${literal}'`,
+  });
+  query.append("fields[]", airtableConfig.signupEmailField);
+  const res = await fetch(
+    `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.signupsTableId)}?${query}`,
+    { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` } },
+  );
+  if (!res.ok) {
+    throw new Error(`Airtable responded ${res.status}: ${await res.text()}`);
+  }
+  const { records = [] } = (await res.json()) as {
+    records?: { createdTime: string }[];
+  };
+  if (records.length === 0) return null;
+  return new Date(Math.min(...records.map((r) => Date.parse(r.createdTime))));
+}
+
+/**
+ * Tick Unsubscribe on an email's signup row. An upsert that sends only this
+ * field, so it leaves the rest of the row alone, and creates the row if the
+ * purchase webhook hasn't added the buyer yet — that later upsert never sends
+ * Unsubscribe, so the opt-out sticks in either order.
+ */
+export async function unsubscribeSignup(
+  email: string,
+  { test = false }: { test?: boolean } = {},
+): Promise<SignupResult> {
+  const { AIRTABLE_API_KEY } = env;
+
+  if (!AIRTABLE_API_KEY) {
+    console.warn(`[opt-out] Airtable not configured — not stored: ${email}`);
+    return { stored: false, reason: "airtable-not-configured" };
+  }
+
+  const res = await fetch(
+    `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.signupsTableId)}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        performUpsert: { fieldsToMergeOn: [airtableConfig.signupEmailField] },
+        records: [
+          {
+            fields: {
+              [airtableConfig.signupEmailField]: email,
+              [UNSUBSCRIBE_FIELD]: true,
+              ...(test || process.env.VERCEL_ENV !== "production"
+                ? { [TEST_FIELD]: true }
+                : {}),
+            },
+          },
+        ],
+        typecast: true,
+      }),
+    },
+  );
 
   if (!res.ok) {
     throw new Error(`Airtable responded ${res.status}: ${await res.text()}`);

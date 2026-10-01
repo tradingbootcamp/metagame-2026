@@ -5,6 +5,7 @@ import {
   recordDiscountCode,
   recordPurchase,
   recordSignup,
+  signupCreatedAt,
   type PurchaseStatus,
 } from "@/lib/airtable";
 import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
@@ -226,6 +227,26 @@ export async function POST(request: Request) {
     // through an old Payment Link are matched by its URL instead.
     const tier = tierForCheckoutMetadata(full.metadata);
     if (status === "Paid" && email) {
+      // Buyers join the mailing list unless their email has been on it before.
+      // Soft-fail, like the email below.
+      let addedToMailingList = false;
+      try {
+        if ((await signupCreatedAt(email)) === null) {
+          await recordSignup(email, {
+            name: preferredName ?? full.customer_details?.name ?? undefined,
+            test: !event.livemode || isTestCoupon,
+          });
+          addedToMailingList = true;
+        }
+      } catch (err) {
+        console.error("[stripe-webhook] mailing-list signup failed:", err);
+        await sendAdminErrorEmail(
+          `Mailing-list signup failed for ticket buyer ${email} (session ${full.id}): ${err instanceof Error ? err.message : String(err)}`,
+        ).catch((adminErr) =>
+          console.error("[stripe-webhook] admin alert failed:", adminErr),
+        );
+      }
+
       try {
         await sendTicketConfirmationEmail({
           to: email,
@@ -248,28 +269,13 @@ export async function POST(request: Request) {
           receiptUrl: charge?.receipt_url ?? undefined,
           discountCode: couponCode,
           ticketCode: ticketCode(paymentIntent?.id ?? full.id),
+          addedToMailingList,
           test: !event.livemode || isTestCoupon,
         });
       } catch (err) {
         console.error("[stripe-webhook] confirmation email failed:", err);
         await sendAdminErrorEmail(
           `Ticket confirmation email failed for ${email} (session ${full.id}): ${err instanceof Error ? err.message : String(err)}`,
-        ).catch((adminErr) =>
-          console.error("[stripe-webhook] admin alert failed:", adminErr),
-        );
-      }
-
-      // Buyers join the mailing list automatically (the confirmation email
-      // says so). Soft-fail like the email above.
-      try {
-        await recordSignup(email, {
-          name: preferredName ?? full.customer_details?.name ?? undefined,
-          test: !event.livemode || isTestCoupon,
-        });
-      } catch (err) {
-        console.error("[stripe-webhook] mailing-list signup failed:", err);
-        await sendAdminErrorEmail(
-          `Mailing-list signup failed for ticket buyer ${email} (session ${full.id}): ${err instanceof Error ? err.message : String(err)}`,
         ).catch((adminErr) =>
           console.error("[stripe-webhook] admin alert failed:", adminErr),
         );
