@@ -1,30 +1,34 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { signupCreatedAt } from "@/lib/airtable";
 import { getStripe } from "@/lib/stripe";
 import ContentPage from "@/v2/components/ContentPage";
-import ThanksOptIn from "@/v2/components/tickets/ThanksOptIn";
+import MailingListOptOut from "@/v2/components/tickets/MailingListOptOut";
 import { Button } from "@/v2/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Thanks — Metagame 2026",
 };
 
-// film-grain texture, shared with the home page so /thanks sits on the same surface
 // Pull the buyer's email from a completed Checkout Session. Returns null unless
 // Stripe is configured, the session exists, and it actually paid — we never
-// prefill the opt-in from an unverified or unpaid session (the id is attacker-supplied).
-async function paidBuyer(
+// show the opt-out for an unverified or unpaid session (the id is attacker-supplied).
+async function newlySubscribedBuyer(
   sessionId: string | undefined,
-): Promise<{ email: string; name?: string } | null> {
+): Promise<{ sessionId: string; email: string } | null> {
   if (!sessionId) return null;
   const stripe = getStripe();
   if (!stripe) return null;
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (session.payment_status !== "paid") return null;
+    if (session.payment_status === "unpaid") return null;
     const email = session.customer_details?.email;
     if (!email) return null;
-    return { email, name: session.customer_details?.name ?? undefined };
+    // A row older than the checkout means they were on the list already (the
+    // webhook left them alone); a newer or not-yet-written one is this purchase's.
+    const signedUp = await signupCreatedAt(email);
+    if (signedUp && signedUp.getTime() < session.created * 1000) return null;
+    return { sessionId, email };
   } catch {
     return null;
   }
@@ -36,7 +40,7 @@ export default async function ThanksPage({
   searchParams: Promise<{ session_id?: string | string[] }>;
 }) {
   const { session_id } = await searchParams;
-  const buyer = await paidBuyer(
+  const buyer = await newlySubscribedBuyer(
     Array.isArray(session_id) ? session_id[0] : session_id,
   );
 
@@ -53,7 +57,18 @@ export default async function ThanksPage({
       }
     >
       <div className="flex max-w-[640px] flex-col items-start gap-8">
-        {buyer ? <ThanksOptIn email={buyer.email} name={buyer.name} /> : null}
+        {buyer ? (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-base text-ink">
+              We also added {buyer.email} to the Metagame mailing list for news
+              about this and future events.
+            </p>
+            <MailingListOptOut
+              purchase={{ sessionId: buyer.sessionId }}
+              email={buyer.email}
+            />
+          </div>
+        ) : null}
         <Button asChild variant="navy">
           <Link href="/">Back to the site</Link>
         </Button>

@@ -4,6 +4,8 @@ import { env } from "@/env";
 import {
   recordDiscountCode,
   recordPurchase,
+  recordSignup,
+  signupCreatedAt,
   type PurchaseRecord,
   type PurchaseStatus,
 } from "@/lib/airtable";
@@ -16,6 +18,7 @@ import {
   tierForCheckoutMetadata,
   tierLabelForPaymentLinkUrl,
 } from "@/lib/tickets";
+import { mailingListOptOutUrl } from "@/lib/purchase-buyer";
 import { pickUtm } from "@/lib/utm";
 
 // Signature verification needs the raw body + Node crypto — keep this off the edge.
@@ -229,6 +232,26 @@ export async function POST(request: Request) {
     // through an old Payment Link are matched by its URL instead.
     const tier = tierForCheckoutMetadata(full.metadata);
     if (status === "Paid" && email) {
+      // Buyers join the mailing list unless their email has been on it before.
+      // Soft-fail, like the email below.
+      let addedToMailingList = false;
+      try {
+        if ((await signupCreatedAt(email)) === null) {
+          await recordSignup(email, {
+            name: preferredName ?? full.customer_details?.name ?? undefined,
+            test: !event.livemode || isTestCoupon,
+          });
+          addedToMailingList = true;
+        }
+      } catch (err) {
+        console.error("[stripe-webhook] mailing-list signup failed:", err);
+        await sendAdminErrorEmail(
+          `Mailing-list signup failed for ticket buyer ${email} (session ${full.id}): ${err instanceof Error ? err.message : String(err)}`,
+        ).catch((adminErr) =>
+          console.error("[stripe-webhook] admin alert failed:", adminErr),
+        );
+      }
+
       try {
         await sendTicketConfirmationEmail({
           to: email,
@@ -251,6 +274,9 @@ export async function POST(request: Request) {
           receiptUrl: charge?.receipt_url ?? undefined,
           discountCode: couponCode,
           ticketCode: ticketCode(paymentIntent?.id ?? full.id),
+          mailingListOptOutUrl: addedToMailingList
+            ? mailingListOptOutUrl({ sessionId: full.id })
+            : undefined,
           test: !event.livemode || isTestCoupon,
         });
       } catch (err) {
