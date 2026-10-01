@@ -4,10 +4,12 @@ import { env } from "@/env";
 import {
   recordDiscountCode,
   recordPurchase,
+  type PurchaseRecord,
   type PurchaseStatus,
 } from "@/lib/airtable";
 import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
+import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
 import {
   dayPassForPaymentLinkUrl,
@@ -189,7 +191,7 @@ export async function POST(request: Request) {
         ?.find((f) => f.key === "preferred_name")
         ?.text?.value?.trim() || undefined;
 
-    await recordPurchase({
+    const purchase: PurchaseRecord = {
       // Prefer the PaymentIntent id (the canonical payment) as the upsert key.
       id: paymentIntent?.id ?? full.id,
       // Derived from the same id as the upsert key, so retries can't churn it.
@@ -213,7 +215,9 @@ export async function POST(request: Request) {
       // Flag Test if it's a sandbox checkout (livemode=false) OR used an in-prod test
       // coupon — either way it shouldn't count as a real sale.
       test: !event.livemode || isTestCoupon,
-    });
+    };
+    await recordPurchase(purchase);
+    await capturePurchase(purchase);
 
     // Confirmation email once the money is settled (or none was owed): card
     // checkouts on `completed`, ACH on `async_payment_succeeded` — never for a
