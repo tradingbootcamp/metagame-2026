@@ -70,12 +70,7 @@ export const TEAM: Person[] = [
     email: "david@metagame.games",
   },
   { name: "Sparr Risher", title: "Generalist", photo: sparr },
-  {
-    name: "Kai Geffen",
-    title: "Generalist",
-    photo: kai,
-    email: "metagame@celestialdecks.gg",
-  },
+  { name: "Kai Geffen", title: "Generalist", photo: kai },
   { name: "Michael Sheely", title: "Generalist", photo: michael },
   {
     name: "Damon Pourtahmaseb-Sasi",
