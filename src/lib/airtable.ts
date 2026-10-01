@@ -222,7 +222,9 @@ export async function recordPurchase(
     fields["BTC Amount Discounted"] = purchase.btcAmountDiscounted;
   if (purchase.receiptUrl) fields["Receipt URL"] = purchase.receiptUrl;
   if (purchase.notes) fields["Notes"] = purchase.notes;
-  if (purchase.discordHandle) fields["Discord Handle"] = purchase.discordHandle;
+  // Buyers often type "@name"; Discord usernames can't contain "@".
+  const discordHandle = purchase.discordHandle?.trim().replace(/^@+\s*/, "");
+  if (discordHandle) fields["Discord Handle"] = discordHandle;
   if (purchase.openNodeOrderId)
     fields["OpenNode Order ID"] = purchase.openNodeOrderId;
   if (purchase.btcTxId) fields["BTC Tx ID"] = purchase.btcTxId;
