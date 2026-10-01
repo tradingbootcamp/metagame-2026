@@ -1,3 +1,4 @@
+import { Mail } from "lucide-react";
 import Image from "next/image";
 import type { Person } from "@/v2/data/team";
 import HatImage from "@/v2/hat-trick/HatImage";
@@ -24,7 +25,9 @@ export default function PersonCard({
   compact = false,
 }: Person & { compact?: boolean }) {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-navy/[0.16] bg-white shadow-[0_8px_24px_rgba(23,48,89,0.08)]">
+    <div
+      className={`flex h-full flex-col overflow-hidden border ${compact ? "rounded-2xl" : ""} border-navy/[0.16] bg-white shadow-[0_8px_24px_rgba(23,48,89,0.08)]`}
+    >
       {photo && hats?.length ? (
         <HatImage
           src={photo}
@@ -52,7 +55,7 @@ export default function PersonCard({
         </div>
       )}
       <div
-        className={`px-1 py-2 text-center ${compact ? "sm:px-4 sm:py-3" : "sm:px-5 sm:py-4"}`}
+        className={`flex flex-1 flex-col items-center px-1 py-2 text-center ${compact ? "sm:px-4 sm:py-3" : "sm:px-5 sm:py-4"}`}
       >
         <h3
           className={`${HEADING} text-xs break-words text-navy ${compact ? "sm:text-lg" : "sm:text-xl"}`}
@@ -76,10 +79,10 @@ export default function PersonCard({
         {email && !compact && (
           <ContactLink
             to={email}
-            className="mt-1 inline-block text-xs font-semibold text-navy underline underline-offset-2 hover:text-meeple sm:mt-2 sm:text-sm"
+            className="mt-auto pt-1.5 text-sm font-semibold text-navy underline underline-offset-2 hover:text-meeple sm:pt-2"
           >
             {/* The address is wider than a three-up phone card. */}
-            <span className="sm:hidden">Email</span>
+            <Mail aria-label={`Email ${name}`} className="size-4 sm:hidden" />
             <span className="hidden sm:inline">{email}</span>
           </ContactLink>
         )}
