@@ -285,16 +285,16 @@ export default function Home() {
         <div className={CONTAINER}>
           <SectionHeading eyebrow="Who will be there?" title="Speakers" />
           {/* Wrapping flex, not a grid, so a short last row centers. */}
-          <div className="mt-10 flex flex-wrap justify-center gap-5">
+          <div className="mt-10 flex flex-wrap justify-center gap-2 sm:gap-5">
             {SPEAKERS.map((speaker) => (
               <div
                 key={speaker.name}
-                className="w-[calc(50%-0.625rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]"
+                className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]"
               >
                 <PersonCard {...speaker} compact />
               </div>
             ))}
-            <div className="w-[calc(50%-0.625rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]">
+            <div className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]">
               <SpeakerCtaCard href={RFP_FORM_URL} />
             </div>
           </div>

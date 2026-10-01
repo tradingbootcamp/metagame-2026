@@ -23,6 +23,7 @@ const TEXTAREA =
 export default function ContactModal({
   subject: initialSubject = "",
   to = TEAM_EMAIL,
+  toName = "us",
   onClose,
 }: ContactOptions & { onClose: () => void }) {
   const [name, setName] = useState("");
@@ -58,11 +59,11 @@ export default function ContactModal({
           <DialogTitle
             className={`${HEADING} text-[clamp(22px,3vw,28px)] text-cream`}
           >
-            Contact us
+            Contact {toName}
           </DialogTitle>
           {to !== TEAM_EMAIL && (
             <DialogDescription className="mt-1.5 text-[15px] text-cream/80">
-              Your message goes to {to}.
+              {to}
             </DialogDescription>
           )}
         </div>
