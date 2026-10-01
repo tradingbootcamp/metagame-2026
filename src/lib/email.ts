@@ -89,13 +89,6 @@ export function renderTicketConfirmationEmail(
   const paid = isBtc ? `\u20BF${btcPaid}` : `$${(usdPaid ?? 0).toFixed(2)}`;
   const full = isBtc ? `\u20BF${btcFull}` : `$${(usdFull ?? 0).toFixed(2)}`;
 
-  // Prefill the mailing-list form (modal opens via #updates; params must precede
-  // the hash). Signup stays an explicit submit — the link only fills the fields.
-  const prefill = new URLSearchParams({
-    ...(to ? { email: to } : {}),
-    ...(purchaserName ? { name: purchaserName } : {}),
-  }).toString();
-  const mailingListUrl = `${SITE}/${prefill ? `?${prefill}` : ""}#updates`;
   const paidLine = `Amount paid: ${paid}${
     discounted
       ? ` (was ${full}` + (discountCode ? `, code ${discountCode})` : ")")
@@ -137,7 +130,7 @@ export function renderTicketConfirmationEmail(
 
         <p>Have questions? Check out our <a href="${SITE}/#faq">FAQ</a>. More questions? Reply to this email.</p>
 
-        <p>To hear about future events, <a href="${mailingListUrl}">join the general Metagame mailing list</a>.</p>
+        <p>We've added you to the Metagame mailing list for news about this and future events &mdash; you can unsubscribe from any of those emails.</p>
 
         <p>See you at Metagame 2026!</p>
 
@@ -177,7 +170,7 @@ Please join our Discord server, where much future relevant communication will ta
 
 Have questions? Check out our FAQ (${SITE}/#faq). More questions? Reply to this email.
 
-To hear about future events, join the general Metagame mailing list: ${mailingListUrl}
+We've added you to the Metagame mailing list for news about this and future events — you can unsubscribe from any of those emails.
 
 See you at Metagame 2026!
 

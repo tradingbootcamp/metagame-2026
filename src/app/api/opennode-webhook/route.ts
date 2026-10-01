@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   markPurchaseFailedIfExists,
   recordPurchase,
+  recordSignup,
   type PurchaseStatus,
 } from "@/lib/airtable";
 import {
@@ -191,6 +192,22 @@ export async function POST(request: Request) {
       console.error("[opennode-webhook] confirmation email failed:", err);
       await sendAdminErrorEmail(
         `Ticket confirmation email failed for ${email} (OpenNode ${charge.id}): ${err instanceof Error ? err.message : String(err)}`,
+      ).catch((adminErr) =>
+        console.error("[opennode-webhook] admin alert failed:", adminErr),
+      );
+    }
+
+    // Buyers join the mailing list automatically (the confirmation email
+    // says so). Soft-fail like the email above.
+    try {
+      await recordSignup(email, {
+        name: meta.name ? String(meta.name) : undefined,
+        test: meta.test === true || meta.test === "true",
+      });
+    } catch (err) {
+      console.error("[opennode-webhook] mailing-list signup failed:", err);
+      await sendAdminErrorEmail(
+        `Mailing-list signup failed for ticket buyer ${email} (OpenNode ${charge.id}): ${err instanceof Error ? err.message : String(err)}`,
       ).catch((adminErr) =>
         console.error("[opennode-webhook] admin alert failed:", adminErr),
       );

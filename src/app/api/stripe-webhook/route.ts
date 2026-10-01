@@ -4,6 +4,7 @@ import { env } from "@/env";
 import {
   recordDiscountCode,
   recordPurchase,
+  recordSignup,
   type PurchaseStatus,
 } from "@/lib/airtable";
 import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
@@ -253,6 +254,22 @@ export async function POST(request: Request) {
         console.error("[stripe-webhook] confirmation email failed:", err);
         await sendAdminErrorEmail(
           `Ticket confirmation email failed for ${email} (session ${full.id}): ${err instanceof Error ? err.message : String(err)}`,
+        ).catch((adminErr) =>
+          console.error("[stripe-webhook] admin alert failed:", adminErr),
+        );
+      }
+
+      // Buyers join the mailing list automatically (the confirmation email
+      // says so). Soft-fail like the email above.
+      try {
+        await recordSignup(email, {
+          name: preferredName ?? full.customer_details?.name ?? undefined,
+          test: !event.livemode || isTestCoupon,
+        });
+      } catch (err) {
+        console.error("[stripe-webhook] mailing-list signup failed:", err);
+        await sendAdminErrorEmail(
+          `Mailing-list signup failed for ticket buyer ${email} (session ${full.id}): ${err instanceof Error ? err.message : String(err)}`,
         ).catch((adminErr) =>
           console.error("[stripe-webhook] admin alert failed:", adminErr),
         );

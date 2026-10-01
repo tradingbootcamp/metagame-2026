@@ -24,6 +24,7 @@ type SignupFields = {
   name?: string;
   interests?: InterestValue[];
   notes?: string;
+  test?: boolean; // force the Test box, e.g. a sandbox purchase hitting prod
 };
 
 /**
@@ -41,7 +42,7 @@ type SignupFields = {
  */
 export async function recordSignup(
   email: string,
-  { name, interests = [], notes }: SignupFields = {},
+  { name, interests = [], notes, test = false }: SignupFields = {},
 ): Promise<SignupResult> {
   const { AIRTABLE_API_KEY } = env;
 
@@ -61,7 +62,7 @@ export async function recordSignup(
     ),
     // VERCEL_ENV distinguishes preview from production (NODE_ENV is "production"
     // for both), so preview deploys + local dev (undefined) are marked test.
-    [TEST_FIELD]: process.env.VERCEL_ENV !== "production",
+    [TEST_FIELD]: test || process.env.VERCEL_ENV !== "production",
   };
   if (name) fields[NAME_FIELD] = name;
   if (notes) fields[NOTES_FIELD] = notes;
