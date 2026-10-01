@@ -276,7 +276,7 @@ export default function LinksTool({
                 setDraft((prev) => ({
                   ...prev,
                   slug: e.target.value,
-                  slugDirty: e.target.value !== "",
+                  slugDirty: true,
                 }))
               }
               className={fieldClass}
@@ -299,7 +299,7 @@ export default function LinksTool({
                 setDraft((prev) => ({
                   ...prev,
                   internalName: e.target.value,
-                  labelDirty: e.target.value !== "",
+                  labelDirty: true,
                 }))
               }
               className={fieldClass}
