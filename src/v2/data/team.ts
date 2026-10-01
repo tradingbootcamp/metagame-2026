@@ -57,6 +57,7 @@ export const TEAM: Person[] = [
     name: "Yemima Morris",
     title: "Volunteer Coordinator",
     photo: yemima,
+    email: "yemima@metagame.games",
   },
   { name: "John Bromels", title: "Megagame Lead", photo: john },
   {
@@ -69,9 +70,15 @@ export const TEAM: Person[] = [
     name: "David Holt",
     title: "Marketing & Sponsorships",
     photo: davidHolt,
+    email: "david@metagame.games",
   },
   { name: "Sparr Risher", title: "Generalist", photo: sparr },
-  { name: "Kai Geffen", title: "Generalist", photo: kai },
+  {
+    name: "Kai Geffen",
+    title: "Generalist",
+    photo: kai,
+    email: "metagame@celestialdecks.gg",
+  },
   { name: "Michael Sheely", title: "Generalist", photo: michael },
   {
     name: "Damon Pourtahmaseb-Sasi",
