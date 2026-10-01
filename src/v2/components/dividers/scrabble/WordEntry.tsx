@@ -9,10 +9,12 @@ export default function WordEntry({
   word,
   onChange,
   disabled = false,
+  autoFocus = false,
 }: {
   word: string;
   onChange: (word: string) => void;
   disabled?: boolean;
+  autoFocus?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
 
@@ -43,7 +45,7 @@ export default function WordEntry({
         </span>
       ))}
       <input
-        autoFocus
+        autoFocus={autoFocus}
         disabled={disabled}
         value={word}
         onChange={(e) => type(e.target.value)}
