@@ -2,12 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/v2/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/v2/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/v2/components/ui/dialog";
 import { Input } from "@/v2/components/ui/input";
 import { TEAM_EMAIL } from "@/v2/lib/links";
 import { cn } from "@/v2/lib/utils";
@@ -61,11 +56,6 @@ export default function ContactModal({
           >
             Contact {toName}
           </DialogTitle>
-          {to !== TEAM_EMAIL && to.includes("@") && (
-            <DialogDescription className="mt-1.5 text-[15px] text-cream/80">
-              {to}
-            </DialogDescription>
-          )}
         </div>
 
         {status === "success" ? (

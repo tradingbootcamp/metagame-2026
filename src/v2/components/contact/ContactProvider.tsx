@@ -14,10 +14,7 @@ import ContactModal from "./ContactModal";
 export type ContactOptions = {
   /** Prefilled subject line. */
   subject?: string;
-  /**
-   * Recipient: an address or a `contactKey` the API allows. Defaults to the
-   * team inbox.
-   */
+  /** Recipient: a team member's `contactKey`. Defaults to the team inbox. */
   to?: string;
   /** Who `to` is, for the modal title ("Contact Ricki"). */
   toName?: string;

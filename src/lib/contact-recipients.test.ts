@@ -1,24 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TEAM_EMAIL } from "@/v2/lib/links";
-import { parsePrivateEmails, resolveRecipient } from "./contact-recipients";
+import { resolveRecipient } from "./contact-recipients";
 
-const priv = parsePrivateEmails("kai = kai@example.com, nobody=x@example.com");
-const people = [{ email: "ricki@metagame.games" }, { contactKey: "kai" }];
-const resolve = (to: string, emails = priv) =>
-  resolveRecipient(to, emails, people);
+const people = [{ contactKey: "kai" }, { contactKey: "unset" }, {}];
+const resolve = (to: string) => resolveRecipient(to, people);
 
 describe("resolveRecipient", () => {
-  it("passes the team inbox and published team addresses through", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("passes the team inbox through", () => {
     expect(resolve(TEAM_EMAIL)).toBe(TEAM_EMAIL);
-    expect(resolve("ricki@metagame.games")).toBe("ricki@metagame.games");
   });
-  it("resolves a contact key to its private address", () => {
+  it("resolves a contact key to its env address", () => {
+    vi.stubEnv("CONTACT_EMAIL_KAI", "kai@example.com");
     expect(resolve("kai")).toBe("kai@example.com");
   });
-  it("rejects unknown addresses, unlisted keys and raw private addresses", () => {
+  it("rejects addresses, unlisted keys and keys with no env var", () => {
+    vi.stubEnv("CONTACT_EMAIL_KAI", "kai@example.com");
+    vi.stubEnv("CONTACT_EMAIL_NOBODY", "x@example.com");
+    expect(resolve("kai@example.com")).toBeNull();
     expect(resolve("evil@example.com")).toBeNull();
     expect(resolve("nobody")).toBeNull();
-    expect(resolve("kai@example.com")).toBeNull();
-    expect(resolve("kai", parsePrivateEmails(undefined))).toBeNull();
+    expect(resolve("unset")).toBeNull();
   });
 });
