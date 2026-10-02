@@ -1,5 +1,6 @@
 import { Mail } from "lucide-react";
 import Image from "next/image";
+import { contactEmail } from "@/lib/contact-recipients";
 import type { Person } from "@/v2/data/team";
 import HatImage from "@/v2/hat-trick/HatImage";
 import ContactLink from "./contact/ContactLink";
@@ -76,7 +77,7 @@ export default function PersonCard({
             title
           )}
         </p>
-        {contactKey && !compact && (
+        {contactKey && contactEmail(contactKey) && !compact && (
           <ContactLink
             to={contactKey}
             toName={name.split(" ")[0]}
