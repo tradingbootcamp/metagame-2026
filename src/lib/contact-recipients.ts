@@ -1,8 +1,9 @@
 import { ADVISORS, TEAM, type Person } from "@/v2/data/team";
 import { TEAM_EMAIL } from "@/v2/lib/links";
 
-/** The address behind a `contactKey`: CONTACT_EMAIL_<KEY>. Server-only. */
-export const contactEmail = (key: string) =>
+// The address behind a `contactKey`: CONTACT_EMAIL_<KEY>. Read at request
+// time only: these are Sensitive on Vercel, so the CI build can't see them.
+const contactEmail = (key: string) =>
   process.env[`CONTACT_EMAIL_${key.toUpperCase()}`]?.trim() || null;
 
 // Where the contact form may deliver: the team inbox, or a team member's
