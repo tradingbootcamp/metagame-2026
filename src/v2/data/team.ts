@@ -78,6 +78,7 @@ export const TEAM: Person[] = [
     name: "Damon Pourtahmaseb-Sasi",
     title: "Community Health Liaison",
     photo: damon,
+    contactKey: "damon",
   },
 ];
 
