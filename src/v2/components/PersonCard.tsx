@@ -1,5 +1,6 @@
 import { Mail } from "lucide-react";
 import Image from "next/image";
+import { contactEmail } from "@/lib/contact-recipients";
 import type { Person } from "@/v2/data/team";
 import HatImage from "@/v2/hat-trick/HatImage";
 import ContactLink from "./contact/ContactLink";
@@ -20,7 +21,7 @@ export default function PersonCard({
   title,
   titleUrl,
   photo,
-  email,
+  contactKey,
   hats,
   compact = false,
 }: Person & { compact?: boolean }) {
@@ -76,15 +77,13 @@ export default function PersonCard({
             title
           )}
         </p>
-        {email && !compact && (
+        {contactKey && contactEmail(contactKey) && !compact && (
           <ContactLink
-            to={email}
+            to={contactKey}
             toName={name.split(" ")[0]}
             className="mt-auto pt-1.5 text-sm font-semibold text-navy underline underline-offset-2 hover:text-meeple sm:pt-2"
           >
-            {/* The address is wider than a three-up phone card. */}
-            <Mail aria-label={`Email ${name}`} className="size-4 sm:hidden" />
-            <span className="hidden sm:inline">{email}</span>
+            <Mail aria-label={`Email ${name}`} className="size-4 sm:size-5" />
           </ContactLink>
         )}
       </div>

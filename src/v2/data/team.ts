@@ -19,14 +19,16 @@ import yemima from "../../../public/images/team/yemima.jpg";
 // /team in display order. TeamCarousel also reads TEAM but isn't mounted
 // anywhere right now. To add someone: add an entry and import their photo from
 // public/images/team/ (800px JPEGs). Omit `photo` for an initials placeholder,
-// `email` if they'd rather not be contacted directly.
+// `contactKey` if they'd rather not be contacted directly.
 export type Person = {
   name: string;
   title: string;
   // When set, the title renders as a link (speaker bylines).
   titleUrl?: string;
   photo?: StaticImageData;
-  email?: string;
+  // Contactable through the site form. The address isn't here (this repo is
+  // public): it's the server-only env var CONTACT_EMAIL_<CONTACTKEY>.
+  contactKey?: string;
   // Hat Trick: hats hidden in this photo (see src/v2/hat-trick).
   hats?: Hat[];
 };
@@ -36,25 +38,25 @@ export const TEAM: Person[] = [
     name: "Ricki Heicklen",
     title: "Game and Conference Master",
     photo: ricki,
-    email: "ricki@metagame.games",
+    contactKey: "ricki",
   },
   {
     name: "Ben Karcher",
     title: "Chief of Staff",
     photo: ben,
-    email: "ben@metagame.games",
+    contactKey: "ben",
   },
   {
     name: "Brian Smiley",
     title: "Operations Lead",
     photo: brian,
-    email: "brian@metagame.games",
+    contactKey: "brian",
   },
   {
     name: "Yemima Morris",
     title: "Volunteer Coordinator",
     photo: yemima,
-    email: "yemima@metagame.games",
+    contactKey: "yemima",
   },
   { name: "John Bromels", title: "Megagame Lead", photo: john },
   {
@@ -67,7 +69,7 @@ export const TEAM: Person[] = [
     name: "David Holt",
     title: "Marketing & Sponsorships",
     photo: davidHolt,
-    email: "david@metagame.games",
+    contactKey: "david",
   },
   { name: "Sparr Risher", title: "Generalist", photo: sparr },
   { name: "Kai Geffen", title: "Generalist", photo: kai },
@@ -76,6 +78,7 @@ export const TEAM: Person[] = [
     name: "Damon Pourtahmaseb-Sasi",
     title: "Community Health Liaison",
     photo: damon,
+    contactKey: "damon",
   },
 ];
 
