@@ -134,18 +134,19 @@ const DICE: Die[] = [
     ],
     initial: [1, 3, 2],
   },
-  // octahedron: point-up diamond quartered into its four front faces
+  // octahedron seen down a vertex: a square quartered along its diagonals, so
+  // the top face reads upright as the roll
   {
     id: "d8",
     sides: 8,
     pivot: [50, 50],
-    silhouette: "M50 10 L86 50 L50 90 L14 50 Z",
-    seams: "M50 10 L50 90 M14 50 L86 50",
+    silhouette: "M22 22 L78 22 L78 78 L22 78 Z",
+    seams: "M22 22 L78 78 M78 22 L22 78",
     faces: [
-      { x: 38.5, y: 37.5, turn: -45, size: 22 },
-      { x: 61.5, y: 37.5, turn: 45, size: 22 },
-      { x: 38.5, y: 62.5, turn: -135, size: 22 },
-      { x: 61.5, y: 62.5, turn: 135, size: 22 },
+      { x: 50, y: 33, turn: 0, size: 22 },
+      { x: 67, y: 50, turn: 90, size: 22 },
+      { x: 33, y: 50, turn: -90, size: 22 },
+      { x: 50, y: 67, turn: 180, size: 22 },
     ],
     initial: [8, 3, 5, 2],
   },

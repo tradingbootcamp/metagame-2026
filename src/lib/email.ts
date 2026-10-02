@@ -44,6 +44,8 @@ export type TicketConfirmationEmail = {
   ticketCode?: string;
   /** Set for a day pass: the one admitted day replaces the Fri–Sun dates line. */
   eventDay?: { long: string; ymd: string };
+  /** Set when this purchase put the buyer on the mailing list: adds a line saying so, linking here to opt out. */
+  mailingListOptOutUrl?: string;
   test?: boolean;
 };
 
@@ -78,6 +80,7 @@ export function renderTicketConfirmationEmail(
     discountCode,
     ticketCode,
     eventDay,
+    mailingListOptOutUrl,
     test = false,
   }: TicketConfirmationEmail,
   assetBase: string = SITE,
@@ -89,13 +92,6 @@ export function renderTicketConfirmationEmail(
   const paid = isBtc ? `\u20BF${btcPaid}` : `$${(usdPaid ?? 0).toFixed(2)}`;
   const full = isBtc ? `\u20BF${btcFull}` : `$${(usdFull ?? 0).toFixed(2)}`;
 
-  // Prefill the mailing-list form (modal opens via #updates; params must precede
-  // the hash). Signup stays an explicit submit — the link only fills the fields.
-  const prefill = new URLSearchParams({
-    ...(to ? { email: to } : {}),
-    ...(purchaserName ? { name: purchaserName } : {}),
-  }).toString();
-  const mailingListUrl = `${SITE}/${prefill ? `?${prefill}` : ""}#updates`;
   const paidLine = `Amount paid: ${paid}${
     discounted
       ? ` (was ${full}` + (discountCode ? `, code ${discountCode})` : ")")
@@ -137,7 +133,7 @@ export function renderTicketConfirmationEmail(
 
         <p>Have questions? Check out our <a href="${SITE}/#faq">FAQ</a>. More questions? Reply to this email.</p>
 
-        <p>To hear about future events, <a href="${mailingListUrl}">join the general Metagame mailing list</a>.</p>
+        ${mailingListOptOutUrl ? `<p>We've also added you to the Metagame mailing list for news about this and future events &mdash; <a href="${mailingListOptOutUrl}">opt out here</a> if you'd rather not get those.</p>` : ""}
 
         <p>See you at Metagame 2026!</p>
 
@@ -176,9 +172,13 @@ Your Metagame 2026 ticket is confirmed. We're excited to see you there!
 Please join our Discord server, where much future relevant communication will take place: ${SOCIAL_LINKS.DISCORD}
 
 Have questions? Check out our FAQ (${SITE}/#faq). More questions? Reply to this email.
-
-To hear about future events, join the general Metagame mailing list: ${mailingListUrl}
-
+${
+  mailingListOptOutUrl
+    ? `
+We've also added you to the Metagame mailing list for news about this and future events. Opt out here if you'd rather not get those: ${mailingListOptOutUrl}
+`
+    : ""
+}
 See you at Metagame 2026!
 
 Ticket Details

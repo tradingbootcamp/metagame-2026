@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import {
   markPurchaseFailedIfExists,
   recordPurchase,
+  recordSignup,
+  signupCreatedAt,
+  type PurchaseRecord,
   type PurchaseStatus,
 } from "@/lib/airtable";
 import {
@@ -9,8 +12,10 @@ import {
   getHostedCheckoutUrl,
   verifyWebhookSignature,
 } from "@/lib/opennode";
+import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
 import { getDayPass } from "@/lib/tickets";
+import { mailingListOptOutUrl } from "@/lib/purchase-buyer";
 import { pickUtm } from "@/lib/utm";
 import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
 
@@ -122,7 +127,7 @@ export async function POST(request: Request) {
       : undefined;
 
   try {
-    await recordPurchase({
+    const purchase: PurchaseRecord = {
       id: charge.id,
       // Derived from the same id as the upsert key, so retries can't churn it.
       ticketCode: ticketCode(charge.id),
@@ -156,7 +161,9 @@ export async function POST(request: Request) {
         charge.fiat_value != null ? charge.fiat_value / 100 : undefined,
       btcNetwork,
       utm: pickUtm((key) => meta[key]),
-    });
+    };
+    await recordPurchase(purchase);
+    await capturePurchase(purchase);
   } catch (err) {
     // 500 → OpenNode retries; recordPurchase upserts on ID, so a retry can't dupe.
     console.error("[opennode-webhook] failed to record purchase:", err);
@@ -167,6 +174,26 @@ export async function POST(request: Request) {
   // recorded, so log + alert instead of a 500 (which would make OpenNode retry).
   const email = meta.email ? String(meta.email) : undefined;
   if (recordStatus === "Paid" && email) {
+    // Buyers join the mailing list unless their email has been on it before.
+    // Soft-fail, like the email below.
+    let addedToMailingList = false;
+    try {
+      if ((await signupCreatedAt(email)) === null) {
+        await recordSignup(email, {
+          name: meta.name ? String(meta.name) : undefined,
+          test: meta.test === true || meta.test === "true",
+        });
+        addedToMailingList = true;
+      }
+    } catch (err) {
+      console.error("[opennode-webhook] mailing-list signup failed:", err);
+      await sendAdminErrorEmail(
+        `Mailing-list signup failed for ticket buyer ${email} (OpenNode ${charge.id}): ${err instanceof Error ? err.message : String(err)}`,
+      ).catch((adminErr) =>
+        console.error("[opennode-webhook] admin alert failed:", adminErr),
+      );
+    }
+
     try {
       await sendTicketConfirmationEmail({
         to: email,
@@ -185,6 +212,9 @@ export async function POST(request: Request) {
         // shows the payment details and serves as one.
         receiptUrl: getHostedCheckoutUrl(charge.id, charge),
         ticketCode: ticketCode(charge.id),
+        mailingListOptOutUrl: addedToMailingList
+          ? mailingListOptOutUrl({ chargeId: charge.id })
+          : undefined,
         test: meta.test === true || meta.test === "true",
       });
     } catch (err) {

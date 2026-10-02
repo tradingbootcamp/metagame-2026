@@ -19,22 +19,23 @@ const NAME_FIELD = "Name";
 const NOTES_FIELD = "Notes";
 // Marks dev/test submissions so they're filterable from real signups.
 const TEST_FIELD = "Test";
+const UNSUBSCRIBE_FIELD = "Unsubscribe";
 
 type SignupFields = {
   name?: string;
   interests?: InterestValue[];
   notes?: string;
+  test?: boolean; // force the Test box, e.g. a sandbox purchase hitting prod
 };
 
 /**
  * Upsert an email into the Airtable signups table, keyed on the email field so
- * a repeat submission updates rather than duplicates. Uses `performUpsert`, so
- * it dedupes server-side with only `data.records:write` scope — no read needed.
+ * a repeat submission updates rather than duplicates.
  *
- * Both the initial signup and the optional interest follow-up call this: the
- * follow-up re-sends the same email plus `interests`/`notes`, and the upsert
- * merges them onto the existing row. An upsert PATCH *replaces* the multi-select,
- * so we always re-include "email list" to keep the original tag.
+ * Both the initial signup and the optional interest follow-up call this, as
+ * does the post-purchase opt-in. An upsert PATCH *replaces* the multi-select,
+ * so the row's existing interests are read first and unioned in — a repeat
+ * signup only ever adds tags.
  *
  * If Airtable isn't configured yet (no token / base / table), this no-ops with
  * a warning so local dev still works — the splash form succeeds, the email just
@@ -42,7 +43,7 @@ type SignupFields = {
  */
 export async function recordSignup(
   email: string,
-  { name, interests = [], notes }: SignupFields = {},
+  { name, interests = [], notes, test = false }: SignupFields = {},
 ): Promise<SignupResult> {
   const { AIRTABLE_API_KEY } = env;
 
@@ -51,15 +52,90 @@ export async function recordSignup(
     return { stored: false, reason: "airtable-not-configured" };
   }
 
+  const tableUrl = `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.signupsTableId)}`;
+
+  const existing = await existingInterests(tableUrl, email, AIRTABLE_API_KEY);
+
   const fields: Record<string, unknown> = {
     [airtableConfig.signupEmailField]: email,
-    [INTEREST_FIELD]: Array.from(new Set([EMAIL_LIST_VALUE, ...interests])),
+    [INTEREST_FIELD]: Array.from(
+      new Set([EMAIL_LIST_VALUE, ...existing, ...interests]),
+    ),
     // VERCEL_ENV distinguishes preview from production (NODE_ENV is "production"
     // for both), so preview deploys + local dev (undefined) are marked test.
-    [TEST_FIELD]: process.env.VERCEL_ENV !== "production",
+    [TEST_FIELD]: test || process.env.VERCEL_ENV !== "production",
   };
   if (name) fields[NAME_FIELD] = name;
   if (notes) fields[NOTES_FIELD] = notes;
+
+  const res = await fetch(tableUrl, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      performUpsert: { fieldsToMergeOn: [airtableConfig.signupEmailField] },
+      records: [{ fields }],
+      typecast: true,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Airtable responded ${res.status}: ${await res.text()}`);
+  }
+
+  return { stored: true };
+}
+
+/**
+ * When an email first landed on the signups table, or null if it never has.
+ * Case-insensitive, and counts unsubscribed rows — ticket purchases use this to
+ * leave anyone who's already been on the list alone.
+ */
+export async function signupCreatedAt(email: string): Promise<Date | null> {
+  const { AIRTABLE_API_KEY } = env;
+  if (!AIRTABLE_API_KEY) return null;
+
+  const literal = email
+    .trim()
+    .toLowerCase()
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'");
+  const query = new URLSearchParams({
+    filterByFormula: `LOWER(TRIM({${airtableConfig.signupEmailField}}))='${literal}'`,
+  });
+  query.append("fields[]", airtableConfig.signupEmailField);
+  const res = await fetch(
+    `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.signupsTableId)}?${query}`,
+    { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` } },
+  );
+  if (!res.ok) {
+    throw new Error(`Airtable responded ${res.status}: ${await res.text()}`);
+  }
+  const { records = [] } = (await res.json()) as {
+    records?: { createdTime: string }[];
+  };
+  if (records.length === 0) return null;
+  return new Date(Math.min(...records.map((r) => Date.parse(r.createdTime))));
+}
+
+/**
+ * Tick Unsubscribe on an email's signup row. An upsert that sends only this
+ * field, so it leaves the rest of the row alone, and creates the row if the
+ * purchase webhook hasn't added the buyer yet — that later upsert never sends
+ * Unsubscribe, so the opt-out sticks in either order.
+ */
+export async function unsubscribeSignup(
+  email: string,
+  { test = false }: { test?: boolean } = {},
+): Promise<SignupResult> {
+  const { AIRTABLE_API_KEY } = env;
+
+  if (!AIRTABLE_API_KEY) {
+    console.warn(`[opt-out] Airtable not configured — not stored: ${email}`);
+    return { stored: false, reason: "airtable-not-configured" };
+  }
 
   const res = await fetch(
     `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.signupsTableId)}`,
@@ -71,7 +147,17 @@ export async function recordSignup(
       },
       body: JSON.stringify({
         performUpsert: { fieldsToMergeOn: [airtableConfig.signupEmailField] },
-        records: [{ fields }],
+        records: [
+          {
+            fields: {
+              [airtableConfig.signupEmailField]: email,
+              [UNSUBSCRIBE_FIELD]: true,
+              ...(test || process.env.VERCEL_ENV !== "production"
+                ? { [TEST_FIELD]: true }
+                : {}),
+            },
+          },
+        ],
         typecast: true,
       }),
     },
@@ -82,6 +168,33 @@ export async function recordSignup(
   }
 
   return { stored: true };
+}
+
+// Throws on a failed read rather than returning [] — writing without the
+// existing tags is exactly the overwrite this guards against.
+async function existingInterests(
+  tableUrl: string,
+  email: string,
+  apiKey: string,
+): Promise<string[]> {
+  const literal = email.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const query = new URLSearchParams({
+    filterByFormula: `{${airtableConfig.signupEmailField}}='${literal}'`,
+  });
+  query.append("fields[]", INTEREST_FIELD);
+  const res = await fetch(`${tableUrl}?${query}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Airtable responded ${res.status}: ${await res.text()}`);
+  }
+  const { records = [] } = (await res.json()) as {
+    records?: { fields: Record<string, unknown> }[];
+  };
+  return records.flatMap((r) => {
+    const value = r.fields[INTEREST_FIELD];
+    return Array.isArray(value) ? (value as string[]) : [];
+  });
 }
 
 /**

@@ -32,7 +32,7 @@ import { trackEgg, type Via } from "../track";
 import { wobble } from "./wobble";
 import WordEntry from "./WordEntry";
 import Dict from "./Dict";
-import { openDict, recordFind, useFound } from "./found";
+import { openDict, openType, recordFind, useFound } from "./found";
 import {
   BASE_LOOK,
   BANG_DRAW_MS,
@@ -944,8 +944,10 @@ export default function ScrabbleDivider({
   const [turning, setTurning] = useState(false);
   // A tile's standing rotation: the spins so far, plus TILT.
   const standing = turn + look.tilt;
-  // TYPE: the keyboard entry beside the rack, and what's in it.
-  const [typed, setTyped] = useState<string | null>(null);
+  // TYPE: what's in the keyboard entry beside the rack, and whether it was
+  // cast just now: one brought back by a reload doesn't take the focus.
+  const [typed, setTyped] = useState("");
+  const [typeCast, setTypeCast] = useState(false);
   // One coin, out of a random tile. `id` remounts it so COIN can be recast.
   const [coin, setCoin] = useState<{ id: number; tile: number } | null>(null);
   const [glyph, setGlyph] = useState<{
@@ -1076,7 +1078,8 @@ export default function ScrabbleDivider({
         setRand((n) => n + 1);
         break;
       case "type":
-        setTyped((w) => w ?? "");
+        setTypeCast(true);
+        openType();
         break;
       case "glyph":
         setGlyph((g) => ({
@@ -1420,7 +1423,7 @@ export default function ScrabbleDivider({
         .join("");
       if (word === side.toUpperCase()) {
         setRand((n) => n + 1);
-        setTyped((w) => w && "");
+        setTyped("");
       }
       if (both)
         setTimeout(
@@ -1665,7 +1668,7 @@ export default function ScrabbleDivider({
   return (
     <>
       <div className="relative">
-        {typed !== null && !exit && (
+        {found.typing && !exit && (
           // Past the right-hand hairline where there's room, under the rack
           // where there isn't — or over it, once the code has the space under.
           <div
@@ -1675,6 +1678,7 @@ export default function ScrabbleDivider({
           >
             <WordEntry
               word={typed}
+              autoFocus={typeCast}
               disabled={stopped}
               onChange={(w) => {
                 setTyped(w);
