@@ -1,8 +1,7 @@
 import { ADVISORS, TEAM, type Person } from "@/v2/data/team";
 import { TEAM_EMAIL } from "@/v2/lib/links";
 
-// The address behind a `contactKey`: CONTACT_EMAIL_<KEY>. Read at request
-// time only: these are Sensitive on Vercel, so the CI build can't see them.
+// The address behind a `contactKey`: CONTACT_EMAIL_<KEY>.
 const contactEmail = (key: string) =>
   process.env[`CONTACT_EMAIL_${key.toUpperCase()}`]?.trim() || null;
 
