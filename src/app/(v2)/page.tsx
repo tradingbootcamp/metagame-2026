@@ -213,6 +213,21 @@ const FAQS: {
     ),
   },
   {
+    question: "Who can I come to with problems?",
+    answer: (
+      <>
+        For general questions or complaints,{" "}
+        <ContactLink className={BODY_LINK}>contact the team</ContactLink>. If
+        you have a sensitive issue to bring to our Community Health lead, you
+        can contact Damon{" "}
+        <ContactLink to="damon" toName="Damon" className={BODY_LINK}>
+          here
+        </ContactLink>
+        .
+      </>
+    ),
+  },
+  {
     question: "Where can I learn more about Metagame?",
     answer: (
       <>
