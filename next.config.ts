@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 import { validateEnv } from "./src/env";
-import { RFP_FORM_URL } from "./src/v2/lib/links";
+import { RFP_FORM_URL, VOLUNTEER_FORM_URL } from "./src/v2/lib/links";
 
 // Warn (don't fail) on missing required env vars at build / dev start.
 validateEnv();
@@ -22,6 +22,12 @@ const nextConfig: NextConfig = {
     { source: "/key-dates", destination: "/#key-dates", permanent: true },
     // Short link to the session-proposal (RFP) Airtable form.
     { source: "/propose", destination: RFP_FORM_URL, permanent: false },
+    // Short link to the volunteer sign-up Airtable form.
+    {
+      source: "/volunteer-form",
+      destination: VOLUNTEER_FORM_URL,
+      permanent: false,
+    },
     // Short links into Standard checkout; /buy/<code> pre-applies a promo code.
     {
       source: "/buy",
