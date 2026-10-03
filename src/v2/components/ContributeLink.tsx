@@ -53,7 +53,7 @@ export default function ContributeLink({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <FaGithub aria-hidden /> Open the repo on GitHub
+                <FaGithub aria-hidden /> Open on GitHub
               </a>
             </Button>
           </DialogContent>
