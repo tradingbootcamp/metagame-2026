@@ -121,6 +121,11 @@ export default function ContactModal({
               aria-hidden
               className="absolute -left-[9999px] h-0 w-0 opacity-0"
             />
+            <p className="text-sm text-cream/60">
+              {to === TEAM_EMAIL
+                ? "Your message goes to the Metagame team's shared inbox."
+                : `Your message goes straight to ${toName}.`}
+            </p>
             <div className="flex items-center gap-4">
               <Button
                 type="submit"
