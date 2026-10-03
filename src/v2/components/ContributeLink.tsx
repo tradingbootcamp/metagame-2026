@@ -43,8 +43,7 @@ export default function ContributeLink({
               </DialogTitle>
               <DialogDescription className="text-base text-cream/80">
                 Have an idea for a minigame, easter egg, or puzzle to add to
-                this website? Fork the repo and make a PR and we&rsquo;ll take a
-                look.
+                this website? Make a PR and we&rsquo;ll take a look.
               </DialogDescription>
             </div>
             <Button asChild className="h-12 w-full gap-2 text-base">
