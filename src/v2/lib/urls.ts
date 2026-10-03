@@ -3,4 +3,5 @@
 export const SOCIAL_LINKS = {
   DISCORD: "https://discord.gg/8pxvc9p4Ss",
   TWITTER: "https://x.com/metagame_con",
+  GITHUB: "https://github.com/tradingbootcamp/metagame-2026",
 } as const;

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { FaDiscord, FaEnvelope } from "react-icons/fa";
+import { FaDiscord, FaEnvelope, FaGithub } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import ContactLink from "./contact/ContactLink";
+import ContributeLink from "./ContributeLink";
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { NAV_LINKS } from "./nav/links";
 
@@ -36,6 +37,10 @@ export default function SiteFooter() {
               <FaXTwitter aria-hidden />
               Twitter
             </a>
+            <ContributeLink className={CONTACT}>
+              <FaGithub aria-hidden />
+              Contribute to this site
+            </ContributeLink>
           </div>
           <div
             aria-label="Event details"
