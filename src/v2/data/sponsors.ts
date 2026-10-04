@@ -1,4 +1,5 @@
 import type { StaticImageData } from "next/image";
+import arbor from "../../../public/images/sponsors/arbor_trading_bootcamp.png";
 import franciscoSan from "../../../public/images/sponsors/francisco_san_logo.png";
 import manifund from "../../../public/images/sponsors/manifund_logo.png";
 import outsideTheAsylum from "../../../public/images/sponsors/outside_the_asylum.png";
@@ -20,6 +21,11 @@ export const GOLD_SPONSORS: Sponsor[] = [
 ];
 
 export const PATRON_SPONSORS: Sponsor[] = [
+  {
+    name: "Arbor Trading Bootcamp",
+    url: "https://www.trading.camp",
+    logo: arbor,
+  },
   {
     name: "Francisco San",
     url: "https://franciscosan.org",
