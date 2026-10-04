@@ -22,10 +22,10 @@ export const GOLD_SPONSORS: Sponsor[] = [
 
 export const PATRON_SPONSORS: Sponsor[] = [
   {
-    name: "Arbor",
+    name: "Arbor Trading Bootcamp",
     url: "https://www.trading.camp",
     logo: arbor,
-    logoClass: "h-10 md:h-[52px]",
+    logoClass: "h-12 md:h-16",
   },
   {
     name: "Francisco San",
