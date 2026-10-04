@@ -4,7 +4,11 @@ import { contactEmail } from "@/lib/contact-recipients";
 import type { Person } from "@/v2/data/team";
 import HatImage from "@/v2/hat-trick/HatImage";
 import ContactLink from "./contact/ContactLink";
+import ReloadLink from "./ReloadLink";
 import { HEADING } from "./styles";
+
+const TITLE_LINK =
+  "underline underline-offset-2 transition-colors hover:text-navy";
 
 const initials = (name: string) =>
   name
@@ -64,13 +68,16 @@ export default function PersonCard({
           {name}
         </h3>
         <p className="mt-1 font-space-mono text-[9px] break-words text-ink/60 uppercase sm:text-xs sm:tracking-[0.08em]">
-          {titleUrl ? (
+          {titleUrl?.startsWith("#") ? (
+            <ReloadLink href={titleUrl} className={TITLE_LINK}>
+              {title}
+            </ReloadLink>
+          ) : titleUrl ? (
             <a
               href={titleUrl}
-              {...(titleUrl.startsWith("#")
-                ? {}
-                : { target: "_blank", rel: "noopener noreferrer" })}
-              className="underline underline-offset-2 transition-colors hover:text-navy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={TITLE_LINK}
             >
               {title}
             </a>
