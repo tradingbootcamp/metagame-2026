@@ -8,6 +8,7 @@ import lexi from "../../../public/images/speakers/lexi_kohanski.jpg";
 import peihGee from "../../../public/images/speakers/peih_gee_law.jpg";
 import randy from "../../../public/images/speakers/randy_lubin.jpg";
 import raph from "../../../public/images/speakers/raph_damico.jpg";
+import ricki from "../../../public/images/speakers/ricki_heicklen.jpg";
 import tommy from "../../../public/images/team/tommy.jpg";
 import { HATS } from "@/v2/hat-trick/hats";
 import type { Person } from "./team";
@@ -84,5 +85,11 @@ export const SPEAKERS: Person[] = [
     title: "Leveraged Play",
     titleUrl: "https://leveragedplay.com/",
     photo: randy,
+  },
+  {
+    name: "Ricki Heicklen",
+    title: "Metagame",
+    titleUrl: "/",
+    photo: ricki,
   },
 ];
