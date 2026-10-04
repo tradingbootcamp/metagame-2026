@@ -89,7 +89,7 @@ export const SPEAKERS: Person[] = [
   {
     name: "Ricki Heicklen",
     title: "Metagame",
-    titleUrl: "#speakers",
+    titleUrl: "/",
     photo: ricki,
   },
 ];
