@@ -25,6 +25,7 @@ export const PATRON_SPONSORS: Sponsor[] = [
     name: "Arbor",
     url: "https://www.trading.camp",
     logo: arbor,
+    logoClass: "h-10 md:h-[52px]",
   },
   {
     name: "Francisco San",
