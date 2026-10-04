@@ -636,22 +636,29 @@ export default function Home() {
           <SectionHeading eyebrow="With gratitude" title="Our sponsors" />
           <div className="mt-10 flex flex-col items-center gap-10">
             {[
-              { label: "Gold", sponsors: GOLD_SPONSORS, logo: "h-28 md:h-40" },
+              {
+                label: "Gold",
+                sponsors: GOLD_SPONSORS,
+                logo: "h-28 md:h-40",
+                row: "flex flex-wrap justify-center gap-x-12 gap-y-6",
+              },
               {
                 label: "Patron",
                 sponsors: PATRON_SPONSORS,
                 logo: "h-14 md:h-[72px]",
+                // 2x2 on phones; logos shrink to fit their column.
+                row: "grid w-full grid-cols-2 justify-items-center gap-x-6 gap-y-8 md:flex md:flex-wrap md:justify-center md:gap-x-12 md:gap-y-6",
               },
-            ].map(({ label, sponsors, logo }) => (
+            ].map(({ label, sponsors, logo, row }) => (
               <div key={label} className="flex flex-col items-center gap-4">
                 <p className={`${EYEBROW} text-sm text-ink/50`}>{label}</p>
-                <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
+                <div className={`items-center ${row}`}>
                   {sponsors.map((s) => {
                     const img = (
                       <Image
                         src={s.logo}
                         alt={`${s.name} logo`}
-                        className={`w-auto ${s.logoClass ?? logo}`}
+                        className={`w-auto max-w-full object-contain ${s.logoClass ?? logo}`}
                       />
                     );
                     return s.url ? (
