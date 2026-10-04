@@ -15,3 +15,9 @@ Use Claude Code's built-in worktree flow.
 
 Minimal. A short note for a non-obvious _why_ is fine; don't narrate the change
 itself or let a comment grow into a PR report.
+
+## Issue tracking (Linear)
+
+Work is tracked in Linear (Metagame team): attach PRs by putting `[META-###]` in the PR title or using the Linear-provided branch name, and file issues generously — including to record work already done. In the PR body only `Fixes META-###` attaches; avoid `Ref`, which blocks the on-merge status transitions. A linked PR moves the issue to In Progress on open and In Review on merge — In Review means "merged, pending human review", and nothing moves an issue to Done automatically, so never mark issues Done yourself. No Linear access? Skip all this — a clear PR description is enough.
+
+When mentioning PRs or issues in your output, render them as links whenever possible — PR numbers as `https://github.com/tradingbootcamp/metagame-2026/pull/<num>` and Linear issue IDs as `https://linear.app/arbormetagame/issue/META-###`.
