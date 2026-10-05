@@ -13,7 +13,7 @@ import {
   supporterTier,
 } from "@/v2/lib/tickets";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
-import { withFirstTouchUtm } from "@/lib/utm";
+import { withUtm } from "@/lib/utm";
 import { FINANCIAL_AID_FORM_URL } from "@/v2/lib/links";
 import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import {
@@ -47,7 +47,7 @@ const FULL_PRICE_HREF = stripeCheckoutHref({ tier: "standard", code: "own" });
 // UTMs live in localStorage, so they're added at click time (not render) to keep
 // the server-rendered href stable.
 const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-  e.currentTarget.href = withFirstTouchUtm(href);
+  e.currentTarget.href = withUtm(href);
 };
 
 export default function TicketsPanel({

@@ -1,8 +1,9 @@
 import posthog from "posthog-js";
 
-// First-touch attribution: the UTMs a visitor first landed with, when they
-// first visited, and their PostHog id ride along into checkout (Stripe session
-// metadata / OpenNode charge metadata) and end up on their Airtable purchase row.
+// Last-touch attribution: the UTMs from the most recent tracking link a visitor
+// arrived through, when they first visited, and their PostHog id ride along into
+// checkout (Stripe session metadata / OpenNode charge metadata) and end up on
+// their Airtable purchase row.
 
 const LANDING_KEYS = [
   "utm_source",
@@ -15,7 +16,10 @@ export const UTM_KEYS = [...LANDING_KEYS, "first_visit", "posthog_id"] as const;
 
 export type Utm = Partial<Record<(typeof UTM_KEYS)[number], string>>;
 
-const STORAGE_KEY = "first-touch-utm";
+const STORAGE_KEY = "last-touch-utm";
+// Visitors from before last-touch stored their landing UTMs here; still the best
+// we have for them until they arrive through another tracking link.
+const LEGACY_STORAGE_KEY = "first-touch-utm";
 const FIRST_VISIT_KEY = "first-visit";
 const MAX_LEN = 200;
 
@@ -40,17 +44,20 @@ export function pickUtm(
   return utm;
 }
 
-/** Store the landing URL's UTMs and the visit time, unless an earlier visit already did. */
-export function captureFirstTouchUtm(search: string): void {
+/**
+ * Record the first visit time, and store the landing URL's UTMs over any earlier
+ * set so the latest tracking link wins. A URL without UTMs leaves the set alone.
+ */
+export function captureUtm(search: string): void {
   try {
     if (!localStorage.getItem(FIRST_VISIT_KEY)) {
       localStorage.setItem(FIRST_VISIT_KEY, new Date().toISOString());
     }
-    if (localStorage.getItem(STORAGE_KEY)) return;
     const params = new URLSearchParams(search);
     const utm = pickUtm((key) => params.get(key), LANDING_KEYS);
     if (Object.keys(utm).length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(utm));
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
     }
   } catch {
     // Storage blocked — attribution is best-effort.
@@ -70,11 +77,16 @@ export function stripUtmFromUrl(): void {
   window.history.replaceState(window.history.state, "", url);
 }
 
-export function readFirstTouchUtm(): Utm {
+export function readUtm(): Utm {
   let stored: Record<string, unknown> = {};
   let firstVisit: string | null = null;
   try {
-    stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}") ?? {};
+    stored =
+      JSON.parse(
+        localStorage.getItem(STORAGE_KEY) ??
+          localStorage.getItem(LEGACY_STORAGE_KEY) ??
+          "{}",
+      ) ?? {};
     firstVisit = localStorage.getItem(FIRST_VISIT_KEY);
   } catch {}
   let posthogId: string | undefined;
@@ -88,10 +100,10 @@ export function readFirstTouchUtm(): Utm {
   );
 }
 
-/** `href` with the stored first-touch UTMs set as query params. Client-only. */
-export function withFirstTouchUtm(href: string): string {
+/** `href` with the stored UTMs set as query params. Client-only. */
+export function withUtm(href: string): string {
   const url = new URL(href, window.location.origin);
-  for (const [key, value] of Object.entries(readFirstTouchUtm())) {
+  for (const [key, value] of Object.entries(readUtm())) {
     url.searchParams.set(key, value);
   }
   return url.pathname + url.search;

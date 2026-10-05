@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { captureFirstTouchUtm, stripUtmFromUrl } from "@/lib/utm";
+import { captureUtm, stripUtmFromUrl } from "@/lib/utm";
 
 export default function UtmCapture() {
   useEffect(() => {
-    captureFirstTouchUtm(window.location.search);
+    captureUtm(window.location.search);
     stripUtmFromUrl();
   }, []);
   return null;
