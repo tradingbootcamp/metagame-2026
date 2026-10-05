@@ -73,6 +73,7 @@ export const SITE_PAGES = [
   { path: "/childcare", label: "Childcare" },
   { path: "/team", label: "Team" },
   { path: "/last-year", label: "Last year" },
+  { path: "/volunteer-form", label: "Volunteer form" },
 ] as const;
 
 export const sitePageUrl = (origin: string, path: string) =>
