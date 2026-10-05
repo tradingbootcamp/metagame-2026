@@ -4,7 +4,7 @@ import {
   FINANCIAL_AID_FORM_URL,
   MEGAGAME_PROPOSAL_FORM_URL,
   RFP_FORM_URL,
-  VOLUNTEER_FORM_URL,
+  VOLUNTEER_FORM_PATH,
 } from "@/v2/lib/links";
 
 export type KeyDate = {
@@ -84,7 +84,7 @@ export const KEY_DATES: KeyDate[] = [
     label: "Oct 26",
     title: "Volunteer applications due",
     endsAt: endOfDay(10, 26),
-    href: VOLUNTEER_FORM_URL,
+    href: VOLUNTEER_FORM_PATH,
     cta: "Apply to volunteer",
   },
   {
