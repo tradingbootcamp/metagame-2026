@@ -14,7 +14,8 @@ import {
 } from "@/v2/lib/tickets";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { withFirstTouchUtm } from "@/lib/utm";
-import { FINANCIAL_AID_FORM_URL, VOLUNTEER_FORM_URL } from "@/v2/lib/links";
+import { FINANCIAL_AID_FORM_URL } from "@/v2/lib/links";
+import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import {
   subscribeCurrency,
   getCurrencySnapshot,
@@ -271,14 +272,11 @@ export default function TicketsPanel({
         >
           <span>
             A limited supply of volunteer tickets are available.{" "}
-            <a
-              href={VOLUNTEER_FORM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <VolunteerFormLink
               className={`font-bold underline underline-offset-2 ${onDark ? "text-tan" : "text-meeple"}`}
             >
               Apply to volunteer
-            </a>
+            </VolunteerFormLink>
           </span>
           <span>
             Ticket price out of reach?{" "}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import AnagramEmail from "@/v2/components/AnagramEmail";
+import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import Carousel from "@/v2/components/Carousel";
 import ContactLink from "@/v2/components/contact/ContactLink";
 import CrypticsLightbox from "@/v2/components/CrypticsLightbox";
@@ -44,7 +45,7 @@ import {
   MEGAGAME_PROPOSAL_FORM_URL,
   NIGHT_MARKET_FORM_URL,
   RFP_FORM_URL,
-  VOLUNTEER_FORM_URL,
+  VOLUNTEER_FORM_PATH,
 } from "@/v2/lib/links";
 import HatImage from "@/v2/hat-trick/HatImage";
 import { HATS } from "@/v2/hat-trick/hats";
@@ -365,7 +366,7 @@ export default function Home() {
                   </>
                 ),
                 cta: "Apply to volunteer",
-                href: VOLUNTEER_FORM_URL,
+                href: VOLUNTEER_FORM_PATH,
                 external: true,
               },
               {
@@ -400,7 +401,9 @@ export default function Home() {
                   {body}
                 </div>
                 <Button asChild variant="default" className="mt-6 w-fit">
-                  {external ? (
+                  {href === VOLUNTEER_FORM_PATH ? (
+                    <VolunteerFormLink>{cta}</VolunteerFormLink>
+                  ) : external ? (
                     <a href={href} target="_blank" rel="noopener noreferrer">
                       {cta}
                     </a>

@@ -8,7 +8,9 @@ export const RFP_FORM_URL =
 export const MEGAGAME_PROPOSAL_FORM_URL =
   "https://airtable.com/appROpPV6XUP4CSqX/pagMOssJPZrZU6YLP/form";
 
-// Volunteer sign-up Airtable form.
+// Volunteer sign-up Airtable form. Link to VOLUNTEER_FORM_PATH instead: the
+// raw URL shows the form's internal tracking fields and loses attribution.
+export const VOLUNTEER_FORM_PATH = "/volunteer-form";
 export const VOLUNTEER_FORM_URL =
   "https://airtable.com/appROpPV6XUP4CSqX/pag6QeXN6XYI1SwYf/form";
 

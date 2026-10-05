@@ -1,4 +1,6 @@
 import Link from "next/link";
+import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
+import { VOLUNTEER_FORM_PATH } from "@/v2/lib/links";
 import {
   todayLabel,
   upcomingKeyDates,
@@ -103,7 +105,11 @@ export default function KeyDates() {
             </p>
             {d.href && d.cta && (
               <p className="mt-1 text-sm font-semibold text-meeple">
-                {external ? (
+                {d.href === VOLUNTEER_FORM_PATH ? (
+                  <VolunteerFormLink className="underline underline-offset-2">
+                    {d.cta}
+                  </VolunteerFormLink>
+                ) : external ? (
                   <a
                     href={d.href}
                     target="_blank"
