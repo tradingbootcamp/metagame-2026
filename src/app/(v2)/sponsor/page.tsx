@@ -60,7 +60,7 @@ const TIERS: {
     name: "Silver",
     cost: "$15k",
     blurb:
-      "All the Patron benefits, plus your logo on everything, a booth, and a couple of tickets.",
+      "All the Patron benefits, plus your logo on everything, a featured Night Market booth, and a couple of tickets.",
     head: "bg-ink/70 text-cream",
     cell: "bg-ink/[0.04]",
     mark: "text-ink/60",
@@ -69,7 +69,7 @@ const TIERS: {
     id: "patron",
     name: "Patron",
     cost: "$2k+",
-    blurb: "Credit on our website and our gratitude.",
+    blurb: "Credit on our website, a Night Market booth, and our gratitude.",
     head: "bg-moss text-white",
     cell: "bg-moss/12",
     mark: "text-moss",
@@ -116,13 +116,19 @@ const BENEFITS: {
     },
   },
   {
-    label: "Featured Night Market booth",
+    label: "Night Market booth",
+    cardLabels: {
+      headline: "Featured Night Market booth",
+      platinum: "Featured Night Market booth",
+      gold: "Featured Night Market booth",
+      silver: "Featured Night Market booth",
+    },
     cells: {
-      headline: true,
-      platinum: true,
-      gold: true,
-      silver: true,
-      patron: false,
+      headline: "Featured",
+      platinum: "Featured",
+      gold: "Featured",
+      silver: "Featured",
+      patron: true,
     },
   },
   {
