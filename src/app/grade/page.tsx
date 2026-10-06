@@ -48,6 +48,7 @@ const VERDICT_ORDER = [
 ];
 
 const NEXT_STEPS_ORDER = [
+  "0. Assign grader",
   "1. Grade",
   "2. Committee decision",
   "3. Email speaker with verdict",
@@ -312,8 +313,10 @@ export default async function GradePage(props: PageProps<"/grade">) {
   const views = me === null ? VIEWS.filter((v) => v.key !== "mine") : VIEWS;
 
   const params = await props.searchParams;
+  // "Everything" is the landing view: the committee reads the whole pipeline
+  // far more often than its own queue. "all" survives the anon filter below.
   const view = (views.find((v) => v.key === first(params.view))?.key ??
-    views[0].key) as ViewKey;
+    "all") as ViewKey;
   const rawQuery = first(params.q);
   const query = rawQuery.trim().toLowerCase();
   const sort = (SORTS.find((s) => s === first(params.sort)) ??

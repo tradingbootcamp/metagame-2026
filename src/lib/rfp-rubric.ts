@@ -227,6 +227,7 @@ export const NEXT_STEPS_DECIDE = "2. Committee decision";
 // Numbered in Airtable, so this order is the pipeline order. The trailing space
 // on "7. None!" is in the option name itself — don't trim it or the write fails.
 const NEXT_STEPS_OPTIONS = [
+  "0. Assign grader",
   "1. Grade",
   "2. Committee decision",
   "3. Email speaker with verdict",
