@@ -159,9 +159,9 @@ const FAQS: {
     question: "Can I bring my kids?",
     answer: (
       <>
-        Yes! Children under 13 get free admission, and we will have free
-        childcare and some children&apos;s programming available during the day.
-        See the{" "}
+        Yes! Children under 13 get free admission, and we offer free childcare
+        and children&apos;s programming for kids ages 5-12 during the day (we
+        can&apos;t provide childcare for children under 5). See the{" "}
         <Link href="/childcare" className={BODY_LINK}>
           childcare page
         </Link>{" "}
