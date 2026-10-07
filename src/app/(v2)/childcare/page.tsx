@@ -23,7 +23,7 @@ export default function ChildcarePage() {
           <p>
             Metagame is for the whole family. Children under 13 attend Metagame
             for free, and we hope to see many in attendance! We offer childcare
-            for kids ages 5-12 (for free!), so that the grown-ups can have fun
+            for kids ages 5-12 (for free!), so that the parents can have fun
             too. We are not able to offer childcare for children under 5, but
             they are very welcome to attend with you.
           </p>
