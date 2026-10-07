@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { FaBitcoin } from "react-icons/fa";
-import { readFirstTouchUtm, withFirstTouchUtm } from "@/lib/utm";
+import { readUtm, withUtm } from "@/lib/utm";
 import { dayPasses, stripeCheckoutHref } from "@/v2/lib/tickets";
 import {
   subscribeCurrency,
@@ -77,7 +77,7 @@ export default function DayPassModal({ onClose }: { onClose: () => void }) {
           name,
           email,
           ...(discord.trim() ? { discord: discord.trim() } : {}),
-          ...readFirstTouchUtm(),
+          ...readUtm(),
         }),
       });
       const data = await res.json();
@@ -198,7 +198,7 @@ export default function DayPassModal({ onClose }: { onClose: () => void }) {
                   day: p.id,
                 });
                 const addUtm = (e: React.MouseEvent<HTMLAnchorElement>) => {
-                  e.currentTarget.href = withFirstTouchUtm(href);
+                  e.currentTarget.href = withUtm(href);
                 };
                 return (
                   <Button

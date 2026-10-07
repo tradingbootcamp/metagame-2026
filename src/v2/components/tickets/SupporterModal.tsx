@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { FaBitcoin } from "react-icons/fa";
-import { readFirstTouchUtm, withFirstTouchUtm } from "@/lib/utm";
+import { readUtm, withUtm } from "@/lib/utm";
 import { stripeCheckoutHref, supporterTier } from "@/v2/lib/tickets";
 import {
   subscribeCurrency,
@@ -106,7 +106,7 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
           ...(discord.trim() ? { discord: discord.trim() } : {}),
           // Server re-validates this is ≥ floor before charging.
           btc: amount,
-          ...readFirstTouchUtm(),
+          ...readUtm(),
         }),
       });
       const data = await res.json();
@@ -133,9 +133,7 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
 
   function checkoutAtStripe() {
     window.open(
-      withFirstTouchUtm(
-        stripeCheckoutHref({ tier: "supporter", chip: chip.usd }),
-      ),
+      withUtm(stripeCheckoutHref({ tier: "supporter", chip: chip.usd })),
       "_blank",
       "noopener,noreferrer",
     );

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FaBitcoin } from "react-icons/fa";
-import { readFirstTouchUtm } from "@/lib/utm";
+import { readUtm } from "@/lib/utm";
 import type { TicketTier } from "@/v2/lib/tickets";
 import { Button } from "@/v2/components/ui/button";
 import { Input } from "@/v2/components/ui/input";
@@ -143,7 +143,7 @@ export default function BtcModal({
           // Server re-validates and re-derives the price; an invalid code just
           // falls through to full price.
           ...(discountCode.trim() ? { discountCode: discountCode.trim() } : {}),
-          ...readFirstTouchUtm(),
+          ...readUtm(),
         }),
       });
       const data = await res.json();
