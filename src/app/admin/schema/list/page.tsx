@@ -16,7 +16,7 @@ export default async function AdminSchemaListPage() {
   }
   if (!(await readSession())) return <PasswordForm />;
 
-  const { tables, enums } = describeSchema();
+  const { groups, tables, enums } = describeSchema();
   const relationships = tables.flatMap((t) =>
     t.columns.flatMap((c) =>
       c.references ? [{ from: `${t.name}.${c.name}`, ...c.references }] : [],
@@ -24,12 +24,12 @@ export default async function AdminSchemaListPage() {
   );
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <section className="space-y-3">
         <p className="text-sm text-ink/70">
           Read straight from the Drizzle schema in <code>src/db/schema</code>,
-          so this page always matches the code on this deploy. Tables, then how
-          they connect, then enums.
+          so this page always matches the code on this deploy. Every section and
+          table folds; click a name below to jump to it.
         </p>
         <nav className="flex flex-wrap gap-2 text-sm">
           {tables.map((t) => (
@@ -45,10 +45,7 @@ export default async function AdminSchemaListPage() {
         </nav>
       </section>
 
-      <section className="space-y-2">
-        <h2 className="font-bebas text-2xl tracking-wide text-navy">
-          Relationships
-        </h2>
+      <Section title="Relationships" count={relationships.length}>
         <ul className="space-y-1 font-mono text-sm">
           {relationships.map((r) => (
             <li key={r.from}>
@@ -63,14 +60,19 @@ export default async function AdminSchemaListPage() {
             </li>
           ))}
         </ul>
-      </section>
+      </Section>
 
-      {tables.map((t) => (
-        <TableCard key={t.name} table={t} />
+      {groups.map((g) => (
+        <Section key={g.name} title={g.name} count={g.tables.length}>
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            {g.tables.map((t) => (
+              <TableCard key={t.name} table={t} />
+            ))}
+          </div>
+        </Section>
       ))}
 
-      <section className="space-y-2">
-        <h2 className="font-bebas text-2xl tracking-wide text-navy">Enums</h2>
+      <Section title="Enums" count={enums.length}>
         {enums.map((e) => (
           <p key={e.name} className="font-mono text-sm">
             <span className="text-ink">{e.name}</span>
@@ -85,22 +87,55 @@ export default async function AdminSchemaListPage() {
             ))}
           </p>
         ))}
-      </section>
+      </Section>
     </div>
+  );
+}
+
+/** A collapsible top-level section. Open by default; state is per page load. */
+function Section({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <details open className="group/section">
+      <summary className="flex cursor-pointer items-center gap-2 select-none">
+        <Chevron />
+        <h2 className="font-bebas text-2xl tracking-wide text-navy">{title}</h2>
+        <span className="text-sm text-ink/50">{count}</span>
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
   );
 }
 
 function TableCard({ table }: { table: TableInfo }) {
   return (
-    <section
+    <details
+      open
       id={`table-${table.name}`}
-      className="scroll-mt-20 rounded-xl border border-line bg-white shadow-sm"
+      className="group/table scroll-mt-20 rounded-xl border border-line bg-white shadow-sm"
     >
-      <div className="border-b border-line px-4 py-3">
-        <h2 className="font-mono text-lg text-navy">{table.name}</h2>
-        {table.note && <p className="mt-1 text-sm text-ink/70">{table.note}</p>}
-      </div>
-      <div className="overflow-x-auto">
+      <summary className="flex cursor-pointer items-start gap-2 px-4 py-3 select-none">
+        <Chevron className="mt-1.5" />
+        <span>
+          <span className="block font-mono text-lg text-navy">
+            {table.name}
+            <span className="ml-2 font-sans text-sm text-ink/50">
+              {table.columns.length} columns
+            </span>
+          </span>
+          {table.note && (
+            <span className="mt-1 block text-sm text-ink/70">{table.note}</span>
+          )}
+        </span>
+      </summary>
+      <div className="overflow-x-auto border-t border-line">
         <table className="w-full text-left text-sm">
           <thead className="text-xs tracking-wide text-ink/50 uppercase">
             <tr>
@@ -169,7 +204,27 @@ function TableCard({ table }: { table: TableInfo }) {
           )}
         </div>
       )}
-    </section>
+    </details>
+  );
+}
+
+/** Rotates when the enclosing <details> is open (via the group-open variant). */
+function Chevron({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className={`h-4 w-4 shrink-0 text-ink/50 transition-transform group-open/section:rotate-90 group-open/table:rotate-90 ${className}`}
+    >
+      <path
+        d="M6 4l4 4-4 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

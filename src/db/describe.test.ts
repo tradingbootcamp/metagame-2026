@@ -64,7 +64,24 @@ describe("describeSchema", () => {
     ]);
   });
 
-  it("has a note for every table", () => {
-    for (const t of info.tables) expect(t.note, t.name).not.toBe("");
+  it("has a note and a group for every table", () => {
+    for (const t of info.tables) {
+      expect(t.note, t.name).not.toBe("");
+      expect(t.group, t.name).not.toBe("Other");
+    }
+  });
+
+  it("groups tables in display order without losing any", () => {
+    expect(info.groups.map((g) => g.name)).toEqual([
+      "Auth (managed by Better Auth)",
+      "Attendees",
+    ]);
+    expect(info.groups.flatMap((g) => g.tables.map((t) => t.name))).toEqual([
+      "user",
+      "session",
+      "account",
+      "verification",
+      "profiles",
+    ]);
   });
 });

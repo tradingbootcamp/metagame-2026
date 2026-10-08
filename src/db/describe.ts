@@ -26,6 +26,7 @@ export type IndexInfo = { name: string; columns: string[]; unique: boolean };
 
 export type TableInfo = {
   name: string;
+  group: string;
   note: string;
   columns: ColumnInfo[];
   indexes: IndexInfo[];
@@ -34,7 +35,23 @@ export type TableInfo = {
 
 export type EnumInfo = { name: string; values: string[] };
 
-export type SchemaInfo = { tables: TableInfo[]; enums: EnumInfo[] };
+export type SchemaInfo = {
+  groups: { name: string; tables: TableInfo[] }[];
+  tables: TableInfo[];
+  enums: EnumInfo[];
+};
+
+// Which area each table belongs to, in display order. A table missing here
+// lands in "Other" so it still shows up (and the test flags it).
+const TABLE_GROUPS: Record<string, string[]> = {
+  "Auth (managed by Better Auth)": [
+    "user",
+    "session",
+    "account",
+    "verification",
+  ],
+  Attendees: ["profiles"],
+};
 
 // What each table is for, in one line. Reviewed alongside the columns.
 const TABLE_NOTES: Record<string, string> = {
@@ -107,6 +124,10 @@ export function describeSchema(): SchemaInfo {
 
     return {
       name: cfg.name,
+      group:
+        Object.keys(TABLE_GROUPS).find((g) =>
+          TABLE_GROUPS[g].includes(cfg.name),
+        ) ?? "Other",
       note: TABLE_NOTES[cfg.name] ?? "",
       columns: cfg.columns.map((col) => {
         const name = columnName(col);
@@ -133,5 +154,16 @@ export function describeSchema(): SchemaInfo {
   for (const table of info) {
     table.referencedBy = referencedBy.get(table.name) ?? [];
   }
-  return { tables: info, enums };
+
+  const groups = [...Object.keys(TABLE_GROUPS), "Other"]
+    .map((name) => ({
+      name,
+      tables:
+        name === "Other"
+          ? info.filter((t) => t.group === "Other")
+          : TABLE_GROUPS[name].flatMap((t) => info.filter((i) => i.name === t)),
+    }))
+    .filter((g) => g.tables.length > 0);
+
+  return { groups, tables: info, enums };
 }
