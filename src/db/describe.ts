@@ -76,10 +76,10 @@ function indexColumnName(column: unknown): string {
 }
 
 export function describeSchema(): SchemaInfo {
-  const tables = Object.values(schema).filter((v): v is PgTable =>
-    is(v, PgTable),
-  );
-  const enums: EnumInfo[] = Object.values(schema)
+  // Widen first: the module's exact export types defeat the type guards.
+  const exports: unknown[] = Object.values(schema);
+  const tables = exports.filter((v): v is PgTable => is(v, PgTable));
+  const enums: EnumInfo[] = exports
     .filter(isPgEnum)
     .map((e) => ({ name: e.enumName, values: [...e.enumValues] }));
 
