@@ -68,6 +68,12 @@ jobs:
       - name: Build
         run: vercel build --prod
 
+      # After Build so node_modules exist; before Deploy so the schema is ahead
+      # of the code. Reads DATABASE_URL from the env `vercel pull` wrote, and
+      # no-ops while that's unset.
+      - name: Run database migrations
+        run: pnpm db:migrate
+
       - name: Deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

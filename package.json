@@ -13,14 +13,19 @@
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
     "prepare": "git config core.hooksPath .githooks || true",
     "email:min": "node scripts/announcement-bootcamp.mjs && node scripts/email-minify.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.19.3",
+    "@neondatabase/serverless": "^1.2.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.4",
     "lucide-react": "^1.25.0",
     "next": "16.2.7",
     "posthog-js": "^1.434.12",
@@ -40,6 +45,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.184.1",
+    "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "lint-staged": "^17.5.1",

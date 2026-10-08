@@ -90,6 +90,12 @@ const ENV_SPEC: EnvSpec[] = [
     description:
       'OpenNode environment: "dev" (sandbox, default) or "live". Picks the API + hosted-checkout host.',
   },
+  {
+    name: "DATABASE_URL",
+    required: false,
+    description:
+      "Neon Postgres connection string (set by the Neon integration on Vercel; a personal branch locally). Without it, anything that touches the database throws a clear error.",
+  },
 ];
 
 let alreadyValidated = false;
@@ -130,5 +136,6 @@ export const env = {
   STRIPE_TEST_99_CODE: process.env.STRIPE_TEST_99_CODE,
   STRIPE_PROMO_KEY: process.env.STRIPE_PROMO_KEY,
   COMP_COUPON_ID: process.env.COMP_COUPON_ID,
+  DATABASE_URL: process.env.DATABASE_URL,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
 } as const;
