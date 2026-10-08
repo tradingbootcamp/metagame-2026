@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ViewToggle from "./ViewToggle";
 
 export const metadata: Metadata = {
   title: "Database Schema — Metagame",
@@ -21,12 +22,15 @@ export default function AdminSchemaLayout({
           >
             Database Schema
           </Link>
-          <Link
-            href="/admin/links"
-            className="text-sm text-ink/60 underline underline-offset-2 hover:text-meeple"
-          >
-            Tracking Links
-          </Link>
+          <div className="flex items-center gap-4">
+            <ViewToggle />
+            <Link
+              href="/admin/links"
+              className="text-sm text-ink/60 underline underline-offset-2 hover:text-meeple"
+            >
+              Tracking Links
+            </Link>
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-5xl px-4 py-8">{children}</main>
