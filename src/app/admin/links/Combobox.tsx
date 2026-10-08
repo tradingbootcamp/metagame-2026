@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { fieldClass } from "./ui";
+import { fieldClass } from "../ui";
 
 // Text input with a filtered suggestion panel. Open fields accept whatever is
 // typed (the last row offers to add it); closed fields are enforced server-side,

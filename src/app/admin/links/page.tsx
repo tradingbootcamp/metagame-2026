@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { NameForm, PasswordForm } from "./SignInForms";
+import { NameForm, PasswordForm } from "../SignInForms";
 import LinksTool from "./LinksTool";
 import { isConfigured, readSession } from "@/lib/admin-auth";
 import { siteOriginFromHeaders } from "@/lib/site-origin";
