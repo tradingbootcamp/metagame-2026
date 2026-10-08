@@ -8,7 +8,8 @@ import {
   smallButtonClass,
   selectClass,
   selectStyle,
-} from "./ui";
+  useCopy,
+} from "../ui";
 import Combobox from "./Combobox";
 import {
   defaultCampaign,
@@ -371,22 +372,6 @@ function Field({
       </span>
     </label>
   );
-}
-
-type CopyStatus = "idle" | "copied" | "failed";
-
-function useCopy() {
-  const [status, setStatus] = useState<CopyStatus>("idle");
-  const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setStatus("copied");
-    } catch {
-      setStatus("failed");
-    }
-    setTimeout(() => setStatus("idle"), 2000);
-  };
-  return { status, copy };
 }
 
 function Result({ url, link }: { url: string; link: TrackingLink }) {

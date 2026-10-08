@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { identify, unlock, type FormState } from "./actions";
+import { identify, unlock, type FormState } from "./auth-actions";
 import { buttonClass, Card, fieldClass } from "./ui";
 
 const initial: FormState = {};
@@ -49,7 +49,7 @@ export function NameForm() {
           className={fieldClass}
         />
         <p className="text-sm text-ink/60">
-          Labels the links you create so you can find them again.
+          Labels what you create so you can find it again.
         </p>
         <button type="submit" disabled={pending} className={buttonClass}>
           {pending ? "One sec…" : "Continue"}

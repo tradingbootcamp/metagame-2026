@@ -4,11 +4,11 @@ import { signOut } from "../auth-actions";
 import { readSession } from "@/lib/admin-auth";
 
 export const metadata: Metadata = {
-  title: "Tracking Links — Metagame",
+  title: "Promo Codes — Metagame",
   robots: { index: false, follow: false },
 };
 
-export default async function AdminLinksLayout({
+export default async function AdminPromoLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -21,16 +21,16 @@ export default async function AdminLinksLayout({
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <nav className="flex items-baseline gap-4">
             <Link
-              href="/admin/links"
+              href="/admin/promo"
               className="font-bebas text-xl tracking-wide text-navy"
             >
-              Tracking Links
+              Promo Codes
             </Link>
             <Link
-              href="/admin/promo"
+              href="/admin/links"
               className="text-sm text-ink/60 underline-offset-2 hover:text-meeple hover:underline"
             >
-              Promo codes
+              Tracking links
             </Link>
           </nav>
           {session && (

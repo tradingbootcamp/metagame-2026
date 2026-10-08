@@ -37,6 +37,18 @@ const ENV_SPEC: EnvSpec[] = [
       "Promo code for the in-prod 99%-off test purchase; live purchases using it get flagged Test in Airtable.",
   },
   {
+    name: "STRIPE_PROMO_KEY",
+    required: false,
+    description:
+      "Restricted Stripe key (Promotion codes: Write, Coupons: Read) for the promo-code tool at /admin/promo. Separate from STRIPE_SECRET_KEY on purpose; without it the Stripe rail is unavailable.",
+  },
+  {
+    name: "COMP_COUPON_ID",
+    required: false,
+    description:
+      "Id of the hand-made 100%-off Stripe coupon: the default selection in /admin/promo's coupon dropdown.",
+  },
+  {
     name: "RESEND_API_KEY",
     required: false,
     description:
@@ -116,5 +128,7 @@ export const env = {
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
   STRIPE_TEST_99_CODE: process.env.STRIPE_TEST_99_CODE,
+  STRIPE_PROMO_KEY: process.env.STRIPE_PROMO_KEY,
+  COMP_COUPON_ID: process.env.COMP_COUPON_ID,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
 } as const;
