@@ -8,3 +8,5 @@ src/components/dice3d/takes/*.json
 src/v2/components/dice/dice3d/takes/*.json
 # hand-tuned email HTML: keep attribute quoting as written
 emails/
+# generated ER diagram site
+public/schema-erd/

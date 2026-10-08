@@ -1,4 +1,9 @@
 import type { NextConfig } from "next";
+import {
+  PHASE_DEVELOPMENT_SERVER,
+  PHASE_PRODUCTION_BUILD,
+} from "next/constants";
+import { buildErd } from "./scripts/build-erd.mjs";
 import { validateEnv } from "./src/env";
 import { RFP_FORM_URL } from "./src/v2/lib/links";
 
@@ -38,4 +43,12 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["10.*.*.*", "192.168.*.*", "157.230.177.203"],
 };
 
-export default nextConfig;
+export default function config(phase: string): NextConfig {
+  // The ER diagram under /admin/schema/erd is generated from drizzle/*.sql.
+  // Done here rather than in a package.json script so it runs however the
+  // site is built (pnpm build, next build, Vercel).
+  if (phase === PHASE_PRODUCTION_BUILD || phase === PHASE_DEVELOPMENT_SERVER) {
+    buildErd();
+  }
+  return nextConfig;
+}

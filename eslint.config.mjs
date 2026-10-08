@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated ER diagram site (scripts/build-erd.mjs).
+    "public/schema-erd/**",
   ]),
 ]);
 

@@ -22,7 +22,9 @@ Neon Postgres via Drizzle. Schema is `src/db/schema/`, queries go through
 `getDb()` in `src/db/index.ts`, and migrations are the SQL files in `drizzle/`.
 After changing the schema run `pnpm db:generate` and commit what it writes;
 never hand-edit a generated migration. Deploys apply migrations before the
-code goes live (see the Vercel workflows). Airtable stays the ops view for
+code goes live (see the Vercel workflows). `/admin/schema` renders the schema
+from the Drizzle objects; `/admin/schema/erd` iframes a Liam ERD site that
+`next build` generates from the migrations into `public/schema-erd`. Airtable stays the ops view for
 purchases and RFPs; Postgres is the source of truth for accounts, ticket
 ownership, and the schedule.
 

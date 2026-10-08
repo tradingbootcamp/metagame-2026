@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import Link from "next/link";
 import { PasswordForm } from "../links/SignInForms";
 import { isConfigured, readSession } from "@/lib/admin-auth";
 import { describeSchema, type TableInfo } from "@/db/describe";
@@ -29,7 +30,11 @@ export default async function AdminSchemaPage() {
         <p className="text-sm text-ink/70">
           Read straight from the Drizzle schema in <code>src/db/schema</code>,
           so this page always matches the code on this deploy. Tables, then how
-          they connect, then enums.
+          they connect, then enums. Prefer boxes and arrows?{" "}
+          <Link href="/admin/schema/erd" className="text-navy underline">
+            Open the interactive diagram
+          </Link>
+          .
         </p>
         <nav className="flex flex-wrap gap-2 text-sm">
           {tables.map((t) => (

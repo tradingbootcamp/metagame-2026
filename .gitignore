@@ -44,3 +44,6 @@ next-env.d.ts
 
 # Source images (photoshop exports, originals); web-sized copies live in public/images
 /pictures
+
+# ER diagram site, generated from drizzle/*.sql at build (scripts/build-erd.mjs)
+/public/schema-erd
