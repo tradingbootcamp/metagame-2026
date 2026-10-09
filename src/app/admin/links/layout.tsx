@@ -32,6 +32,12 @@ export default async function AdminLinksLayout({
             >
               Promo codes
             </Link>
+            <Link
+              href="/admin"
+              className="text-sm text-ink/60 underline-offset-2 hover:text-meeple hover:underline"
+            >
+              All tools
+            </Link>
           </nav>
           {session && (
             <div className="flex items-center gap-3 text-sm text-ink/60">

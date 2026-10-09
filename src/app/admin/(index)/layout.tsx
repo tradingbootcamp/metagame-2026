@@ -4,11 +4,11 @@ import { signOut } from "../auth-actions";
 import { readSession } from "@/lib/admin-auth";
 
 export const metadata: Metadata = {
-  title: "Promo Codes — Metagame",
+  title: "Team Tools — Metagame",
   robots: { index: false, follow: false },
 };
 
-export default async function AdminPromoLayout({
+export default async function AdminIndexLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -19,26 +19,12 @@ export default async function AdminPromoLayout({
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
       <header className="sticky top-0 z-10 border-b border-line bg-cream/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <nav className="flex items-baseline gap-4">
-            <Link
-              href="/admin/promo"
-              className="font-bebas text-xl tracking-wide text-navy"
-            >
-              Promo Codes
-            </Link>
-            <Link
-              href="/admin/links"
-              className="text-sm text-ink/60 underline-offset-2 hover:text-meeple hover:underline"
-            >
-              Tracking links
-            </Link>
-            <Link
-              href="/admin"
-              className="text-sm text-ink/60 underline-offset-2 hover:text-meeple hover:underline"
-            >
-              All tools
-            </Link>
-          </nav>
+          <Link
+            href="/admin"
+            className="font-bebas text-xl tracking-wide text-navy"
+          >
+            Team Tools
+          </Link>
           {session && (
             <div className="flex items-center gap-3 text-sm text-ink/60">
               {session.identity && <span>{session.identity.name}</span>}
