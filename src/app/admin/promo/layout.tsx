@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { signOut } from "../auth-actions";
+import BackToTools from "../BackToTools";
 import { readSession } from "@/lib/admin-auth";
 
 export const metadata: Metadata = {
@@ -19,7 +20,8 @@ export default async function AdminPromoLayout({
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
       <header className="sticky top-0 z-10 border-b border-line bg-cream/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <nav className="flex items-baseline gap-4">
+          <nav className="flex items-center gap-4">
+            <BackToTools />
             <Link
               href="/admin/promo"
               className="font-bebas text-xl tracking-wide text-navy"
@@ -31,12 +33,6 @@ export default async function AdminPromoLayout({
               className="text-sm text-ink/60 underline-offset-2 hover:text-meeple hover:underline"
             >
               Tracking links
-            </Link>
-            <Link
-              href="/admin"
-              className="text-sm text-ink/60 underline-offset-2 hover:text-meeple hover:underline"
-            >
-              All tools
             </Link>
           </nav>
           {session && (

@@ -8,13 +8,19 @@ export default async function AdminSchemaListPage() {
 
   if (!isConfigured()) {
     return (
-      <p className="mx-auto max-w-sm text-sm text-ink/70">
+      <p className="mx-auto max-w-sm px-4 py-8 text-sm text-ink/70">
         Team tools aren’t configured on this deploy — set{" "}
         <code>ADMIN_PASSWORD</code> and <code>ADMIN_SESSION_SECRET</code>.
       </p>
     );
   }
-  if (!(await readSession())) return <PasswordForm />;
+  if (!(await readSession())) {
+    return (
+      <div className="px-4 py-8">
+        <PasswordForm />
+      </div>
+    );
+  }
 
   const { groups, tables, enums } = describeSchema();
   const relationships = tables.flatMap((t) =>
@@ -24,7 +30,7 @@ export default async function AdminSchemaListPage() {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-8">
       <section className="space-y-3">
         <p className="text-sm text-ink/70">
           Read straight from the Drizzle schema in <code>src/db/schema</code>,

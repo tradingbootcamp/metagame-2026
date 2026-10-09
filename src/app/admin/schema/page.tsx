@@ -11,26 +11,26 @@ export default async function AdminSchemaPage() {
 
   if (!isConfigured()) {
     return (
-      <p className="mx-auto max-w-sm text-sm text-ink/70">
+      <p className="mx-auto max-w-sm px-4 py-8 text-sm text-ink/70">
         Team tools aren’t configured on this deploy — set{" "}
         <code>ADMIN_PASSWORD</code> and <code>ADMIN_SESSION_SECRET</code>.
       </p>
     );
   }
-  if (!(await readSession())) return <PasswordForm />;
+  if (!(await readSession())) {
+    return (
+      <div className="px-4 py-8">
+        <PasswordForm />
+      </div>
+    );
+  }
 
+  // Everything below the 3.5rem header bar (plus its 1px border).
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-ink/70">
-        Built from the migration SQL. Drag to pan, scroll to zoom, click a table
-        to highlight what it connects to. Blank in local dev? Run{" "}
-        <code>pnpm erd:build</code>.
-      </p>
-      <iframe
-        src="/schema-erd/index.html?showMode=ALL_FIELDS"
-        title="Database schema ER diagram"
-        className="h-[calc(100vh-11rem)] w-full rounded-xl border border-line bg-white"
-      />
-    </div>
+    <iframe
+      src="/schema-erd/index.html?showMode=ALL_FIELDS"
+      title="Database schema ER diagram. Blank in local dev until you run pnpm erd:build."
+      className="block h-[calc(100dvh-3.5rem-1px)] w-full border-0 bg-white"
+    />
   );
 }
