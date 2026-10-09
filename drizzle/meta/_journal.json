@@ -8,6 +8,13 @@
       "when": 1791492387277,
       "tag": "0000_typical_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791507271434,
+      "tag": "0001_rainy_fixer",
+      "breakpoints": true
     }
   ]
 }

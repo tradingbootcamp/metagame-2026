@@ -19,6 +19,13 @@ export const user = pgTable("user", {
   email: text().notNull().unique(),
   emailVerified: boolean().notNull().default(false),
   image: text(),
+  // Better Auth admin plugin. `role` is "user" or "admin" for now; the plugin
+  // refuses to let users change it themselves. Admin is the break-glass
+  // superuser that gates every team tool until the permission system lands.
+  role: text().notNull().default("user"),
+  banned: boolean().notNull().default(false),
+  banReason: text(),
+  banExpires: timestamp({ withTimezone: true }),
   ...timestamps,
 });
 
@@ -33,6 +40,8 @@ export const session = pgTable(
     userId: text()
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    // Set when an admin is viewing the site as this user (admin plugin).
+    impersonatedBy: text(),
     ...timestamps,
   },
   (t) => [index("session_user_id_idx").on(t.userId)],

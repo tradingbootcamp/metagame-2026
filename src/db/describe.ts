@@ -55,7 +55,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
 
 // What each table is for, in one line. Reviewed alongside the columns.
 const TABLE_NOTES: Record<string, string> = {
-  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique.",
+  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique. role (user | admin) and the ban fields come from the admin plugin and can't be changed through the normal account-update path; admin is the break-glass superuser until the permission system exists.",
   session:
     "Signed-in browser sessions. Deleting a user removes their sessions (cascade).",
   account:
@@ -63,7 +63,7 @@ const TABLE_NOTES: Record<string, string> = {
   verification:
     "Short-lived email codes and similar one-time secrets, keyed by identifier (the email).",
   profiles:
-    "Attendee-editable profile fields. role is admin/SQL-only and is what gates admin tools once real roles exist.",
+    "Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field.",
 };
 
 function columnName(column: PgColumn): string {

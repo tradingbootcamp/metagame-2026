@@ -41,12 +41,6 @@ export default async function AdminLinksLayout({
           </nav>
           {session && (
             <div className="flex items-center gap-3 text-sm text-ink/60">
-              <Link
-                href="/admin/schema"
-                className="underline underline-offset-2 hover:text-meeple"
-              >
-                Schema
-              </Link>
               {session.identity && <span>{session.identity.name}</span>}
               <form action={signOut}>
                 <button

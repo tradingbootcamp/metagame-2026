@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { PasswordForm } from "../links/SignInForms";
+import { PasswordForm } from "../SignInForms";
 import { isConfigured, readSession } from "@/lib/admin-auth";
 
 // Liam ERD static site, generated into public/schema-erd at build time

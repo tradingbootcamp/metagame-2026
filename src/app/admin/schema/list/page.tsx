@@ -1,5 +1,5 @@
 import { connection } from "next/server";
-import { PasswordForm } from "../../links/SignInForms";
+import { PasswordForm } from "../../SignInForms";
 import { isConfigured, readSession } from "@/lib/admin-auth";
 import { describeSchema, type TableInfo } from "@/db/describe";
 

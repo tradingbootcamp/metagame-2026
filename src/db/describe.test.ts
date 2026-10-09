@@ -44,15 +44,16 @@ describe("describeSchema", () => {
     ).toEqual(["account", "profiles", "session"]);
   });
 
-  it("exposes enum values and defaults", () => {
-    const role = column("profiles", "role");
-    expect(role.type).toBe("user_role");
-    expect(role.enumValues).toEqual(["attendee", "admin"]);
-    expect(role.default).toBe("'attendee'");
+  it("exposes defaults, including the admin-plugin role", () => {
+    const role = column("user", "role");
+    expect(role.type).toBe("text");
+    expect(role.nullable).toBe(false);
+    expect(role.default).toBe("'user'");
+    expect(column("user", "banned").default).toBe("false");
     expect(column("user", "created_at").default).toBe("now()");
-    expect(info.enums).toEqual([
-      { name: "user_role", values: ["attendee", "admin"] },
-    ]);
+    expect(column("session", "impersonated_by").nullable).toBe(true);
+    expect(table("profiles").columns.map((c) => c.name)).not.toContain("role");
+    expect(info.enums).toEqual([]);
   });
 
   it("marks keys and uniqueness", () => {
