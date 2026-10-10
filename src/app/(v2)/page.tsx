@@ -554,12 +554,14 @@ export default function Home() {
                 title="Night Market"
               />
               <p className={PROSE}>
-                Come browse our cozy fairylight adorned market for a wide
-                variety of booths offering fun and interesting things to play,
-                experience and consume. This is an open to the public event on
-                Friday evening.
+                Show off your game, product, or latest creation at our open
+                market, or come discover what others have brought to share.
+                Explore booths offering things to play, experience, and savor.
+                This is open to the public on Friday evening.
               </p>
-              <p className={PROSE}>Have something you want to offer?</p>
+              <p className={PROSE}>
+                Have a game, product, or creation to share?
+              </p>
               <Button asChild variant="default" className="mt-6 w-fit">
                 <a
                   href={NIGHT_MARKET_FORM_URL}
