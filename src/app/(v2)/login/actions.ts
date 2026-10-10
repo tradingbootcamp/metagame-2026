@@ -23,6 +23,7 @@ export type AuthState = {
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FRESH_SESSION_MS = 10 * 60 * 1000;
 
 const apiCode = (e: unknown) =>
   e instanceof APIError ? e.body?.code : undefined;
@@ -57,8 +58,18 @@ export async function authenticate(
 
   if (intent === "set-password") {
     const session = await currentSession();
-    if (!session) {
-      return { step: "email", email, error: "Your session expired." };
+    // Only a session minted just now (by the code above, or a password) may
+    // replace a password without the old one; a stolen older session can't.
+    const fresh =
+      session &&
+      Date.now() - new Date(session.session.createdAt).getTime() <
+        FRESH_SESSION_MS;
+    if (!session || !fresh) {
+      return {
+        step: "email",
+        email,
+        error: "Sign in again to set a password.",
+      };
     }
     const replacing = await hasPassword(session.user.id);
     const fail = (error: string): AuthState => ({
