@@ -11,7 +11,7 @@ import type { Identity } from "./grader-identity";
 export type Session = BaseSession<Identity>;
 
 export type Access =
-  | { via: "account"; identity: Identity }
+  | { via: "account"; identity: Extract<Identity, { kind: "grader" }> }
   | { via: "password"; identity: Identity | null };
 
 function parseIdentity(value: unknown): Identity | null {
