@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb, schema } from "@/db";
 import { currentSession, getAuth, hasPassword } from "@/lib/auth";
+import { claimTicket, normalizeTicketCode } from "@/lib/ticket-store";
 
 export type FormState = { error?: string; saved?: boolean };
 
@@ -148,6 +149,28 @@ export async function savePassword(
 
   revalidatePath("/account");
   return { mode: "password", saved: true };
+}
+
+export type ClaimState = { error?: string; claimed?: string };
+
+const CLAIM_ERRORS = {
+  unknown: "We don't have a ticket with that code. Check it against the email.",
+  yours: "That ticket is already yours.",
+  taken: "Someone else has already claimed that ticket.",
+  unpaid: "That ticket's payment hasn't settled yet. Try again later.",
+};
+
+export async function claim(
+  _prev: ClaimState,
+  formData: FormData,
+): Promise<ClaimState> {
+  const session = await requireSession();
+  const code = normalizeTicketCode(String(formData.get("code") ?? ""));
+  if (code.length !== 6) return { error: "Codes are 6 characters." };
+  const result = await claimTicket(session.user.id, code);
+  if (!result.ok) return { error: CLAIM_ERRORS[result.reason] };
+  revalidatePath("/account");
+  return { claimed: result.ticket.tier ?? "Your ticket" };
 }
 
 export async function signOut(): Promise<void> {

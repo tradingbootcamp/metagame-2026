@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ticketFromPurchase } from "./ticket-store";
+import { normalizeTicketCode, ticketFromPurchase } from "./ticket-store";
 import { ticketCode } from "./ticket-code";
 
 const stripe = {
@@ -56,5 +56,12 @@ describe("ticketFromPurchase", () => {
       purchaserEmail: null,
       purchaserName: null,
     });
+  });
+});
+
+describe("normalizeTicketCode", () => {
+  it("accepts the display form and common misreads", () => {
+    expect(normalizeTicketCode(" a2c-4ef ")).toBe("A2C4EF");
+    expect(normalizeTicketCode("i1l-o0u")).toBe("11100U");
   });
 });
