@@ -151,7 +151,10 @@ export default function UsersTable({
             Delete this account?
           </DialogTitle>
           <DialogDescription className="text-base text-cream/80">
-            This permanently deletes{" "}
+            This{" "}
+            <span className="font-bold text-salmon underline">
+              permanently deletes
+            </span>{" "}
             <span className="font-semibold text-cream">{deleting?.email}</span>{" "}
             and everything attached to it: their profile, sessions, and sign-in
             methods. There is no undo. To keep the account but lock them out,
