@@ -38,6 +38,15 @@ before that from Airtable (dry run by default, `--apply` writes). A ticket is
 owned only once its code is claimed; a matching purchaser email shows the
 buyer their tickets but never grants ownership.
 
+### Schedule
+
+`locations`, `sessions`, `session_hosts`, `rsvps`, `bookmarks` in
+`src/db/schema/schedule.ts`. Sessions are authored in Airtable (accepted RFPs
+get a room and time there) and synced in by `airtable_rfp_record_id`; only
+`status = published` rows show. An RSVP's capacity check is one statement, an
+`INSERT … SELECT` that compares the going count to `max_capacity`, never a
+read followed by an insert.
+
 ## Accounts
 
 Better Auth, built lazily by `getAuth()` in `src/lib/auth.ts` over the Drizzle
