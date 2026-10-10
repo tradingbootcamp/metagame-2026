@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   checkPassword,
-  endSession,
+  endAccess,
   readSession,
   startSession,
 } from "@/lib/admin-auth";
@@ -47,6 +47,6 @@ export async function identify(
 }
 
 export async function signOut(): Promise<void> {
-  await endSession();
+  await endAccess();
   refresh();
 }

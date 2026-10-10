@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import GradeForm from "./GradeForm";
 import InfoTip from "../InfoTip";
 import { swatch } from "@/lib/airtable-colors";
-import { isConfigured, readSession } from "@/lib/grader-auth";
+import { gradeAccess } from "@/lib/grader-auth";
 import {
   CONTEXT_FIELDS,
   DECISION_FIELDS,
@@ -96,9 +96,7 @@ function rowsFor(
 export default async function SubmissionPage(
   props: PageProps<"/grade/[recordId]">,
 ) {
-  if (!isConfigured()) redirect("/grade");
-  const session = await readSession();
-  if (!session?.identity) redirect("/grade");
+  if (!(await gradeAccess())?.identity) redirect("/grade");
 
   const { recordId } = await props.params;
   const submission = await getSubmission(recordId);

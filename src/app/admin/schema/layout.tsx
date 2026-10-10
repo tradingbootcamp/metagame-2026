@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { signOut } from "../auth-actions";
 import BackToTools from "../BackToTools";
+import SessionBar from "../SessionBar";
 import ViewToggle from "./ViewToggle";
-import { readSession } from "@/lib/admin-auth";
+import { adminAccess } from "@/lib/admin-auth";
 
 export const metadata: Metadata = {
   title: "Database Schema — Metagame",
@@ -15,7 +15,7 @@ export default async function AdminSchemaLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await readSession();
+  const access = await adminAccess();
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
@@ -30,21 +30,9 @@ export default async function AdminSchemaLayout({
             >
               Database Schema
             </Link>
-            {session && <ViewToggle />}
+            {access && <ViewToggle />}
           </nav>
-          {session && (
-            <div className="flex items-center gap-3 text-sm text-ink/60">
-              {session.identity && <span>{session.identity.name}</span>}
-              <form action={signOut}>
-                <button
-                  type="submit"
-                  className="underline underline-offset-2 hover:text-meeple"
-                >
-                  Sign out
-                </button>
-              </form>
-            </div>
-          )}
+          <SessionBar />
         </div>
       </header>
       {/* Pages pick their own width: the diagram is full-bleed, the list is a column. */}

@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 import ToolLayout from "../ToolLayout";
 
 export const metadata: Metadata = {
-  title: "Team Tools — Metagame",
+  title: "Users — Metagame",
   robots: { index: false, follow: false },
 };
 
-export default function AdminIndexLayout({
+export default function AdminUsersLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <ToolLayout title="Team Tools" href="/admin">
+    <ToolLayout title="Users" href="/admin/users">
       {children}
     </ToolLayout>
   );

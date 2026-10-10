@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { signOut, switchGrader } from "./actions";
-import { readSession } from "@/lib/grader-auth";
+import { gradeAccess } from "@/lib/grader-auth";
 import { identityLabel } from "@/lib/grader-identity";
 
 export const metadata: Metadata = {
@@ -14,7 +14,7 @@ export default async function GradeLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await readSession();
+  const access = await gradeAccess();
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
@@ -26,14 +26,20 @@ export default async function GradeLayout({
           >
             Session Rubric
           </Link>
-          {session && (
+          {access && (
             <div className="flex items-center gap-3 text-sm text-ink/60">
-              {session.identity && (
-                <form action={switchGrader}>
-                  <button type="submit" className="hover:text-meeple">
-                    {identityLabel(session.identity)}
-                  </button>
-                </form>
+              {access.via === "account" ? (
+                <Link href="/account" className="hover:text-meeple">
+                  {identityLabel(access.identity)}
+                </Link>
+              ) : (
+                access.identity && (
+                  <form action={switchGrader}>
+                    <button type="submit" className="hover:text-meeple">
+                      {identityLabel(access.identity)}
+                    </button>
+                  </form>
+                )
               )}
               <form action={signOut}>
                 <button

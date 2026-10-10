@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { NameForm, PasswordForm } from "../SignInForms";
+import SignIn from "../SignIn";
+import { NameForm } from "../SignInForms";
 import { Card } from "../ui";
-import { isConfigured, readSession } from "@/lib/admin-auth";
+import { adminAccess } from "@/lib/admin-auth";
 
 const TOOLS = [
   {
@@ -16,6 +17,11 @@ const TOOLS = [
     blurb: "Mint comp and discount codes on Stripe or BTC.",
   },
   {
+    href: "/admin/users",
+    name: "Users",
+    blurb: "Accounts: grant team access, ban and unban.",
+  },
+  {
     href: "/admin/schema",
     name: "Database schema",
     blurb: "ER diagram and column-by-column reference for the Postgres schema.",
@@ -25,18 +31,9 @@ const TOOLS = [
 export default async function AdminIndexPage() {
   await connection();
 
-  if (!isConfigured()) {
-    return (
-      <p className="mx-auto max-w-sm text-sm text-ink/70">
-        Team tools aren’t configured on this deploy — set{" "}
-        <code>ADMIN_PASSWORD</code> and <code>ADMIN_SESSION_SECRET</code>.
-      </p>
-    );
-  }
-
-  const session = await readSession();
-  if (!session) return <PasswordForm />;
-  if (!session.identity) return <NameForm />;
+  const access = await adminAccess();
+  if (!access) return <SignIn next="/admin" />;
+  if (!access.name) return <NameForm />;
 
   return (
     <Card title="Tools">

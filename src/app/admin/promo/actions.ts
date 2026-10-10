@@ -1,6 +1,6 @@
 "use server";
 
-import { readSession } from "@/lib/admin-auth";
+import { EXPIRED, requireAdmin } from "@/lib/admin-auth";
 import { PromoError, type MintResult, type Rail } from "@/lib/promo-codes";
 import { listBtcCodes, mintBtcCode, type BtcCode } from "@/lib/promo-codes-btc";
 import {
@@ -27,8 +27,8 @@ export async function mint(
   _prev: MintState,
   formData: FormData,
 ): Promise<MintState> {
-  const session = await readSession();
-  if (!session?.identity) return { error: "Your session expired. Reload." };
+  const admin = await requireAdmin();
+  if (!admin) return { error: EXPIRED };
 
   const rail: Rail = str(formData, "rail") === "btc" ? "btc" : "stripe";
   const name = str(formData, "name");
@@ -62,7 +62,7 @@ export async function mint(
         : await mintStripeCode({
             ...input,
             couponId: str(formData, "couponId") || undefined,
-            issuedBy: session.identity.name,
+            issuedBy: admin.name,
           });
     return { minted };
   } catch (err) {
@@ -80,7 +80,7 @@ export type CodeLists = {
 };
 
 export async function listCodes(): Promise<CodeLists> {
-  if (!(await readSession())) throw new Error("Your session expired. Reload.");
+  if (!(await requireAdmin())) throw new Error(EXPIRED);
   const [stripe, btc] = await Promise.allSettled([
     listStripeCodes(),
     listBtcCodes(),
@@ -101,7 +101,7 @@ export async function setActive(
   id: string,
   active: boolean,
 ): Promise<{ error?: string }> {
-  if (!(await readSession())) return { error: "Your session expired. Reload." };
+  if (!(await requireAdmin())) return { error: EXPIRED };
   try {
     await setStripeCodeActive(id, active);
     return {};
