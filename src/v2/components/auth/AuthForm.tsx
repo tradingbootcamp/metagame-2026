@@ -148,6 +148,16 @@ export default function AuthForm({
     );
   }
 
+  const forgot = mode === "signin" && (
+    <button
+      type="button"
+      onClick={() => setByCode((v) => !v)}
+      className="self-start text-sm text-ink/55 underline-offset-2 hover:text-ink hover:underline"
+    >
+      {byCode ? "Back to password sign-in" : "Forgot your password?"}
+    </button>
+  );
+
   return (
     <form action={action} className={FORM}>
       {hidden}
@@ -161,48 +171,42 @@ export default function AuthForm({
         autoFocus
         className={FIELD_LIGHT}
       />
-      {!byCode && (
-        <Input
-          type="password"
-          name="password"
-          autoComplete="current-password"
-          placeholder="Password"
-          required
-          className={FIELD_LIGHT}
-        />
+      {byCode ? (
+        forgot
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          <Input
+            type="password"
+            name="password"
+            autoComplete="current-password"
+            placeholder="Password"
+            required
+            className={FIELD_LIGHT}
+          />
+          {forgot}
+        </div>
       )}
-      <Button
-        type="submit"
-        name="intent"
-        value={byCode ? "code" : "password"}
-        disabled={pending}
-        className="self-start"
-      >
-        {pending ? "One sec…" : byCode ? "Email me a code" : "Sign in"}
-      </Button>
-      <Messages state={state} />
-      <div className="flex flex-col items-start gap-2">
+      <div className="flex flex-wrap gap-3">
+        <Button
+          type="submit"
+          name="intent"
+          value={byCode ? "code" : "password"}
+          disabled={pending}
+        >
+          {pending ? "One sec…" : byCode ? "Email me a code" : "Sign in"}
+        </Button>
         {mode === "signin" && (
-          <button
-            type="button"
-            onClick={() => setByCode((v) => !v)}
-            className={LINK}
-          >
-            {byCode
-              ? "Back to password sign-in"
-              : "Forgot your password? Sign in with a code"}
-          </button>
-        )}
-        {mode === "signin" ? (
-          <Link href="/signup" className={LINK}>
-            New here? Create an account
-          </Link>
-        ) : (
-          <Link href="/login" className={LINK}>
-            Already have an account? Sign in
-          </Link>
+          <Button asChild variant="navy">
+            <Link href="/signup">Create Account</Link>
+          </Button>
         )}
       </div>
+      <Messages state={state} />
+      {mode === "signup" && (
+        <Link href="/login" className={`${LINK} self-start`}>
+          Already have an account? Sign in
+        </Link>
+      )}
     </form>
   );
 }
