@@ -6,29 +6,27 @@ import { buttonClass, Card, fieldClass } from "./ui";
 
 const initial: FormState = {};
 
+/** Password half of the sign-in card; SignIn.tsx decides whether to show it. */
 export function PasswordForm() {
   const [state, action, pending] = useActionState(unlock, initial);
 
   return (
-    <Card title="Team tools">
-      <form action={action} className="space-y-3">
-        <input
-          type="password"
-          name="password"
-          autoComplete="current-password"
-          placeholder="Password"
-          required
-          autoFocus
-          className={fieldClass}
-        />
-        <button type="submit" disabled={pending} className={buttonClass}>
-          {pending ? "Checking…" : "Enter"}
-        </button>
-        <p aria-live="polite" className="min-h-5 text-sm text-meeple">
-          {state.error}
-        </p>
-      </form>
-    </Card>
+    <form action={action} className="space-y-3">
+      <input
+        type="password"
+        name="password"
+        autoComplete="current-password"
+        placeholder="Password"
+        required
+        className={fieldClass}
+      />
+      <button type="submit" disabled={pending} className={buttonClass}>
+        {pending ? "Checking…" : "Enter"}
+      </button>
+      <p aria-live="polite" className="min-h-5 text-sm text-meeple">
+        {state.error}
+      </p>
+    </form>
   );
 }
 

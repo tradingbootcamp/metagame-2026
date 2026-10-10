@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { GraderPicker, PasswordForm } from "./SignInForms";
-import { isConfigured, readSession } from "@/lib/grader-auth";
-import { identityName } from "@/lib/grader-identity";
+import SignIn from "./SignIn";
+import { GraderPicker } from "./SignInForms";
+import { gradeAccess } from "@/lib/grader-auth";
+import { identityName, type Identity } from "@/lib/grader-identity";
 import InfoTip from "./InfoTip";
 import InlineSelect from "./InlineSelect";
 import {
@@ -285,31 +286,32 @@ function Group({
 }
 
 export default async function GradePage(props: PageProps<"/grade">) {
-  // Every branch here is per-request. Without this the unconfigured branch
-  // returns before anything touches cookies(), and the build bakes the page in
-  // as static — after which no grader ever gets past the password form.
+  // Every branch here is per-request. Without this the sign-in branch returns
+  // before anything touches cookies(), and the build bakes the page in as
+  // static — after which no grader ever gets past the sign-in form.
   await connection();
 
-  if (!isConfigured()) {
-    return (
-      <p className="mx-auto max-w-sm text-sm text-ink/70">
-        Grading isn’t configured on this deploy — set{" "}
-        <code>GRADER_PASSWORD</code> and <code>GRADER_SESSION_SECRET</code>.
-      </p>
-    );
-  }
-
-  const session = await readSession();
-  if (!session) return <PasswordForm />;
+  const access = await gradeAccess();
+  if (!access) return <SignIn />;
 
   const submissions = await listSubmissions();
-  if (!session.identity) {
+  let identity: Identity;
+  if (access.via === "account") {
+    // An account's name may differ from the Airtable spelling in case only;
+    // use the roster's so "Assigned to me" matches.
+    const roster = await resolveGraderNames(submissions);
+    const name = access.identity.name;
+    const match = roster.find((r) => r.toLowerCase() === name.toLowerCase());
+    identity = { kind: "grader", name: match ?? name };
+  } else if (access.identity) {
+    identity = access.identity;
+  } else {
     return <GraderPicker graders={await resolveGraderNames(submissions)} />;
   }
 
   // Null for "Someone else": no name to match rows against, so there's nothing
   // for "Assigned to me" to hold and the tab is dropped rather than shown empty.
-  const me = identityName(session.identity);
+  const me = identityName(identity);
   const views = me === null ? VIEWS.filter((v) => v.key !== "mine") : VIEWS;
 
   const params = await props.searchParams;

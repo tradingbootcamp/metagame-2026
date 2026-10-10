@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { readSession } from "@/lib/admin-auth";
+import { adminAccess, EXPIRED } from "@/lib/admin-auth";
 import { siteOriginFromHeaders } from "@/lib/site-origin";
 import {
   createTrackingLink,
@@ -35,8 +35,8 @@ export async function createLink(
   _prev: CreateState,
   formData: FormData,
 ): Promise<CreateState> {
-  const session = await readSession();
-  if (!session?.identity) return { error: "Your session expired. Reload." };
+  const access = await adminAccess();
+  if (!access?.name) return { error: EXPIRED };
 
   const origin = await siteOriginFromHeaders();
 
@@ -74,7 +74,7 @@ export async function createLink(
     destination,
     ...utm,
     internalName: str(formData, "internalName").slice(0, 120),
-    createdBy: session.identity.name,
+    createdBy: access.name,
   });
   revalidatePath(PATH);
   return { created: { link, shortUrl: shortUrl(origin, link.slug) } };

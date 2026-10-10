@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { signOut } from "../auth-actions";
 import BackToTools from "../BackToTools";
-import { readSession } from "@/lib/admin-auth";
+import SessionBar from "../SessionBar";
 
 export const metadata: Metadata = {
   title: "Tracking Links — Metagame",
@@ -14,8 +13,6 @@ export default async function AdminLinksLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await readSession();
-
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
       <header className="sticky top-0 z-10 border-b border-line bg-cream/95 backdrop-blur">
@@ -35,19 +32,7 @@ export default async function AdminLinksLayout({
               Promo codes
             </Link>
           </nav>
-          {session && (
-            <div className="flex items-center gap-3 text-sm text-ink/60">
-              {session.identity && <span>{session.identity.name}</span>}
-              <form action={signOut}>
-                <button
-                  type="submit"
-                  className="underline underline-offset-2 hover:text-meeple"
-                >
-                  Sign out
-                </button>
-              </form>
-            </div>
-          )}
+          <SessionBar />
         </div>
       </header>
       <main className="mx-auto w-full max-w-5xl px-4 py-8">{children}</main>

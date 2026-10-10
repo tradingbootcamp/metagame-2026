@@ -1,16 +1,18 @@
+import { adminSession } from "./auth";
 import { createSessionAuth, type Session as BaseSession } from "./session-auth";
 import type { Identity } from "./grader-identity";
 
-// One shared password gets you in; the "I am" dropdown says who you are. If
-// self-asserted identity stops being good enough, give each grader their own
-// passcode and check it here; nothing outside this file needs to change.
-//
-// The two are separate steps so the roster (committee names, read from the
-// assignee column in Airtable) is never rendered to someone who hasn't given
-// the password.
+// Access is a signed-in admin account, whose name is the grader identity. The
+// shared password + "I am" dropdown is the fallback until the committee has
+// accounts (META-1484); the two steps keep the roster (committee names, read
+// from the assignee column in Airtable) off the screen of anyone without it.
 
 /** `identity: null` = password accepted, still need to say who you are. */
 export type Session = BaseSession<Identity>;
+
+export type Access =
+  | { via: "account"; identity: Identity }
+  | { via: "password"; identity: Identity | null };
 
 function parseIdentity(value: unknown): Identity | null {
   if (!value || typeof value !== "object") return null;
@@ -32,3 +34,16 @@ export const {
   secretEnv: "GRADER_SESSION_SECRET",
   parseIdentity,
 });
+
+/** Who may grade on this request, or null. */
+export async function gradeAccess(): Promise<Access | null> {
+  const account = await adminSession();
+  if (account) {
+    return {
+      via: "account",
+      identity: { kind: "grader", name: account.user.name },
+    };
+  }
+  const legacy = await readSession();
+  return legacy ? { via: "password", identity: legacy.identity } : null;
+}

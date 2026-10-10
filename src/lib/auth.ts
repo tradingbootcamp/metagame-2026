@@ -71,12 +71,31 @@ export type Session = NonNullable<
   Awaited<ReturnType<Auth["api"]["getSession"]>>
 >;
 
+/** Whether this deploy can mint and read account sessions at all. */
+export const accountsConfigured = () =>
+  Boolean(env.BETTER_AUTH_SECRET && env.DATABASE_URL);
+
 /** The signed-in user for the current request, or null. */
 export async function currentSession(): Promise<Session | null> {
   // headers() first: it marks the render dynamic, so `next build` never tries
   // to prerender a page through getAuth() (which needs the env).
   const requestHeaders = await headers();
   return getAuth().api.getSession({ headers: requestHeaders });
+}
+
+/**
+ * The session when its user holds the `admin` role and isn't banned, else
+ * null. The break-glass check every team tool gates on until META-1483.
+ */
+export async function adminSession(): Promise<Session | null> {
+  if (!accountsConfigured()) return null;
+  const session = await currentSession();
+  if (!session) return null;
+  const { user } = session;
+  const banned =
+    Boolean(user.banned) &&
+    (!user.banExpires || new Date(user.banExpires) > new Date());
+  return user.role === "admin" && !banned ? session : null;
 }
 
 /** Whether the user has a password to sign in with (a "credential" account row). */

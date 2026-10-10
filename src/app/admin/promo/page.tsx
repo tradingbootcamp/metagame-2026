@@ -1,28 +1,20 @@
 import { connection } from "next/server";
-import { NameForm, PasswordForm } from "../SignInForms";
+import SignIn from "../SignIn";
+import { NameForm } from "../SignInForms";
 import PromoTool from "./PromoTool";
-import { isConfigured, readSession } from "@/lib/admin-auth";
+import { adminAccess } from "@/lib/admin-auth";
 import { listCoupons, type Coupon } from "@/lib/promo-codes-stripe";
 import { siteOriginFromHeaders } from "@/lib/site-origin";
 import { getPromoStripe, promoMode } from "@/lib/stripe-promo";
 
 export default async function AdminPromoPage() {
-  // Per-request on every branch, or the unconfigured/password branch gets
-  // baked in as static at build time.
+  // Per-request on every branch, or the sign-in branch gets baked in as
+  // static at build time.
   await connection();
 
-  if (!isConfigured()) {
-    return (
-      <p className="mx-auto max-w-sm text-sm text-ink/70">
-        Team tools aren’t configured on this deploy — set{" "}
-        <code>ADMIN_PASSWORD</code> and <code>ADMIN_SESSION_SECRET</code>.
-      </p>
-    );
-  }
-
-  const session = await readSession();
-  if (!session) return <PasswordForm />;
-  if (!session.identity) return <NameForm />;
+  const access = await adminAccess();
+  if (!access) return <SignIn next="/admin/promo" />;
+  if (!access.name) return <NameForm />;
 
   // A missing/unreadable coupon list leaves the Stripe rail disabled with a
   // message rather than breaking the BTC rail too.

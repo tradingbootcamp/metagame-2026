@@ -64,7 +64,7 @@ const ENV_SPEC: EnvSpec[] = [
     name: "GRADER_PASSWORD",
     required: false,
     description:
-      "Shared password for the speaker committee's grading tool at /grade. Without it (and GRADER_SESSION_SECRET) the page says it isn't configured.",
+      "Shared password for the speaker committee's grading tool at /grade. Fallback while the committee gets accounts; admin accounts sign in without it. Remove once they do.",
   },
   {
     name: "GRADER_SESSION_SECRET",
@@ -76,7 +76,7 @@ const ENV_SPEC: EnvSpec[] = [
     name: "ADMIN_PASSWORD",
     required: false,
     description:
-      "Shared password for the team tools under /admin (tracking links). Without it (and ADMIN_SESSION_SECRET) the page says it isn't configured.",
+      "Shared password for the team tools under /admin. Fallback while the team gets accounts; admin accounts sign in without it. Remove once they do.",
   },
   {
     name: "ADMIN_SESSION_SECRET",

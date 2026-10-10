@@ -1,6 +1,6 @@
 import { connection } from "next/server";
-import { PasswordForm } from "../SignInForms";
-import { isConfigured, readSession } from "@/lib/admin-auth";
+import SignIn from "../SignIn";
+import { adminAccess } from "@/lib/admin-auth";
 
 // Liam ERD static site, generated into public/schema-erd at build time
 // (scripts/build-erd.mjs). The files under public/ are fetchable without the
@@ -9,18 +9,10 @@ import { isConfigured, readSession } from "@/lib/admin-auth";
 export default async function AdminSchemaPage() {
   await connection();
 
-  if (!isConfigured()) {
-    return (
-      <p className="mx-auto max-w-sm px-4 py-8 text-sm text-ink/70">
-        Team tools aren’t configured on this deploy — set{" "}
-        <code>ADMIN_PASSWORD</code> and <code>ADMIN_SESSION_SECRET</code>.
-      </p>
-    );
-  }
-  if (!(await readSession())) {
+  if (!(await adminAccess())) {
     return (
       <div className="px-4 py-8">
-        <PasswordForm />
+        <SignIn next="/admin/schema" />
       </div>
     );
   }

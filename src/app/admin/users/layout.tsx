@@ -2,41 +2,34 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import BackToTools from "../BackToTools";
 import SessionBar from "../SessionBar";
-import ViewToggle from "./ViewToggle";
-import { adminAccess } from "@/lib/admin-auth";
 
 export const metadata: Metadata = {
-  title: "Database Schema — Metagame",
+  title: "Users — Metagame",
   robots: { index: false, follow: false },
 };
 
-export default async function AdminSchemaLayout({
+export default function AdminUsersLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const access = await adminAccess();
-
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
       <header className="sticky top-0 z-10 border-b border-line bg-cream/95 backdrop-blur">
-        {/* Fixed height: the diagram page sizes its iframe to the viewport minus this bar. */}
-        <div className="flex h-14 items-center justify-between gap-4 px-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <nav className="flex items-center gap-4">
             <BackToTools />
             <Link
-              href="/admin/schema"
+              href="/admin/users"
               className="font-bebas text-xl tracking-wide text-navy"
             >
-              Database Schema
+              Users
             </Link>
-            {access && <ViewToggle />}
           </nav>
           <SessionBar />
         </div>
       </header>
-      {/* Pages pick their own width: the diagram is full-bleed, the list is a column. */}
-      <main className="flex flex-1 flex-col">{children}</main>
+      <main className="mx-auto w-full max-w-5xl px-4 py-8">{children}</main>
     </div>
   );
 }

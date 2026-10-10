@@ -37,7 +37,17 @@ account); `/account` holds the profile and an optional password. Accounts only
 come from proving the email, so password sign-up is disabled and password
 sign-in is refused on unverified accounts. `currentSession()` is the server-side
 read; `src/proxy.ts` only redirects, so every protected page and action calls it
-again. `/admin` and `/grade` keep their shared passwords until META-1484.
+again.
+
+Team tools (`/admin/*`, `/grade`) open to accounts with `user.role = 'admin'`
+(Better Auth's admin plugin). `adminAccess()` / `requireAdmin()` in
+`src/lib/admin-auth.ts` and `gradeAccess()` in `src/lib/grader-auth.ts` are the
+single checks; swap them for `can()` when the permission system lands
+(META-1483). `/admin/users` grants and revokes admin and bans; the first admin
+is bootstrapped by hand in the Neon console:
+`update "user" set role = 'admin' where email = '…'`. The shared-password
+fallback (`ADMIN_PASSWORD`, `GRADER_PASSWORD` and their secrets) stays until
+the team has accounts, then those env vars and the password paths go.
 
 ## Issue tracking (Linear)
 

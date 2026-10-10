@@ -1,23 +1,15 @@
 import { connection } from "next/server";
-import { PasswordForm } from "../../SignInForms";
-import { isConfigured, readSession } from "@/lib/admin-auth";
+import SignIn from "../../SignIn";
+import { adminAccess } from "@/lib/admin-auth";
 import { describeSchema, type TableInfo } from "@/db/describe";
 
 export default async function AdminSchemaListPage() {
   await connection();
 
-  if (!isConfigured()) {
-    return (
-      <p className="mx-auto max-w-sm px-4 py-8 text-sm text-ink/70">
-        Team tools aren’t configured on this deploy — set{" "}
-        <code>ADMIN_PASSWORD</code> and <code>ADMIN_SESSION_SECRET</code>.
-      </p>
-    );
-  }
-  if (!(await readSession())) {
+  if (!(await adminAccess())) {
     return (
       <div className="px-4 py-8">
-        <PasswordForm />
+        <SignIn next="/admin/schema/list" />
       </div>
     );
   }

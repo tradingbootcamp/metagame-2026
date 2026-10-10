@@ -1,9 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { getAuth } from "@/lib/auth";
 import {
   checkPassword,
   endSession,
+  gradeAccess,
   readSession,
   startSession,
 } from "@/lib/grader-auth";
@@ -68,8 +71,13 @@ export async function switchGrader(): Promise<void> {
   revalidatePath("/grade");
 }
 
+/** Ends whichever session let them in; an account signs out of the site. */
 export async function signOut(): Promise<void> {
+  const access = await gradeAccess();
   await endSession();
+  if (access?.via === "account") {
+    await getAuth().api.signOut({ headers: await headers() });
+  }
   revalidatePath("/grade");
 }
 
@@ -82,7 +90,7 @@ export async function setOverviewField(
   field: string,
   value: string,
 ): Promise<{ error?: string }> {
-  if (!(await readSession())?.identity)
+  if (!(await gradeAccess())?.identity)
     return { error: "Your session expired." };
   if (!INLINE_FIELDS.includes(field)) {
     return { error: "That field isn't editable here." };
@@ -111,7 +119,7 @@ export async function submitGrades(
   _prev: SaveState,
   formData: FormData,
 ): Promise<SaveState> {
-  if (!(await readSession())?.identity)
+  if (!(await gradeAccess())?.identity)
     return { error: "Your session expired." };
 
   // Multi-selects arrive as repeated entries (with a leading empty one, so an
