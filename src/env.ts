@@ -96,6 +96,12 @@ const ENV_SPEC: EnvSpec[] = [
     description:
       "Neon Postgres connection string (set by the Neon integration on Vercel; a personal branch locally). Without it, anything that touches the database throws a clear error.",
   },
+  {
+    name: "BETTER_AUTH_SECRET",
+    required: false,
+    description:
+      "Signs Better Auth session cookies and hashes sign-in codes. Any long random string; rotating it signs everyone out. Without it, /login and /account throw a clear error.",
+  },
 ];
 
 let alreadyValidated = false;
@@ -137,5 +143,6 @@ export const env = {
   STRIPE_PROMO_KEY: process.env.STRIPE_PROMO_KEY,
   COMP_COUPON_ID: process.env.COMP_COUPON_ID,
   DATABASE_URL: process.env.DATABASE_URL,
+  BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
 } as const;

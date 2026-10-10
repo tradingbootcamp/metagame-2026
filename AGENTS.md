@@ -29,6 +29,16 @@ objects. Airtable stays the ops view for
 purchases and RFPs; Postgres is the source of truth for accounts, ticket
 ownership, and the schedule.
 
+## Accounts
+
+Better Auth, built lazily by `getAuth()` in `src/lib/auth.ts` over the Drizzle
+client. `/login` signs in with an emailed six-digit code (which also creates the
+account); `/account` holds the profile and an optional password. Accounts only
+come from proving the email, so password sign-up is disabled and password
+sign-in is refused on unverified accounts. `currentSession()` is the server-side
+read; `src/proxy.ts` only redirects, so every protected page and action calls it
+again. `/admin` and `/grade` keep their shared passwords until META-1484.
+
 ## Issue tracking (Linear)
 
 Work is tracked in Linear (Metagame team): attach PRs by putting `[META-###]` in the PR title or using the Linear-provided branch name, and file issues generously — including to record work already done. In the PR body only `Fixes META-###` attaches; avoid `Ref`, which blocks the on-merge status transitions. A linked PR moves the issue to In Progress on open and In Review on merge — In Review means "merged, pending human review", and nothing moves an issue to Done automatically, so never mark issues Done yourself. No Linear access? Skip all this — a clear PR description is enough.
