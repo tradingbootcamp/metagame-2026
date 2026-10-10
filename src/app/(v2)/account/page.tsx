@@ -41,7 +41,7 @@ export default async function AccountPage() {
           }}
         />
         <div className="flex flex-col gap-10">
-          <PasswordForm hasPassword={passwordSet} />
+          <PasswordForm hasPassword={passwordSet} email={user.email} />
           <SignOutButton />
         </div>
       </div>

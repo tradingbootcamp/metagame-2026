@@ -91,3 +91,13 @@ export async function hasPassword(userId: string): Promise<boolean> {
     .limit(1);
   return rows.length > 0;
 }
+
+/**
+ * Replaces the password without checking the current one. Only for callers
+ * that just proved the email with a code; that proof is the reset token.
+ */
+export async function replacePassword(userId: string, newPassword: string) {
+  const ctx = await getAuth().$context;
+  const hash = await ctx.password.hash(newPassword);
+  await ctx.internalAdapter.updatePassword(userId, hash);
+}

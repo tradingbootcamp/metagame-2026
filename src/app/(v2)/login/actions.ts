@@ -3,7 +3,12 @@
 import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { currentSession, getAuth, hasPassword } from "@/lib/auth";
+import {
+  currentSession,
+  getAuth,
+  hasPassword,
+  replacePassword,
+} from "@/lib/auth";
 import { safeNextPath } from "@/lib/next-path";
 
 export type AuthMode = "signin" | "signup";
@@ -11,6 +16,8 @@ export type AuthMode = "signin" | "signup";
 export type AuthState = {
   step: "email" | "code" | "password";
   email: string;
+  /** The password step is replacing an existing password, not adding a first one. */
+  replacing?: boolean;
   error?: string;
   notice?: string;
 };
@@ -49,23 +56,31 @@ export async function authenticate(
   if (intent === "restart") return { step: "email", email };
 
   if (intent === "set-password") {
-    if (!(await currentSession())) {
+    const session = await currentSession();
+    if (!session) {
       return { step: "email", email, error: "Your session expired." };
     }
+    const replacing = await hasPassword(session.user.id);
+    const fail = (error: string): AuthState => ({
+      step: "password",
+      email,
+      replacing,
+      error,
+    });
     const newPassword = String(formData.get("newPassword") ?? "");
-    if (newPassword.length < 8) {
-      return { step: "password", email, error: "Use at least 8 characters." };
-    }
+    if (newPassword.length < 8) return fail("Use at least 8 characters.");
     if (newPassword !== String(formData.get("confirm") ?? "")) {
-      return { step: "password", email, error: "The passwords don't match." };
+      return fail("The passwords don't match.");
     }
-    try {
+    const requestHeaders = await headers();
+    if (replacing) {
+      await replacePassword(session.user.id, newPassword);
+      await getAuth().api.revokeOtherSessions({ headers: requestHeaders });
+    } else {
       await getAuth().api.setPassword({
         body: { newPassword },
-        headers: await headers(),
+        headers: requestHeaders,
       });
-    } catch (e) {
-      if (apiCode(e) !== "PASSWORD_ALREADY_SET") throw e;
     }
     redirect(next);
   }
@@ -139,9 +154,11 @@ export async function authenticate(
       return { step: "code", email, error };
     }
     // Signing up: offer a password right away, unless this turned out to be an
-    // existing account that already has one.
-    if (mode === "signup" && !(await hasPassword(userId))) {
-      return { step: "password", email };
+    // existing account that already has one. Signing in by code with a
+    // password on file is usually "I forgot it", so offer a new one then too.
+    const has = await hasPassword(userId);
+    if (mode === "signup" ? !has : has) {
+      return { step: "password", email, replacing: has };
     }
     redirect(next);
   }

@@ -2,11 +2,14 @@
 
 import { useActionState } from "react";
 import {
+  resetPassword,
   savePassword,
   signOut,
   updateProfile,
   type FormState,
+  type ResetState,
 } from "./actions";
+import PinInput from "@/v2/components/auth/PinInput";
 import { Button } from "@/v2/components/ui/button";
 import { Input } from "@/v2/components/ui/input";
 import { FIELD_LIGHT } from "@/v2/components/styles";
@@ -119,29 +122,109 @@ export function ProfileForm({
   );
 }
 
-export function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
+const GREY_LINK =
+  "self-start text-sm text-ink/55 underline-offset-2 hover:text-ink hover:underline";
+
+export function PasswordForm({
+  hasPassword,
+  email,
+}: {
+  hasPassword: boolean;
+  email: string;
+}) {
   const [state, action, pending] = useActionState(savePassword, initial);
 
   return (
-    <form action={action} className="flex flex-col gap-4">
-      <h2 className="font-grotesk text-2xl font-bold text-navy">
-        {hasPassword ? "Change password" : "Set a password"}
-      </h2>
-      <p className="text-sm text-ink/70">
-        {hasPassword
-          ? "Forgot it? Sign out, sign in with a code, and set a new one here."
-          : "Optional. You can always sign in with an emailed code instead."}
-      </p>
-      {hasPassword && (
+    <div className="flex flex-col gap-6">
+      <form action={action} className="flex flex-col gap-4">
+        <h2 className="font-grotesk text-2xl font-bold text-navy">
+          {hasPassword ? "Change password" : "Set a password"}
+        </h2>
+        {!hasPassword && (
+          <p className="text-sm text-ink/70">
+            Optional. You can always sign in with an emailed code instead.
+          </p>
+        )}
+        {hasPassword && (
+          <Input
+            type="password"
+            name="currentPassword"
+            autoComplete="current-password"
+            placeholder="Current password"
+            required
+            className={FIELD_LIGHT}
+          />
+        )}
         <Input
           type="password"
-          name="currentPassword"
-          autoComplete="current-password"
-          placeholder="Current password"
+          name="newPassword"
+          autoComplete="new-password"
+          placeholder="New password (8+ characters)"
           required
+          minLength={8}
           className={FIELD_LIGHT}
         />
-      )}
+        <Input
+          type="password"
+          name="confirm"
+          autoComplete="new-password"
+          placeholder="Repeat new password"
+          required
+          minLength={8}
+          className={FIELD_LIGHT}
+        />
+        <Button
+          type="submit"
+          variant="navy"
+          disabled={pending}
+          className="self-start"
+        >
+          {pending
+            ? "Saving…"
+            : hasPassword
+              ? "Change password"
+              : "Set password"}
+        </Button>
+        <Status state={state} saved="Password saved." />
+      </form>
+      {hasPassword && <ResetPasswordForm email={email} />}
+    </div>
+  );
+}
+
+const resetInitial: ResetState = { step: "idle" };
+
+function ResetPasswordForm({ email }: { email: string }) {
+  const [state, action, pending] = useActionState(resetPassword, resetInitial);
+
+  if (state.step === "done") {
+    return <p className="text-sm text-ink/70">{state.notice}</p>;
+  }
+
+  if (state.step === "idle") {
+    return (
+      <form action={action} className="flex flex-col gap-1">
+        <button
+          type="submit"
+          name="intent"
+          value="send"
+          disabled={pending}
+          className={GREY_LINK}
+        >
+          {pending ? "Sending a code…" : "Forgot your current password?"}
+        </button>
+        {state.error && <p className="text-sm text-meeple">{state.error}</p>}
+      </form>
+    );
+  }
+
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      <p className="text-base text-ink">
+        We emailed a code to <strong>{email}</strong>. Enter it with your new
+        password.
+      </p>
+      <PinInput name="code" disabled={pending} />
       <Input
         type="password"
         name="newPassword"
@@ -162,13 +245,30 @@ export function PasswordForm({ hasPassword }: { hasPassword: boolean }) {
       />
       <Button
         type="submit"
+        name="intent"
+        value="reset"
         variant="navy"
         disabled={pending}
         className="self-start"
       >
-        {pending ? "Saving…" : hasPassword ? "Change password" : "Set password"}
+        {pending ? "Saving…" : "Set new password"}
       </Button>
-      <Status state={state} saved="Password saved." />
+      <p aria-live="polite" className="min-h-5 text-sm">
+        {state.error ? (
+          <span className="text-meeple">{state.error}</span>
+        ) : (
+          <span className="text-ink/70">{state.notice}</span>
+        )}
+      </p>
+      <button
+        type="submit"
+        name="intent"
+        value="resend"
+        disabled={pending}
+        className={GREY_LINK}
+      >
+        Send a new code
+      </button>
     </form>
   );
 }

@@ -99,3 +99,69 @@ export async function signOut(): Promise<void> {
   await getAuth().api.signOut({ headers: await headers() });
   redirect("/");
 }
+
+export type ResetState = {
+  step: "idle" | "code" | "done";
+  error?: string;
+  notice?: string;
+};
+
+// Forgot the current password while signed in: prove the email with a code
+// instead. The reset revokes every session, so sign this one back in after.
+export async function resetPassword(
+  prev: ResetState,
+  formData: FormData,
+): Promise<ResetState> {
+  const session = await requireSession();
+  const email = session.user.email;
+  const intent = String(formData.get("intent") ?? "");
+  const auth = getAuth();
+
+  if (intent === "send" || intent === "resend") {
+    try {
+      await auth.api.requestPasswordResetEmailOTP({ body: { email } });
+    } catch (e) {
+      console.error("[account] sending reset code failed", e);
+      return { step: "idle", error: "We couldn't send the email. Try again." };
+    }
+    return {
+      step: "code",
+      notice: intent === "resend" ? "Sent a new code." : undefined,
+    };
+  }
+
+  if (intent === "reset") {
+    const otp = String(formData.get("code") ?? "").replace(/\D/g, "");
+    if (otp.length !== 6)
+      return { step: "code", error: "Enter the 6-digit code." };
+    const password = String(formData.get("newPassword") ?? "");
+    if (password.length < 8) {
+      return { step: "code", error: "Use at least 8 characters." };
+    }
+    if (password !== String(formData.get("confirm") ?? "")) {
+      return { step: "code", error: "The passwords don't match." };
+    }
+    try {
+      await auth.api.resetPasswordEmailOTP({ body: { email, otp, password } });
+    } catch (e) {
+      const code = e instanceof APIError ? e.body?.code : undefined;
+      return {
+        step: "code",
+        error:
+          code === "OTP_EXPIRED"
+            ? "That code expired. Send a new one."
+            : code === "TOO_MANY_ATTEMPTS"
+              ? "Too many tries. Send a new code."
+              : "That code didn't match.",
+      };
+    }
+    await auth.api.signInEmail({
+      body: { email, password },
+      headers: await headers(),
+    });
+    revalidatePath("/account");
+    return { step: "done", notice: "Password updated." };
+  }
+
+  return prev;
+}

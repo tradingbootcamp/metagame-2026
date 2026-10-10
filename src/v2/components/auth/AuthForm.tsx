@@ -103,14 +103,19 @@ export default function AuthForm({
         {hidden}
         <input type="hidden" name="email" value={state.email} />
         <p className="text-base text-ink">
-          You&apos;re in. Choose a password and next time you can sign in with
-          it instead of a code.
+          {state.replacing
+            ? "You're in. Want a new password? Set one here, or skip if you remember the old one."
+            : "You're in. Choose a password and next time you can sign in with it instead of a code."}
         </p>
         <Input
           type="password"
           name="newPassword"
           autoComplete="new-password"
-          placeholder="Password (8+ characters)"
+          placeholder={
+            state.replacing
+              ? "New password (8+ characters)"
+              : "Password (8+ characters)"
+          }
           required
           minLength={8}
           autoFocus
@@ -132,7 +137,11 @@ export default function AuthForm({
           disabled={pending}
           className="self-start"
         >
-          {pending ? "Saving…" : "Save password"}
+          {pending
+            ? "Saving…"
+            : state.replacing
+              ? "Set new password"
+              : "Save password"}
         </Button>
         <Messages state={state} />
         <button
