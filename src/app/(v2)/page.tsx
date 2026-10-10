@@ -555,9 +555,9 @@ export default function Home() {
               />
               <p className={PROSE}>
                 Show off your game, product, or latest creation at our open
-                market, or come discover what others have brought to
-                share. Explore booths offering things to play, experience, and
-                savor. This is open to the public on Friday evening.
+                market, or come discover what others have brought to share.
+                Explore booths offering things to play, experience, and savor.
+                This is open to the public on Friday evening.
               </p>
               <p className={PROSE}>
                 Have a game, product, or creation to share?
