@@ -303,3 +303,40 @@ export async function sendContactEmail({
   if (error) throw new Error(error.message);
   return true;
 }
+
+export type SignInCodeEmail = {
+  to: string;
+  code: string;
+  /** Better Auth's OTP purpose; the copy is the same for all of them. */
+  type: "sign-in" | "email-verification" | "forget-password" | "change-email";
+};
+
+/** Six-digit sign-in code for /login. Logs the code instead when Resend isn't configured, so local sign-in still works. */
+export async function sendSignInCodeEmail({ to, code }: SignInCodeEmail) {
+  const resend = getResend();
+  if (!resend) {
+    console.warn(
+      `[email] Resend not configured — sign-in code for ${to}: ${code}`,
+    );
+    return;
+  }
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to,
+    replyTo: [TEAM],
+    subject: `${code} is your Metagame sign-in code`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+        <div style="text-align: center; margin: 24px 0;">
+          <img src="${SITE}/images/dice_logo.png" alt="METAGAME" width="240" style="max-width: 100%; height: auto;" />
+        </div>
+        <p>Here's your sign-in code:</p>
+        <p style="font-family: monospace; font-size: 32px; letter-spacing: 0.3em; text-align: center; margin: 24px 0;">${code}</p>
+        <p>It works for 10 minutes. If you didn't ask for it, ignore this email &mdash; nobody can sign in without the code.</p>
+        <p style="font-size: 12px; color: #888;">&copy; 2026 Arbor</p>
+      </div>
+    `,
+    text: `Your Metagame sign-in code is ${code}. It works for 10 minutes.\n\nIf you didn't ask for it, ignore this email — nobody can sign in without the code.`,
+  });
+  if (error) throw new Error(`Resend send failed: ${error.message}`);
+}
