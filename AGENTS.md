@@ -29,6 +29,15 @@ objects. Airtable stays the ops view for
 purchases and RFPs; Postgres is the source of truth for accounts, ticket
 ownership, and the schedule.
 
+### Tickets
+
+The payment webhooks write each purchase to Airtable and then to `tickets`
+through `recordTicket()` in `src/lib/ticket-store.ts`, upserting on the payment
+id so retries can't duplicate. `pnpm db:backfill-tickets` loads purchases made
+before that from Airtable (dry run by default, `--apply` writes). A ticket is
+owned only once its code is claimed; a matching purchaser email shows the
+buyer their tickets but never grants ownership.
+
 ## Accounts
 
 Better Auth, built lazily by `getAuth()` in `src/lib/auth.ts` over the Drizzle

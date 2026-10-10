@@ -16,6 +16,7 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/db-migrate.mjs",
+    "db:backfill-tickets": "node scripts/backfill-tickets.mjs",
     "db:studio": "drizzle-kit studio",
     "erd:build": "node scripts/build-erd.mjs"
   },

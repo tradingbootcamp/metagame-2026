@@ -15,6 +15,13 @@
       "when": 1791507271434,
       "tag": "0001_rainy_fixer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791650392574,
+      "tag": "0002_violet_bucky",
+      "breakpoints": true
     }
   ]
 }

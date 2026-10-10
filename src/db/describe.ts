@@ -51,6 +51,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
     "verification",
   ],
   Attendees: ["profiles"],
+  Tickets: ["tickets"],
 };
 
 // What each table is for, in one line. Reviewed alongside the columns.
@@ -64,6 +65,8 @@ const TABLE_NOTES: Record<string, string> = {
     "Short-lived email codes and similar one-time secrets, keyed by identifier (the email).",
   profiles:
     "Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field.",
+  tickets:
+    "One row per purchase, keyed by the payment id the webhooks upsert on. Airtable keeps the finance detail; this holds what admission needs. owner_user_id is set only by claiming the ticket code, never by email match.",
 };
 
 function columnName(column: PgColumn): string {

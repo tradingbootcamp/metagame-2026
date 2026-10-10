@@ -5,7 +5,7 @@ import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 // names, so don't rename them. Column names come from drizzle's snake_case
 // casing (see drizzle.config.ts and src/db/index.ts).
 
-const timestamps = {
+export const timestamps = {
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp({ withTimezone: true })
     .notNull()
