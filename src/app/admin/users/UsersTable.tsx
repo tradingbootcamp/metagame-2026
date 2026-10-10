@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setBanned, setRole, type Result } from "./actions";
+import { removeUser, setBanned, setRole, type Result } from "./actions";
 import { fieldClass, smallButtonClass } from "../ui";
 
 export type UserRow = {
@@ -29,6 +29,8 @@ export default function UsersTable({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  /** Row whose Delete has been clicked once; the second click is the real one. */
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const run = (action: () => Promise<Result>) =>
     startTransition(async () => {
@@ -111,6 +113,37 @@ export default function UsersTable({
                       >
                         {u.banned ? "Unban" : "Ban"}
                       </button>
+                      {deleting === u.id ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() => {
+                              setDeleting(null);
+                              run(() => removeUser(u.id));
+                            }}
+                            className={`${smallButtonClass} border-meeple text-meeple`}
+                          >
+                            Really delete {u.email}?
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleting(null)}
+                            className={smallButtonClass}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => setDeleting(u.id)}
+                          className={smallButtonClass}
+                        >
+                          Delete
+                        </button>
+                      )}
                     </span>
                   )}
                 </td>
