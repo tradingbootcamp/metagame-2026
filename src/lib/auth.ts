@@ -73,7 +73,10 @@ export type Session = NonNullable<
 
 /** The signed-in user for the current request, or null. */
 export async function currentSession(): Promise<Session | null> {
-  return getAuth().api.getSession({ headers: await headers() });
+  // headers() first: it marks the render dynamic, so `next build` never tries
+  // to prerender a page through getAuth() (which needs the env).
+  const requestHeaders = await headers();
+  return getAuth().api.getSession({ headers: requestHeaders });
 }
 
 /** Whether the user has a password to sign in with (a "credential" account row). */
