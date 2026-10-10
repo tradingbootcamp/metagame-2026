@@ -17,8 +17,13 @@ describe("describeSchema", () => {
   it("lists every table once", () => {
     expect(info.tables.map((t) => t.name).sort()).toEqual([
       "account",
+      "bookmarks",
+      "locations",
       "profiles",
+      "rsvps",
       "session",
+      "session_hosts",
+      "sessions",
       "tickets",
       "user",
       "verification",
@@ -42,7 +47,15 @@ describe("describeSchema", () => {
       table("user")
         .referencedBy.map((r) => r.table)
         .sort(),
-    ).toEqual(["account", "profiles", "session", "tickets"]);
+    ).toEqual([
+      "account",
+      "bookmarks",
+      "profiles",
+      "rsvps",
+      "session",
+      "session_hosts",
+      "tickets",
+    ]);
     expect(column("tickets", "owner_user_id").references?.onDelete).toBe(
       "set null",
     );
@@ -60,6 +73,10 @@ describe("describeSchema", () => {
     expect(info.enums.map((e) => e.name)).toEqual([
       "ticket_source",
       "ticket_status",
+      "session_category",
+      "session_ages",
+      "session_status",
+      "rsvp_status",
     ]);
   });
 
@@ -84,6 +101,7 @@ describe("describeSchema", () => {
       "Auth (managed by Better Auth)",
       "Attendees",
       "Tickets",
+      "Schedule",
     ]);
     expect(info.groups.flatMap((g) => g.tables.map((t) => t.name))).toEqual([
       "user",
@@ -92,6 +110,11 @@ describe("describeSchema", () => {
       "verification",
       "profiles",
       "tickets",
+      "locations",
+      "sessions",
+      "session_hosts",
+      "rsvps",
+      "bookmarks",
     ]);
   });
 });
