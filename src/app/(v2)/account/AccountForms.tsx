@@ -10,6 +10,7 @@ import {
   type ResetState,
 } from "./actions";
 import PinInput from "@/v2/components/auth/PinInput";
+import { SOCIAL_LINKS } from "@/lib/urls";
 import { Button } from "@/v2/components/ui/button";
 import { Input } from "@/v2/components/ui/input";
 import { FIELD_LIGHT } from "@/v2/components/styles";
@@ -87,7 +88,17 @@ export function ProfileForm({
           />
         </label>
         <label className="flex flex-col gap-1.5">
-          <span className={LABEL}>Discord handle</span>
+          <span className={LABEL}>
+            Discord handle{" "}
+            <a
+              href={SOCIAL_LINKS.DISCORD}
+              target="_blank"
+              rel="noreferrer"
+              className="font-normal text-meeple underline-offset-2 hover:underline"
+            >
+              (Join!)
+            </a>
+          </span>
           <Input
             name="discordHandle"
             defaultValue={v.discordHandle}
