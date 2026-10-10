@@ -14,6 +14,7 @@ import {
 } from "@/lib/opennode";
 import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
+import { markTicketFailed, recordTicket } from "@/lib/ticket-store";
 import { getDayPass } from "@/lib/tickets";
 import { mailingListOptOutUrl } from "@/lib/purchase-buyer";
 import { pickUtm } from "@/lib/utm";
@@ -95,6 +96,7 @@ export async function POST(request: Request) {
       // charge never counted, so there's nothing to heal (keep the no-op).
       try {
         await markPurchaseFailedIfExists(charge.id);
+        await markTicketFailed(charge.id);
       } catch (err) {
         // 500 → OpenNode retries; the update is idempotent on charge id.
         console.error("[opennode-webhook] self-heal to Failed failed:", err);
@@ -163,6 +165,7 @@ export async function POST(request: Request) {
       utm: pickUtm((key) => meta[key]),
     };
     await recordPurchase(purchase);
+    await recordTicket(purchase);
     await capturePurchase(purchase);
   } catch (err) {
     // 500 → OpenNode retries; recordPurchase upserts on ID, so a retry can't dupe.

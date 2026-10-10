@@ -13,6 +13,7 @@ import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
 import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
+import { recordTicket } from "@/lib/ticket-store";
 import {
   dayPassForPaymentLinkUrl,
   tierForCheckoutMetadata,
@@ -220,6 +221,7 @@ export async function POST(request: Request) {
       test: !event.livemode || isTestCoupon,
     };
     await recordPurchase(purchase);
+    await recordTicket(purchase);
     await capturePurchase(purchase);
 
     // Confirmation email once the money is settled (or none was owed): card

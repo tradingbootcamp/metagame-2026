@@ -19,6 +19,7 @@ describe("describeSchema", () => {
       "account",
       "profiles",
       "session",
+      "tickets",
       "user",
       "verification",
     ]);
@@ -41,7 +42,10 @@ describe("describeSchema", () => {
       table("user")
         .referencedBy.map((r) => r.table)
         .sort(),
-    ).toEqual(["account", "profiles", "session"]);
+    ).toEqual(["account", "profiles", "session", "tickets"]);
+    expect(column("tickets", "owner_user_id").references?.onDelete).toBe(
+      "set null",
+    );
   });
 
   it("exposes defaults, including the admin-plugin role", () => {
@@ -53,7 +57,10 @@ describe("describeSchema", () => {
     expect(column("user", "created_at").default).toBe("now()");
     expect(column("session", "impersonated_by").nullable).toBe(true);
     expect(table("profiles").columns.map((c) => c.name)).not.toContain("role");
-    expect(info.enums).toEqual([]);
+    expect(info.enums.map((e) => e.name)).toEqual([
+      "ticket_source",
+      "ticket_status",
+    ]);
   });
 
   it("marks keys and uniqueness", () => {
@@ -76,6 +83,7 @@ describe("describeSchema", () => {
     expect(info.groups.map((g) => g.name)).toEqual([
       "Auth (managed by Better Auth)",
       "Attendees",
+      "Tickets",
     ]);
     expect(info.groups.flatMap((g) => g.tables.map((t) => t.name))).toEqual([
       "user",
@@ -83,6 +91,7 @@ describe("describeSchema", () => {
       "account",
       "verification",
       "profiles",
+      "tickets",
     ]);
   });
 });
