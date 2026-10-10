@@ -40,9 +40,10 @@ read; `src/proxy.ts` only redirects, so every protected page and action calls it
 again.
 
 Team tools (`/admin/*`, `/grade`) open to accounts with `user.role = 'admin'`
-(Better Auth's admin plugin). `adminAccess()` / `requireAdmin()` in
-`src/lib/admin-auth.ts` and `gradeAccess()` in `src/lib/grader-auth.ts` are the
-single checks; swap them for `can()` when the permission system lands
+(Better Auth's admin plugin). `adminSession()` in `src/lib/auth.ts` is the one
+role check; `adminAccess()` / `requireAdmin()` (`src/lib/admin-auth.ts`) and
+`gradeAccess()` (`src/lib/grader-auth.ts`) layer the password fallback on it.
+Swap `adminSession()` for `can()` when the permission system lands
 (META-1483). `/admin/users` grants and revokes admin and bans; the first admin
 is bootstrapped by hand in the Neon console:
 `update "user" set role = 'admin' where email = '…'`. The shared-password

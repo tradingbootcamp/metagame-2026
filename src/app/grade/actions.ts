@@ -1,11 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
-import { getAuth } from "@/lib/auth";
 import {
   checkPassword,
-  endSession,
+  endAccess,
   gradeAccess,
   readSession,
   startSession,
@@ -71,13 +69,8 @@ export async function switchGrader(): Promise<void> {
   revalidatePath("/grade");
 }
 
-/** Ends whichever session let them in; an account signs out of the site. */
 export async function signOut(): Promise<void> {
-  const access = await gradeAccess();
-  await endSession();
-  if (access?.via === "account") {
-    await getAuth().api.signOut({ headers: await headers() });
-  }
+  await endAccess();
   revalidatePath("/grade");
 }
 

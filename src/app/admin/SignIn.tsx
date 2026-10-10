@@ -7,9 +7,7 @@ export default function SignIn({ next }: { next: string }) {
     <ToolSignIn
       title="Team tools"
       next={next}
-      passwordConfigured={isConfigured()}
-      passwordEnvs={["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"]}
-      passwordForm={<PasswordForm />}
+      passwordForm={isConfigured() && <PasswordForm />}
     />
   );
 }

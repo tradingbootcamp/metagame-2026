@@ -1,15 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import {
-  adminAccess,
   checkPassword,
-  endSession,
+  endAccess,
   readSession,
   startSession,
 } from "@/lib/admin-auth";
-import { getAuth } from "@/lib/auth";
 import { listTrackingLinks } from "@/lib/tracking-links";
 
 // One session covers every tool under /admin, so sign-in revalidates the
@@ -49,12 +46,7 @@ export async function identify(
   return {};
 }
 
-/** Ends whichever session let them in; an account signs out of the site. */
 export async function signOut(): Promise<void> {
-  const access = await adminAccess();
-  await endSession();
-  if (access?.via === "account") {
-    await getAuth().api.signOut({ headers: await headers() });
-  }
+  await endAccess();
   refresh();
 }

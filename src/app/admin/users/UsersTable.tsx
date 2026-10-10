@@ -11,29 +11,21 @@ export type UserRow = {
   emailVerified: boolean;
   admin: boolean;
   banned: boolean;
-  /** ISO string: Dates don't cross the server/client boundary. */
-  createdAt: string;
+  joined: string;
+  /** The viewer's own row has no buttons. */
+  self: boolean;
 };
-
-const dateFormat = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
 
 export default function UsersTable({
   rows,
   total,
   query,
   truncated,
-  me,
 }: {
   rows: UserRow[];
   total: number;
   query: string;
   truncated: boolean;
-  /** The viewer's own id; their row has no buttons. */
-  me: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -84,9 +76,7 @@ export default function UsersTable({
                     <span className="ml-2 text-ink/40">unverified</span>
                   )}
                 </td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  {dateFormat.format(new Date(u.createdAt))}
-                </td>
+                <td className="px-4 py-2 whitespace-nowrap">{u.joined}</td>
                 <td className="px-4 py-2 whitespace-nowrap">
                   {u.banned ? (
                     <span className="rounded bg-meeple/10 px-1.5 py-0.5 text-xs font-semibold text-meeple">
@@ -101,7 +91,7 @@ export default function UsersTable({
                   )}
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
-                  {u.id !== me && (
+                  {!u.self && (
                     <span className="inline-flex gap-2">
                       <button
                         type="button"

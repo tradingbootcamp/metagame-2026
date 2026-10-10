@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "@/app/admin/ui";
 import { accountsConfigured, currentSession } from "@/lib/auth";
 
 // The sign-in card for a team tool: an account with the admin role, or, until
@@ -6,35 +7,26 @@ import { accountsConfigured, currentSession } from "@/lib/auth";
 export default async function ToolSignIn({
   title,
   next,
-  passwordConfigured,
-  passwordEnvs,
   passwordForm,
 }: {
   title: string;
   /** Where /login sends them back to. */
   next: string;
-  passwordConfigured: boolean;
-  /** Named in the "nothing configured" message. */
-  passwordEnvs: [string, string];
-  passwordForm: React.ReactNode;
+  /** The shared-password form, when that fallback is configured. */
+  passwordForm?: React.ReactNode;
 }) {
   const accounts = accountsConfigured();
-  if (!accounts && !passwordConfigured) {
+  if (!accounts && !passwordForm) {
     return (
       <p className="mx-auto max-w-sm text-sm text-ink/70">
-        {title} isn’t configured on this deploy — set{" "}
-        <code>{passwordEnvs[0]}</code> and <code>{passwordEnvs[1]}</code>, or
-        the database and <code>BETTER_AUTH_SECRET</code> for accounts.
+        {title} isn’t configured on this deploy. See <code>.env.example</code>.
       </p>
     );
   }
-  const session = accounts ? await currentSession() : null;
+  const session = accounts ? await currentSession().catch(() => null) : null;
 
   return (
-    <div className="mx-auto max-w-sm rounded-xl border border-line bg-white p-6 shadow-sm">
-      <h1 className="font-bebas mb-4 text-2xl tracking-wide text-navy">
-        {title}
-      </h1>
+    <Card title={title}>
       {accounts &&
         (session ? (
           <p className="text-sm text-ink/70">
@@ -54,12 +46,12 @@ export default async function ToolSignIn({
             Sign in with your account
           </Link>
         ))}
-      {accounts && passwordConfigured && (
+      {accounts && passwordForm && (
         <p className="my-4 text-center text-xs tracking-wide text-ink/40 uppercase">
           or use the team password
         </p>
       )}
-      {passwordConfigured && passwordForm}
-    </div>
+      {passwordForm}
+    </Card>
   );
 }

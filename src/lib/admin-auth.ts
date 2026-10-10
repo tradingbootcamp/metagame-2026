@@ -1,4 +1,4 @@
-import { adminSession } from "./auth";
+import { adminSession, signOutAccount } from "./auth";
 import { createSessionAuth, type Session as BaseSession } from "./session-auth";
 
 // Team-only tools under /admin. Access is a signed-in account with the admin
@@ -9,9 +9,9 @@ export type AdminIdentity = { name: string };
 export type Session = BaseSession<AdminIdentity>;
 
 export type Access =
-  | { via: "account"; name: string; userId: string; email: string }
+  | { via: "account"; name: string; userId: string }
   /** `name: null` = password accepted, still need to say who you are. */
-  | { via: "password"; name: string | null; userId?: undefined };
+  | { via: "password"; name: string | null };
 
 function parseIdentity(value: unknown): AdminIdentity | null {
   if (!value || typeof value !== "object") return null;
@@ -38,7 +38,8 @@ export async function adminAccess(): Promise<Access | null> {
   const account = await adminSession();
   if (account) {
     const { id, name, email } = account.user;
-    return { via: "account", name, userId: id, email };
+    // Code sign-in registers without a name; the email is the label then.
+    return { via: "account", name: name.trim() || email, userId: id };
   }
   const legacy = await readSession();
   return legacy
@@ -49,11 +50,17 @@ export async function adminAccess(): Promise<Access | null> {
 export const EXPIRED = "Your session expired. Reload.";
 
 /**
- * The one check for server actions and pages: an admin with a name to put on
- * what they create. Swap for `can()` when the permission system lands.
+ * The one check for server actions: an admin with a name to put on what they
+ * create, or null. Swap for `can()` when the permission system lands.
  */
-export async function requireAdmin(): Promise<Access & { name: string }> {
+export async function requireAdmin(): Promise<Access | null> {
   const access = await adminAccess();
-  if (!access?.name) throw new Error(EXPIRED);
-  return access as Access & { name: string };
+  return access?.name ? access : null;
+}
+
+/** Ends whichever session let them in; an account signs out of the site. */
+export async function endAccess(): Promise<void> {
+  const access = await adminAccess();
+  await endSession();
+  if (access?.via === "account") await signOutAccount();
 }

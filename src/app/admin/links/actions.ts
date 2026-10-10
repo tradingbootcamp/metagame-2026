@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { adminAccess, EXPIRED } from "@/lib/admin-auth";
+import { EXPIRED, requireAdmin } from "@/lib/admin-auth";
 import { siteOriginFromHeaders } from "@/lib/site-origin";
 import {
   createTrackingLink,
@@ -35,8 +35,8 @@ export async function createLink(
   _prev: CreateState,
   formData: FormData,
 ): Promise<CreateState> {
-  const access = await adminAccess();
-  if (!access?.name) return { error: EXPIRED };
+  const admin = await requireAdmin();
+  if (!admin) return { error: EXPIRED };
 
   const origin = await siteOriginFromHeaders();
 
@@ -74,7 +74,7 @@ export async function createLink(
     destination,
     ...utm,
     internalName: str(formData, "internalName").slice(0, 120),
-    createdBy: access.name,
+    createdBy: admin.name,
   });
   revalidatePath(PATH);
   return { created: { link, shortUrl: shortUrl(origin, link.slug) } };

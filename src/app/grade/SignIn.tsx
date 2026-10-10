@@ -7,9 +7,7 @@ export default function SignIn() {
     <ToolSignIn
       title="Speaker committee"
       next="/grade"
-      passwordConfigured={isConfigured()}
-      passwordEnvs={["GRADER_PASSWORD", "GRADER_SESSION_SECRET"]}
-      passwordForm={<PasswordForm />}
+      passwordForm={isConfigured() && <PasswordForm />}
     />
   );
 }

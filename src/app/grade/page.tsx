@@ -296,17 +296,19 @@ export default async function GradePage(props: PageProps<"/grade">) {
 
   const submissions = await listSubmissions();
   let identity: Identity;
-  if (access.via === "account") {
-    // An account's name may differ from the Airtable spelling in case only;
-    // use the roster's so "Assigned to me" matches.
-    const roster = await resolveGraderNames(submissions);
-    const name = access.identity.name;
-    const match = roster.find((r) => r.toLowerCase() === name.toLowerCase());
-    identity = { kind: "grader", name: match ?? name };
-  } else if (access.identity) {
+  if (access.identity) {
     identity = access.identity;
   } else {
     return <GraderPicker graders={await resolveGraderNames(submissions)} />;
+  }
+  if (access.via === "account" && identity.kind === "grader") {
+    // An account's name may differ from the Airtable spelling in case only;
+    // use the roster's so "Assigned to me" matches.
+    const name = identity.name.toLowerCase();
+    const match = (await resolveGraderNames(submissions)).find(
+      (r) => r.toLowerCase() === name,
+    );
+    if (match) identity = { kind: "grader", name: match };
   }
 
   // Null for "Someone else": no name to match rows against, so there's nothing

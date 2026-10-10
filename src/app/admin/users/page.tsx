@@ -1,39 +1,26 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { connection } from "next/server";
-import SignIn from "../SignIn";
-import { Card } from "../ui";
 import UsersTable, { type UserRow } from "./UsersTable";
-import { adminAccess } from "@/lib/admin-auth";
-import { getAuth } from "@/lib/auth";
+import ToolSignIn from "@/components/ToolSignIn";
+import { adminSession, getAuth } from "@/lib/auth";
 
 const PAGE_SIZE = 100;
 
-const first = (value: string | string[] | undefined) =>
-  (Array.isArray(value) ? value[0] : value) ?? "";
+const joined = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
 
+// Account-only, no password fallback: the role and ban calls need an admin session.
 export default async function AdminUsersPage(props: PageProps<"/admin/users">) {
   await connection();
 
-  const access = await adminAccess();
-  if (!access) return <SignIn next="/admin/users" />;
-  if (access.via !== "account") {
-    return (
-      <Card title="Users">
-        <p className="text-sm text-ink/70">
-          Granting access takes an admin account, not the team password.{" "}
-          <Link
-            href="/login?next=/admin/users"
-            className="font-semibold text-meeple underline-offset-2 hover:underline"
-          >
-            Sign in with yours.
-          </Link>
-        </p>
-      </Card>
-    );
-  }
+  const session = await adminSession();
+  if (!session) return <ToolSignIn title="Users" next="/admin/users" />;
 
-  const q = first((await props.searchParams).q).trim();
+  const q = String((await props.searchParams).q ?? "").trim();
   const { users, total } = await getAuth().api.listUsers({
     query: {
       ...(q && {
@@ -54,7 +41,8 @@ export default async function AdminUsersPage(props: PageProps<"/admin/users">) {
     emailVerified: u.emailVerified,
     admin: u.role === "admin",
     banned: Boolean(u.banned),
-    createdAt: new Date(u.createdAt).toISOString(),
+    joined: joined.format(new Date(u.createdAt)),
+    self: u.id === session.user.id,
   }));
 
   return (
@@ -63,7 +51,6 @@ export default async function AdminUsersPage(props: PageProps<"/admin/users">) {
       total={total}
       query={q}
       truncated={total > rows.length}
-      me={access.userId}
     />
   );
 }

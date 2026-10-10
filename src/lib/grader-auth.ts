@@ -1,4 +1,4 @@
-import { adminSession } from "./auth";
+import { adminSession, signOutAccount } from "./auth";
 import { createSessionAuth, type Session as BaseSession } from "./session-auth";
 import type { Identity } from "./grader-identity";
 
@@ -11,7 +11,7 @@ import type { Identity } from "./grader-identity";
 export type Session = BaseSession<Identity>;
 
 export type Access =
-  | { via: "account"; identity: Extract<Identity, { kind: "grader" }> }
+  | { via: "account"; identity: Identity }
   | { via: "password"; identity: Identity | null };
 
 function parseIdentity(value: unknown): Identity | null {
@@ -39,11 +39,20 @@ export const {
 export async function gradeAccess(): Promise<Access | null> {
   const account = await adminSession();
   if (account) {
+    // Code sign-in registers without a name; no name means "Someone else".
+    const name = account.user.name.trim();
     return {
       via: "account",
-      identity: { kind: "grader", name: account.user.name },
+      identity: name ? { kind: "grader", name } : { kind: "anon" },
     };
   }
   const legacy = await readSession();
   return legacy ? { via: "password", identity: legacy.identity } : null;
+}
+
+/** Ends whichever session let them in; an account signs out of the site. */
+export async function endAccess(): Promise<void> {
+  const access = await gradeAccess();
+  await endSession();
+  if (access?.via === "account") await signOutAccount();
 }

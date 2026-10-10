@@ -20,12 +20,9 @@ export default async function AdminLinksPage() {
     loadLinkOptions(),
     siteOriginFromHeaders(),
   ]);
-  return (
-    <LinksTool
-      links={links}
-      options={options}
-      origin={origin}
-      me={access.name}
-    />
-  );
+  // "brian" and "Brian" are one person: reuse the spelling already on their links.
+  const me =
+    links.find((l) => l.createdBy.toLowerCase() === access.name.toLowerCase())
+      ?.createdBy ?? access.name;
+  return <LinksTool links={links} options={options} origin={origin} me={me} />;
 }
