@@ -3,6 +3,13 @@
 import { useState, useTransition } from "react";
 import { removeUser, setBanned, setRole, type Result } from "./actions";
 import { fieldClass, smallButtonClass } from "../ui";
+import { Button } from "@/v2/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/v2/components/ui/dialog";
 
 export type UserRow = {
   id: string;
@@ -29,8 +36,7 @@ export default function UsersTable({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  /** Row whose Delete has been clicked once; the second click is the real one. */
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<UserRow | null>(null);
 
   const run = (action: () => Promise<Result>) =>
     startTransition(async () => {
@@ -113,37 +119,14 @@ export default function UsersTable({
                       >
                         {u.banned ? "Unban" : "Ban"}
                       </button>
-                      {deleting === u.id ? (
-                        <>
-                          <button
-                            type="button"
-                            disabled={pending}
-                            onClick={() => {
-                              setDeleting(null);
-                              run(() => removeUser(u.id));
-                            }}
-                            className={`${smallButtonClass} border-meeple text-meeple`}
-                          >
-                            Really delete {u.email}?
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setDeleting(null)}
-                            className={smallButtonClass}
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={pending}
-                          onClick={() => setDeleting(u.id)}
-                          className={smallButtonClass}
-                        >
-                          Delete
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => setDeleting(u)}
+                        className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
+                      >
+                        Delete
+                      </button>
                     </span>
                   )}
                 </td>
@@ -159,6 +142,46 @@ export default function UsersTable({
           </tbody>
         </table>
       </div>
+      <Dialog
+        open={deleting !== null}
+        onOpenChange={(o) => !o && setDeleting(null)}
+      >
+        <DialogContent className="flex max-w-[480px] flex-col gap-5 px-8 py-7">
+          <DialogTitle className="font-bebas text-2xl tracking-wide text-cream">
+            Delete this account?
+          </DialogTitle>
+          <DialogDescription className="text-base text-cream/80">
+            This permanently deletes{" "}
+            <span className="font-semibold text-cream">{deleting?.email}</span>{" "}
+            and everything attached to it: their profile, sessions, and sign-in
+            methods. There is no undo. To keep the account but lock them out,
+            use Ban instead.
+          </DialogDescription>
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setDeleting(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending}
+              onClick={() => {
+                if (!deleting) return;
+                const { id } = deleting;
+                setDeleting(null);
+                run(() => removeUser(id));
+              }}
+            >
+              Delete account
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
