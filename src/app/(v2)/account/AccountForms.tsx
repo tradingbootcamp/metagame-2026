@@ -2,12 +2,11 @@
 
 import { useActionState } from "react";
 import {
-  resetPassword,
   savePassword,
   signOut,
   updateProfile,
   type FormState,
-  type ResetState,
+  type PasswordState,
 } from "./actions";
 import PinInput from "@/v2/components/auth/PinInput";
 import { SOCIAL_LINKS } from "@/lib/urls";
@@ -136,6 +135,8 @@ export function ProfileForm({
 const GREY_LINK =
   "self-start text-sm text-ink/55 underline-offset-2 hover:text-ink hover:underline";
 
+const passwordInitial: PasswordState = { mode: "password" };
+
 export function PasswordForm({
   hasPassword,
   email,
@@ -143,20 +144,54 @@ export function PasswordForm({
   hasPassword: boolean;
   email: string;
 }) {
-  const [state, action, pending] = useActionState(savePassword, initial);
+  const [state, action, pending] = useActionState(
+    savePassword,
+    passwordInitial,
+  );
+  const byCode = state.mode === "code";
 
   return (
-    <div className="flex flex-col gap-6">
-      <form action={action} className="flex flex-col gap-4">
-        <h2 className="font-grotesk text-2xl font-bold text-navy">
-          {hasPassword ? "Change password" : "Set a password"}
-        </h2>
-        {!hasPassword && (
-          <p className="text-sm text-ink/70">
-            Optional. You can always sign in with an emailed code instead.
+    <form action={action} className="flex flex-col gap-4">
+      <h2 className="font-grotesk text-2xl font-bold text-navy">
+        {hasPassword ? "Change password" : "Set a password"}
+      </h2>
+      {!hasPassword && (
+        <p className="text-sm text-ink/70">
+          Optional. You can always sign in with an emailed code instead.
+        </p>
+      )}
+      {hasPassword && byCode && (
+        <div className="flex flex-col gap-3">
+          <p className="text-base text-ink">
+            We emailed a code to <strong>{email}</strong>.
           </p>
-        )}
-        {hasPassword && (
+          <PinInput name="code" disabled={pending} />
+          <div className="flex gap-5">
+            <button
+              type="submit"
+              name="intent"
+              value="resend"
+              formNoValidate
+              disabled={pending}
+              className={GREY_LINK}
+            >
+              Send a new code
+            </button>
+            <button
+              type="submit"
+              name="intent"
+              value="cancel"
+              formNoValidate
+              disabled={pending}
+              className={GREY_LINK}
+            >
+              Use my current password instead
+            </button>
+          </div>
+        </div>
+      )}
+      {hasPassword && !byCode && (
+        <div className="flex flex-col gap-1.5">
           <Input
             type="password"
             name="currentPassword"
@@ -165,77 +200,18 @@ export function PasswordForm({
             required
             className={FIELD_LIGHT}
           />
-        )}
-        <Input
-          type="password"
-          name="newPassword"
-          autoComplete="new-password"
-          placeholder="New password (8+ characters)"
-          required
-          minLength={8}
-          className={FIELD_LIGHT}
-        />
-        <Input
-          type="password"
-          name="confirm"
-          autoComplete="new-password"
-          placeholder="Repeat new password"
-          required
-          minLength={8}
-          className={FIELD_LIGHT}
-        />
-        <Button
-          type="submit"
-          variant="navy"
-          disabled={pending}
-          className="self-start"
-        >
-          {pending
-            ? "Saving…"
-            : hasPassword
-              ? "Change password"
-              : "Set password"}
-        </Button>
-        <Status state={state} saved="Password saved." />
-      </form>
-      {hasPassword && <ResetPasswordForm email={email} />}
-    </div>
-  );
-}
-
-const resetInitial: ResetState = { step: "idle" };
-
-function ResetPasswordForm({ email }: { email: string }) {
-  const [state, action, pending] = useActionState(resetPassword, resetInitial);
-
-  if (state.step === "done") {
-    return <p className="text-sm text-ink/70">{state.notice}</p>;
-  }
-
-  if (state.step === "idle") {
-    return (
-      <form action={action} className="flex flex-col gap-1">
-        <button
-          type="submit"
-          name="intent"
-          value="send"
-          disabled={pending}
-          className={GREY_LINK}
-        >
-          {pending ? "Sending a code…" : "Forgot your current password?"}
-        </button>
-        {state.error && <p className="text-sm text-meeple">{state.error}</p>}
-      </form>
-    );
-  }
-
-  return (
-    <form action={action} className="flex flex-col gap-4">
-      <p className="text-base text-ink">
-        We emailed a code to <strong>{email}</strong>. Enter it with your new
-        password.
-      </p>
-      <PinInput name="code" disabled={pending} />
+          <button
+            type="submit"
+            name="intent"
+            value="send"
+            formNoValidate
+            disabled={pending}
+            className={GREY_LINK}
+          >
+            {pending ? "Sending a code…" : "Forgot your current password?"}
+          </button>
+        </div>
+      )}
       <Input
         type="password"
         name="newPassword"
@@ -257,29 +233,28 @@ function ResetPasswordForm({ email }: { email: string }) {
       <Button
         type="submit"
         name="intent"
-        value="reset"
+        value={byCode ? "reset" : "change"}
         variant="navy"
         disabled={pending}
         className="self-start"
       >
-        {pending ? "Saving…" : "Set new password"}
+        {pending
+          ? "Saving…"
+          : byCode
+            ? "Set new password"
+            : hasPassword
+              ? "Change password"
+              : "Set password"}
       </Button>
       <p aria-live="polite" className="min-h-5 text-sm">
         {state.error ? (
           <span className="text-meeple">{state.error}</span>
         ) : (
-          <span className="text-ink/70">{state.notice}</span>
+          <span className="text-ink/70">
+            {state.saved ? "Password saved." : state.notice}
+          </span>
         )}
       </p>
-      <button
-        type="submit"
-        name="intent"
-        value="resend"
-        disabled={pending}
-        className={GREY_LINK}
-      >
-        Send a new code
-      </button>
     </form>
   );
 }
