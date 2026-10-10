@@ -81,6 +81,12 @@ jobs:
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
         run: vercel build
 
+      # After Build so node_modules exist; before Deploy so the schema is ahead
+      # of the code. Reads DATABASE_URL from the env `vercel pull` wrote, and
+      # no-ops while that's unset.
+      - name: Run database migrations
+        run: pnpm db:migrate
+
       - name: Deploy
         id: deploy
         # `shell: bash` for pipefail — the default `bash -e` takes the pipeline's

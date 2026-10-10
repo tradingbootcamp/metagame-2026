@@ -15,6 +15,11 @@ const TOOLS = [
     name: "Promo codes",
     blurb: "Mint comp and discount codes on Stripe or BTC.",
   },
+  {
+    href: "/admin/schema",
+    name: "Database schema",
+    blurb: "ER diagram and column-by-column reference for the Postgres schema.",
+  },
 ];
 
 export default async function AdminIndexPage() {

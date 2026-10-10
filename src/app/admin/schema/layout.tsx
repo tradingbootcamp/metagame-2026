@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { signOut } from "../auth-actions";
 import BackToTools from "../BackToTools";
+import ViewToggle from "./ViewToggle";
 import { readSession } from "@/lib/admin-auth";
 
 export const metadata: Metadata = {
-  title: "Promo Codes — Metagame",
+  title: "Database Schema — Metagame",
   robots: { index: false, follow: false },
 };
 
-export default async function AdminPromoLayout({
+export default async function AdminSchemaLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -19,21 +20,17 @@ export default async function AdminPromoLayout({
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
       <header className="sticky top-0 z-10 border-b border-line bg-cream/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+        {/* Fixed height: the diagram page sizes its iframe to the viewport minus this bar. */}
+        <div className="flex h-14 items-center justify-between gap-4 px-4">
           <nav className="flex items-center gap-4">
             <BackToTools />
             <Link
-              href="/admin/promo"
+              href="/admin/schema"
               className="font-bebas text-xl tracking-wide text-navy"
             >
-              Promo Codes
+              Database Schema
             </Link>
-            <Link
-              href="/admin/links"
-              className="text-sm text-ink/60 underline-offset-2 hover:text-meeple hover:underline"
-            >
-              Tracking links
-            </Link>
+            {session && <ViewToggle />}
           </nav>
           {session && (
             <div className="flex items-center gap-3 text-sm text-ink/60">
@@ -50,7 +47,8 @@ export default async function AdminPromoLayout({
           )}
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl px-4 py-8">{children}</main>
+      {/* Pages pick their own width: the diagram is full-bleed, the list is a column. */}
+      <main className="flex flex-1 flex-col">{children}</main>
     </div>
   );
 }

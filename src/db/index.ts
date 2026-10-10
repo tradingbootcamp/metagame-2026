@@ -1,0 +1,25 @@
+import { neon } from "@neondatabase/serverless";
+import { drizzle, type NeonHttpDatabase } from "drizzle-orm/neon-http";
+import { env } from "@/env";
+import * as schema from "./schema";
+
+export type Db = NeonHttpDatabase<typeof schema>;
+
+let cached: Db | null = null;
+
+/**
+ * Drizzle over Neon's HTTP driver — one fetch per query, no connection pool to
+ * manage, which suits Vercel's serverless functions. Built lazily so modules
+ * can import this without a DATABASE_URL (local dev without a DB, tests).
+ */
+export function getDb(): Db {
+  if (cached) return cached;
+  const url = env.DATABASE_URL;
+  if (!url) {
+    throw new Error("DATABASE_URL is not set — see .env.example");
+  }
+  cached = drizzle({ client: neon(url), schema, casing: "snake_case" });
+  return cached;
+}
+
+export { schema };
