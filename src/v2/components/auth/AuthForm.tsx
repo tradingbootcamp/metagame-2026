@@ -161,6 +161,11 @@ export default function AuthForm({
   return (
     <form action={action} className={FORM}>
       {hidden}
+      {mode === "signin" && byCode && (
+        <p className="text-base text-ink">
+          Enter your email and we&apos;ll send you a code to sign in with.
+        </p>
+      )}
       <Input
         type="email"
         name="email"
