@@ -554,8 +554,8 @@ export default function Home() {
                 title="Night Market"
               />
               <p className={PROSE}>
-                Show off your game, product, or latest creation at our bustling,
-                fairy-lit market, or come discover what others have brought to
+                Show off your game, product, or latest creation at our open
+                market, or come discover what others have brought to
                 share. Explore booths offering things to play, experience, and
                 savor. This is open to the public on Friday evening.
               </p>
