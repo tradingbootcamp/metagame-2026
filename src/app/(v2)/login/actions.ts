@@ -1,6 +1,7 @@
 "use server";
 
 import { APIError } from "better-auth/api";
+import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
@@ -9,6 +10,7 @@ import {
   hasPassword,
   replacePassword,
 } from "@/lib/auth";
+import { getDb, schema } from "@/db";
 import { safeNextPath } from "@/lib/next-path";
 
 export type AuthMode = "signin" | "signup";
@@ -24,9 +26,20 @@ export type AuthState = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FRESH_SESSION_MS = 10 * 60 * 1000;
+const WELCOME_BACK =
+  "Looks like you already had an account, so we signed you in.";
 
 const apiCode = (e: unknown) =>
   e instanceof APIError ? e.body?.code : undefined;
+
+async function userExists(email: string): Promise<boolean> {
+  const rows = await getDb()
+    .select({ id: schema.user.id })
+    .from(schema.user)
+    .where(eq(schema.user.email, email))
+    .limit(1);
+  return rows.length > 0;
+}
 
 async function sendCode(email: string): Promise<string | undefined> {
   try {
@@ -147,6 +160,8 @@ export async function authenticate(
     if (otp.length !== 6) {
       return { step: "code", email, error: "Enter the 6-digit code." };
     }
+    // Checked before the sign-in, which creates the user when it's new.
+    const existing = mode === "signup" && (await userExists(email));
     let userId: string;
     try {
       const result = await getAuth().api.signInEmailOTP({
@@ -169,9 +184,14 @@ export async function authenticate(
     // password on file is usually "I forgot it", so offer a new one then too.
     const has = await hasPassword(userId);
     if (mode === "signup" ? !has : has) {
-      return { step: "password", email, replacing: has };
+      return {
+        step: "password",
+        email,
+        replacing: has,
+        notice: existing ? WELCOME_BACK : undefined,
+      };
     }
-    redirect(next);
+    redirect(existing ? `/account?notice=welcome-back` : next);
   }
 
   return prev;

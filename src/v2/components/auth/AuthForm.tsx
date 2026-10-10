@@ -102,6 +102,7 @@ export default function AuthForm({
       <form action={action} className={FORM}>
         {hidden}
         <input type="hidden" name="email" value={state.email} />
+        {state.notice && <p className="text-sm text-ink/70">{state.notice}</p>}
         <p className="text-base text-ink">
           {state.replacing
             ? "You're in. Want a new password? Set one here, or skip if you remember the old one."
@@ -143,7 +144,7 @@ export default function AuthForm({
               ? "Set new password"
               : "Save password"}
         </Button>
-        <Messages state={state} />
+        <Messages state={{ ...state, notice: undefined }} />
         <button
           type="submit"
           name="intent"

@@ -11,7 +11,12 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ notice?: string }>;
+}) {
+  const { notice } = await searchParams;
   const session = await currentSession();
   if (!session) redirect("/login?next=/account");
   const { user } = session;
@@ -27,7 +32,13 @@ export default async function AccountPage() {
     <ContentPage
       eyebrow="Account"
       title={user.name || "Your account"}
-      intro={<p>Signed in as {user.email}.</p>}
+      intro={
+        <p>
+          {notice === "welcome-back" &&
+            "Looks like you already had an account, so we signed you in. "}
+          Signed in as {user.email}.
+        </p>
+      }
     >
       <div className="grid max-w-[960px] gap-12 md:grid-cols-2">
         <ProfileForm
