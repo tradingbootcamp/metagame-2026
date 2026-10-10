@@ -64,3 +64,19 @@ export async function setBanned(
   revalidatePath("/admin/users");
   return {};
 }
+
+/** Hard delete: sessions, accounts, and the profile cascade with the user. */
+export async function removeUser(userId: string): Promise<Result> {
+  const error = await refused(userId);
+  if (error) return error;
+  try {
+    await getAuth().api.removeUser({
+      body: { userId },
+      headers: await headers(),
+    });
+  } catch (err) {
+    return { error: message(err) };
+  }
+  revalidatePath("/admin/users");
+  return {};
+}

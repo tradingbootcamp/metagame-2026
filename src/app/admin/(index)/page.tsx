@@ -19,7 +19,7 @@ const TOOLS = [
   {
     href: "/admin/users",
     name: "Users",
-    blurb: "Accounts: grant team access, ban and unban.",
+    blurb: "Accounts: grant team access, ban, delete.",
   },
   {
     href: "/admin/schema",
