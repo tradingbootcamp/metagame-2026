@@ -4,6 +4,7 @@ import SignIn from "./SignIn";
 import { GraderPicker } from "./SignInForms";
 import { gradeAccess } from "@/lib/grader-auth";
 import { identityName, type Identity } from "@/lib/grader-identity";
+import { matchLabel } from "@/lib/name-match";
 import InfoTip from "./InfoTip";
 import InlineSelect from "./InlineSelect";
 import {
@@ -302,13 +303,9 @@ export default async function GradePage(props: PageProps<"/grade">) {
     return <GraderPicker graders={await resolveGraderNames(submissions)} />;
   }
   if (access.via === "account" && identity.kind === "grader") {
-    // An account's name may differ from the Airtable spelling in case only;
-    // use the roster's so "Assigned to me" matches.
-    const name = identity.name.toLowerCase();
-    const match = (await resolveGraderNames(submissions)).find(
-      (r) => r.toLowerCase() === name,
-    );
-    if (match) identity = { kind: "grader", name: match };
+    // The Airtable roster's spelling, so "Assigned to me" matches.
+    const roster = await resolveGraderNames(submissions);
+    identity = { kind: "grader", name: matchLabel(identity.name, roster) };
   }
 
   // Null for "Someone else": no name to match rows against, so there's nothing

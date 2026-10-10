@@ -1,4 +1,4 @@
-import { adminSession, signOutAccount } from "./auth";
+import { accountLabel, adminSession, signOutAccount } from "./auth";
 import { createSessionAuth, type Session as BaseSession } from "./session-auth";
 import type { Identity } from "./grader-identity";
 
@@ -39,11 +39,14 @@ export const {
 export async function gradeAccess(): Promise<Access | null> {
   const account = await adminSession();
   if (account) {
-    // Code sign-in registers without a name; no name means "Someone else".
-    const name = account.user.name.trim();
+    const label = await accountLabel(account.user);
+    // Code sign-in registers without a name: email-only means "Someone else".
     return {
       via: "account",
-      identity: name ? { kind: "grader", name } : { kind: "anon" },
+      identity:
+        label === account.user.email
+          ? { kind: "anon" }
+          : { kind: "grader", name: label },
     };
   }
   const legacy = await readSession();

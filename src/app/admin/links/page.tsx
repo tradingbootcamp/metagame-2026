@@ -3,6 +3,7 @@ import SignIn from "../SignIn";
 import { NameForm } from "../SignInForms";
 import LinksTool from "./LinksTool";
 import { adminAccess } from "@/lib/admin-auth";
+import { matchLabel } from "@/lib/name-match";
 import { siteOriginFromHeaders } from "@/lib/site-origin";
 import { listTrackingLinks, loadLinkOptions } from "@/lib/tracking-links";
 
@@ -20,10 +21,9 @@ export default async function AdminLinksPage() {
     loadLinkOptions(),
     siteOriginFromHeaders(),
   ]);
-  // "brian" and "Brian" are one person: reuse the spelling already on their links.
-  const name = access.name.toLowerCase();
-  const me =
-    links.find((l) => l.createdBy.toLowerCase() === name)?.createdBy ??
-    access.name;
+  const me = matchLabel(
+    access.name,
+    links.map((l) => l.createdBy),
+  );
   return <LinksTool links={links} options={options} origin={origin} me={me} />;
 }

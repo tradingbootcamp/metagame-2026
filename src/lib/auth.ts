@@ -106,6 +106,22 @@ export const adminSession = cache(async (): Promise<Session | null> => {
   return user?.role === "admin" && !user.banned ? session : null;
 });
 
+/**
+ * What the account goes by: the profile's preferred name, else the account
+ * name, else the email (code sign-in registers without a name).
+ */
+export const accountLabel = cache(
+  async (user: Session["user"]): Promise<string> => {
+    const { profiles } = schema;
+    const [profile] = await getDb()
+      .select({ preferredName: profiles.preferredName })
+      .from(profiles)
+      .where(eq(profiles.userId, user.id))
+      .limit(1);
+    return profile?.preferredName?.trim() || user.name.trim() || user.email;
+  },
+);
+
 /** Signs the account out of the site. */
 export async function signOutAccount(): Promise<void> {
   await getAuth().api.signOut({ headers: await headers() });

@@ -1,4 +1,4 @@
-import { adminSession, signOutAccount } from "./auth";
+import { accountLabel, adminSession, signOutAccount } from "./auth";
 import { createSessionAuth, type Session as BaseSession } from "./session-auth";
 
 // Team-only tools under /admin. Access is a signed-in account with the admin
@@ -37,9 +37,8 @@ export const {
 export async function adminAccess(): Promise<Access | null> {
   const account = await adminSession();
   if (account) {
-    const { id, name, email } = account.user;
-    // Code sign-in registers without a name; the email is the label then.
-    return { via: "account", name: name.trim() || email, userId: id };
+    const name = await accountLabel(account.user);
+    return { via: "account", name, userId: account.user.id };
   }
   const legacy = await readSession();
   return legacy
