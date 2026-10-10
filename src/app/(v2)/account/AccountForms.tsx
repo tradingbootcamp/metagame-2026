@@ -46,8 +46,10 @@ export type ProfileValues = {
 };
 
 export function ProfileForm({
+  email,
   initialValues,
 }: {
+  email: string;
   initialValues: ProfileValues;
 }) {
   const [state, action, pending] = useActionState(updateProfile, initial);
@@ -67,6 +69,10 @@ export function ProfileForm({
           className={FIELD_LIGHT}
         />
       </label>
+      <div className="flex flex-col gap-1.5">
+        <span className={LABEL}>Email</span>
+        <p className="text-base text-ink">{email}</p>
+      </div>
       <label className="flex flex-col gap-1.5">
         <span className={LABEL}>Preferred name</span>
         <Input

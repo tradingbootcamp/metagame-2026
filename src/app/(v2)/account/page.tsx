@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { PasswordForm, ProfileForm, SignOutButton } from "./AccountForms";
 import { getDb, schema } from "@/db";
 import { currentSession, hasPassword } from "@/lib/auth";
-import ContentPage from "@/v2/components/ContentPage";
 
 export const metadata: Metadata = {
   title: "Account — Metagame 2026",
@@ -29,19 +28,16 @@ export default async function AccountPage({
   const passwordSet = await hasPassword(user.id);
 
   return (
-    <ContentPage
-      eyebrow="Account"
-      title={user.name || "Your account"}
-      intro={
-        <p>
-          {notice === "welcome-back" &&
-            "Looks like you already had an account, so we signed you in. "}
-          Signed in as {user.email}.
+    // Same measure and top clearance as ContentPage, without its title block.
+    <div className="mx-auto max-w-[1180px] px-8 pt-28 pb-20">
+      {notice === "welcome-back" && (
+        <p className="mb-8 text-base text-ink/70">
+          Looks like you already had an account, so we signed you in.
         </p>
-      }
-    >
+      )}
       <div className="grid max-w-[960px] gap-12 md:grid-cols-2">
         <ProfileForm
+          email={user.email}
           initialValues={{
             name: user.name,
             preferredName: profile?.preferredName ?? "",
@@ -56,6 +52,6 @@ export default async function AccountPage({
           <SignOutButton />
         </div>
       </div>
-    </ContentPage>
+    </div>
   );
 }
