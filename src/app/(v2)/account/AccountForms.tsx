@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import {
   savePassword,
   signOut,
@@ -137,6 +138,37 @@ const GREY_LINK =
 
 const passwordInitial: PasswordState = { mode: "password" };
 
+/** True only while a submit carrying this `intent` is in flight, not any submit of the form. */
+function useIntentPending(intent: string) {
+  const { pending, data } = useFormStatus();
+  return pending && data?.get("intent") === intent;
+}
+
+function IntentLink({
+  intent,
+  label,
+  busy,
+}: {
+  intent: string;
+  label: string;
+  busy?: string;
+}) {
+  const { pending } = useFormStatus();
+  const mine = useIntentPending(intent);
+  return (
+    <button
+      type="submit"
+      name="intent"
+      value={intent}
+      formNoValidate
+      disabled={pending}
+      className={GREY_LINK}
+    >
+      {mine && busy ? busy : label}
+    </button>
+  );
+}
+
 export function PasswordForm({
   hasPassword,
   email,
@@ -167,26 +199,15 @@ export function PasswordForm({
           </p>
           <PinInput name="code" disabled={pending} />
           <div className="flex gap-5">
-            <button
-              type="submit"
-              name="intent"
-              value="resend"
-              formNoValidate
-              disabled={pending}
-              className={GREY_LINK}
-            >
-              Send a new code
-            </button>
-            <button
-              type="submit"
-              name="intent"
-              value="cancel"
-              formNoValidate
-              disabled={pending}
-              className={GREY_LINK}
-            >
-              Use my current password instead
-            </button>
+            <IntentLink
+              intent="resend"
+              label="Send a new code"
+              busy="Sending…"
+            />
+            <IntentLink
+              intent="cancel"
+              label="Use my current password instead"
+            />
           </div>
         </div>
       )}
@@ -200,16 +221,11 @@ export function PasswordForm({
             required
             className={FIELD_LIGHT}
           />
-          <button
-            type="submit"
-            name="intent"
-            value="send"
-            formNoValidate
-            disabled={pending}
-            className={GREY_LINK}
-          >
-            {pending ? "Sending a code…" : "Forgot your current password?"}
-          </button>
+          <IntentLink
+            intent="send"
+            label="Forgot your current password?"
+            busy="Sending a code…"
+          />
         </div>
       )}
       <Input
@@ -238,13 +254,16 @@ export function PasswordForm({
         disabled={pending}
         className="self-start"
       >
-        {pending
-          ? "Saving…"
-          : byCode
-            ? "Set new password"
-            : hasPassword
-              ? "Change password"
-              : "Set password"}
+        <SaveLabel
+          intent={byCode ? "reset" : "change"}
+          label={
+            byCode
+              ? "Set new password"
+              : hasPassword
+                ? "Change password"
+                : "Set password"
+          }
+        />
       </Button>
       <p aria-live="polite" className="min-h-5 text-sm">
         {state.error ? (
@@ -257,6 +276,10 @@ export function PasswordForm({
       </p>
     </form>
   );
+}
+
+function SaveLabel({ intent, label }: { intent: string; label: string }) {
+  return useIntentPending(intent) ? "Saving…" : label;
 }
 
 export function SignOutButton() {
