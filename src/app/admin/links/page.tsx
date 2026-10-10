@@ -21,8 +21,9 @@ export default async function AdminLinksPage() {
     siteOriginFromHeaders(),
   ]);
   // "brian" and "Brian" are one person: reuse the spelling already on their links.
+  const name = access.name.toLowerCase();
   const me =
-    links.find((l) => l.createdBy.toLowerCase() === access.name.toLowerCase())
-      ?.createdBy ?? access.name;
+    links.find((l) => l.createdBy.toLowerCase() === name)?.createdBy ??
+    access.name;
   return <LinksTool links={links} options={options} origin={origin} me={me} />;
 }

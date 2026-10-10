@@ -47,15 +47,17 @@ export async function adminAccess(): Promise<Access | null> {
     : null;
 }
 
+export type NamedAccess = Access & { name: string };
+
 export const EXPIRED = "Your session expired. Reload.";
 
 /**
  * The one check for server actions: an admin with a name to put on what they
  * create, or null. Swap for `can()` when the permission system lands.
  */
-export async function requireAdmin(): Promise<Access | null> {
+export async function requireAdmin(): Promise<NamedAccess | null> {
   const access = await adminAccess();
-  return access?.name ? access : null;
+  return access?.name ? (access as NamedAccess) : null;
 }
 
 /** Ends whichever session let them in; an account signs out of the site. */
