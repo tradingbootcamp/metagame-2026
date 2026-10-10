@@ -33,7 +33,7 @@ ownership, and the schedule.
 
 Better Auth, built lazily by `getAuth()` in `src/lib/auth.ts` over the Drizzle
 client. `/login` signs in with an emailed six-digit code (which also creates the
-account); `/account` holds the profile and an optional password. Accounts only
+account; one email per address per 30s, resends reuse the live code); `/account` holds the profile and an optional password. Accounts only
 come from proving the email, so password sign-up is disabled and password
 sign-in is refused on unverified accounts. `currentSession()` is the server-side
 read; `src/proxy.ts` only redirects, so every protected page and action calls it

@@ -5,7 +5,7 @@ import { admin, emailOTP } from "better-auth/plugins";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { cache } from "react";
-import { getDb, schema } from "@/db";
+import { getDb, schema, type Db } from "@/db";
 import { env } from "@/env";
 import { sendSignInCodeEmail } from "@/lib/email";
 
@@ -48,8 +48,12 @@ function createAuth() {
     plugins: [
       emailOTP({
         sendVerificationOTP: async ({ email, otp, type }) => {
+          if (await sentRecently(db, email, otp)) return;
           await sendSignInCodeEmail({ to: email, code: otp, type });
         },
+        // Resends extend the same code rather than minting a new one, so a
+        // send skipped by the cooldown leaves the person with a working code.
+        resendStrategy: "reuse",
         expiresIn: 10 * 60,
         allowedAttempts: 5,
       }),
@@ -57,6 +61,34 @@ function createAuth() {
       nextCookies(),
     ],
   });
+}
+
+const SEND_COOLDOWN_MS = 30 * 1000;
+
+/**
+ * Whether this exact code was emailed to this address in the last 30s. The
+ * send buttons are server actions, outside Better Auth's per-IP rate limit,
+ * so this is what stops someone spamming codes at an inbox. A rotated code
+ * (attempts used up) always goes out.
+ */
+async function sentRecently(db: Db, email: string, otp: string) {
+  const { verification } = schema;
+  const identifier = `code-sent:${email}`;
+  const now = new Date();
+  const [last] = await db
+    .select({ value: verification.value, expiresAt: verification.expiresAt })
+    .from(verification)
+    .where(eq(verification.identifier, identifier))
+    .limit(1);
+  if (last && last.value === otp && last.expiresAt > now) return true;
+  await db.delete(verification).where(eq(verification.identifier, identifier));
+  await db.insert(verification).values({
+    id: crypto.randomUUID(),
+    identifier,
+    value: otp,
+    expiresAt: new Date(now.getTime() + SEND_COOLDOWN_MS),
+  });
+  return false;
 }
 
 export type Auth = ReturnType<typeof createAuth>;
