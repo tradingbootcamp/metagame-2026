@@ -6,11 +6,11 @@ import AuthForm from "@/v2/components/auth/AuthForm";
 import ContentPage from "@/v2/components/ContentPage";
 
 export const metadata: Metadata = {
-  title: "Sign in — Metagame 2026",
+  title: "Create an account — Metagame 2026",
   robots: { index: false },
 };
 
-export default async function LoginPage({
+export default async function SignupPage({
   searchParams,
 }: {
   searchParams: Promise<{ next?: string | string[] }>;
@@ -20,8 +20,17 @@ export default async function LoginPage({
   if (await currentSession()) redirect(target);
 
   return (
-    <ContentPage eyebrow="Account" title="Sign in">
-      <AuthForm mode="signin" next={target} />
+    <ContentPage
+      eyebrow="Account"
+      title="Create an account"
+      intro={
+        <p>
+          We&apos;ll email you a six-digit code to confirm your address. Then
+          you can choose a password, or keep signing in with codes.
+        </p>
+      }
+    >
+      <AuthForm mode="signup" next={target} />
     </ContentPage>
   );
 }

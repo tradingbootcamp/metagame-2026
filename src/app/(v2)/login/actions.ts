@@ -3,11 +3,13 @@
 import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getAuth } from "@/lib/auth";
+import { currentSession, getAuth, hasPassword } from "@/lib/auth";
 import { safeNextPath } from "@/lib/next-path";
 
-export type LoginState = {
-  step: "email" | "code";
+export type AuthMode = "signin" | "signup";
+
+export type AuthState = {
+  step: "email" | "code" | "password";
   email: string;
   error?: string;
   notice?: string;
@@ -24,23 +26,50 @@ async function sendCode(email: string): Promise<string | undefined> {
       body: { email, type: "sign-in" },
     });
   } catch (e) {
-    console.error("[login] sending code failed", e);
+    console.error("[auth] sending code failed", e);
     return "We couldn't send the email. Try again in a minute.";
   }
 }
 
-// One action for every step; `intent` says which button was pressed.
-export async function login(
-  prev: LoginState,
+// One action for both /login and /signup; `intent` says which button was
+// pressed and `mode` which page it came from.
+export async function authenticate(
+  prev: AuthState,
   formData: FormData,
-): Promise<LoginState> {
+): Promise<AuthState> {
   const intent = String(formData.get("intent") ?? "");
+  const mode: AuthMode =
+    formData.get("mode") === "signup" ? "signup" : "signin";
   const email = String(formData.get("email") ?? prev.email)
     .trim()
     .toLowerCase();
   const next = safeNextPath(formData.get("next"));
 
+  if (intent === "skip") redirect(next);
   if (intent === "restart") return { step: "email", email };
+
+  if (intent === "set-password") {
+    if (!(await currentSession())) {
+      return { step: "email", email, error: "Your session expired." };
+    }
+    const newPassword = String(formData.get("newPassword") ?? "");
+    if (newPassword.length < 8) {
+      return { step: "password", email, error: "Use at least 8 characters." };
+    }
+    if (newPassword !== String(formData.get("confirm") ?? "")) {
+      return { step: "password", email, error: "The passwords don't match." };
+    }
+    try {
+      await getAuth().api.setPassword({
+        body: { newPassword },
+        headers: await headers(),
+      });
+    } catch (e) {
+      if (apiCode(e) !== "PASSWORD_ALREADY_SET") throw e;
+    }
+    redirect(next);
+  }
+
   if (!EMAIL_RE.test(email)) {
     return { step: "email", email, error: "Enter a valid email address." };
   }
@@ -81,7 +110,7 @@ export async function login(
         step: "email",
         email,
         error:
-          "Wrong email or password. If you haven't set a password yet, sign in with a code.",
+          "Wrong email or password. No password yet? Sign in with a code instead.",
       };
     }
     redirect(next);
@@ -92,11 +121,13 @@ export async function login(
     if (otp.length !== 6) {
       return { step: "code", email, error: "Enter the 6-digit code." };
     }
+    let userId: string;
     try {
-      await getAuth().api.signInEmailOTP({
+      const result = await getAuth().api.signInEmailOTP({
         body: { email, otp },
         headers: await headers(),
       });
+      userId = result.user.id;
     } catch (e) {
       const code = apiCode(e);
       const error =
@@ -106,6 +137,11 @@ export async function login(
             ? "Too many tries. Send a new code."
             : "That code didn't match.";
       return { step: "code", email, error };
+    }
+    // Signing up: offer a password right away, unless this turned out to be an
+    // existing account that already has one.
+    if (mode === "signup" && !(await hasPassword(userId))) {
+      return { step: "password", email };
     }
     redirect(next);
   }
