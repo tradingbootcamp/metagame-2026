@@ -669,11 +669,14 @@ export default function Home() {
                 <p className={`${EYEBROW} text-sm text-ink/50`}>{label}</p>
                 <div className={`items-center ${row}`}>
                   {sponsors.map((s) => {
-                    const img = (
+                    const cls = `w-auto max-w-full object-contain ${s.logoClass ?? logo}`;
+                    const img = s.Logo ? (
+                      <s.Logo className={cls} />
+                    ) : (
                       <Image
                         src={s.logo}
                         alt={`${s.name} logo`}
-                        className={`w-auto max-w-full object-contain ${s.logoClass ?? logo}`}
+                        className={cls}
                       />
                     );
                     return s.url ? (

@@ -1,5 +1,6 @@
 import type { StaticImageData } from "next/image";
-import arbor from "../../../public/images/sponsors/arbor_logo.png";
+import type { ComponentType } from "react";
+import ArborLogo from "@/v2/components/ArborLogo";
 import dModel from "../../../public/images/sponsors/dmodel_logo.png";
 import franciscoSan from "../../../public/images/sponsors/francisco_san_logo.png";
 import manifund from "../../../public/images/sponsors/manifund_logo.png";
@@ -9,11 +10,14 @@ import rogueSignal from "../../../public/images/sponsors/rogue_signal/rogue_sign
 export type Sponsor = {
   name: string;
   url?: string;
-  logo: StaticImageData;
   // Height classes overriding the tier default, for logos whose aspect
   // ratio makes the shared height read too big or too small.
   logoClass?: string;
-};
+} & (
+  | { logo: StaticImageData; Logo?: never }
+  // A component drawing its own logo (sized by className), for animated ones.
+  | { logo?: never; Logo: ComponentType<{ className?: string }> }
+);
 
 // Sponsors by tier, each tier in display order. Logos shrink tier by tier
 // (Gold > Silver > Patron) on the home page's sponsors section.
@@ -34,7 +38,7 @@ export const PATRON_SPONSORS: Sponsor[] = [
   {
     name: "Arbor",
     url: "https://www.trading.camp",
-    logo: arbor,
+    Logo: ArborLogo,
     logoClass: "h-10 md:h-[52px]",
   },
   {

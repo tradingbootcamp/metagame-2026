@@ -872,3 +872,37 @@ button:not(:disabled) {
     translate: 0;
   }
 }
+
+/* Arbor sponsor logo (src/v2/components/ArborLogo): branches draw out and
+   nodes pop in tier by tier once the logo has scrolled into view. */
+.arbor-branch {
+  animation: arbor-branch linear forwards paused;
+}
+.arbor-node {
+  transform: scale(0);
+  animation: arbor-node ease-out forwards paused;
+}
+[data-grown] .arbor-branch,
+[data-grown] .arbor-node {
+  animation-play-state: running;
+}
+@keyframes arbor-branch {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes arbor-node {
+  to {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arbor-branch {
+    animation: none;
+    stroke-dashoffset: 0 !important;
+  }
+  .arbor-node {
+    animation: none;
+    transform: none;
+  }
+}
