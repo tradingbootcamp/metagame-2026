@@ -32,10 +32,10 @@ export const SILVER_SPONSORS: Sponsor[] = [
 
 export const PATRON_SPONSORS: Sponsor[] = [
   {
-    name: "Arbor Trading Bootcamp",
+    name: "Arbor",
     url: "https://www.trading.camp",
     logo: arbor,
-    logoClass: "h-12 md:h-16",
+    logoClass: "h-10 md:h-[52px]",
   },
   {
     name: "Francisco San",
