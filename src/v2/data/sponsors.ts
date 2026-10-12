@@ -1,5 +1,6 @@
 import type { StaticImageData } from "next/image";
 import arbor from "../../../public/images/sponsors/arbor_logo.png";
+import dModel from "../../../public/images/sponsors/dmodel_logo.png";
 import franciscoSan from "../../../public/images/sponsors/francisco_san_logo.png";
 import manifund from "../../../public/images/sponsors/manifund_logo.png";
 import outsideTheAsylum from "../../../public/images/sponsors/outside_the_asylum.png";
@@ -14,10 +15,19 @@ export type Sponsor = {
   logoClass?: string;
 };
 
-// Sponsors by tier, each tier in display order. Gold logos render larger
-// than Patron ones on the home page's sponsors section.
+// Sponsors by tier, each tier in display order. Logos shrink tier by tier
+// (Gold > Silver > Patron) on the home page's sponsors section.
 export const GOLD_SPONSORS: Sponsor[] = [
   { name: "Rogue Signal", url: "https://roguesignal.io", logo: rogueSignal },
+];
+
+export const SILVER_SPONSORS: Sponsor[] = [
+  {
+    name: "d_model",
+    url: "https://dmodel.ai",
+    logo: dModel,
+    logoClass: "h-14 md:h-20",
+  },
 ];
 
 export const PATRON_SPONSORS: Sponsor[] = [

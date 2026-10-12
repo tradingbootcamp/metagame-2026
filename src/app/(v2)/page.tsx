@@ -34,7 +34,11 @@ import {
 import TicketsPanel from "@/v2/components/tickets/TicketsPanel";
 import { Button } from "@/v2/components/ui/button";
 import { CAROUSEL } from "@/v2/data/carousel";
-import { GOLD_SPONSORS, PATRON_SPONSORS } from "@/v2/data/sponsors";
+import {
+  GOLD_SPONSORS,
+  PATRON_SPONSORS,
+  SILVER_SPONSORS,
+} from "@/v2/data/sponsors";
 import { SPEAKERS } from "@/v2/data/speakers";
 import SpeakerCtaCard from "@/v2/components/SpeakerCtaCard";
 import {
@@ -645,6 +649,12 @@ export default function Home() {
                 label: "Gold",
                 sponsors: GOLD_SPONSORS,
                 logo: "h-28 md:h-40",
+                row: "flex flex-wrap justify-center gap-x-12 gap-y-6",
+              },
+              {
+                label: "Silver",
+                sponsors: SILVER_SPONSORS,
+                logo: "h-16 md:h-24",
                 row: "flex flex-wrap justify-center gap-x-12 gap-y-6",
               },
               {
