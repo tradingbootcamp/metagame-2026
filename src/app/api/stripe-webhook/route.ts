@@ -20,6 +20,8 @@ import {
 } from "@/lib/tickets";
 import { mailingListOptOutUrl } from "@/lib/purchase-buyer";
 import { pickUtm } from "@/lib/utm";
+import { FAMILY_PACK } from "@/lib/family-pack";
+import { recordFamilyPack } from "@/lib/family-pack-purchase";
 
 // Signature verification needs the raw body + Node crypto — keep this off the edge.
 export const runtime = "nodejs";
@@ -146,6 +148,11 @@ export async function POST(request: Request) {
         "discounts.promotion_code",
       ],
     });
+
+    if (full.metadata?.tier === FAMILY_PACK.id) {
+      await recordFamilyPack(full, status);
+      return NextResponse.json({ received: true });
+    }
 
     const paymentIntent = expanded<Stripe.PaymentIntent>(full.payment_intent);
     const charge = paymentIntent

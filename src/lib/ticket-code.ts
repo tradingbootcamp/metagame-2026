@@ -7,8 +7,8 @@ const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
  * Deterministic 6-char ticket code derived from the payment id (Stripe
  * PaymentIntent or OpenNode charge id) — same input always yields the same
  * code, so webhook retries/upserts can never churn a code. Codes are
- * per-PURCHASE; quantity is locked to 1 on all payment links, so purchase ==
- * ticket. Revisit if adjustable quantity is ever enabled in Stripe.
+ * per-admission: single purchases use the payment id; group purchases append
+ * a stable ticket index so each attendee has a separate code.
  */
 export function ticketCode(paymentId: string): string {
   const hash = createHash("sha256").update(paymentId).digest();

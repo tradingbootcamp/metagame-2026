@@ -47,6 +47,8 @@ export type TicketConfirmationEmail = {
   /** Set when this purchase put the buyer on the mailing list: adds a line saying so, linking here to opt out. */
   mailingListOptOutUrl?: string;
   test?: boolean;
+  groupTickets?: { name: string; email: string; code: string }[];
+  idempotencyKey?: string;
 };
 
 const VENUE = "Lighthaven%2C+2740+Telegraph+Avenue%2C+Berkeley%2C+CA";
@@ -82,6 +84,7 @@ export function renderTicketConfirmationEmail(
     eventDay,
     mailingListOptOutUrl,
     test = false,
+    groupTickets,
   }: TicketConfirmationEmail,
   assetBase: string = SITE,
 ) {
@@ -98,7 +101,25 @@ export function renderTicketConfirmationEmail(
       : ""
   }`;
 
-  const subject = `${test ? "TEST: " : ""}Metagame 2026 Ticket`;
+  const subject = `${test ? "TEST: " : ""}Metagame 2026 ${groupTickets ? "Family & Friends Pack" : "Ticket"}`;
+  const escape = (value: string) =>
+    value.replace(
+      /[&<>"']/g,
+      (c) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[c]!,
+    );
+  const groupHtml = groupTickets
+    ? `<p>Your pack includes ${groupTickets.length} separate weekend admissions. Share each code with its named attendee; they may check in separately. For attendee changes or refund requests, reply to this email.</p><ul>${groupTickets.map((t) => `<li>${escape(t.name)} (${escape(t.email)}): <strong>${formatTicketCode(t.code)}</strong></li>`).join("")}</ul>`
+    : "";
+  const groupText = groupTickets
+    ? `Your pack includes ${groupTickets.length} separate weekend admissions. Share each code with its named attendee; they may check in separately. For attendee changes or refund requests, reply to this email.\n${groupTickets.map((t) => `${t.name} (${t.email}): ${formatTicketCode(t.code)}`).join("\n")}`
+    : "";
 
   // The shipped .ics is the full three-day event, so day passes get only the
   // Google link (scoped to their day).
@@ -142,6 +163,7 @@ export function renderTicketConfirmationEmail(
           <p><strong>Name:</strong> ${purchaserName || "—"}</p>
           <p><strong>Email:</strong> ${to}</p>
           <p><strong>Type:</strong> ${tierLabel}</p>
+          ${groupHtml}
           ${ticketCode ? `<p><strong>Ticket code:</strong> <span style="font-family: monospace; font-size: 15px;">${formatTicketCode(ticketCode)}</span></p>` : ""}
           <p><strong>Amount Paid:</strong> ${discounted ? `<span style="text-decoration: line-through; color: #999;">${full}</span> ` : ""}${paid}${discountCode && discounted ? ` (<strong>${discountCode}</strong>)` : ""}</p>
           ${receiptUrl ? `<p><a href="${receiptUrl}">View your receipt</a></p>` : ""}
@@ -185,6 +207,7 @@ Ticket Details
 - Name: ${purchaserName || "—"}
 - Email: ${to}
 - Type: ${tierLabel}
+${groupText}
 ${ticketCode ? `- Ticket code: ${formatTicketCode(ticketCode)}` : ""}
 - ${paidLine}
 ${receiptUrl ? `- Receipt: ${receiptUrl}` : ""}
@@ -214,15 +237,18 @@ export async function sendTicketConfirmationEmail(
   }
 
   const { subject, html, text } = renderTicketConfirmationEmail(data);
-  const { error } = await resend.emails.send({
-    from: FROM,
-    to: data.to,
-    bcc: [CORE],
-    replyTo: [TEAM],
-    subject,
-    html,
-    text,
-  });
+  const { error } = await resend.emails.send(
+    {
+      from: FROM,
+      to: data.to,
+      bcc: [CORE],
+      replyTo: [TEAM],
+      subject,
+      html,
+      text,
+    },
+    data.idempotencyKey ? { idempotencyKey: data.idempotencyKey } : undefined,
+  );
 
   if (error) throw new Error(`Resend send failed: ${error.message}`);
   return { sent: true as const };

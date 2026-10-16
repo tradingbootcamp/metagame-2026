@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { signupCreatedAt } from "@/lib/airtable";
 import { getStripe } from "@/lib/stripe";
+import { FAMILY_PACK } from "@/lib/family-pack";
 import ContentPage from "@/v2/components/ContentPage";
 import MailingListOptOut from "@/v2/components/tickets/MailingListOptOut";
 import { Button } from "@/v2/components/ui/button";
@@ -22,6 +23,7 @@ async function newlySubscribedBuyer(
   try {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     if (session.payment_status === "unpaid") return null;
+    if (session.metadata?.tier === FAMILY_PACK.id) return null;
     const email = session.customer_details?.email;
     if (!email) return null;
     // A row older than the checkout means they were on the list already (the
