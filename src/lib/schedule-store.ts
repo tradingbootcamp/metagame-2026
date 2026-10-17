@@ -101,15 +101,13 @@ export async function upsertSession(input: SessionInput): Promise<string> {
   } else {
     await db.batch([
       remove,
-      db
-        .insert(sessionHosts)
-        .values(
-          hosts.map((displayName, position) => ({
-            sessionId,
-            position,
-            displayName,
-          })),
-        ),
+      db.insert(sessionHosts).values(
+        hosts.map((displayName, position) => ({
+          sessionId,
+          position,
+          displayName,
+        })),
+      ),
     ]);
   }
   return sessionId;
@@ -439,15 +437,13 @@ export async function insertSample(): Promise<void> {
         status: s.status ?? "draft",
       })
       .returning({ id: sessions.id });
-    await db
-      .insert(sessionHosts)
-      .values(
-        s.hosts.map((displayName, position) => ({
-          sessionId: row.id,
-          position,
-          displayName,
-        })),
-      );
+    await db.insert(sessionHosts).values(
+      s.hosts.map((displayName, position) => ({
+        sessionId: row.id,
+        position,
+        displayName,
+      })),
+    );
   }
 }
 
