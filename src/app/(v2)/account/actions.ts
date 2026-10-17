@@ -6,7 +6,11 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb, schema } from "@/db";
 import { currentSession, getAuth, hasPassword } from "@/lib/auth";
-import { claimTicket, normalizeTicketCode } from "@/lib/ticket-store";
+import {
+  claimTicket,
+  normalizeTicketCode,
+  ticketLabel,
+} from "@/lib/ticket-store";
 
 export type FormState = { error?: string; saved?: boolean };
 
@@ -158,6 +162,8 @@ const CLAIM_ERRORS = {
   yours: "That ticket is already yours.",
   taken: "Someone else has already claimed that ticket.",
   unpaid: "That ticket's payment hasn't settled yet. Try again later.",
+  void: "That ticket's payment didn't go through, so it can't be claimed.",
+  limited: "Too many codes that didn't work. Try again in an hour.",
 };
 
 export async function claim(
@@ -170,7 +176,7 @@ export async function claim(
   const result = await claimTicket(session.user.id, code);
   if (!result.ok) return { error: CLAIM_ERRORS[result.reason] };
   revalidatePath("/account");
-  return { claimed: result.ticket.tier ?? "Your ticket" };
+  return { claimed: ticketLabel(result.ticket.tier) };
 }
 
 export async function signOut(): Promise<void> {

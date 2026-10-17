@@ -6,7 +6,7 @@ import TicketsPanel, { type TicketView } from "./TicketsPanel";
 import { getDb, schema } from "@/db";
 import { currentSession, hasPassword } from "@/lib/auth";
 import { formatTicketCode } from "@/lib/ticket-code";
-import { ticketsForUser } from "@/lib/ticket-store";
+import { emailKey, ticketLabel, ticketsForUser } from "@/lib/ticket-store";
 
 export const metadata: Metadata = {
   title: "Account — Metagame 2026",
@@ -23,27 +23,26 @@ export default async function AccountPage({
   if (!session) redirect("/login?next=/account");
   const { user } = session;
 
-  const [profile] = await getDb()
-    .select()
-    .from(schema.profiles)
-    .where(eq(schema.profiles.userId, user.id))
-    .limit(1);
-  const passwordSet = await hasPassword(user.id);
-  const tickets: TicketView[] = (await ticketsForUser(user.id, user.email)).map(
-    (t) => ({
-      id: t.paymentId,
-      tier: t.tier ?? "Metagame 2026 ticket",
-      status: t.status,
-      test: t.test,
-      mine: t.ownerUserId === user.id,
-      claimed: t.ownerUserId !== null,
-      // Only the buyer sees the code; it's what they hand to whoever attends.
-      code:
-        t.purchaserEmail === user.email.toLowerCase()
-          ? formatTicketCode(t.ticketCode)
-          : null,
-    }),
-  );
+  const email = emailKey(user.email);
+  const [[profile], passwordSet, rows] = await Promise.all([
+    getDb()
+      .select()
+      .from(schema.profiles)
+      .where(eq(schema.profiles.userId, user.id))
+      .limit(1),
+    hasPassword(user.id),
+    ticketsForUser(user.id, email),
+  ]);
+  const tickets: TicketView[] = rows.map((t) => ({
+    id: t.paymentId,
+    tier: ticketLabel(t.tier),
+    status: t.status,
+    test: t.test,
+    mine: t.ownerUserId === user.id,
+    claimed: t.ownerUserId !== null,
+    // Only the buyer sees the code; it's what they hand to whoever attends.
+    code: t.purchaserEmail === email ? formatTicketCode(t.ticketCode) : null,
+  }));
 
   return (
     // Same measure and top clearance as ContentPage, without its title block.

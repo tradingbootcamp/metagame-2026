@@ -5,11 +5,12 @@ import { claim, type ClaimState } from "./actions";
 import { Button } from "@/v2/components/ui/button";
 import { Input } from "@/v2/components/ui/input";
 import { FIELD_LIGHT } from "@/v2/components/styles";
+import type { TicketRow } from "@/lib/ticket-store";
 
 export type TicketView = {
   id: string;
   tier: string;
-  status: "pending" | "paid" | "failed" | "underpaid";
+  status: TicketRow["status"];
   test: boolean;
   /** Claimed by the signed-in user. */
   mine: boolean;
@@ -78,7 +79,6 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
             name="code"
             placeholder="A2C-4EF"
             autoComplete="off"
-            maxLength={8}
             required
             className={`${FIELD_LIGHT} font-mono uppercase`}
           />

@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+import { and, count, desc, eq, isNull, lte, or } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { env } from "@/env";
 import type { PurchaseRecord, PurchaseStatus } from "@/lib/airtable";
@@ -7,11 +7,20 @@ import { ticketCode } from "@/lib/ticket-code";
 type Ticket = typeof schema.tickets.$inferInsert;
 export type TicketRow = typeof schema.tickets.$inferSelect;
 
-const { tickets } = schema;
+const { tickets, verification } = schema;
 
 // Sandbox purchases land in the same table; production never shows them.
+// NEXT_PUBLIC_ because deploys go out prebuilt (see src/lib/tickets.ts).
 const visible =
-  process.env.VERCEL_ENV === "production" ? eq(tickets.test, false) : undefined;
+  process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
+    ? eq(tickets.test, false)
+    : undefined;
+
+/** How purchaser emails are stored and matched. */
+export const emailKey = (email: string) => email.trim().toLowerCase();
+
+export const ticketLabel = (tier: string | null) =>
+  tier ?? "Metagame 2026 ticket";
 
 const STATUS: Record<PurchaseStatus, Ticket["status"]> = {
   Pending: "pending",
@@ -31,7 +40,7 @@ export function ticketFromPurchase(purchase: PurchaseRecord): Ticket {
     tier: purchase.ticketType ?? null,
     amountCents:
       purchase.amount != null ? Math.round(purchase.amount * 100) : null,
-    purchaserEmail: purchase.customerEmail?.trim().toLowerCase() || null,
+    purchaserEmail: emailKey(purchase.customerEmail ?? "") || null,
     purchaserName: purchase.preferredName ?? purchase.customerName ?? null,
   };
 }
@@ -85,28 +94,73 @@ export async function ticketsForUser(
         visible,
         or(
           eq(tickets.ownerUserId, userId),
-          eq(tickets.purchaserEmail, email.trim().toLowerCase()),
+          eq(tickets.purchaserEmail, emailKey(email)),
         ),
       ),
     )
     .orderBy(desc(tickets.createdAt));
 }
 
-/** Typed codes: case, dashes and spaces don't matter; I/L read as 1, O as 0. */
+/**
+ * Typed codes: case, dashes and spaces don't matter; I/L read as 1, O as 0,
+ * U as V. The alphabet has none of I/L/O/U.
+ */
 export function normalizeTicketCode(input: string): string {
   return input
     .toUpperCase()
     .replace(/[^0-9A-Z]/g, "")
     .replace(/[IL]/g, "1")
-    .replace(/O/g, "0");
+    .replace(/O/g, "0")
+    .replace(/U/g, "V");
 }
 
 export type ClaimResult =
   | { ok: true; ticket: TicketRow }
-  | { ok: false; reason: "unknown" | "yours" | "taken" | "unpaid" };
+  | {
+      ok: false;
+      reason: "unknown" | "yours" | "taken" | "unpaid" | "void" | "limited";
+    };
+
+// Codes are short enough to guess by script, so failed claims are capped per
+// account. Kept in Better Auth's verification table, like sentRecently().
+const CLAIM_FAILURE_LIMIT = 25;
+const CLAIM_FAILURE_WINDOW_MS = 60 * 60 * 1000;
+
+export async function claimTicket(
+  userId: string,
+  code: string,
+): Promise<ClaimResult> {
+  const db = getDb();
+  const identifier = `claim-failed:${userId}`;
+  const now = new Date();
+  await db
+    .delete(verification)
+    .where(
+      and(
+        eq(verification.identifier, identifier),
+        lte(verification.expiresAt, now),
+      ),
+    );
+  const [{ failures }] = await db
+    .select({ failures: count() })
+    .from(verification)
+    .where(eq(verification.identifier, identifier));
+  if (failures >= CLAIM_FAILURE_LIMIT) return { ok: false, reason: "limited" };
+
+  const result = await attemptClaim(userId, code);
+  if (!result.ok && result.reason !== "yours") {
+    await db.insert(verification).values({
+      id: crypto.randomUUID(),
+      identifier,
+      value: code,
+      expiresAt: new Date(now.getTime() + CLAIM_FAILURE_WINDOW_MS),
+    });
+  }
+  return result;
+}
 
 // One conditional UPDATE, so two people entering the same code can't both win.
-export async function claimTicket(
+async function attemptClaim(
   userId: string,
   code: string,
 ): Promise<ClaimResult> {
@@ -133,5 +187,8 @@ export async function claimTicket(
   if (!existing) return { ok: false, reason: "unknown" };
   if (existing.ownerUserId === userId) return { ok: false, reason: "yours" };
   if (existing.ownerUserId) return { ok: false, reason: "taken" };
-  return { ok: false, reason: "unpaid" };
+  return {
+    ok: false,
+    reason: existing.status === "pending" ? "unpaid" : "void",
+  };
 }

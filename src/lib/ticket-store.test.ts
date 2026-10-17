@@ -62,6 +62,6 @@ describe("ticketFromPurchase", () => {
 describe("normalizeTicketCode", () => {
   it("accepts the display form and common misreads", () => {
     expect(normalizeTicketCode(" a2c-4ef ")).toBe("A2C4EF");
-    expect(normalizeTicketCode("i1l-o0u")).toBe("11100U");
+    expect(normalizeTicketCode("i1l-o0u")).toBe("11100V");
   });
 });
