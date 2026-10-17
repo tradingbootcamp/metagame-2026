@@ -26,15 +26,22 @@
     {
       "idx": 3,
       "version": "7",
-      "when": 1792213907124,
-      "tag": "0003_schedule",
+      "when": 1791650961881,
+      "tag": "0003_fat_golden_guardian",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "7",
+      "when": 1792213907124,
+      "tag": "0004_schedule_tighten",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
       "when": 1792213907494,
-      "tag": "0004_rsvp_capacity",
+      "tag": "0005_rsvp_capacity",
       "breakpoints": true
     }
   ]

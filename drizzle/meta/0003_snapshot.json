@@ -1,5 +1,5 @@
 {
-  "id": "7432fdeb-a8bc-4dd5-96fb-74be16fe01ff",
+  "id": "8d2c2714-72f7-4fec-b3b8-2401816873f2",
   "prevId": "13c4e38f-2c64-465b-92a9-433f3652b422",
   "version": "7",
   "dialect": "postgresql",
@@ -713,12 +713,6 @@
           "notNull": true,
           "default": false
         },
-        "airtable_record_id": {
-          "name": "airtable_record_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -737,20 +731,9 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "locations_airtableRecordId_unique": {
-          "name": "locations_airtableRecordId_unique",
-          "nullsNotDistinct": false,
-          "columns": ["airtable_record_id"]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {
-        "locations_capacity_positive": {
-          "name": "locations_capacity_positive",
-          "value": "\"locations\".\"capacity\" > 0"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.rsvps": {
@@ -842,12 +825,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "user_id": {
           "name": "user_id",
           "type": "text",
@@ -899,9 +876,9 @@
         }
       },
       "compositePrimaryKeys": {
-        "session_hosts_session_id_position_pk": {
-          "name": "session_hosts_session_id_position_pk",
-          "columns": ["session_id", "position"]
+        "session_hosts_session_id_display_name_pk": {
+          "name": "session_hosts_session_id_display_name_pk",
+          "columns": ["session_id", "display_name"]
         }
       },
       "uniqueConstraints": {},
@@ -1032,21 +1009,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "sessions_location_id_idx": {
-          "name": "sessions_location_id_idx",
-          "columns": [
-            {
-              "expression": "location_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -1074,24 +1036,7 @@
         }
       },
       "policies": {},
-      "checkConstraints": {
-        "sessions_ends_after_start": {
-          "name": "sessions_ends_after_start",
-          "value": "\"sessions\".\"ends_at\" > \"sessions\".\"starts_at\""
-        },
-        "sessions_published_timed": {
-          "name": "sessions_published_timed",
-          "value": "\"sessions\".\"status\" = 'draft' OR (\"sessions\".\"starts_at\" IS NOT NULL AND \"sessions\".\"ends_at\" IS NOT NULL)"
-        },
-        "sessions_max_capacity_positive": {
-          "name": "sessions_max_capacity_positive",
-          "value": "\"sessions\".\"max_capacity\" > 0"
-        },
-        "sessions_min_within_max": {
-          "name": "sessions_min_within_max",
-          "value": "\"sessions\".\"min_capacity\" >= 0 AND \"sessions\".\"min_capacity\" <= \"sessions\".\"max_capacity\""
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     }
   },

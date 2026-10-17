@@ -16,11 +16,8 @@ CREATE TABLE "locations" (
 	"campus_location" text,
 	"display_order" integer DEFAULT 100 NOT NULL,
 	"show_in_schedule" boolean DEFAULT false NOT NULL,
-	"airtable_record_id" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "locations_airtableRecordId_unique" UNIQUE("airtable_record_id"),
-	CONSTRAINT "locations_capacity_positive" CHECK ("locations"."capacity" > 0)
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "rsvps" (
@@ -33,10 +30,9 @@ CREATE TABLE "rsvps" (
 --> statement-breakpoint
 CREATE TABLE "session_hosts" (
 	"session_id" uuid NOT NULL,
-	"position" integer NOT NULL,
 	"user_id" text,
 	"display_name" text NOT NULL,
-	CONSTRAINT "session_hosts_session_id_position_pk" PRIMARY KEY("session_id","position")
+	CONSTRAINT "session_hosts_session_id_display_name_pk" PRIMARY KEY("session_id","display_name")
 );
 --> statement-breakpoint
 CREATE TABLE "sessions" (
@@ -57,11 +53,7 @@ CREATE TABLE "sessions" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "sessions_slug_unique" UNIQUE("slug"),
-	CONSTRAINT "sessions_airtableRfpRecordId_unique" UNIQUE("airtable_rfp_record_id"),
-	CONSTRAINT "sessions_ends_after_start" CHECK ("sessions"."ends_at" > "sessions"."starts_at"),
-	CONSTRAINT "sessions_published_timed" CHECK ("sessions"."status" = 'draft' OR ("sessions"."starts_at" IS NOT NULL AND "sessions"."ends_at" IS NOT NULL)),
-	CONSTRAINT "sessions_max_capacity_positive" CHECK ("sessions"."max_capacity" > 0),
-	CONSTRAINT "sessions_min_within_max" CHECK ("sessions"."min_capacity" >= 0 AND "sessions"."min_capacity" <= "sessions"."max_capacity")
+	CONSTRAINT "sessions_airtableRfpRecordId_unique" UNIQUE("airtable_rfp_record_id")
 );
 --> statement-breakpoint
 ALTER TABLE "bookmarks" ADD CONSTRAINT "bookmarks_session_id_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -74,5 +66,4 @@ ALTER TABLE "sessions" ADD CONSTRAINT "sessions_location_id_locations_id_fk" FOR
 CREATE INDEX "bookmarks_user_id_idx" ON "bookmarks" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "rsvps_user_id_idx" ON "rsvps" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "session_hosts_user_id_idx" ON "session_hosts" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "sessions_starts_at_idx" ON "sessions" USING btree ("starts_at");--> statement-breakpoint
-CREATE INDEX "sessions_location_id_idx" ON "sessions" USING btree ("location_id");
+CREATE INDEX "sessions_starts_at_idx" ON "sessions" USING btree ("starts_at");
