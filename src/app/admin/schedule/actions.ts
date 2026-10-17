@@ -1,0 +1,204 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { EXPIRED, requireAdmin } from "@/lib/admin-auth";
+import {
+  AGES,
+  CATEGORIES,
+  STATUSES,
+  fromPacificWall,
+  slugify,
+  type Ages,
+  type Category,
+  type Status,
+} from "@/lib/schedule";
+import {
+  explainDbError,
+  insertSample,
+  removeLocation,
+  removeSample,
+  removeSession,
+  upsertLocation,
+  upsertSession,
+} from "@/lib/schedule-store";
+
+export type FormState = {
+  ok?: boolean;
+  error?: string;
+  /** Field the error belongs to, when it's one field's fault. */
+  field?: string;
+};
+
+const PATH = "/admin/schedule";
+
+const str = (formData: FormData, key: string) =>
+  String(formData.get(key) ?? "").trim();
+
+const optional = (formData: FormData, key: string) =>
+  str(formData, key) || null;
+
+function oneOf<T extends string>(
+  value: string,
+  choices: readonly T[],
+): T | null {
+  return (choices as readonly string[]).includes(value) ? (value as T) : null;
+}
+
+/** A whole number from a text field, null when blank, NaN when not a number. */
+function int(formData: FormData, key: string): number | null {
+  const raw = str(formData, key);
+  if (!raw) return null;
+  return /^-?\d+$/.test(raw) ? Number(raw) : Number.NaN;
+}
+
+export async function saveSession(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!(await requireAdmin())) return { error: EXPIRED };
+
+  const title = str(formData, "title");
+  if (!title) return { field: "title", error: "Required." };
+  const slug = slugify(str(formData, "slug") || title);
+  if (!slug) return { field: "slug", error: "Needs a letter or digit." };
+
+  const startRaw = str(formData, "startsAt");
+  const endRaw = str(formData, "endsAt");
+  const startsAt = startRaw ? fromPacificWall(startRaw) : null;
+  const endsAt = endRaw ? fromPacificWall(endRaw) : null;
+  if (startRaw && !startsAt) return { field: "startsAt", error: "Not a time." };
+  if (endRaw && !endsAt) return { field: "endsAt", error: "Not a time." };
+  if (Boolean(startsAt) !== Boolean(endsAt)) {
+    return {
+      field: startsAt ? "endsAt" : "startsAt",
+      error: "Set both times, or neither for an unplaced draft.",
+    };
+  }
+  if (startsAt && endsAt && endsAt <= startsAt) {
+    return { field: "endsAt", error: "End must be after start." };
+  }
+
+  const maxCapacity = int(formData, "maxCapacity");
+  const minCapacity = int(formData, "minCapacity");
+  if (Number.isNaN(maxCapacity))
+    return { field: "maxCapacity", error: "Whole number." };
+  if (Number.isNaN(minCapacity))
+    return { field: "minCapacity", error: "Whole number." };
+
+  const status: Status = oneOf(str(formData, "status"), STATUSES) ?? "draft";
+  if (status === "published" && !startsAt) {
+    return {
+      field: "status",
+      error: "A published session needs a start and end time.",
+    };
+  }
+
+  const hosts = str(formData, "hosts")
+    .split(/\r?\n|,/)
+    .map((h) => h.trim())
+    .filter(Boolean);
+
+  try {
+    await upsertSession({
+      id: str(formData, "id") || undefined,
+      slug,
+      title,
+      description: optional(formData, "description"),
+      category: oneOf<Category>(str(formData, "category"), CATEGORIES),
+      startsAt,
+      endsAt,
+      locationId: optional(formData, "locationId"),
+      maxCapacity,
+      minCapacity,
+      ages: oneOf<Ages>(str(formData, "ages"), AGES),
+      needs: optional(formData, "needs"),
+      status,
+      hosts,
+    });
+  } catch (err) {
+    return explainDbError(err);
+  }
+  revalidatePath(PATH);
+  return { ok: true };
+}
+
+export async function deleteSession(id: string): Promise<FormState> {
+  if (!(await requireAdmin())) return { error: EXPIRED };
+  try {
+    await removeSession(id);
+  } catch (err) {
+    return explainDbError(err);
+  }
+  revalidatePath(PATH);
+  return { ok: true };
+}
+
+export async function saveLocation(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!(await requireAdmin())) return { error: EXPIRED };
+
+  const name = str(formData, "name");
+  if (!name) return { field: "name", error: "Required." };
+  const capacity = int(formData, "capacity");
+  if (Number.isNaN(capacity))
+    return { field: "capacity", error: "Whole number." };
+  const displayOrder = int(formData, "displayOrder") ?? 100;
+  if (Number.isNaN(displayOrder))
+    return { field: "displayOrder", error: "Whole number." };
+
+  try {
+    await upsertLocation({
+      id: str(formData, "id") || undefined,
+      name,
+      capacity,
+      campusLocation: optional(formData, "campusLocation"),
+      displayOrder,
+      showInSchedule: formData.get("showInSchedule") === "on",
+    });
+  } catch (err) {
+    return explainDbError(err);
+  }
+  revalidatePath(PATH);
+  return { ok: true };
+}
+
+export async function deleteLocation(id: string): Promise<FormState> {
+  if (!(await requireAdmin())) return { error: EXPIRED };
+  try {
+    await removeLocation(id);
+  } catch (err) {
+    return explainDbError(err);
+  }
+  revalidatePath(PATH);
+  return { ok: true };
+}
+
+// Sample data is for a local database only. Previews share the production
+// database until META-3156, so this refuses outside `next dev`.
+const sampleAllowed = process.env.NODE_ENV === "development";
+
+export async function addSample(): Promise<FormState> {
+  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!sampleAllowed) return { error: "Sample data is dev-only." };
+  try {
+    await insertSample();
+  } catch (err) {
+    return explainDbError(err);
+  }
+  revalidatePath(PATH);
+  return { ok: true };
+}
+
+export async function clearSample(): Promise<FormState> {
+  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!sampleAllowed) return { error: "Sample data is dev-only." };
+  try {
+    await removeSample();
+  } catch (err) {
+    return explainDbError(err);
+  }
+  revalidatePath(PATH);
+  return { ok: true };
+}

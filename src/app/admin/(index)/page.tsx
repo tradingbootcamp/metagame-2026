@@ -22,6 +22,11 @@ const TOOLS = [
     blurb: "Accounts: grant team access, ban, delete.",
   },
   {
+    href: "/admin/schedule",
+    name: "Schedule",
+    blurb: "Rooms and sessions for the 2026 program, on a day-by-room grid.",
+  },
+  {
     href: "/admin/schema",
     name: "Database schema",
     blurb: "ER diagram and column-by-column reference for the Postgres schema.",

@@ -52,6 +52,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
   ],
   Attendees: ["profiles"],
   Tickets: ["tickets"],
+  Schedule: ["locations", "sessions", "session_hosts", "rsvps", "bookmarks"],
 };
 
 // What each table is for, in one line. Reviewed alongside the columns.
@@ -67,6 +68,15 @@ const TABLE_NOTES: Record<string, string> = {
     "Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field.",
   tickets:
     "One row per purchase, keyed by the payment id the webhooks upsert on. Airtable keeps the finance detail; this holds what admission needs. owner_user_id is set only by claiming the ticket code, never by email match.",
+  locations:
+    "Rooms and spaces sessions happen in. display_order and show_in_schedule drive the schedule columns; airtable_record_id ties a room to its Lighthaven Spaces row.",
+  sessions:
+    "One row per schedule slot. Drafts can be unplaced (null times, no location); only published rows show. airtable_rfp_record_id ties a session to the accepted RFP it was synced from.",
+  session_hosts:
+    "Who runs a session, one row per host in billing order (position 0 is the lead), replacing 2025's host_1/2/3 columns. user_id links the host's account when they have one; display_name is what the schedule shows regardless.",
+  rsvps:
+    "Going or waitlisted, one row per user per session. The rsvps_capacity trigger refuses a going row once the session's max_capacity is reached (null = unlimited).",
+  bookmarks: "Sessions a user starred. One row per pair.",
 };
 
 function columnName(column: PgColumn): string {
