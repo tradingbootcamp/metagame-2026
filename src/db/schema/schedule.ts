@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   pgEnum,
@@ -21,15 +23,21 @@ export const sessionAges = pgEnum("session_ages", ["all", "kids", "adults"]);
 export const sessionStatus = pgEnum("session_status", ["draft", "published"]);
 export const rsvpStatus = pgEnum("rsvp_status", ["going", "waitlist"]);
 
-export const locations = pgTable("locations", {
-  id: uuid().primaryKey().defaultRandom(),
-  name: text().notNull(),
-  capacity: integer(),
-  campusLocation: text(),
-  displayOrder: integer().notNull().default(100),
-  showInSchedule: boolean().notNull().default(false),
-  ...timestamps,
-});
+export const locations = pgTable(
+  "locations",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    name: text().notNull(),
+    capacity: integer(),
+    campusLocation: text(),
+    displayOrder: integer().notNull().default(100),
+    showInSchedule: boolean().notNull().default(false),
+    // The Lighthaven Spaces row this was synced from; null for hand-made rooms.
+    airtableRecordId: text().unique(),
+    ...timestamps,
+  },
+  (t) => [check("locations_capacity_positive", sql`${t.capacity} > 0`)],
+);
 
 export const sessions = pgTable(
   "sessions",
@@ -52,7 +60,20 @@ export const sessions = pgTable(
     airtableRfpRecordId: text().unique(),
     ...timestamps,
   },
-  (t) => [index("sessions_starts_at_idx").on(t.startsAt)],
+  (t) => [
+    index("sessions_starts_at_idx").on(t.startsAt),
+    index("sessions_location_id_idx").on(t.locationId),
+    check("sessions_ends_after_start", sql`${t.endsAt} > ${t.startsAt}`),
+    check(
+      "sessions_published_timed",
+      sql`${t.status} = 'draft' OR (${t.startsAt} IS NOT NULL AND ${t.endsAt} IS NOT NULL)`,
+    ),
+    check("sessions_max_capacity_positive", sql`${t.maxCapacity} > 0`),
+    check(
+      "sessions_min_within_max",
+      sql`${t.minCapacity} >= 0 AND ${t.minCapacity} <= ${t.maxCapacity}`,
+    ),
+  ],
 );
 
 export const sessionHosts = pgTable(
@@ -61,12 +82,14 @@ export const sessionHosts = pgTable(
     sessionId: uuid()
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
+    // 0 is the lead host, then co-hosts in billing order.
+    position: integer().notNull(),
     // Linked once the host has an account; the name shows either way.
     userId: text().references(() => user.id, { onDelete: "set null" }),
     displayName: text().notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.sessionId, t.displayName] }),
+    primaryKey({ columns: [t.sessionId, t.position] }),
     index("session_hosts_user_id_idx").on(t.userId),
   ],
 );
