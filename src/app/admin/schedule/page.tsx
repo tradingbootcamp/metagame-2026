@@ -1,0 +1,21 @@
+import { connection } from "next/server";
+import SignIn from "../SignIn";
+import { NameForm } from "../SignInForms";
+import ScheduleTool from "./ScheduleTool";
+import { adminAccess } from "@/lib/admin-auth";
+import { loadSchedule } from "@/lib/schedule-store";
+
+export default async function AdminSchedulePage() {
+  // Per-request on every branch, or the sign-in branch gets baked in as
+  // static at build time.
+  await connection();
+
+  const access = await adminAccess();
+  if (!access) return <SignIn next="/admin/schedule" />;
+  if (!access.name) return <NameForm />;
+
+  const schedule = await loadSchedule();
+  // Mirrors the guard in actions.ts: sample data only against a local database.
+  const canSeed = process.env.NODE_ENV === "development";
+  return <ScheduleTool {...schedule} canSeed={canSeed} />;
+}
