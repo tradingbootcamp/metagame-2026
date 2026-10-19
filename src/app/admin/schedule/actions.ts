@@ -148,6 +148,10 @@ export async function saveLocation(
   if (Number.isNaN(displayOrder))
     return { field: "displayOrder", error: "Whole number." };
 
+  const thumbnail = optional(formData, "thumbnail");
+  if (thumbnail && !thumbnail.startsWith("data:image/"))
+    return { field: "thumbnail", error: "Not an image." };
+
   try {
     await upsertLocation({
       id: str(formData, "id") || undefined,
@@ -156,6 +160,7 @@ export async function saveLocation(
       campusLocation: optional(formData, "campusLocation"),
       displayOrder,
       showInSchedule: formData.get("showInSchedule") === "on",
+      thumbnail,
     });
   } catch (err) {
     return explainDbError(err);

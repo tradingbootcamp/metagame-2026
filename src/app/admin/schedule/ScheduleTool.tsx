@@ -236,7 +236,19 @@ export default function ScheduleTool({
               {locations.map((l) => (
                 <tr key={l.id}>
                   <td className="px-4 py-2 tabular-nums">{l.displayOrder}</td>
-                  <td className="px-4 py-2 font-semibold">{l.name}</td>
+                  <td className="px-4 py-2 font-semibold">
+                    <span className="flex items-center gap-2">
+                      {l.thumbnail && (
+                        // eslint-disable-next-line @next/next/no-img-element -- data URL
+                        <img
+                          src={l.thumbnail}
+                          alt=""
+                          className="h-8 w-10 rounded object-cover"
+                        />
+                      )}
+                      {l.name}
+                    </span>
+                  </td>
                   <td className="px-4 py-2">{l.campusLocation ?? "—"}</td>
                   <td className="px-4 py-2 tabular-nums">
                     {l.capacity ?? "—"}

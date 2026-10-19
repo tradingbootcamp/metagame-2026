@@ -18,6 +18,8 @@ export type ScheduleLocation = {
   campusLocation: string | null;
   displayOrder: number;
   showInSchedule: boolean;
+  /** Data URL, already thumbnail-sized. */
+  thumbnail: string | null;
 };
 
 export type ScheduleSession = {

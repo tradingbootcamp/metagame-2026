@@ -44,6 +44,7 @@ export async function loadSchedule(): Promise<Schedule> {
       campusLocation: l.campusLocation,
       displayOrder: l.displayOrder,
       showInSchedule: l.showInSchedule,
+      thumbnail: l.thumbnail,
     })),
     sessions: sess.map((s) => ({
       id: s.id,
@@ -165,6 +166,10 @@ const CONSTRAINT_MESSAGES: Record<string, { field?: string; error: string }> = {
   sessions_min_within_max: {
     field: "minCapacity",
     error: "Min capacity must be between 0 and the max.",
+  },
+  locations_thumbnail_small_image: {
+    field: "thumbnail",
+    error: "That image is too large; try a smaller one.",
   },
   locations_capacity_positive: {
     field: "capacity",

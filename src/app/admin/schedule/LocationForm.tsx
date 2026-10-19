@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { XIcon } from "lucide-react";
 import { deleteLocation, saveLocation, type FormState } from "./actions";
 import { buttonClass, fieldClass, smallButtonClass } from "../ui";
@@ -33,6 +39,110 @@ function Field({
   );
 }
 
+const THUMB_PX = 320;
+
+/** Shrinks an image file to a THUMB_PX-bounded data URL. */
+async function toThumbnail(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, THUMB_PX / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const webp = canvas.toDataURL("image/webp", 0.8);
+  // Browsers that can't encode webp hand back a PNG instead.
+  return webp.startsWith("data:image/webp")
+    ? webp
+    : canvas.toDataURL("image/jpeg", 0.8);
+}
+
+function ThumbnailPicker({
+  value,
+  onChange,
+  error,
+}: {
+  value: string | null;
+  onChange: (v: string | null) => void;
+  error: string | null;
+}) {
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const take = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setProblem("That isn’t an image.");
+      return;
+    }
+    try {
+      onChange(await toThumbnail(file));
+      setProblem(null);
+    } catch {
+      setProblem("Couldn’t read that image.");
+    }
+  };
+
+  return (
+    <div className="text-sm">
+      <span className="mb-1 block font-medium text-ink/80">Thumbnail</span>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            void take(e.dataTransfer.files[0]);
+          }}
+          className={`flex h-24 w-32 shrink-0 items-center justify-center overflow-hidden rounded-md border border-dashed text-center text-xs text-ink/50 transition-colors ${
+            dragging
+              ? "border-navy bg-navy/5"
+              : "border-line hover:border-ink/40"
+          }`}
+        >
+          {value ? (
+            // eslint-disable-next-line @next/next/no-img-element -- data URL
+            <img src={value} alt="" className="h-full w-full object-cover" />
+          ) : (
+            "Drop an image or click to choose"
+          )}
+        </button>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className={smallButtonClass}
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      <input
+        ref={fileInput}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          void take(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
+      {(problem ?? error) && (
+        <span className="mt-1 block text-xs text-meeple">
+          {problem ?? error}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function LocationForm({
   location,
   onClose,
@@ -47,6 +157,7 @@ export default function LocationForm({
   const [deleting, startDelete] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [thumbnail, setThumbnail] = useState(location?.thumbnail ?? null);
 
   useEffect(() => {
     if (state.ok) onClose();
@@ -116,6 +227,13 @@ export default function LocationForm({
               />
             </Field>
           </div>
+
+          <ThumbnailPicker
+            value={thumbnail}
+            onChange={setThumbnail}
+            error={state.field === "thumbnail" ? (state.error ?? null) : null}
+          />
+          <input type="hidden" name="thumbnail" value={thumbnail ?? ""} />
 
           <label className="flex items-center gap-2 text-sm">
             <input

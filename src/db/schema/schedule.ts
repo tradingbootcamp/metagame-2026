@@ -32,11 +32,19 @@ export const locations = pgTable(
     campusLocation: text(),
     displayOrder: integer().notNull().default(100),
     showInSchedule: boolean().notNull().default(false),
+    // A small image as a data URL, downscaled in the browser before upload.
+    thumbnail: text(),
     // The Lighthaven Spaces row this was synced from; null for hand-made rooms.
     airtableRecordId: text().unique(),
     ...timestamps,
   },
-  (t) => [check("locations_capacity_positive", sql`${t.capacity} > 0`)],
+  (t) => [
+    check("locations_capacity_positive", sql`${t.capacity} > 0`),
+    check(
+      "locations_thumbnail_small_image",
+      sql`${t.thumbnail} like 'data:image/%' and length(${t.thumbnail}) <= 200000`,
+    ),
+  ],
 );
 
 export const sessions = pgTable(
