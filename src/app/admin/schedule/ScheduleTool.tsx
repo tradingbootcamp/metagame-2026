@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState, useTransition } from "react";
 import { addSample, clearSample, type FormState } from "./actions";
 import LocationForm from "./LocationForm";
 import ScheduleGrid from "./ScheduleGrid";
-import SessionForm from "./SessionForm";
+import SessionForm, { type SessionDefaults } from "./SessionForm";
 import { buttonClass, smallButtonClass } from "../ui";
 import {
   buildDays,
@@ -16,7 +16,11 @@ import {
 } from "@/lib/schedule";
 
 type Editing =
-  | { kind: "session"; session: ScheduleSession | null }
+  | {
+      kind: "session";
+      session: ScheduleSession | null;
+      defaults?: SessionDefaults;
+    }
   | { kind: "location"; location: ScheduleLocation | null }
   | null;
 
@@ -67,6 +71,8 @@ export default function ScheduleTool({
 
   const openSession = (session: ScheduleSession | null) =>
     setEditing({ kind: "session", session });
+  const createAt = (defaults: SessionDefaults) =>
+    setEditing({ kind: "session", session: null, defaults });
   const openLocation = (location: ScheduleLocation | null) =>
     setEditing({ kind: "location", location });
 
@@ -120,7 +126,12 @@ export default function ScheduleTool({
         </div>
       </div>
 
-      <ScheduleGrid days={days} locations={locations} onOpen={openSession} />
+      <ScheduleGrid
+        days={days}
+        locations={locations}
+        onOpen={openSession}
+        onCreate={createAt}
+      />
 
       {unplaced.length > 0 && (
         <Section title="Unplaced drafts">
@@ -260,6 +271,7 @@ export default function ScheduleTool({
         <SessionForm
           key={editing.session?.id ?? "new"}
           session={editing.session}
+          defaults={editing.defaults}
           locations={locations}
           onClose={close}
         />

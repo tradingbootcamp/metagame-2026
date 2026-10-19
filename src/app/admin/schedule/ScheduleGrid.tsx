@@ -15,9 +15,11 @@ import {
   type ScheduleSession,
 } from "@/lib/schedule";
 import { CATEGORY_STYLES, LEGEND } from "@/v2/lib/schedule-styles";
+import type { SessionDefaults } from "./SessionForm";
 
 type View = "grid" | "list";
 type OpenFn = (s: ScheduleSession) => void;
+type CreateFn = (defaults: SessionDefaults) => void;
 
 /** Placed sessions with no room land in a column of their own. */
 const NO_ROOM = "__none__";
@@ -84,10 +86,12 @@ function GridDay({
   day,
   columns,
   onOpen,
+  onCreate,
 }: {
   day: Day;
   columns: Column[];
   onOpen: OpenFn;
+  onCreate: CreateFn;
 }) {
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
   return (
@@ -134,6 +138,18 @@ function GridDay({
                     className="relative border-r border-b border-line/60 last:border-r-0"
                     style={{ height: SLOT_PX }}
                   >
+                    <button
+                      type="button"
+                      aria-label={`New session ${day.name} ${slotLabel(slotStart)}${col.id === NO_ROOM ? "" : ` in ${col.name}`}`}
+                      onClick={() =>
+                        onCreate({
+                          day: day.key,
+                          startMin: slotStart,
+                          locationId: col.id === NO_ROOM ? null : col.id,
+                        })
+                      }
+                      className="absolute inset-0 cursor-cell transition-colors hover:bg-navy/[0.06]"
+                    />
                     {inSlot.map((s) => (
                       <SessionBlock
                         key={s.id}
@@ -218,10 +234,12 @@ export default function ScheduleGrid({
   days,
   locations,
   onOpen,
+  onCreate,
 }: {
   days: Day[];
   locations: ScheduleLocation[];
   onOpen: OpenFn;
+  onCreate: CreateFn;
 }) {
   const [dayIndex, setDayIndex] = useState(0);
   const [view, setView] = useState<View>("grid");
@@ -341,7 +359,12 @@ export default function ScheduleGrid({
             Add a room to get a grid.
           </p>
         ) : (
-          <GridDay day={day} columns={columns} onOpen={onOpen} />
+          <GridDay
+            day={day}
+            columns={columns}
+            onOpen={onOpen}
+            onCreate={onCreate}
+          />
         )
       ) : (
         <ListDay day={day} roomName={roomName} onOpen={onOpen} />

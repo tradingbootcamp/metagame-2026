@@ -145,6 +145,20 @@ export function slotLabel(slotStart: number): string {
   return `${h12}:${pad(m)} ${period}`;
 }
 
+/** "14:30" from minutes since midnight. */
+export function minutesToHHMM(min: number): string {
+  return `${pad(Math.floor(min / 60))}:${pad(min % 60)}`;
+}
+
+// Sessions start on the hour or half hour and end five minutes before the
+// next half hour, leaving a passing period.
+const FIRST_START = 7 * 60;
+const LAST_START = 23 * 60 + 30;
+export const END_GAP_MINUTES = 5;
+export const START_TIMES: number[] = [];
+for (let m = FIRST_START; m <= LAST_START; m += 30) START_TIMES.push(m);
+export const END_TIMES = START_TIMES.map((m) => m + 30 - END_GAP_MINUTES);
+
 // Grid geometry, matching the 2025 schedule component.
 const PX_PER_MIN = 2;
 export const SLOT_MINUTES = 30;
