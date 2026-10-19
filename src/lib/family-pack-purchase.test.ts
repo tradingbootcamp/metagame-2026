@@ -1,16 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type Stripe from "stripe";
-const { recordPurchase, capturePurchase, sendTicketConfirmationEmail } =
-  vi.hoisted(() => ({
-    recordPurchase: vi.fn(),
-    capturePurchase: vi.fn(),
-    sendTicketConfirmationEmail: vi.fn(),
-  }));
+const {
+  recordPurchase,
+  recordTicket,
+  capturePurchase,
+  sendTicketConfirmationEmail,
+} = vi.hoisted(() => ({
+  recordPurchase: vi.fn(),
+  recordTicket: vi.fn(),
+  capturePurchase: vi.fn(),
+  sendTicketConfirmationEmail: vi.fn(),
+}));
 vi.mock("@/lib/airtable", () => ({ recordPurchase }));
 vi.mock("@/lib/posthog-server", () => ({ capturePurchase }));
 vi.mock("@/lib/email", () => ({ sendTicketConfirmationEmail }));
+vi.mock("@/lib/ticket-store", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./ticket-store")>()),
+  recordTicket,
+}));
 import { recordFamilyPack } from "./family-pack-purchase";
 import { packMetadata } from "./family-pack";
+import { ticketFromPurchase } from "./ticket-store";
 
 function session(count = 4) {
   return {
@@ -86,6 +96,26 @@ describe("family pack fulfillment", () => {
       expect.objectContaining({ to: "guest0@example.com" }),
     );
   });
+  it("writes one tickets row per admission, owned by each attendee's email", async () => {
+    await recordFamilyPack(session(5), "Paid");
+    const rows = recordTicket.mock.calls.map(([p]) => ticketFromPurchase(p));
+    expect(rows).toHaveLength(5);
+    expect(new Set(rows.map((r) => r.paymentId)).size).toBe(5);
+    rows.forEach((row, i) =>
+      expect(row).toMatchObject({
+        paymentId: `pi_pack:ticket:${i + 1}`,
+        purchaserEmail: `guest${i}@example.com`,
+        purchaserName: `Guest ${i}`,
+        status: "paid",
+        source: "stripe",
+        amountCents: 37500,
+        test: true,
+      }),
+    );
+    expect(rows.map((r) => r.ticketCode)).toEqual(
+      recordPurchase.mock.calls.map(([p]) => p.ticketCode),
+    );
+  });
   it("retains admission identities through pending, paid and replay events", async () => {
     await recordFamilyPack(session(), "Pending");
     const before = recordPurchase.mock.calls.map(([r]) => [r.id, r.ticketCode]);
@@ -119,6 +149,7 @@ describe("family pack fulfillment", () => {
   it("propagates recording/email failures so Stripe retries can recover", async () => {
     recordPurchase.mockResolvedValue({ stored: false });
     await expect(recordFamilyPack(session(), "Paid")).rejects.toThrow();
+    expect(recordTicket).not.toHaveBeenCalled();
     expect(sendTicketConfirmationEmail).not.toHaveBeenCalled();
     recordPurchase.mockResolvedValue({ stored: true });
     sendTicketConfirmationEmail.mockRejectedValue(new Error("mail down"));

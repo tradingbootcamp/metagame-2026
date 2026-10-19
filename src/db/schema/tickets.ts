@@ -22,13 +22,15 @@ export const ticketStatus = pgEnum("ticket_status", [
   "underpaid",
 ]);
 
-// One row per purchase; quantity is locked to 1 at checkout, so purchase ==
-// ticket. Written by the payment webhooks beside the Airtable row, which stays
-// the ops/finance view. Ownership (owner_user_id) is only ever set by a claim.
+// One row per admission. Single-ticket checkouts lock quantity to 1, so their
+// row is the whole purchase; a Family & Friends Pack writes one row per ticket.
+// Written by the payment webhooks beside the Airtable row, which stays the
+// ops/finance view. Ownership (owner_user_id) is only ever set by a claim.
 export const tickets = pgTable(
   "tickets",
   {
-    // Stripe PaymentIntent id, OpenNode charge id, or admin:<uuid>.
+    // Stripe PaymentIntent id (`<id>:ticket:<n>` for pack tickets), OpenNode
+    // charge id, or admin:<uuid>.
     paymentId: text().primaryKey(),
     ticketCode: text().notNull().unique(),
     source: ticketSource().notNull(),

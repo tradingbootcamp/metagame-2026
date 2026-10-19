@@ -13,6 +13,7 @@ import {
 } from "@/lib/family-pack";
 import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
+import { recordTicket } from "@/lib/ticket-store";
 import { pickUtm } from "@/lib/utm";
 
 export async function recordFamilyPack(
@@ -68,6 +69,7 @@ export async function recordFamilyPack(
     const result = await recordPurchase(purchase);
     if (!result.stored)
       throw new Error("Family pack admissions could not be stored.");
+    await recordTicket(purchase);
     await capturePurchase(purchase);
   }
   if (status === "Paid") {
