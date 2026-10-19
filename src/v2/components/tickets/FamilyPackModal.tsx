@@ -101,7 +101,7 @@ export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
               <fieldset
                 key={i}
                 disabled={busy}
-                className="grid grid-cols-[1fr_1.4fr_1fr] gap-2"
+                className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1.4fr_1fr]"
               >
                 <legend className="sr-only">Attendee {i + 1}</legend>
                 <Input
@@ -118,6 +118,7 @@ export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
                   type="email"
                   maxLength={254}
                   required
+                  className="order-last col-span-2 sm:order-none sm:col-span-1"
                 />
                 <Input
                   name={`discord_${i}`}
