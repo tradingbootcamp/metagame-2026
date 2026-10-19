@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FAMILY_PACK } from "@/lib/family-pack";
+import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { readUtm } from "@/lib/utm";
 import { Button } from "@/v2/components/ui/button";
 import { Input } from "@/v2/components/ui/input";
@@ -11,11 +11,18 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/v2/components/ui/dialog";
+import { HEADING } from "../styles";
+
+const QUANTITIES = Array.from(
+  { length: FAMILY_PACK.max - FAMILY_PACK.min + 1 },
+  (_, i) => FAMILY_PACK.min + i,
+);
 
 export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
-  const [quantity, setQuantity] = useState(4);
+  const [quantity, setQuantity] = useState<number>(FAMILY_PACK.min);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const total = (quantity * FAMILY_PACK.usd).toLocaleString();
   async function checkout(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
@@ -44,29 +51,43 @@ export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
   }
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
-      <DialogContent className="max-h-[90dvh] max-w-[560px] overflow-y-auto p-6">
-        <DialogTitle>Family &amp; Friends Pack</DialogTitle>
-        <DialogDescription>
-          4–6 paid weekend tickets at $375 each. Save $50 per person. Children
-          under 13 attend free and do not count toward the minimum. USD checkout
-          only; discounts cannot be combined.
-        </DialogDescription>
+      <DialogContent className="flex max-h-[90dvh] max-w-[520px] flex-col gap-5 overflow-y-auto p-6 sm:p-8">
+        <div className="flex flex-col gap-1 pr-6">
+          <DialogTitle className={`${HEADING} text-[clamp(24px,6vw,30px)]`}>
+            Family &amp; Friends Pack
+          </DialogTitle>
+          <DialogDescription className="text-base text-cream/80">
+            {FAMILY_PACK.min}-to-{FAMILY_PACK.max}-ticket bundle for{" "}
+            <span className="text-cream/45 line-through">${STANDARD_USD}</span>{" "}
+            <span className="text-tan">${FAMILY_PACK.usd}</span> each
+          </DialogDescription>
+        </div>
         <form onSubmit={checkout} className="flex flex-col gap-4">
-          <label className="flex flex-col gap-2">
-            Paid attendees
+          <div className="flex flex-wrap items-center gap-3">
             <select
               disabled={busy}
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
+              aria-label="Number of tickets"
               className="rounded border border-cream/30 bg-navy p-2 text-cream"
             >
-              {[4, 5, 6].map((n) => (
+              {QUANTITIES.map((n) => (
                 <option key={n} value={n}>
-                  {n} tickets — ${(n * FAMILY_PACK.usd).toLocaleString()}
+                  {n} tickets
                 </option>
               ))}
             </select>
-          </label>
+            <span className="flex items-baseline gap-1.5">
+              <span className="text-cream/80">×</span>
+              <span className="text-cream/45 line-through">
+                ${STANDARD_USD}
+              </span>
+              <span className="text-cream/80">${FAMILY_PACK.usd} =</span>
+              <span className={`${HEADING} text-[24px] leading-none text-tan`}>
+                ${total}
+              </span>
+            </span>
+          </div>
           {Array.from({ length: quantity }, (_, i) => (
             <fieldset key={i} disabled={busy} className="flex flex-col gap-2">
               <legend className="mb-2">Attendee {i + 1}</legend>
@@ -88,19 +109,20 @@ export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
             </fieldset>
           ))}
           <p className="text-sm text-cream/80">
-            One person pays for the pack. The buyer receives all ticket codes to
-            share; attendees can check in separately. For changes or refund
-            requests, contact team@metagame.games.
+            Each attendee gets their ticket by email, and the email provided at
+            checkout gets all of them.
           </p>
           {error && (
             <p role="alert" className="text-tan">
               {error}
             </p>
           )}
-          <Button type="submit" disabled={busy}>
-            {busy
-              ? "Opening checkout…"
-              : `Pay $${(quantity * FAMILY_PACK.usd).toLocaleString()} for ${quantity} tickets`}
+          <Button
+            type="submit"
+            disabled={busy}
+            className="h-12 w-full text-base"
+          >
+            {busy ? "Opening checkout…" : `Pay $${total}`}
           </Button>
         </form>
       </DialogContent>

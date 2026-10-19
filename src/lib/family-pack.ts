@@ -1,3 +1,5 @@
+import { ticketTiers } from "@/lib/tickets";
+
 export const FAMILY_PACK = {
   id: "family-friends",
   label: "Family & Friends Pack",
@@ -5,6 +7,10 @@ export const FAMILY_PACK = {
   min: 4,
   max: 6,
 } as const;
+
+/** Regular Standard weekend price, shown struck through against the pack price. */
+export const STANDARD_USD = ticketTiers.find((t) => t.id === "standard")!.prices
+  .full.usd;
 
 export type PackAttendee = { name: string; email: string };
 

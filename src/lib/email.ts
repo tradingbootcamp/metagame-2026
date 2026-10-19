@@ -115,10 +115,10 @@ export function renderTicketConfirmationEmail(
         })[c]!,
     );
   const groupHtml = groupTickets
-    ? `<p>Your pack includes ${groupTickets.length} separate weekend admissions. Share each code with its named attendee; they may check in separately. For attendee changes or refund requests, reply to this email.</p><ul>${groupTickets.map((t) => `<li>${escape(t.name)} (${escape(t.email)}): <strong>${formatTicketCode(t.code)}</strong></li>`).join("")}</ul>`
+    ? `<p>Your pack includes ${groupTickets.length} separate weekend admissions. We've also emailed each attendee their own code. For attendee changes or refund requests, reply to this email.</p><ul>${groupTickets.map((t) => `<li>${escape(t.name)} (${escape(t.email)}): <strong>${formatTicketCode(t.code)}</strong></li>`).join("")}</ul>`
     : "";
   const groupText = groupTickets
-    ? `Your pack includes ${groupTickets.length} separate weekend admissions. Share each code with its named attendee; they may check in separately. For attendee changes or refund requests, reply to this email.\n${groupTickets.map((t) => `${t.name} (${t.email}): ${formatTicketCode(t.code)}`).join("\n")}`
+    ? `Your pack includes ${groupTickets.length} separate weekend admissions. We've also emailed each attendee their own code. For attendee changes or refund requests, reply to this email.\n${groupTickets.map((t) => `${t.name} (${t.email}): ${formatTicketCode(t.code)}`).join("\n")}`
     : "";
 
   // The shipped .ics is the full three-day event, so day passes get only the

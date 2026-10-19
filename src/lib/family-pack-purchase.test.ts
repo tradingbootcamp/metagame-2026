@@ -65,8 +65,27 @@ describe("family pack fulfillment", () => {
           idempotencyKey: "family-pack/pi_pack",
         }),
       );
+      expect(sendTicketConfirmationEmail).toHaveBeenCalledTimes(count + 1);
+      rows.forEach((row, i) =>
+        expect(sendTicketConfirmationEmail).toHaveBeenCalledWith(
+          expect.objectContaining({
+            to: `guest${i}@example.com`,
+            ticketCode: row.ticketCode,
+            idempotencyKey: `family-pack/pi_pack/ticket/${i + 1}`,
+          }),
+        ),
+      );
     },
   );
+  it("doesn't separately email an attendee who is also the buyer", async () => {
+    const s = session();
+    s.customer_details!.email = "GUEST0@example.com";
+    await recordFamilyPack(s, "Paid");
+    expect(sendTicketConfirmationEmail).toHaveBeenCalledTimes(4);
+    expect(sendTicketConfirmationEmail).not.toHaveBeenCalledWith(
+      expect.objectContaining({ to: "guest0@example.com" }),
+    );
+  });
   it("retains admission identities through pending, paid and replay events", async () => {
     await recordFamilyPack(session(), "Pending");
     const before = recordPurchase.mock.calls.map(([r]) => [r.id, r.ticketCode]);

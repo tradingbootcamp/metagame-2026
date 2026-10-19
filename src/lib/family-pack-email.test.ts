@@ -15,6 +15,6 @@ it("includes each admission in the buyer's confirmation and escapes attendee HTM
   expect(email.text).toContain("guest@example.com");
   expect(email.html).toContain("&lt;img src=x&gt;");
   expect(email.html).not.toContain("<img src=x>");
-  expect(email.html).toContain("check in separately");
+  expect(email.html).toContain("emailed each attendee their own code");
   expect(email.text).not.toContain("Ticket code: undefined");
 });

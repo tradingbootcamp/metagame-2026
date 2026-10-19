@@ -7,6 +7,7 @@ import {
 import { sendTicketConfirmationEmail } from "@/lib/email";
 import {
   FAMILY_PACK,
+  STANDARD_USD,
   attendeesFromMetadata,
   allocateCents,
 } from "@/lib/family-pack";
@@ -81,5 +82,18 @@ export async function recordFamilyPack(
       idempotencyKey: `family-pack/${paymentId}`,
       test: !session.livemode,
     });
+    for (const [index, ticket] of tickets.entries()) {
+      if (ticket.email.toLowerCase() === email.toLowerCase()) continue;
+      await sendTicketConfirmationEmail({
+        to: ticket.email,
+        purchaserName: ticket.name,
+        tierLabel: `${FAMILY_PACK.label} — Standard weekend`,
+        usdPaid: FAMILY_PACK.usd,
+        usdFull: STANDARD_USD,
+        ticketCode: ticket.code,
+        idempotencyKey: `family-pack/${paymentId}/ticket/${index + 1}`,
+        test: !session.livemode,
+      });
+    }
   }
 }

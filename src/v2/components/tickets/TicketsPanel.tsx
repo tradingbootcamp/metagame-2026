@@ -13,6 +13,7 @@ import {
   stripeCheckoutHref,
   supporterTier,
 } from "@/v2/lib/tickets";
+import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { withUtm } from "@/lib/utm";
 import { FINANCIAL_AID_FORM_URL } from "@/v2/lib/links";
@@ -273,11 +274,18 @@ export default function TicketsPanel({
           onClick={() => setFamilyPackOpen(true)}
           className={TILE}
         >
-          <span className={TILE_LABEL}>Family &amp; Friends Pack</span>
-          <span className={`${HEADING} text-[30px] leading-none text-tan`}>
-            $375 each
+          <span className={TILE_LABEL}>Family &amp; Friends</span>
+          <span className="flex items-baseline gap-2.5 leading-none">
+            <span className="text-[18px] font-bold text-cream/40 line-through">
+              ${STANDARD_USD}
+            </span>
+            <span className={`${HEADING} text-[30px] text-tan`}>
+              ${FAMILY_PACK.usd}
+            </span>
           </span>
-          <span className={TILE_NOTE}>4–6 paid tickets · USD</span>
+          <span className={TILE_NOTE}>
+            each · {FAMILY_PACK.min}–{FAMILY_PACK.max} ticket bundle
+          </span>
         </Button>
         {/* Volunteer + financial aid: plain application links, deliberately not
             styled like the purchase tiles. */}
