@@ -47,3 +47,6 @@ next-env.d.ts
 
 # ER diagram site, generated from drizzle/*.sql at build (scripts/build-erd.mjs)
 /public/schema-erd
+
+# Claude Code worktrees (full repo copies)
+/.claude/worktrees/

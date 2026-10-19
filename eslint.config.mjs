@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Generated ER diagram site (scripts/build-erd.mjs).
     "public/schema-erd/**",
+    // Claude Code worktrees: full repo copies nested in the checkout.
+    ".claude/worktrees/**",
   ]),
 ]);
 
