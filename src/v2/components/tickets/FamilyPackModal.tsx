@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FaChevronDown } from "react-icons/fa";
 import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { readUtm } from "@/lib/utm";
 import { Button } from "@/v2/components/ui/button";
@@ -64,19 +65,25 @@ export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
         </div>
         <form onSubmit={checkout} className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <select
-              disabled={busy}
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              aria-label="Number of tickets"
-              className="rounded border border-cream/30 bg-navy p-2 text-cream"
-            >
-              {QUANTITIES.map((n) => (
-                <option key={n} value={n}>
-                  {n} tickets
-                </option>
-              ))}
-            </select>
+            <span className="relative">
+              <select
+                disabled={busy}
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+                aria-label="Number of tickets"
+                className="appearance-none rounded border border-cream/30 bg-navy py-2 pr-9 pl-3 text-cream"
+              >
+                {QUANTITIES.map((n) => (
+                  <option key={n} value={n}>
+                    {n} tickets
+                  </option>
+                ))}
+              </select>
+              <FaChevronDown
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 right-3 size-3 -translate-y-1/2 text-cream/70"
+              />
+            </span>
             <span className="flex items-baseline gap-1.5">
               <span className="text-cream/80">×</span>
               <span className="text-cream/45 line-through">
@@ -109,8 +116,8 @@ export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
             </fieldset>
           ))}
           <p className="text-sm text-cream/80">
-            Each attendee gets their ticket by email, and the email provided at
-            checkout gets all of them.
+            Each attendee will receive a ticket email, and the email you provide
+            at Stripe checkout will get all of them for reference.
           </p>
           {error && (
             <p role="alert" className="text-tan">
