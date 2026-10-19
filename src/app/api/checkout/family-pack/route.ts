@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     );
   }
   const stripe = getStripe();
-  if (!stripe || !familyPackPriceId)
+  if (!stripe)
     return NextResponse.json(
       { error: "Checkout isn't available right now." },
       { status: 503 },
