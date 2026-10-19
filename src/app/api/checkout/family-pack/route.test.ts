@@ -39,7 +39,10 @@ describe("family pack checkout", () => {
       expect(response.status).toBe(200);
       const session = create.mock.calls[0][0];
       expect(session.line_items[0].quantity).toBe(count);
-      expect(session.line_items[0].price_data.unit_amount).toBe(37500);
+      expect(session.line_items[0]).toEqual({
+        price: "price_1US939CtO443EG3nJQbU6ork",
+        quantity: count,
+      });
       expect(session.allow_promotion_codes).toBe(false);
       expect(session.discounts).toBeUndefined();
       expect(session.metadata.utm_content).toBe("poster-v2");

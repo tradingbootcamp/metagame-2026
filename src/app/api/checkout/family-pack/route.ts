@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  FAMILY_PACK,
+  familyPackPriceId,
   packMetadata,
   parsePackAttendees,
 } from "@/lib/family-pack";
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     );
   }
   const stripe = getStripe();
-  if (!stripe)
+  if (!stripe || !familyPackPriceId)
     return NextResponse.json(
       { error: "Checkout isn't available right now." },
       { status: 503 },
@@ -35,13 +35,7 @@ export async function POST(request: Request) {
       mode: "payment",
       line_items: [
         {
-          price_data: {
-            currency: "usd",
-            unit_amount: FAMILY_PACK.usd * 100,
-            product_data: {
-              name: `${FAMILY_PACK.label} — Standard weekend admission`,
-            },
-          },
+          price: familyPackPriceId,
           quantity: attendees.length,
         },
       ],
@@ -54,7 +48,7 @@ export async function POST(request: Request) {
       custom_text: {
         submit: {
           message:
-            "4–6 paid weekend tickets at $375 each. Children under 13 attend free and do not count toward the pack. Your group ticket codes will be emailed to the buyer.",
+            "Each attendee will receive a ticket email, and the email you provide here will get all of them for reference.",
         },
       },
       success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,

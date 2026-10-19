@@ -1,4 +1,4 @@
-import { ticketTiers } from "@/lib/tickets";
+import { stripeMode, ticketTiers } from "@/lib/tickets";
 
 export const FAMILY_PACK = {
   id: "family-friends",
@@ -6,7 +6,15 @@ export const FAMILY_PACK = {
   usd: 375,
   min: 4,
   max: 6,
+  // TODO(live): create the live Price before this ships; checkout is off until then.
+  priceIds: {
+    test: "price_1US939CtO443EG3nJQbU6ork",
+    live: null,
+  },
 } as const;
+
+export const familyPackPriceId: string | null =
+  FAMILY_PACK.priceIds[stripeMode];
 
 /** Regular Standard weekend price, shown struck through against the pack price. */
 export const STANDARD_USD = ticketTiers.find((t) => t.id === "standard")!.prices
