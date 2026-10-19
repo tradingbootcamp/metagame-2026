@@ -104,7 +104,7 @@ export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
                 className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1.4fr_1fr]"
               >
                 <legend className="mb-1.5 font-space-mono text-[12px] tracking-[0.12em] text-cream/70 uppercase">
-                  Attendee {i + 1}
+                  Ticket {i + 1}
                 </legend>
                 <Input
                   name={`name_${i}`}
