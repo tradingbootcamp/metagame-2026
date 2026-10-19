@@ -20,7 +20,7 @@ export const familyPackPriceId: string | null =
 export const STANDARD_USD = ticketTiers.find((t) => t.id === "standard")!.prices
   .full.usd;
 
-export type PackAttendee = { name: string; email: string };
+export type PackAttendee = { name: string; email: string; discord?: string };
 
 export function parsePackAttendees(value: unknown): PackAttendee[] {
   if (
@@ -33,10 +33,21 @@ export function parsePackAttendees(value: unknown): PackAttendee[] {
   return value.map((entry: unknown) => {
     if (!entry || typeof entry !== "object")
       throw new Error("Enter each attendee's name and email.");
-    const { name, email } = entry as Record<string, unknown>;
-    if (typeof name !== "string" || typeof email !== "string")
+    const { name, email, discord } = entry as Record<string, unknown>;
+    if (
+      typeof name !== "string" ||
+      typeof email !== "string" ||
+      (discord != null && typeof discord !== "string")
+    )
       throw new Error("Enter each attendee's name and email.");
-    const attendee = { name: name.trim(), email: email.trim() };
+    const handle = discord?.trim().replace(/^@+\s*/, "");
+    const attendee: PackAttendee = {
+      name: name.trim(),
+      email: email.trim(),
+      ...(handle ? { discord: handle } : {}),
+    };
+    if ((attendee.discord?.length ?? 0) > 40)
+      throw new Error("Discord handles are at most 40 characters.");
     if (
       !attendee.name ||
       attendee.name.length > 80 ||

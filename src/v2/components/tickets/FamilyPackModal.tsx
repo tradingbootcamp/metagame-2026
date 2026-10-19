@@ -30,6 +30,7 @@ export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
     const attendees = Array.from({ length: quantity }, (_, i) => ({
       name: fields.get(`name_${i}`),
       email: fields.get(`email_${i}`),
+      discord: fields.get(`discord_${i}`),
     }));
     setBusy(true);
     setError("");
@@ -52,7 +53,7 @@ export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
   }
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
-      <DialogContent className="flex max-h-[90dvh] max-w-[520px] flex-col gap-5 overflow-y-auto p-6 sm:p-8">
+      <DialogContent className="flex max-h-[90dvh] max-w-[680px] flex-col gap-5 overflow-y-auto p-6 sm:p-8">
         <div className="flex flex-col gap-1 pr-6">
           <DialogTitle className={`${HEADING} text-[clamp(24px,6vw,30px)]`}>
             Family &amp; Friends Pack
@@ -95,26 +96,38 @@ export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
               </span>
             </span>
           </div>
-          {Array.from({ length: quantity }, (_, i) => (
-            <fieldset key={i} disabled={busy} className="flex flex-col gap-2">
-              <legend className="mb-2">Attendee {i + 1}</legend>
-              <Input
-                name={`name_${i}`}
-                aria-label={`Attendee ${i + 1} name`}
-                placeholder="Full name"
-                maxLength={80}
-                required
-              />
-              <Input
-                name={`email_${i}`}
-                aria-label={`Attendee ${i + 1} email`}
-                placeholder="Email"
-                type="email"
-                maxLength={254}
-                required
-              />
-            </fieldset>
-          ))}
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: quantity }, (_, i) => (
+              <fieldset
+                key={i}
+                disabled={busy}
+                className="grid grid-cols-[1fr_1.4fr_1fr] gap-2"
+              >
+                <legend className="sr-only">Attendee {i + 1}</legend>
+                <Input
+                  name={`name_${i}`}
+                  aria-label={`Attendee ${i + 1} name`}
+                  placeholder={`Attendee ${i + 1} name`}
+                  maxLength={80}
+                  required
+                />
+                <Input
+                  name={`email_${i}`}
+                  aria-label={`Attendee ${i + 1} email`}
+                  placeholder="Email"
+                  type="email"
+                  maxLength={254}
+                  required
+                />
+                <Input
+                  name={`discord_${i}`}
+                  aria-label={`Attendee ${i + 1} Discord handle (optional)`}
+                  placeholder="Discord (optional)"
+                  maxLength={40}
+                />
+              </fieldset>
+            ))}
+          </div>
           <p className="text-sm text-cream/80">
             Each attendee will receive a ticket email, and the email you provide
             at Stripe checkout will get all of them for reference.

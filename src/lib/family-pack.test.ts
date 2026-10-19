@@ -26,6 +26,16 @@ describe("family pack eligibility", () => {
   it.each([0, 1, 2, 3, 7, 100])("rejects %i admissions", (count) => {
     expect(() => parsePackAttendees(attendees(count))).toThrow();
   });
+  it("keeps an optional Discord handle without its leading @", () => {
+    const [withHandle, without] = parsePackAttendees([
+      { name: "A", email: "a@example.com", discord: " @@alice " },
+      { name: "B", email: "b@example.com", discord: "" },
+      { name: "C", email: "c@example.com" },
+      { name: "D", email: "d@example.com" },
+    ]);
+    expect(withHandle.discord).toBe("alice");
+    expect(without).not.toHaveProperty("discord");
+  });
   it("rejects malformed attendee data and oversized metadata", () => {
     for (const invalid of [
       null,

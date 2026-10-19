@@ -47,6 +47,7 @@ export async function recordFamilyPack(
       ticketCode: attendee.code,
       customerName: attendee.name,
       customerEmail: attendee.email,
+      discordHandle: attendee.discord,
       billingName: session.customer_details?.name ?? undefined,
       billingEmail: session.customer_details?.email ?? undefined,
       amount: FAMILY_PACK.usd,
