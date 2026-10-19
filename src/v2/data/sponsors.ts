@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import ArborLogo from "@/v2/components/ArborLogo";
 import dModel from "../../../public/images/sponsors/dmodel_logo.png";
 import franciscoSan from "../../../public/images/sponsors/francisco_san_logo.png";
+import goodhartLabs from "../../../public/images/sponsors/goodhart-labs-logos/svg/goodhart-labs-stacked-black.svg";
 import manifund from "../../../public/images/sponsors/manifund_logo.png";
 import outsideTheAsylum from "../../../public/images/sponsors/outside_the_asylum.png";
 import rogueSignal from "../../../public/images/sponsors/rogue_signal/rogue_signal_horiz.svg";
@@ -23,6 +24,12 @@ export type Sponsor = {
 // (Gold > Silver > Patron) on the home page's sponsors section.
 export const GOLD_SPONSORS: Sponsor[] = [
   { name: "Rogue Signal", url: "https://roguesignal.io", logo: rogueSignal },
+  {
+    name: "Goodhart Labs",
+    url: "https://goodhartlabs.com",
+    logo: goodhartLabs,
+    logoClass: "h-24 md:h-32",
+  },
 ];
 
 export const SILVER_SPONSORS: Sponsor[] = [
