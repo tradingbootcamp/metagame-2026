@@ -96,18 +96,20 @@ export default function FamilyPackModal({ onClose }: { onClose: () => void }) {
               </span>
             </span>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-4">
             {Array.from({ length: quantity }, (_, i) => (
               <fieldset
                 key={i}
                 disabled={busy}
                 className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1.4fr_1fr]"
               >
-                <legend className="sr-only">Attendee {i + 1}</legend>
+                <legend className="mb-1.5 font-space-mono text-[12px] tracking-[0.12em] text-cream/70 uppercase">
+                  Attendee {i + 1}
+                </legend>
                 <Input
                   name={`name_${i}`}
                   aria-label={`Attendee ${i + 1} name`}
-                  placeholder={`Attendee ${i + 1} name`}
+                  placeholder="Full name"
                   maxLength={80}
                   required
                 />
