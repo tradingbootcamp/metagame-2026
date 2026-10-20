@@ -2,7 +2,6 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { getDb, schema } from "@/db";
 import { adminSession, getAuth } from "@/lib/auth";
 import { ensureAccount } from "@/lib/schedule-store";
@@ -19,9 +18,9 @@ const message = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
 
 /**
- * Mints a key for the account with this email, making the account and
- * giving it the admin role first if needed: a key acts as its account, and
- * the API only admits admins. The key is returned once and never stored.
+ * Mints a key for the account with this email, making the account if needed.
+ * A key acts as its account, so it only reaches admin routes once the account
+ * is an admin. The key is returned once and never stored.
  */
 export async function createKey(
   email: string,
@@ -39,20 +38,13 @@ export async function createKey(
 
   try {
     const [existing] = await getDb()
-      .select({ id: user.id, role: user.role, banned: user.banned })
+      .select({ id: user.id, banned: user.banned })
       .from(user)
       .where(eq(user.email, email))
       .limit(1);
     if (existing?.banned) return { error: "That account is banned." };
     if (!existing && !name) return { error: "A new account needs a name." };
     const userId = existing?.id ?? (await ensureAccount(name, email)).userId;
-    if (existing?.role !== "admin") {
-      // Through the admin plugin, so it's the caller's session that's checked.
-      await getAuth().api.setRole({
-        body: { userId, role: "admin" },
-        headers: await headers(),
-      });
-    }
     // No headers: the server-only path, which takes a userId instead of
     // attributing the key to the caller.
     const { key } = await getAuth().api.createApiKey({

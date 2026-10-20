@@ -53,9 +53,7 @@ Team tools (`/admin/*`, `/grade`) open to accounts with `user.role = 'admin'`
 role check; `adminAccess()` / `requireAdmin()` (`src/lib/admin-auth.ts`) and
 `gradeAccess()` (`src/lib/grader-auth.ts`) layer the password fallback on it.
 Swap `adminSession()` for `can()` when the permission system lands
-(META-1483). A request carrying an API key in `x-api-key` (api-key plugin;
-keys minted on `/admin/api-keys`) reads as a session for the key's owner, so
-the same gate covers the JSON API under `/api/admin/schedule`. `/admin/users` grants and revokes admin and bans; the first admin
+(META-1483). `/admin/users` grants and revokes admin and bans; the first admin
 is bootstrapped by hand in the Neon console:
 `update "user" set role = 'admin' where email = '…'`. The shared-password
 fallback (`ADMIN_PASSWORD`, `GRADER_PASSWORD` and their secrets) stays until

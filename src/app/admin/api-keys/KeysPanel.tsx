@@ -45,9 +45,8 @@ export default function KeysPanel({ rows }: { rows: KeyRow[] }) {
       >
         <h2 className="font-bebas text-xl tracking-wide text-navy">New key</h2>
         <p className="text-sm text-ink/60">
-          Requests carrying the key act as this account. The account is made if
-          it doesn’t exist and given the admin role, since that’s what the API
-          admits.
+          Requests carrying the key act as this account, which is made if it
+          doesn’t exist. The API only admits admins; grant the role on Users.
         </p>
         <label className="block text-sm">
           Account email
