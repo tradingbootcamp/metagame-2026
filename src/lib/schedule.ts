@@ -213,8 +213,10 @@ export type Day = {
   slots: number[];
 };
 
-// Every day shows at least this window, widened if a session falls outside it.
+// Every day shows at least its window, widened if a session starts earlier.
+// Friday opens in the evening.
 const DAY_START = 9 * 60;
+const DAY_STARTS: Record<string, number> = { "2026-11-06": 17 * 60 };
 const DAY_END = 24 * 60;
 
 /**
@@ -254,7 +256,9 @@ export function buildDays(sessions: ScheduleSession[]): Day[] {
   return days.map((day) => {
     const daySessions = byKey.get(day.key) ?? [];
     const starts = daySessions.map((s) => pacificMinutes(s.startsAt));
-    const startMin = Math.floor(Math.min(DAY_START, ...starts) / 60) * 60;
+    const startMin =
+      Math.floor(Math.min(DAY_STARTS[day.key] ?? DAY_START, ...starts) / 60) *
+      60;
     const slots: number[] = [];
     for (let m = startMin; m < DAY_END; m += SLOT_MINUTES) slots.push(m);
     return { ...day, sessions: daySessions, slots };
