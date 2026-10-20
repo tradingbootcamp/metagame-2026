@@ -17,6 +17,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:backfill-tickets": "node scripts/backfill-tickets.mjs",
+    "db:seed-rooms": "node scripts/seed-rooms.mjs",
     "db:studio": "drizzle-kit studio",
     "erd:build": "node scripts/build-erd.mjs"
   },
@@ -58,6 +59,7 @@
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "shadcn": "^4.13.1",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.3"

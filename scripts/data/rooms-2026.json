@@ -1,0 +1,106 @@
+[
+  {
+    "airtableRecordId": "recjQ3xGBXwkiwBLK",
+    "name": "Food Truck Parking",
+    "capacity": null,
+    "campusLocation": "Behind E",
+    "displayOrder": 0,
+    "imageUrl": "https://fkarmpoupazxnshofaeg.supabase.co/storage/v1/object/public/public-assets/locations/food_court.jpeg"
+  },
+  {
+    "airtableRecordId": "recGskQfOVBjB3rz6",
+    "name": "Rat Park",
+    "capacity": 300,
+    "campusLocation": "Outdoors, behind B",
+    "displayOrder": 1,
+    "imageUrl": "https://fkarmpoupazxnshofaeg.supabase.co/storage/v1/object/public/public-assets/locations/ratpark.jpg"
+  },
+  {
+    "airtableRecordId": "recuMngeFd82lq6tH",
+    "name": "Eigen Hall",
+    "capacity": 40,
+    "campusLocation": "Building E, 1st floor",
+    "displayOrder": 2,
+    "imageUrl": "https://fkarmpoupazxnshofaeg.supabase.co/storage/v1/object/public/public-assets/locations/eigenhall-thumb.jpg"
+  },
+  {
+    "airtableRecordId": "recYvhxfqcLCLcEMk",
+    "name": "Cantor's Diagonal",
+    "capacity": 60,
+    "campusLocation": "Building C",
+    "displayOrder": 3,
+    "imageUrl": "https://fkarmpoupazxnshofaeg.supabase.co/storage/v1/object/public/public-assets/locations/cantors.jpg"
+  },
+  {
+    "airtableRecordId": "recKLF6u60Lp75X2K",
+    "name": "Glass Hall",
+    "capacity": 35,
+    "campusLocation": "Building A, 1st floor",
+    "displayOrder": 4,
+    "imageUrl": "https://fkarmpoupazxnshofaeg.supabase.co/storage/v1/object/public/public-assets/locations/glasshall-thumb.jpg"
+  },
+  {
+    "airtableRecordId": "recxd9AHePYl2ME5S",
+    "name": "Central Courtyard",
+    "capacity": 200,
+    "campusLocation": "The center of campus",
+    "displayOrder": 5,
+    "imageUrl": "https://fkarmpoupazxnshofaeg.supabase.co/storage/v1/object/public/public-assets/locations/central_courtyard.JPG"
+  },
+  {
+    "airtableRecordId": "recX5G6vUO8l6Lvzp",
+    "name": "Thingspace",
+    "capacity": 20,
+    "campusLocation": "Building A, 2nd floor",
+    "displayOrder": 6,
+    "imageUrl": "https://fkarmpoupazxnshofaeg.supabase.co/storage/v1/object/public/public-assets/locations/thingspace_front.jpg"
+  },
+  {
+    "airtableRecordId": "recZWM9ByiCSRvmfg",
+    "name": "Bayes Attic",
+    "capacity": 35,
+    "campusLocation": "Building B, top floor",
+    "displayOrder": 8,
+    "imageUrl": "https://fkarmpoupazxnshofaeg.supabase.co/storage/v1/object/public/public-assets/locations/bayesattic-thumb.jpg"
+  },
+  {
+    "airtableRecordId": "recbtzLkujpV7Bpeh",
+    "name": "The Gardens",
+    "capacity": 80,
+    "campusLocation": "Outdoors, behind E",
+    "displayOrder": 9,
+    "imageUrl": "https://fkarmpoupazxnshofaeg.supabase.co/storage/v1/object/public/public-assets/locations/gardens.jpg"
+  },
+  {
+    "airtableRecordId": "reclxj8U8oXIpDccA",
+    "name": "Bayes Ground",
+    "capacity": 40,
+    "campusLocation": "Building B, 1st floor",
+    "displayOrder": 11,
+    "imageUrl": "https://fkarmpoupazxnshofaeg.supabase.co/storage/v1/object/public/public-assets/locations/bayesground.jpg"
+  },
+  {
+    "airtableRecordId": "recGpJTVHvtc4JrdB",
+    "name": "Exobrain",
+    "capacity": 30,
+    "campusLocation": "Building E, 2nd floor",
+    "displayOrder": 12,
+    "imageUrl": "https://fkarmpoupazxnshofaeg.supabase.co/storage/v1/object/public/public-assets/locations/exobrain-thumb.jpg"
+  },
+  {
+    "airtableRecordId": "rec2BdkupZ3c9nEHb",
+    "name": "1D2",
+    "capacity": null,
+    "campusLocation": "Building D, 1st floor",
+    "displayOrder": 13,
+    "imageUrl": null
+  },
+  {
+    "airtableRecordId": "recNzyJZoypAzpJaY",
+    "name": "New Caprica",
+    "capacity": null,
+    "campusLocation": "Building B, 2nd floor",
+    "displayOrder": 14,
+    "imageUrl": null
+  }
+]

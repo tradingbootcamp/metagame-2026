@@ -1,6 +1,6 @@
 {
-  "id": "96d4aa37-6d31-4b93-8ec1-3bdb6aa32eae",
-  "prevId": "55411050-10ec-4ba5-9671-912d815ad098",
+  "id": "8b6d9cdd-b289-4a2b-81fc-c0ed4bea1716",
+  "prevId": "783109af-b080-4236-90d3-d08857f852d0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -695,6 +695,12 @@
         },
         "campus_location": {
           "name": "campus_location",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
           "type": "text",
           "primaryKey": false,
           "notNull": false

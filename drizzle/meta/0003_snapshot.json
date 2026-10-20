@@ -1,5 +1,5 @@
 {
-  "id": "55411050-10ec-4ba5-9671-912d815ad098",
+  "id": "783109af-b080-4236-90d3-d08857f852d0",
   "prevId": "13c4e38f-2c64-465b-92a9-433f3652b422",
   "version": "7",
   "dialect": "postgresql",
@@ -695,6 +695,12 @@
         },
         "campus_location": {
           "name": "campus_location",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
           "type": "text",
           "primaryKey": false,
           "notNull": false

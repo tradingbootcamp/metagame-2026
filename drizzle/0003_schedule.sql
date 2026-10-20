@@ -14,6 +14,7 @@ CREATE TABLE "locations" (
 	"name" text NOT NULL,
 	"capacity" integer,
 	"campus_location" text,
+	"description" text,
 	"display_order" integer DEFAULT 100 NOT NULL,
 	"show_in_schedule" boolean DEFAULT false NOT NULL,
 	"thumbnail_url" text,

@@ -69,6 +69,7 @@ export async function loadSchedule(): Promise<Schedule> {
       name: l.name,
       capacity: l.capacity,
       campusLocation: l.campusLocation,
+      description: l.description,
       displayOrder: l.displayOrder,
       showInSchedule: l.showInSchedule,
       thumbnailUrl: l.thumbnailUrl,
@@ -440,6 +441,9 @@ export function explainDbError(err: unknown): {
 export const SAMPLE_PREFIX = "sample-";
 // Sample hosts are placeholder accounts; .invalid can never receive mail.
 const SAMPLE_EMAIL_DOMAIN = "sample.invalid";
+// Rooms the sample makes when there are none to borrow; the prefix keeps
+// Remove from ever matching a real room.
+const SAMPLE_ROOM_PREFIX = "Sample: ";
 
 const SAMPLE_LOCATIONS = [
   {
@@ -651,16 +655,28 @@ export async function insertSample(): Promise<void> {
     .limit(1);
   if (existing) return;
 
-  const have = await db.select().from(locations);
-  const roomId = new Map(have.map((l) => [l.name, l.id]));
-  const missing = SAMPLE_LOCATIONS.filter((l) => !roomId.has(l.name));
-  if (missing.length > 0) {
-    const made = await db
+  // Spread the sessions over real rooms when there are any; otherwise make
+  // stand-ins.
+  let rooms = await db
+    .select({ id: locations.id })
+    .from(locations)
+    .orderBy(asc(locations.displayOrder), asc(locations.name))
+    .limit(SAMPLE_LOCATIONS.length);
+  if (rooms.length === 0) {
+    rooms = await db
       .insert(locations)
-      .values(missing.map((l) => ({ ...l, showInSchedule: true })))
-      .returning({ id: locations.id, name: locations.name });
-    for (const l of made) roomId.set(l.name, l.id);
+      .values(
+        SAMPLE_LOCATIONS.map((l) => ({
+          ...l,
+          name: SAMPLE_ROOM_PREFIX + l.name,
+          showInSchedule: true,
+        })),
+      )
+      .returning({ id: locations.id });
   }
+  const roomId = new Map(
+    SAMPLE_LOCATIONS.map((l, i) => [l.name, rooms[i % rooms.length].id]),
+  );
 
   for (const s of SAMPLE_SESSIONS) {
     const slug = `${SAMPLE_PREFIX}${s.title
@@ -707,12 +723,7 @@ export async function removeSample(): Promise<void> {
   const rooms = await db
     .select({ id: locations.id })
     .from(locations)
-    .where(
-      inArray(
-        locations.name,
-        SAMPLE_LOCATIONS.map((l) => l.name),
-      ),
-    );
+    .where(like(locations.name, `${SAMPLE_ROOM_PREFIX}%`));
   if (rooms.length === 0) return;
   const used = new Set(
     (

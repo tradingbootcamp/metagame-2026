@@ -16,6 +16,7 @@ export type ScheduleLocation = {
   name: string;
   capacity: number | null;
   campusLocation: string | null;
+  description: string | null;
   displayOrder: number;
   showInSchedule: boolean;
   /** Public Vercel Blob URL, already thumbnail-sized. */

@@ -31,6 +31,7 @@ export const locations = pgTable(
     name: text().notNull(),
     capacity: integer(),
     campusLocation: text(),
+    description: text(),
     displayOrder: integer().notNull().default(100),
     showInSchedule: boolean().notNull().default(false),
     // A Vercel Blob URL; the image itself never lives in the database.

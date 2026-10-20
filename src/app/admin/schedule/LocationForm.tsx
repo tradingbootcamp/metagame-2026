@@ -212,6 +212,15 @@ export default function LocationForm({
             />
           </Field>
 
+          <Field label="Description" name="description" state={state}>
+            <textarea
+              name="description"
+              rows={3}
+              defaultValue={location?.description ?? ""}
+              className={fieldClass}
+            />
+          </Field>
+
           <div className="grid grid-cols-2 gap-3">
             <Field label="Capacity" name="capacity" state={state}>
               <input

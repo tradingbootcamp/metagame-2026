@@ -235,6 +235,7 @@ export async function saveLocation(
       name,
       capacity,
       campusLocation: optional(formData, "campusLocation"),
+      description: optional(formData, "description"),
       displayOrder,
       showInSchedule: formData.get("showInSchedule") === "on",
       thumbnailUrl,
