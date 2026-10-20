@@ -78,6 +78,12 @@ export type SessionDefaults = {
 const DEFAULT_START = 10 * 60;
 const shortest = (start: number) => start + 30 - END_GAP_MINUTES;
 
+/** "11/6" from "2026-11-06". */
+function monthSlashDay(key: string): string {
+  const [, m, d] = key.split("-").map(Number);
+  return `${m}/${d}`;
+}
+
 /** Keeps an off-grid saved time selectable rather than silently changing it. */
 const withCurrent = (options: number[], current: number | null) =>
   current === null || options.includes(current)
@@ -113,7 +119,7 @@ export default function SessionForm({
   );
 
   const dayOptions: { key: string; label: string }[] = CONFERENCE_DAYS.map(
-    (d) => ({ key: d.key, label: d.name }),
+    (d) => ({ key: d.key, label: `${d.name} ${monthSlashDay(d.key)}` }),
   );
   if (day && !dayOptions.some((d) => d.key === day) && session?.startsAt) {
     dayOptions.push({ key: day, label: formatPacificDay(session.startsAt) });
