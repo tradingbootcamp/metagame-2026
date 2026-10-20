@@ -27,6 +27,12 @@ const TOOLS = [
     blurb: "Rooms and sessions for the 2026 program, on a day-by-room grid.",
   },
   {
+    href: "/admin/api-keys",
+    name: "API keys",
+    blurb:
+      "Keys for scripts and Claude sessions to edit the schedule over HTTP.",
+  },
+  {
     href: "/admin/schema",
     name: "Database schema",
     blurb: "ER diagram and column-by-column reference for the Postgres schema.",

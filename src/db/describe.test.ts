@@ -17,6 +17,7 @@ describe("describeSchema", () => {
   it("lists every table once", () => {
     expect(info.tables.map((t) => t.name).sort()).toEqual([
       "account",
+      "apikey",
       "bookmarks",
       "locations",
       "profiles",
@@ -49,6 +50,7 @@ describe("describeSchema", () => {
         .sort(),
     ).toEqual([
       "account",
+      "apikey",
       "bookmarks",
       "profiles",
       "rsvps",
@@ -108,6 +110,7 @@ describe("describeSchema", () => {
       "session",
       "account",
       "verification",
+      "apikey",
       "profiles",
       "tickets",
       "locations",

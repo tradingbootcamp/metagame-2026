@@ -21,6 +21,8 @@
     "erd:build": "node scripts/build-erd.mjs"
   },
   "dependencies": {
+    "@better-auth/api-key": "1.7.7",
+    "@better-auth/utils": "0.4.2",
     "@dimforge/rapier3d-compat": "^0.19.3",
     "@neondatabase/serverless": "^1.2.0",
     "@react-three/drei": "^10.7.7",

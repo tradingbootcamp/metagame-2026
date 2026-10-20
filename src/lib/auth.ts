@@ -1,3 +1,4 @@
+import { apiKey } from "@better-auth/api-key";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
@@ -8,6 +9,8 @@ import { cache } from "react";
 import { getDb, schema, type Db } from "@/db";
 import { env } from "@/env";
 import { sendSignInCodeEmail } from "@/lib/email";
+
+export const API_KEY_HEADER = "x-api-key";
 
 function createAuth() {
   const secret = env.BETTER_AUTH_SECRET;
@@ -58,6 +61,15 @@ function createAuth() {
         allowedAttempts: 5,
       }),
       admin(),
+      // A request with `x-api-key: <key>` reads as a session for the key's
+      // owner, so adminSession() gates the JSON API the same way it gates the
+      // pages. Keys are minted on /admin/api-keys.
+      apiKey({
+        apiKeyHeaders: API_KEY_HEADER,
+        defaultPrefix: "mg_",
+        enableSessionForAPIKeys: true,
+        rateLimit: { enabled: false },
+      }),
       nextCookies(),
     ],
   });

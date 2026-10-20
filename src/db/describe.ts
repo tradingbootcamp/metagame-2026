@@ -49,6 +49,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
     "session",
     "account",
     "verification",
+    "apikey",
   ],
   Attendees: ["profiles"],
   Tickets: ["tickets"],
@@ -64,6 +65,8 @@ const TABLE_NOTES: Record<string, string> = {
     "How a user can sign in: one row per method. The credential provider's row holds the password hash; OAuth providers would hold tokens.",
   verification:
     "Short-lived email codes and similar one-time secrets, keyed by identifier (the email).",
+  apikey:
+    "API keys (Better Auth api-key plugin), minted on /admin/api-keys. A request carrying one in x-api-key acts as the owning user (reference_id), so the admin gate applies as it does to pages. Only the hash is stored; start shows the first characters for telling keys apart.",
   profiles:
     "Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field.",
   tickets:
