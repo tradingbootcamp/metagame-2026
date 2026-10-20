@@ -47,10 +47,12 @@ const blockStyle = (s: ScheduleSession) =>
 function SessionBlock({
   session,
   slotStart,
+  going,
   onOpen,
 }: {
   session: PlacedSession;
   slotStart: number;
+  going: number;
   onOpen: OpenFn;
 }) {
   const draft = session.status === "draft";
@@ -77,6 +79,12 @@ function SessionBlock({
           {hostNames(session)}
         </span>
       )}
+      {(going > 0 || session.maxCapacity !== null) && (
+        <span className="mt-0.5 block text-[11px] leading-tight text-[#1b1530]/70">
+          👤 {going}
+          {session.maxCapacity !== null && `/${session.maxCapacity}`}
+        </span>
+      )}
     </button>
   );
 }
@@ -86,11 +94,13 @@ type Column = { id: string; name: string; detail: string | null };
 function GridDay({
   day,
   columns,
+  going,
   onOpen,
   onCreate,
 }: {
   day: Day;
   columns: Column[];
+  going: Record<string, number>;
   onOpen: OpenFn;
   onCreate: CreateFn;
 }) {
@@ -156,6 +166,7 @@ function GridDay({
                         key={s.id}
                         session={s}
                         slotStart={slotStart}
+                        going={going[s.id] ?? 0}
                         onOpen={onOpen}
                       />
                     ))}
@@ -234,11 +245,14 @@ function ListDay({
 export default function ScheduleGrid({
   days,
   locations,
+  going,
   onOpen,
   onCreate,
 }: {
   days: Day[];
   locations: ScheduleLocation[];
+  /** Going RSVPs per session id. */
+  going: Record<string, number>;
   onOpen: OpenFn;
   onCreate: CreateFn;
 }) {
@@ -363,6 +377,7 @@ export default function ScheduleGrid({
           <GridDay
             day={day}
             columns={columns}
+            going={going}
             onOpen={onOpen}
             onCreate={onCreate}
           />

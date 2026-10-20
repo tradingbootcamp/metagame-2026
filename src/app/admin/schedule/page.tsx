@@ -3,7 +3,11 @@ import SignIn from "../SignIn";
 import { NameForm } from "../SignInForms";
 import ScheduleTool from "./ScheduleTool";
 import { adminAccess } from "@/lib/admin-auth";
-import { loadSchedule } from "@/lib/schedule-store";
+import {
+  loadAttendance,
+  loadSchedule,
+  loadViewerPlans,
+} from "@/lib/schedule-store";
 
 export default async function AdminSchedulePage() {
   // Per-request on every branch, or the sign-in branch gets baked in as
@@ -14,8 +18,23 @@ export default async function AdminSchedulePage() {
   if (!access) return <SignIn next="/admin/schedule" />;
   if (!access.name) return <NameForm />;
 
-  const schedule = await loadSchedule();
+  const [schedule, attendance, plans] = await Promise.all([
+    loadSchedule(),
+    loadAttendance(),
+    access.via === "account" ? loadViewerPlans(access.userId) : null,
+  ]);
+  const viewer =
+    access.via === "account" && plans
+      ? { ...plans, userId: access.userId }
+      : null;
   // Mirrors the guard in actions.ts: sample data only against a local database.
   const canSeed = process.env.NODE_ENV === "development";
-  return <ScheduleTool {...schedule} canSeed={canSeed} />;
+  return (
+    <ScheduleTool
+      {...schedule}
+      attendance={attendance}
+      viewer={viewer}
+      canSeed={canSeed}
+    />
+  );
 }

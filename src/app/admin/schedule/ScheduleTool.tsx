@@ -12,8 +12,10 @@ import {
   formatPacificTime,
   hostNames,
   isPlaced,
+  type Attendance,
   type ScheduleLocation,
   type ScheduleSession,
+  type ViewerPlans,
 } from "@/lib/schedule";
 
 type Editing =
@@ -48,10 +50,14 @@ function Section({
 export default function ScheduleTool({
   sessions,
   locations,
+  attendance,
+  viewer,
   canSeed,
 }: {
   sessions: ScheduleSession[];
   locations: ScheduleLocation[];
+  attendance: Attendance;
+  viewer: (ViewerPlans & { userId: string }) | null;
   canSeed: boolean;
 }) {
   const [editing, setEditing] = useState<Editing>(null);
@@ -62,6 +68,21 @@ export default function ScheduleTool({
   const days = useMemo(() => buildDays(sessions), [sessions]);
   const unplaced = sessions.filter((s) => !isPlaced(s));
   const published = sessions.filter((s) => s.status === "published").length;
+  const going = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(attendance).map(([id, a]) => [
+          id,
+          a.attendees.filter((x) => x.status === "going").length,
+        ]),
+      ),
+    [attendance],
+  );
+  // The open session re-read from fresh props, so RSVP changes show up live.
+  const openNow =
+    editing?.kind === "session" && editing.session
+      ? (sessions.find((s) => s.id === editing.session!.id) ?? editing.session)
+      : null;
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
 
@@ -130,6 +151,7 @@ export default function ScheduleTool({
       <ScheduleGrid
         days={days}
         locations={locations}
+        going={going}
         onOpen={openSession}
         onCreate={createAt}
       />
@@ -283,9 +305,11 @@ export default function ScheduleTool({
       {editing?.kind === "session" && (
         <SessionForm
           key={editing.session?.id ?? "new"}
-          session={editing.session}
+          session={openNow}
           defaults={editing.defaults}
           locations={locations}
+          attendance={openNow ? attendance[openNow.id] : undefined}
+          viewer={viewer}
           onClose={close}
         />
       )}

@@ -38,14 +38,31 @@ export type ScheduleSession = {
   needs: string | null;
   status: Status;
   /** Billing order, lead first. */
-  hosts: ScheduleHost[];
+  hosts: ScheduleAccount[];
 };
 
-export type ScheduleHost = {
+export type ScheduleAccount = {
   userId: string;
   /** Preferred name, else account name, else email. */
   name: string;
   email: string;
+};
+
+export const RSVP_STATUSES = ["going", "waitlist"] as const;
+export type RsvpStatus = (typeof RSVP_STATUSES)[number];
+
+export type Attendee = ScheduleAccount & { status: RsvpStatus };
+
+/** Who's coming to each session, for organizers. Keyed by session id. */
+export type Attendance = Record<
+  string,
+  { attendees: Attendee[]; bookmarks: number }
+>;
+
+/** The signed-in viewer's own RSVPs and bookmarks. */
+export type ViewerPlans = {
+  rsvps: Record<string, RsvpStatus>;
+  bookmarks: string[];
 };
 
 export function hostNames(session: Pick<ScheduleSession, "hosts">): string {

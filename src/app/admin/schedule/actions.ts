@@ -10,17 +10,19 @@ import {
   slugify,
   type Ages,
   type Category,
-  type ScheduleHost,
+  type ScheduleAccount,
   type Status,
 } from "@/lib/schedule";
 import {
+  cancelRsvp,
   ensureAccount,
   explainDbError,
   insertSample,
   removeLocation,
   removeSample,
   removeSession,
-  searchHosts,
+  rsvp,
+  searchAccounts,
   upsertLocation,
   upsertSession,
 } from "@/lib/schedule-store";
@@ -124,21 +126,21 @@ export async function saveSession(
   return { ok: true };
 }
 
-export async function findHosts(query: string): Promise<ScheduleHost[]> {
+export async function findAccounts(query: string): Promise<ScheduleAccount[]> {
   if (!(await requireAdmin())) return [];
   const q = query.trim();
-  return q.length < 2 ? [] : searchHosts(q);
+  return q.length < 2 ? [] : searchAccounts(q);
 }
 
-export type NewHostResult =
-  | { host: ScheduleHost; error?: never }
-  | { host?: never; error: string };
+export type NewAccountResult =
+  | { account: ScheduleAccount; error?: never }
+  | { account?: never; error: string };
 
 /** Links the account with this email, making one if there is none. */
-export async function addHost(
+export async function addAccount(
   name: string,
   email: string,
-): Promise<NewHostResult> {
+): Promise<NewAccountResult> {
   if (!(await requireAdmin())) return { error: EXPIRED };
   name = name.trim();
   email = email.trim().toLowerCase();
@@ -146,10 +148,39 @@ export async function addHost(
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     return { error: "That email doesn't look right." };
   try {
-    return { host: await ensureAccount(name, email) };
+    return { account: await ensureAccount(name, email) };
   } catch (err) {
     return { error: explainDbError(err).error };
   }
+}
+
+/** RSVPs someone else, e.g. a walk-up; waitlists them when full. */
+export async function addRsvpFor(
+  sessionId: string,
+  userId: string,
+): Promise<FormState> {
+  if (!(await requireAdmin())) return { error: EXPIRED };
+  try {
+    await rsvp(sessionId, userId);
+  } catch (err) {
+    return explainDbError(err);
+  }
+  revalidatePath(PATH);
+  return { ok: true };
+}
+
+export async function removeRsvpFor(
+  sessionId: string,
+  userId: string,
+): Promise<FormState> {
+  if (!(await requireAdmin())) return { error: EXPIRED };
+  try {
+    await cancelRsvp(sessionId, userId);
+  } catch (err) {
+    return explainDbError(err);
+  }
+  revalidatePath(PATH);
+  return { ok: true };
 }
 
 export async function deleteSession(id: string): Promise<FormState> {
@@ -210,8 +241,7 @@ export async function deleteLocation(id: string): Promise<FormState> {
   return { ok: true };
 }
 
-// Sample data is for a local database only. Previews share the production
-// database until META-3156, so this refuses outside `next dev`.
+// Sample data only from `next dev`, never a deployed site.
 const sampleAllowed = process.env.NODE_ENV === "development";
 
 export async function addSample(): Promise<FormState> {

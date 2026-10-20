@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { XIcon } from "lucide-react";
 import { deleteSession, saveSession, type FormState } from "./actions";
+import AttendancePanel from "./AttendancePanel";
 import HostPicker from "./HostPicker";
 import {
   buttonClass,
@@ -24,8 +25,10 @@ import {
   pacificDayKey,
   pacificMinutes,
   slotLabel,
+  type Attendance,
   type ScheduleLocation,
   type ScheduleSession,
+  type ViewerPlans,
 } from "@/lib/schedule";
 import {
   Dialog,
@@ -96,11 +99,15 @@ export default function SessionForm({
   session,
   defaults,
   locations,
+  attendance,
+  viewer,
   onClose,
 }: {
   session: ScheduleSession | null;
   defaults?: SessionDefaults;
   locations: ScheduleLocation[];
+  attendance?: Attendance[string];
+  viewer: (ViewerPlans & { userId: string }) | null;
   onClose: () => void;
 }) {
   const [day, setDay] = useState(
@@ -455,6 +462,13 @@ export default function SessionForm({
             </div>
           </div>
         </form>
+        {session && (
+          <AttendancePanel
+            session={session}
+            attendance={attendance}
+            viewer={viewer}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -1,21 +1,35 @@
-import { asc, eq, ilike, inArray, like, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  ilike,
+  inArray,
+  like,
+  or,
+  sql,
+} from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { getAuth } from "./auth";
 import {
   fromPacificWall,
-  type ScheduleHost,
+  type Attendance,
+  type RsvpStatus,
+  type ScheduleAccount,
+  type ViewerPlans,
   type ScheduleLocation,
   type ScheduleSession,
 } from "./schedule";
 
-const { locations, sessions, sessionHosts, user, profiles } = schema;
+const { locations, sessions, sessionHosts, rsvps, bookmarks, user, profiles } =
+  schema;
 
 // Matches accountLabel(): preferred name, else account name, else email.
-const hostName = sql<string>`coalesce(nullif(trim(${profiles.preferredName}), ''), nullif(trim(${user.name}), ''), ${user.email})`;
+const accountName = sql<string>`coalesce(nullif(trim(${profiles.preferredName}), ''), nullif(trim(${user.name}), ''), ${user.email})`;
 
-const hostColumns = {
+const accountColumns = {
   userId: user.id,
-  name: hostName,
+  name: accountName,
   email: user.email,
 };
 
@@ -36,13 +50,13 @@ export async function loadSchedule(): Promise<Schedule> {
       .from(sessions)
       .orderBy(asc(sessions.startsAt), asc(sessions.title)),
     db
-      .select({ sessionId: sessionHosts.sessionId, ...hostColumns })
+      .select({ sessionId: sessionHosts.sessionId, ...accountColumns })
       .from(sessionHosts)
       .innerJoin(user, eq(user.id, sessionHosts.userId))
       .leftJoin(profiles, eq(profiles.userId, user.id))
       .orderBy(asc(sessionHosts.sessionId), asc(sessionHosts.position)),
   ]);
-  const hostsBySession = new Map<string, ScheduleHost[]>();
+  const hostsBySession = new Map<string, ScheduleAccount[]>();
   for (const { sessionId, ...host } of hosts) {
     hostsBySession.set(sessionId, [
       ...(hostsBySession.get(sessionId) ?? []),
@@ -124,14 +138,18 @@ export async function upsertSession(input: SessionInput): Promise<string> {
         ),
     ]);
   }
+  // A raised capacity frees seats for the waitlist.
+  if (id) await promoteWaitlist(sessionId);
   return sessionId;
 }
 
 /** Accounts whose name, preferred name or email contains the query. */
-export async function searchHosts(query: string): Promise<ScheduleHost[]> {
+export async function searchAccounts(
+  query: string,
+): Promise<ScheduleAccount[]> {
   const q = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
   return getDb()
-    .select(hostColumns)
+    .select(accountColumns)
     .from(user)
     .leftJoin(profiles, eq(profiles.userId, user.id))
     .where(
@@ -141,7 +159,7 @@ export async function searchHosts(query: string): Promise<ScheduleHost[]> {
         ilike(profiles.preferredName, q),
       ),
     )
-    .orderBy(asc(hostName))
+    .orderBy(asc(accountName))
     .limit(8);
 }
 
@@ -152,11 +170,11 @@ export async function searchHosts(query: string): Promise<ScheduleHost[]> {
 export async function ensureAccount(
   name: string,
   email: string,
-): Promise<ScheduleHost> {
+): Promise<ScheduleAccount> {
   const db = getDb();
   const find = () =>
     db
-      .select(hostColumns)
+      .select(accountColumns)
       .from(user)
       .leftJoin(profiles, eq(profiles.userId, user.id))
       .where(eq(user.email, email.toLowerCase()))
@@ -166,6 +184,154 @@ export async function ensureAccount(
   await getAuth().api.createUser({ body: { email, name } });
   const [made] = await find();
   return made;
+}
+
+/** True when the error is the rsvps_capacity trigger refusing a seat. */
+function isFull(err: unknown): boolean {
+  for (
+    let e: unknown = err;
+    e && typeof e === "object";
+    e = (e as { cause?: unknown }).cause
+  ) {
+    if ((e as { constraint?: unknown }).constraint === "rsvps_capacity")
+      return true;
+  }
+  return false;
+}
+
+/**
+ * A going RSVP, or a waitlist spot when the session is full. Re-RSVPing keeps
+ * an existing seat, and retries a waitlisted one.
+ */
+export async function rsvp(
+  sessionId: string,
+  userId: string,
+): Promise<RsvpStatus> {
+  const db = getDb();
+  const mine = and(eq(rsvps.sessionId, sessionId), eq(rsvps.userId, userId));
+  // The capacity trigger runs before ON CONFLICT is considered, so an upsert
+  // would refuse someone already seated; branch on the existing row instead.
+  const [existing] = await db
+    .select({ status: rsvps.status })
+    .from(rsvps)
+    .where(mine)
+    .limit(1);
+  if (existing?.status === "going") return "going";
+  try {
+    if (existing) {
+      await db.update(rsvps).set({ status: "going" }).where(mine);
+    } else {
+      await db
+        .insert(rsvps)
+        .values({ sessionId, userId, status: "going" })
+        .onConflictDoNothing();
+    }
+    return "going";
+  } catch (err) {
+    if (!isFull(err)) throw err;
+    await db
+      .insert(rsvps)
+      .values({ sessionId, userId, status: "waitlist" })
+      .onConflictDoNothing();
+    return "waitlist";
+  }
+}
+
+/** Drops the RSVP, then moves the waitlist up into any freed seat. */
+export async function cancelRsvp(
+  sessionId: string,
+  userId: string,
+): Promise<void> {
+  await getDb()
+    .delete(rsvps)
+    .where(and(eq(rsvps.sessionId, sessionId), eq(rsvps.userId, userId)));
+  await promoteWaitlist(sessionId);
+}
+
+/** Seats waitlisted people, earliest first, until the session is full. */
+async function promoteWaitlist(sessionId: string): Promise<void> {
+  const db = getDb();
+  const waiting = await db
+    .select({ userId: rsvps.userId })
+    .from(rsvps)
+    .where(and(eq(rsvps.sessionId, sessionId), eq(rsvps.status, "waitlist")))
+    .orderBy(asc(rsvps.createdAt));
+  for (const { userId } of waiting) {
+    try {
+      await db
+        .update(rsvps)
+        .set({ status: "going" })
+        .where(and(eq(rsvps.sessionId, sessionId), eq(rsvps.userId, userId)));
+    } catch (err) {
+      if (isFull(err)) return;
+      throw err;
+    }
+  }
+}
+
+export async function setBookmark(
+  sessionId: string,
+  userId: string,
+  on: boolean,
+): Promise<void> {
+  const db = getDb();
+  if (on) {
+    await db
+      .insert(bookmarks)
+      .values({ sessionId, userId })
+      .onConflictDoNothing();
+  } else {
+    await db
+      .delete(bookmarks)
+      .where(
+        and(eq(bookmarks.sessionId, sessionId), eq(bookmarks.userId, userId)),
+      );
+  }
+}
+
+/** Every RSVP with names, plus bookmark counts. Organizer-only data. */
+export async function loadAttendance(): Promise<Attendance> {
+  const db = getDb();
+  const [rows, marks] = await Promise.all([
+    db
+      .select({
+        sessionId: rsvps.sessionId,
+        status: rsvps.status,
+        ...accountColumns,
+      })
+      .from(rsvps)
+      .innerJoin(user, eq(user.id, rsvps.userId))
+      .leftJoin(profiles, eq(profiles.userId, user.id))
+      .orderBy(asc(rsvps.createdAt)),
+    db
+      .select({ sessionId: bookmarks.sessionId, n: count() })
+      .from(bookmarks)
+      .groupBy(bookmarks.sessionId),
+  ]);
+  const out: Attendance = {};
+  const entry = (id: string) => (out[id] ??= { attendees: [], bookmarks: 0 });
+  for (const { sessionId, ...attendee } of rows)
+    entry(sessionId).attendees.push(attendee);
+  for (const { sessionId, n } of marks) entry(sessionId).bookmarks = n;
+  return out;
+}
+
+export async function loadViewerPlans(userId: string): Promise<ViewerPlans> {
+  const db = getDb();
+  const [mine, marked] = await Promise.all([
+    db
+      .select({ sessionId: rsvps.sessionId, status: rsvps.status })
+      .from(rsvps)
+      .where(eq(rsvps.userId, userId)),
+    db
+      .select({ sessionId: bookmarks.sessionId })
+      .from(bookmarks)
+      .where(eq(bookmarks.userId, userId)),
+  ]);
+  return {
+    rsvps: Object.fromEntries(mine.map((r) => [r.sessionId, r.status])),
+    bookmarks: marked.map((b) => b.sessionId),
+  };
 }
 
 export async function removeSession(id: string): Promise<void> {
