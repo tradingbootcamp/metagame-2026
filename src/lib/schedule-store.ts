@@ -172,19 +172,46 @@ export async function ensureAccount(
   name: string,
   email: string,
 ): Promise<ScheduleAccount> {
-  const db = getDb();
-  const find = () =>
-    db
-      .select(accountColumns)
-      .from(user)
-      .leftJoin(profiles, eq(profiles.userId, user.id))
-      .where(eq(user.email, email.toLowerCase()))
-      .limit(1);
-  const [existing] = await find();
+  const existing = await findAccount(email);
   if (existing) return existing;
   await getAuth().api.createUser({ body: { email, name } });
-  const [made] = await find();
-  return made;
+  return (await findAccount(email))!;
+}
+
+export async function findAccount(
+  email: string,
+): Promise<ScheduleAccount | null> {
+  const [found] = await getDb()
+    .select(accountColumns)
+    .from(user)
+    .leftJoin(profiles, eq(profiles.userId, user.id))
+    .where(eq(user.email, email.toLowerCase()))
+    .limit(1);
+  return found ?? null;
+}
+
+export async function sessionIdBySlug(slug: string): Promise<string | null> {
+  const [row] = await getDb()
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(eq(sessions.slug, slug))
+    .limit(1);
+  return row?.id ?? null;
+}
+
+export type RsvpCounts = Record<string, { going: number; waitlist: number }>;
+
+/** Going and waitlisted per session id; sessions with no RSVPs are absent. */
+export async function loadRsvpCounts(): Promise<RsvpCounts> {
+  const rows = await getDb()
+    .select({ sessionId: rsvps.sessionId, status: rsvps.status, n: count() })
+    .from(rsvps)
+    .groupBy(rsvps.sessionId, rsvps.status);
+  const out: RsvpCounts = {};
+  for (const { sessionId, status, n } of rows) {
+    (out[sessionId] ??= { going: 0, waitlist: 0 })[status] = n;
+  }
+  return out;
 }
 
 /** True when the error is the rsvps_capacity trigger refusing a seat. */

@@ -1,0 +1,81 @@
+import {
+  authorize,
+  done,
+  error,
+  failed,
+  json,
+  readBody,
+  resolveHosts,
+  sessionBySlug,
+  sessionToRaw,
+} from "@/lib/schedule-api";
+import { parseSessionFields, type Raw } from "@/lib/schedule-input";
+import { removeSession, upsertSession } from "@/lib/schedule-store";
+
+export const dynamic = "force-dynamic";
+
+type Ctx = RouteContext<"/api/admin/schedule/sessions/[slug]">;
+
+export async function GET(_request: Request, ctx: Ctx) {
+  const access = await authorize();
+  if (access instanceof Response) return access;
+  const session = await sessionBySlug((await ctx.params).slug);
+  return session ? json({ session }) : error("No such session.", 404);
+}
+
+/** Replaces the session: fields left out are cleared, as the form would. */
+export async function PUT(request: Request, ctx: Ctx) {
+  return write(request, ctx, (body) => body);
+}
+
+/** Changes only the fields given; `hosts` left out keeps the host list. */
+export async function PATCH(request: Request, ctx: Ctx) {
+  return write(request, ctx, (body, current) => ({ ...current, ...body }));
+}
+
+async function write(
+  request: Request,
+  ctx: Ctx,
+  merge: (body: Raw, current: Raw) => Raw,
+) {
+  const access = await authorize();
+  if (access instanceof Response) return access;
+  const body = await readBody(request);
+  if (body instanceof Response) return body;
+  const { slug } = await ctx.params;
+  const current = await sessionBySlug(slug);
+  if (!current) return error("No such session.", 404);
+
+  // The path names the session; the body's slug, if any, renames it.
+  const raw = merge({ slug, ...body }, sessionToRaw(current));
+  const parsed = parseSessionFields(raw);
+  if (!parsed.ok) return error(parsed.error, 400, parsed.field);
+  const hosts = await resolveHosts(raw.hosts ?? []);
+  if ("error" in hosts) return error(hosts.error, 400, hosts.field);
+
+  try {
+    await upsertSession({
+      id: current.id,
+      ...parsed.value,
+      hostIds: hosts.ids,
+    });
+  } catch (err) {
+    return failed(err);
+  }
+  done();
+  return json({ session: await sessionBySlug(parsed.value.slug) });
+}
+
+export async function DELETE(_request: Request, ctx: Ctx) {
+  const access = await authorize();
+  if (access instanceof Response) return access;
+  const session = await sessionBySlug((await ctx.params).slug);
+  if (!session) return error("No such session.", 404);
+  try {
+    await removeSession(session.id);
+  } catch (err) {
+    return failed(err);
+  }
+  done();
+  return json({ ok: true });
+}

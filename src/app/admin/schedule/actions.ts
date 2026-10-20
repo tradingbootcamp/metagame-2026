@@ -3,17 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { EXPIRED, requireAdmin } from "@/lib/admin-auth";
 import { deleteImage, uploadImage } from "@/lib/blob";
+import { type ScheduleAccount } from "@/lib/schedule";
 import {
-  AGES,
-  CATEGORIES,
-  STATUSES,
-  fromPacificWall,
-  slugify,
-  type Ages,
-  type Category,
-  type ScheduleAccount,
-  type Status,
-} from "@/lib/schedule";
+  parseLocationFields,
+  parseSessionFields,
+  type Raw,
+} from "@/lib/schedule-input";
 import {
   cancelRsvp,
   ensureAccount,
@@ -44,19 +39,8 @@ const str = (formData: FormData, key: string) =>
 const optional = (formData: FormData, key: string) =>
   str(formData, key) || null;
 
-function oneOf<T extends string>(
-  value: string,
-  choices: readonly T[],
-): T | null {
-  return (choices as readonly string[]).includes(value) ? (value as T) : null;
-}
-
-/** A whole number from a text field, null when blank, NaN when not a number. */
-function int(formData: FormData, key: string): number | null {
-  const raw = str(formData, key);
-  if (!raw) return null;
-  return /^-?\d+$/.test(raw) ? Number(raw) : Number.NaN;
-}
+/** The form's text fields; repeated names (hostId) collapse to one, so read those separately. */
+const fields = (formData: FormData): Raw => Object.fromEntries(formData);
 
 export async function saveSession(
   _prev: FormState,
@@ -64,41 +48,8 @@ export async function saveSession(
 ): Promise<FormState> {
   if (!(await requireAdmin())) return { error: EXPIRED };
 
-  const title = str(formData, "title");
-  if (!title) return { field: "title", error: "Required." };
-  const slug = slugify(str(formData, "slug") || title);
-  if (!slug) return { field: "slug", error: "Needs a letter or digit." };
-
-  const startRaw = str(formData, "startsAt");
-  const endRaw = str(formData, "endsAt");
-  const startsAt = startRaw ? fromPacificWall(startRaw) : null;
-  const endsAt = endRaw ? fromPacificWall(endRaw) : null;
-  if (startRaw && !startsAt) return { field: "startsAt", error: "Not a time." };
-  if (endRaw && !endsAt) return { field: "endsAt", error: "Not a time." };
-  if (Boolean(startsAt) !== Boolean(endsAt)) {
-    return {
-      field: startsAt ? "endsAt" : "startsAt",
-      error: "Set both times, or neither for an unplaced draft.",
-    };
-  }
-  if (startsAt && endsAt && endsAt <= startsAt) {
-    return { field: "endsAt", error: "End must be after start." };
-  }
-
-  const maxCapacity = int(formData, "maxCapacity");
-  const minCapacity = int(formData, "minCapacity");
-  if (Number.isNaN(maxCapacity))
-    return { field: "maxCapacity", error: "Whole number." };
-  if (Number.isNaN(minCapacity))
-    return { field: "minCapacity", error: "Whole number." };
-
-  const status: Status = oneOf(str(formData, "status"), STATUSES) ?? "draft";
-  if (status === "published" && !startsAt) {
-    return {
-      field: "status",
-      error: "A published session needs a start and end time.",
-    };
-  }
+  const parsed = parseSessionFields(fields(formData));
+  if (!parsed.ok) return { field: parsed.field, error: parsed.error };
 
   const hostIds = [
     ...new Set(formData.getAll("hostId").map(String).filter(Boolean)),
@@ -107,18 +58,7 @@ export async function saveSession(
   try {
     await upsertSession({
       id: str(formData, "id") || undefined,
-      slug,
-      title,
-      description: optional(formData, "description"),
-      category: oneOf<Category>(str(formData, "category"), CATEGORIES),
-      startsAt,
-      endsAt,
-      locationId: optional(formData, "locationId"),
-      maxCapacity,
-      minCapacity,
-      ages: oneOf<Ages>(str(formData, "ages"), AGES),
-      needs: optional(formData, "needs"),
-      status,
+      ...parsed.value,
       hostIds,
     });
   } catch (err) {
@@ -202,14 +142,8 @@ export async function saveLocation(
 ): Promise<FormState> {
   if (!(await requireAdmin())) return { error: EXPIRED };
 
-  const name = str(formData, "name");
-  if (!name) return { field: "name", error: "Required." };
-  const capacity = int(formData, "capacity");
-  if (Number.isNaN(capacity))
-    return { field: "capacity", error: "Whole number." };
-  const displayOrder = int(formData, "displayOrder") ?? 100;
-  if (Number.isNaN(displayOrder))
-    return { field: "displayOrder", error: "Whole number." };
+  const parsed = parseLocationFields(fields(formData));
+  if (!parsed.ok) return { field: parsed.field, error: parsed.error };
 
   const id = str(formData, "id") || undefined;
   const previous = id ? await locationThumbnail(id) : null;
@@ -230,16 +164,7 @@ export async function saveLocation(
   }
 
   try {
-    await upsertLocation({
-      id,
-      name,
-      capacity,
-      campusLocation: optional(formData, "campusLocation"),
-      description: optional(formData, "description"),
-      displayOrder,
-      showInSchedule: formData.get("showInSchedule") === "on",
-      thumbnailUrl,
-    });
+    await upsertLocation({ id, ...parsed.value, thumbnailUrl });
   } catch (err) {
     await deleteImage(uploaded);
     return explainDbError(err);
