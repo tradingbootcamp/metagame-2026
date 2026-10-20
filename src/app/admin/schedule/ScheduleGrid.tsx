@@ -89,7 +89,12 @@ function SessionBlock({
   );
 }
 
-type Column = { id: string; name: string; detail: string | null };
+type Column = {
+  id: string;
+  name: string;
+  detail: string | null;
+  thumbnailUrl: string | null;
+};
 
 function GridDay({
   day,
@@ -118,6 +123,14 @@ function GridDay({
               key={col.id}
               className="border-r border-b border-line px-2 py-2 last:border-r-0"
             >
+              {col.thumbnailUrl && (
+                // eslint-disable-next-line @next/next/no-img-element -- already thumbnail-sized
+                <img
+                  src={col.thumbnailUrl}
+                  alt=""
+                  className="mb-1.5 h-14 w-full rounded-sm object-cover"
+                />
+              )}
               <div className="text-sm leading-tight font-bold">{col.name}</div>
               {col.detail && (
                 <div className="text-[11px] leading-tight text-white/75">
@@ -262,6 +275,7 @@ export default function ScheduleGrid({
   const columns: Column[] = locations.map((l) => ({
     id: l.id,
     name: l.name,
+    thumbnailUrl: l.thumbnailUrl,
     detail:
       [
         l.campusLocation,
@@ -272,7 +286,12 @@ export default function ScheduleGrid({
         .join(" · ") || null,
   }));
   if (days.some((d) => d.sessions.some((s) => s.locationId === null))) {
-    columns.push({ id: NO_ROOM, name: "No room", detail: "unassigned" });
+    columns.push({
+      id: NO_ROOM,
+      name: "No room",
+      detail: "unassigned",
+      thumbnailUrl: null,
+    });
   }
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
