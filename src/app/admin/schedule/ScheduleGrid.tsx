@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { FaListUl, FaThLarge } from "react-icons/fa";
 import {
   formatPacificTime,
@@ -110,8 +110,17 @@ function GridDay({
   onCreate: CreateFn;
 }) {
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
+  const scroller = useRef<HTMLDivElement>(null);
+  // Open on the day's usual start; the small hours stay a scroll up.
+  useLayoutEffect(() => {
+    if (scroller.current)
+      scroller.current.scrollTop = day.slots.indexOf(day.opensAt) * SLOT_PX;
+  }, [day.key, day.opensAt, day.slots]);
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-white [--col-w:104px] [--time-w:44px] sm:[--col-w:120px] sm:[--time-w:56px]">
+    <div
+      ref={scroller}
+      className="max-h-[75vh] overflow-auto rounded-xl border border-line bg-white [--col-w:104px] [--time-w:44px] sm:[--col-w:120px] sm:[--time-w:56px]"
+    >
       <div className="min-w-fit">
         <div
           className="sticky top-0 z-30 grid bg-navy text-white"

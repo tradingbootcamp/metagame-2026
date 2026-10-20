@@ -183,11 +183,9 @@ export function minutesToHHMM(min: number): string {
 
 // Sessions start on the hour or half hour and end five minutes before the
 // next half hour, leaving a passing period.
-const FIRST_START = 7 * 60;
-const LAST_START = 23 * 60 + 30;
 export const END_GAP_MINUTES = 5;
 export const START_TIMES: number[] = [];
-for (let m = FIRST_START; m <= LAST_START; m += 30) START_TIMES.push(m);
+for (let m = 0; m < 24 * 60; m += 30) START_TIMES.push(m);
 export const END_TIMES = START_TIMES.map((m) => m + 30 - END_GAP_MINUTES);
 
 // Grid geometry, matching the 2025 schedule component.
@@ -227,15 +225,17 @@ export type Day = {
   name: string;
   dateLabel: string;
   sessions: PlacedSession[];
-  /** 30-minute slot starts (minutes since Pacific midnight) covering the day. */
+  /** 30-minute slot starts (minutes since Pacific midnight), all day. */
   slots: number[];
+  /** Where the grid opens scrolled to; earlier hours are a scroll up. */
+  opensAt: number;
 };
 
-// Every day shows at least its window, widened if a session starts earlier.
 // Friday opens in the evening.
-const DAY_START = 9 * 60;
-const DAY_STARTS: Record<string, number> = { "2026-11-06": 17 * 60 };
-const DAY_END = 24 * 60;
+const OPENS_AT = 9 * 60;
+const DAY_OPENS_AT: Record<string, number> = { "2026-11-06": 17 * 60 };
+const SLOTS: number[] = [];
+for (let m = 0; m < 24 * 60; m += SLOT_MINUTES) SLOTS.push(m);
 
 /**
  * Buckets placed sessions by Pacific day. The three conference days always
@@ -253,7 +253,9 @@ export function buildDays(sessions: ScheduleSession[]): Day[] {
     byKey.set(key, [...(byKey.get(key) ?? []), s]);
   }
 
-  const days: Omit<Day, "sessions" | "slots">[] = [...CONFERENCE_DAYS];
+  const days: Omit<Day, "sessions" | "slots" | "opensAt">[] = [
+    ...CONFERENCE_DAYS,
+  ];
   for (const key of [...byKey.keys()].sort()) {
     if (days.some((d) => d.key === key)) continue;
     const iso = byKey.get(key)![0].startsAt;
@@ -271,16 +273,12 @@ export function buildDays(sessions: ScheduleSession[]): Day[] {
     });
   }
 
-  return days.map((day) => {
-    const daySessions = byKey.get(day.key) ?? [];
-    const starts = daySessions.map((s) => pacificMinutes(s.startsAt));
-    const startMin =
-      Math.floor(Math.min(DAY_STARTS[day.key] ?? DAY_START, ...starts) / 60) *
-      60;
-    const slots: number[] = [];
-    for (let m = startMin; m < DAY_END; m += SLOT_MINUTES) slots.push(m);
-    return { ...day, sessions: daySessions, slots };
-  });
+  return days.map((day) => ({
+    ...day,
+    sessions: byKey.get(day.key) ?? [],
+    slots: SLOTS,
+    opensAt: DAY_OPENS_AT[day.key] ?? OPENS_AT,
+  }));
 }
 
 /** "my-session-title" from "My Session Title!", capped so slugs stay short. */
