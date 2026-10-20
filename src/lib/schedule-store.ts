@@ -362,6 +362,57 @@ export async function loadViewerPlans(userId: string): Promise<ViewerPlans> {
   };
 }
 
+/** Who's going, waitlisted and bookmarked for one session, earliest first. */
+export async function loadSessionPlans(sessionId: string) {
+  const db = getDb();
+  const [rows, marked] = await Promise.all([
+    db
+      .select({ status: rsvps.status, ...accountColumns })
+      .from(rsvps)
+      .innerJoin(user, eq(user.id, rsvps.userId))
+      .leftJoin(profiles, eq(profiles.userId, user.id))
+      .where(eq(rsvps.sessionId, sessionId))
+      .orderBy(asc(rsvps.createdAt)),
+    db
+      .select(accountColumns)
+      .from(bookmarks)
+      .innerJoin(user, eq(user.id, bookmarks.userId))
+      .leftJoin(profiles, eq(profiles.userId, user.id))
+      .where(eq(bookmarks.sessionId, sessionId))
+      .orderBy(asc(bookmarks.createdAt)),
+  ]);
+  const with_ = (status: RsvpStatus) =>
+    rows
+      .filter((r) => r.status === status)
+      .map(({ userId, name, email }) => ({ userId, name, email }));
+  return {
+    going: with_("going"),
+    waitlist: with_("waitlist"),
+    bookmarkedBy: marked,
+  };
+}
+
+/** One account's RSVPs and bookmarks, by session slug. */
+export async function loadAccountPlans(userId: string) {
+  const db = getDb();
+  const session = { slug: sessions.slug, title: sessions.title };
+  const [going, marked] = await Promise.all([
+    db
+      .select({ ...session, status: rsvps.status })
+      .from(rsvps)
+      .innerJoin(sessions, eq(sessions.id, rsvps.sessionId))
+      .where(eq(rsvps.userId, userId))
+      .orderBy(asc(sessions.startsAt)),
+    db
+      .select(session)
+      .from(bookmarks)
+      .innerJoin(sessions, eq(sessions.id, bookmarks.sessionId))
+      .where(eq(bookmarks.userId, userId))
+      .orderBy(asc(sessions.startsAt)),
+  ]);
+  return { rsvps: going, bookmarks: marked };
+}
+
 export async function removeSession(id: string): Promise<void> {
   await getDb().delete(sessions).where(eq(sessions.id, id));
 }

@@ -11,6 +11,7 @@ import {
   cancelRsvp,
   ensureAccount,
   findAccount,
+  loadSessionPlans,
   rsvp,
 } from "@/lib/schedule-store";
 
@@ -35,6 +36,16 @@ async function target(request: Request, ctx: Ctx, create: boolean) {
   if (!account && create && name) account = await ensureAccount(name, email);
   if (!account) return error(`No account for ${email}.`, 404, "email");
   return { session, account };
+}
+
+/** Going and waitlisted accounts, earliest first. */
+export async function GET(_request: Request, ctx: Ctx) {
+  const access = await authorize();
+  if (access instanceof Response) return access;
+  const session = await sessionBySlug((await ctx.params).slug);
+  if (!session) return error("No such session.", 404);
+  const { going, waitlist } = await loadSessionPlans(session.id);
+  return json({ going, waitlist });
 }
 
 /** RSVPs the account; waitlists them when the session is full. */
