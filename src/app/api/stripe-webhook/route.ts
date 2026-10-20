@@ -151,7 +151,18 @@ export async function POST(request: Request) {
     });
 
     if (full.metadata?.tier === FAMILY_PACK.id) {
-      await recordFamilyPack(full, status);
+      try {
+        await recordFamilyPack(full, status);
+      } catch (err) {
+        // Still rethrown so Stripe retries (fulfillment is idempotent), which
+        // means a persistent failure alerts once per retry.
+        await sendAdminErrorEmail(
+          `Family & Friends Pack fulfillment failed (session ${full.id}, buyer ${full.customer_details?.email ?? "unknown"}, status ${status}): ${err instanceof Error ? err.message : String(err)}`,
+        ).catch((adminErr) =>
+          console.error("[stripe-webhook] admin alert failed:", adminErr),
+        );
+        throw err;
+      }
       return NextResponse.json({ received: true });
     }
 
