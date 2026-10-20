@@ -305,7 +305,7 @@ export default function SessionForm({
               {locations.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
-                  {l.capacity ? ` (${l.capacity})` : ""}
+                  {l.capacity ? ` · 👤 ${l.capacity}` : ""}
                 </option>
               ))}
             </select>
