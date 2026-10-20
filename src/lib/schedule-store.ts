@@ -73,6 +73,7 @@ export async function loadSchedule(): Promise<Schedule> {
       displayOrder: l.displayOrder,
       showInSchedule: l.showInSchedule,
       thumbnailUrl: l.thumbnailUrl,
+      imageUrl: l.imageUrl,
     })),
     sessions: sess.map((s) => ({
       id: s.id,
@@ -441,25 +442,40 @@ export async function upsertLocation(input: LocationInput): Promise<string> {
   return inserted.id;
 }
 
-export async function locationThumbnail(id: string): Promise<string | null> {
+export type RoomImages = Pick<ScheduleLocation, "thumbnailUrl" | "imageUrl">;
+
+const imageColumns = {
+  thumbnailUrl: locations.thumbnailUrl,
+  imageUrl: locations.imageUrl,
+};
+
+/** Null when there's no such room. */
+export async function locationImages(id: string): Promise<RoomImages | null> {
   const [row] = await getDb()
-    .select({ url: locations.thumbnailUrl })
+    .select(imageColumns)
     .from(locations)
     .where(eq(locations.id, id))
     .limit(1);
-  return row?.url ?? null;
+  return row ?? null;
+}
+
+export async function setLocationImages(
+  id: string,
+  images: RoomImages,
+): Promise<void> {
+  await getDb().update(locations).set(images).where(eq(locations.id, id));
 }
 
 /**
  * Sessions in the room keep their row; location_id goes null. Returns the
- * thumbnail URL so the caller can delete the file.
+ * image URLs so the caller can delete the files.
  */
-export async function removeLocation(id: string): Promise<string | null> {
+export async function removeLocation(id: string): Promise<RoomImages | null> {
   const [row] = await getDb()
     .delete(locations)
     .where(eq(locations.id, id))
-    .returning({ url: locations.thumbnailUrl });
-  return row?.url ?? null;
+    .returning(imageColumns);
+  return row ?? null;
 }
 
 // Database constraints read back as sentences. Drizzle wraps the driver error,
@@ -492,6 +508,10 @@ const CONSTRAINT_MESSAGES: Record<string, { field?: string; error: string }> = {
   sessions_min_within_max: {
     field: "minCapacity",
     error: "Min capacity must be between 0 and the max.",
+  },
+  locations_image_url_https: {
+    field: "thumbnail",
+    error: "That image is too large; try a smaller one.",
   },
   locations_thumbnail_url_https: {
     field: "thumbnail",

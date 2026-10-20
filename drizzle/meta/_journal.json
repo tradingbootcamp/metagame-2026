@@ -43,6 +43,13 @@
       "when": 1792533804884,
       "tag": "0005_api_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792539856692,
+      "tag": "0006_room_large_images",
+      "breakpoints": true
     }
   ]
 }

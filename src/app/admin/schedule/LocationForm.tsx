@@ -41,12 +41,15 @@ function Field({
 }
 
 const THUMB_PX = 320;
+const LARGE_PX = 1600;
+// Under the server's 900KB cap for large images.
+const LARGE_MAX_BYTES = 850 * 1024;
 
 /**
  * The room's image as of Save: `url` is the saved Blob URL, or a local preview
- * of `file` when a new image was picked.
+ * of `file` when a new image was picked. `large` is the same pick, ~1600px.
  */
-type Thumb = { url: string | null; file: File | null };
+type Thumb = { url: string | null; file: File | null; large: File | null };
 
 function ThumbnailPicker({
   value,
@@ -71,7 +74,10 @@ function ThumbnailPicker({
     }
     try {
       const small = await downscaleImage(file, THUMB_PX);
-      onChange({ url: URL.createObjectURL(small), file: small });
+      let large = await downscaleImage(file, LARGE_PX);
+      if (large.size > LARGE_MAX_BYTES)
+        large = await downscaleImage(file, LARGE_PX * 0.75);
+      onChange({ url: URL.createObjectURL(small), file: small, large });
       setProblem(null);
     } catch {
       setProblem("Couldn’t read that image.");
@@ -111,7 +117,7 @@ function ThumbnailPicker({
         {shown && (
           <button
             type="button"
-            onClick={() => onChange({ url: null, file: null })}
+            onClick={() => onChange({ url: null, file: null, large: null })}
             className={smallButtonClass}
           >
             Remove
@@ -154,6 +160,7 @@ export default function LocationForm({
   const [thumbnail, setThumbnail] = useState<Thumb>({
     url: location?.thumbnailUrl ?? null,
     file: null,
+    large: null,
   });
 
   useEffect(() => {
@@ -187,6 +194,7 @@ export default function LocationForm({
         <form
           action={(fd) => {
             if (thumbnail.file) fd.set("thumbnailFile", thumbnail.file);
+            if (thumbnail.large) fd.set("imageFile", thumbnail.large);
             formAction(fd);
           }}
           className="grid gap-4"

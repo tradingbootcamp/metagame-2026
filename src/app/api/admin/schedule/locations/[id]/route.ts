@@ -29,6 +29,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
       id,
       ...parsed.value,
       thumbnailUrl: current.thumbnailUrl,
+      imageUrl: current.imageUrl,
     });
   } catch (err) {
     return failed(err);

@@ -34,8 +34,10 @@ export const locations = pgTable(
     description: text(),
     displayOrder: integer().notNull().default(100),
     showInSchedule: boolean().notNull().default(false),
-    // A Vercel Blob URL; the image itself never lives in the database.
+    // Vercel Blob URLs; images never live in the database. The thumbnail is
+    // what the schedule shows; image_url is a large copy for detail views.
     thumbnailUrl: text(),
+    imageUrl: text(),
     // The Lighthaven Spaces row this was synced from; null for hand-made rooms.
     airtableRecordId: text().unique(),
     ...timestamps,
@@ -46,6 +48,7 @@ export const locations = pgTable(
       "locations_thumbnail_url_https",
       sql`${t.thumbnailUrl} like 'https://%'`,
     ),
+    check("locations_image_url_https", sql`${t.imageUrl} like 'https://%'`),
   ],
 );
 

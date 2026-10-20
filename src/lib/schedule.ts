@@ -21,6 +21,8 @@ export type ScheduleLocation = {
   showInSchedule: boolean;
   /** Public Vercel Blob URL, already thumbnail-sized. */
   thumbnailUrl: string | null;
+  /** Public Vercel Blob URL, about 1600px, for detail views. */
+  imageUrl: string | null;
 };
 
 export type ScheduleSession = {

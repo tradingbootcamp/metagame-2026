@@ -72,7 +72,7 @@ const TABLE_NOTES: Record<string, string> = {
   tickets:
     "One row per purchase, keyed by the payment id the webhooks upsert on. Airtable keeps the finance detail; this holds what admission needs. owner_user_id is set only by claiming the ticket code, never by email match.",
   locations:
-    "Rooms and spaces sessions happen in. display_order and show_in_schedule drive the schedule columns; airtable_record_id ties a room to its Lighthaven Spaces row.",
+    "Rooms and spaces sessions happen in. display_order and show_in_schedule drive the schedule columns; airtable_record_id ties a room to its Lighthaven Spaces row. thumbnail_url (what the schedule shows) and image_url (a large copy for detail views) are Vercel Blob URLs.",
   sessions:
     "One row per schedule slot. Drafts can be unplaced (null times, no location); only published rows show. airtable_rfp_record_id ties a session to the accepted RFP it was synced from.",
   session_hosts:

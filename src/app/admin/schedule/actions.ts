@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { EXPIRED, requireAdmin } from "@/lib/admin-auth";
-import { deleteImage, uploadImage } from "@/lib/blob";
+import { deleteImage } from "@/lib/blob";
+import { ImageUploadError, replaceRoomImages } from "@/lib/room-images";
 import { type ScheduleAccount } from "@/lib/schedule";
 import {
   parseLocationFields,
@@ -14,13 +15,14 @@ import {
   ensureAccount,
   explainDbError,
   insertSample,
-  locationThumbnail,
+  locationImages,
   removeLocation,
   removeSample,
   removeSession,
   rsvp,
   searchAccounts,
   upsertLocation,
+  type RoomImages,
   upsertSession,
 } from "@/lib/schedule-store";
 
@@ -146,30 +148,35 @@ export async function saveLocation(
   if (!parsed.ok) return { field: parsed.field, error: parsed.error };
 
   const id = str(formData, "id") || undefined;
-  const previous = id ? await locationThumbnail(id) : null;
-  // The form can only keep the current image or send a new file.
-  let thumbnailUrl =
-    optional(formData, "thumbnailUrl") === previous ? previous : null;
-  let uploaded: string | null = null;
-  const file = formData.get("thumbnailFile");
-  if (file instanceof File && file.size > 0) {
-    try {
-      uploaded = thumbnailUrl = await uploadImage("rooms", file);
-    } catch (err) {
-      return {
-        field: "thumbnail",
-        error: err instanceof Error ? err.message : "Upload failed.",
-      };
-    }
-  }
+  const previous: RoomImages = (id && (await locationImages(id))) || {
+    thumbnailUrl: null,
+    imageUrl: null,
+  };
+  // A picked image arrives as both sizes; Remove clears the hidden URL.
+  const file = (key: string) => {
+    const f = formData.get(key);
+    return f instanceof File && f.size > 0 ? f : undefined;
+  };
+  const thumbnail = file("thumbnailFile");
+  const removed =
+    !thumbnail &&
+    previous.thumbnailUrl !== null &&
+    optional(formData, "thumbnailUrl") !== previous.thumbnailUrl;
+  const change = thumbnail
+    ? { thumbnail, image: file("imageFile") ?? null }
+    : removed
+      ? { thumbnail: null, image: null }
+      : { thumbnail: undefined, image: undefined };
 
   try {
-    await upsertLocation({ id, ...parsed.value, thumbnailUrl });
+    await replaceRoomImages(previous, change, async (images) => {
+      await upsertLocation({ id, ...parsed.value, ...images });
+    });
   } catch (err) {
-    await deleteImage(uploaded);
+    if (err instanceof ImageUploadError)
+      return { field: "thumbnail", error: err.message };
     return explainDbError(err);
   }
-  if (previous !== thumbnailUrl) await deleteImage(previous);
   revalidatePath(PATH);
   return { ok: true };
 }
@@ -177,7 +184,9 @@ export async function saveLocation(
 export async function deleteLocation(id: string): Promise<FormState> {
   if (!(await requireAdmin())) return { error: EXPIRED };
   try {
-    await deleteImage(await removeLocation(id));
+    const images = await removeLocation(id);
+    await deleteImage(images?.thumbnailUrl ?? null);
+    await deleteImage(images?.imageUrl ?? null);
   } catch (err) {
     return explainDbError(err);
   }

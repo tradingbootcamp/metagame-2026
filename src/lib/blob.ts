@@ -1,7 +1,9 @@
 import { del, put } from "@vercel/blob";
 
-// Uploads arrive already downscaled in the browser; this is the backstop.
-const MAX_BYTES = 512 * 1024;
+// Uploads arrive already downscaled; these are the backstops. Large images
+// stay under the 1MB server-action body limit.
+export const THUMBNAIL_MAX_BYTES = 512 * 1024;
+export const LARGE_IMAGE_MAX_BYTES = 900 * 1024;
 const TYPES: Record<string, string> = {
   "image/webp": "webp",
   "image/jpeg": "jpg",
@@ -9,10 +11,14 @@ const TYPES: Record<string, string> = {
 };
 
 /** Stores an image under `folder/` in Vercel Blob and returns its public URL. */
-export async function uploadImage(folder: string, file: File): Promise<string> {
+export async function uploadImage(
+  folder: string,
+  file: File,
+  maxBytes = THUMBNAIL_MAX_BYTES,
+): Promise<string> {
   const ext = TYPES[file.type];
   if (!ext) throw new Error("Use a WebP, JPEG or PNG image.");
-  if (file.size > MAX_BYTES) throw new Error("That image is too large.");
+  if (file.size > maxBytes) throw new Error("That image is too large.");
   const { url } = await put(`${folder}/${crypto.randomUUID()}.${ext}`, file, {
     access: "public",
     contentType: file.type,

@@ -37,7 +37,10 @@ export type SessionFields = {
   airtableRfpRecordId?: string | null;
 };
 
-export type LocationFields = Omit<ScheduleLocation, "id" | "thumbnailUrl">;
+export type LocationFields = Omit<
+  ScheduleLocation,
+  "id" | "thumbnailUrl" | "imageUrl"
+>;
 
 const str = (raw: Raw, key: string) => {
   const v = raw[key];
