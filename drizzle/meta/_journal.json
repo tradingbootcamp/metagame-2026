@@ -36,6 +36,13 @@
       "when": 1792458687997,
       "tag": "0004_rsvp_capacity",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792462511032,
+      "tag": "0005_soft_norrin_radd",
+      "breakpoints": true
     }
   ]
 }

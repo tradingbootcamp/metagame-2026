@@ -1,12 +1,23 @@
-import { asc, eq, inArray, like } from "drizzle-orm";
+import { asc, eq, ilike, inArray, like, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
+import { getAuth } from "./auth";
 import {
   fromPacificWall,
+  type ScheduleHost,
   type ScheduleLocation,
   type ScheduleSession,
 } from "./schedule";
 
-const { locations, sessions, sessionHosts } = schema;
+const { locations, sessions, sessionHosts, user, profiles } = schema;
+
+// Matches accountLabel(): preferred name, else account name, else email.
+const hostName = sql<string>`coalesce(nullif(trim(${profiles.preferredName}), ''), nullif(trim(${user.name}), ''), ${user.email})`;
+
+const hostColumns = {
+  userId: user.id,
+  name: hostName,
+  email: user.email,
+};
 
 export type Schedule = {
   locations: ScheduleLocation[];
@@ -25,15 +36,17 @@ export async function loadSchedule(): Promise<Schedule> {
       .from(sessions)
       .orderBy(asc(sessions.startsAt), asc(sessions.title)),
     db
-      .select()
+      .select({ sessionId: sessionHosts.sessionId, ...hostColumns })
       .from(sessionHosts)
+      .innerJoin(user, eq(user.id, sessionHosts.userId))
+      .leftJoin(profiles, eq(profiles.userId, user.id))
       .orderBy(asc(sessionHosts.sessionId), asc(sessionHosts.position)),
   ]);
-  const hostsBySession = new Map<string, string[]>();
-  for (const h of hosts) {
-    hostsBySession.set(h.sessionId, [
-      ...(hostsBySession.get(h.sessionId) ?? []),
-      h.displayName,
+  const hostsBySession = new Map<string, ScheduleHost[]>();
+  for (const { sessionId, ...host } of hosts) {
+    hostsBySession.set(sessionId, [
+      ...(hostsBySession.get(sessionId) ?? []),
+      host,
     ]);
   }
   return {
@@ -67,17 +80,19 @@ export async function loadSchedule(): Promise<Schedule> {
 
 export type SessionInput = Omit<
   ScheduleSession,
-  "id" | "startsAt" | "endsAt"
+  "id" | "startsAt" | "endsAt" | "hosts"
 > & {
   id?: string;
   startsAt: Date | null;
   endsAt: Date | null;
+  /** User ids, lead first. */
+  hostIds: string[];
 };
 
 /** Inserts or, with an id, replaces the session and its host list. */
 export async function upsertSession(input: SessionInput): Promise<string> {
   const db = getDb();
-  const { id, hosts, ...row } = input;
+  const { id, hostIds, ...row } = input;
   let sessionId: string;
   if (id) {
     const [updated] = await db
@@ -97,21 +112,60 @@ export async function upsertSession(input: SessionInput): Promise<string> {
   const remove = db
     .delete(sessionHosts)
     .where(eq(sessionHosts.sessionId, sessionId));
-  if (hosts.length === 0) {
+  if (hostIds.length === 0) {
     await remove;
   } else {
     await db.batch([
       remove,
-      db.insert(sessionHosts).values(
-        hosts.map((displayName, position) => ({
-          sessionId,
-          position,
-          displayName,
-        })),
-      ),
+      db
+        .insert(sessionHosts)
+        .values(
+          hostIds.map((userId, position) => ({ sessionId, position, userId })),
+        ),
     ]);
   }
   return sessionId;
+}
+
+/** Accounts whose name, preferred name or email contains the query. */
+export async function searchHosts(query: string): Promise<ScheduleHost[]> {
+  const q = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
+  return getDb()
+    .select(hostColumns)
+    .from(user)
+    .leftJoin(profiles, eq(profiles.userId, user.id))
+    .where(
+      or(
+        ilike(user.name, q),
+        ilike(user.email, q),
+        ilike(profiles.preferredName, q),
+      ),
+    )
+    .orderBy(asc(hostName))
+    .limit(8);
+}
+
+/**
+ * The account for this email, made if there is none. A made account is
+ * unverified and has no password; signing in with a code claims it.
+ */
+export async function ensureAccount(
+  name: string,
+  email: string,
+): Promise<ScheduleHost> {
+  const db = getDb();
+  const find = () =>
+    db
+      .select(hostColumns)
+      .from(user)
+      .leftJoin(profiles, eq(profiles.userId, user.id))
+      .where(eq(user.email, email.toLowerCase()))
+      .limit(1);
+  const [existing] = await find();
+  if (existing) return existing;
+  await getAuth().api.createUser({ body: { email, name } });
+  const [made] = await find();
+  return made;
 }
 
 export async function removeSession(id: string): Promise<void> {
@@ -147,6 +201,10 @@ export async function removeLocation(id: string): Promise<void> {
 // Database constraints read back as sentences. Drizzle wraps the driver error,
 // so look at the cause too.
 const CONSTRAINT_MESSAGES: Record<string, { field?: string; error: string }> = {
+  session_hosts_session_user_unique: {
+    field: "hosts",
+    error: "Someone is listed as a host twice.",
+  },
   sessions_slug_unique: {
     field: "slug",
     error: "Another session has that slug.",
@@ -198,6 +256,8 @@ export function explainDbError(err: unknown): {
 // weekend's worth of sessions across the three conference days. Slugs are
 // prefixed so the set can be removed again without touching real rows.
 export const SAMPLE_PREFIX = "sample-";
+// Sample hosts are placeholder accounts; .invalid can never receive mail.
+const SAMPLE_EMAIL_DOMAIN = "sample.invalid";
 
 const SAMPLE_LOCATIONS = [
   {
@@ -442,20 +502,26 @@ export async function insertSample(): Promise<void> {
         status: s.status ?? "draft",
       })
       .returning({ id: sessions.id });
+    const hostIds: string[] = [];
+    for (const name of s.hosts) {
+      const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, ".")}@${SAMPLE_EMAIL_DOMAIN}`;
+      hostIds.push((await ensureAccount(name, email)).userId);
+    }
     await db.insert(sessionHosts).values(
-      s.hosts.map((displayName, position) => ({
+      hostIds.map((userId, position) => ({
         sessionId: row.id,
         position,
-        displayName,
+        userId,
       })),
     );
   }
 }
 
-/** Removes the sample sessions, then any sample room nothing else uses. */
+/** Removes the sample sessions and hosts, then any sample room nothing else uses. */
 export async function removeSample(): Promise<void> {
   const db = getDb();
   await db.delete(sessions).where(like(sessions.slug, `${SAMPLE_PREFIX}%`));
+  await db.delete(user).where(like(user.email, `%@${SAMPLE_EMAIL_DOMAIN}`));
   const rooms = await db
     .select({ id: locations.id })
     .from(locations)

@@ -10,6 +10,7 @@ import {
   buildDays,
   formatPacificDay,
   formatPacificTime,
+  hostNames,
   isPlaced,
   type ScheduleLocation,
   type ScheduleSession,
@@ -145,7 +146,7 @@ export default function ScheduleTool({
                 >
                   <span className="font-semibold">{s.title}</span>
                   <span className="text-ink/60">
-                    {[roomName(s.locationId), s.hosts.join(", ")]
+                    {[roomName(s.locationId), hostNames(s)]
                       .filter(Boolean)
                       .join(" · ") || "no room, no hosts"}
                   </span>
@@ -184,7 +185,7 @@ export default function ScheduleTool({
                     {s.title}
                   </td>
                   <td className="px-4 py-2">{roomName(s.locationId) ?? "—"}</td>
-                  <td className="px-4 py-2">{s.hosts.join(", ") || "—"}</td>
+                  <td className="px-4 py-2">{hostNames(s) || "—"}</td>
                   <td className="px-4 py-2">
                     {s.status === "published" ? (
                       <span className="rounded bg-navy/10 px-1.5 py-0.5 text-xs font-semibold text-navy">

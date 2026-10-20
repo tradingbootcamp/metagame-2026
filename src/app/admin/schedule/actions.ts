@@ -10,14 +10,17 @@ import {
   slugify,
   type Ages,
   type Category,
+  type ScheduleHost,
   type Status,
 } from "@/lib/schedule";
 import {
+  ensureAccount,
   explainDbError,
   insertSample,
   removeLocation,
   removeSample,
   removeSession,
+  searchHosts,
   upsertLocation,
   upsertSession,
 } from "@/lib/schedule-store";
@@ -93,10 +96,9 @@ export async function saveSession(
     };
   }
 
-  const hosts = str(formData, "hosts")
-    .split(/\r?\n|,/)
-    .map((h) => h.trim())
-    .filter(Boolean);
+  const hostIds = [
+    ...new Set(formData.getAll("hostId").map(String).filter(Boolean)),
+  ];
 
   try {
     await upsertSession({
@@ -113,13 +115,41 @@ export async function saveSession(
       ages: oneOf<Ages>(str(formData, "ages"), AGES),
       needs: optional(formData, "needs"),
       status,
-      hosts,
+      hostIds,
     });
   } catch (err) {
     return explainDbError(err);
   }
   revalidatePath(PATH);
   return { ok: true };
+}
+
+export async function findHosts(query: string): Promise<ScheduleHost[]> {
+  if (!(await requireAdmin())) return [];
+  const q = query.trim();
+  return q.length < 2 ? [] : searchHosts(q);
+}
+
+export type NewHostResult =
+  | { host: ScheduleHost; error?: never }
+  | { host?: never; error: string };
+
+/** Links the account with this email, making one if there is none. */
+export async function addHost(
+  name: string,
+  email: string,
+): Promise<NewHostResult> {
+  if (!(await requireAdmin())) return { error: EXPIRED };
+  name = name.trim();
+  email = email.trim().toLowerCase();
+  if (!name) return { error: "Name is required." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    return { error: "That email doesn't look right." };
+  try {
+    return { host: await ensureAccount(name, email) };
+  } catch (err) {
+    return { error: explainDbError(err).error };
+  }
 }
 
 export async function deleteSession(id: string): Promise<FormState> {

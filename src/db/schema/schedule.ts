@@ -9,6 +9,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps, user } from "./auth";
@@ -92,12 +93,14 @@ export const sessionHosts = pgTable(
       .references(() => sessions.id, { onDelete: "cascade" }),
     // 0 is the lead host, then co-hosts in billing order.
     position: integer().notNull(),
-    // Linked once the host has an account; the name shows either way.
-    userId: text().references(() => user.id, { onDelete: "set null" }),
-    displayName: text().notNull(),
+    // The shown name is read from the account, never stored here.
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
   },
   (t) => [
     primaryKey({ columns: [t.sessionId, t.position] }),
+    unique("session_hosts_session_user_unique").on(t.sessionId, t.userId),
     index("session_hosts_user_id_idx").on(t.userId),
   ],
 );

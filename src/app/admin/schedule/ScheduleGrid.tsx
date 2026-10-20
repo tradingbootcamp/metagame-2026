@@ -5,6 +5,7 @@ import { FaListUl, FaThLarge } from "react-icons/fa";
 import {
   formatPacificTime,
   heightPx,
+  hostNames,
   offsetPx,
   slotLabel,
   startsInSlot,
@@ -57,7 +58,7 @@ function SessionBlock({
     <button
       type="button"
       onClick={() => onOpen(session)}
-      title={`${session.title}${session.hosts.length ? " — " + session.hosts.join(", ") : ""}${draft ? " (draft)" : ""}`}
+      title={`${session.title}${session.hosts.length ? " — " + hostNames(session) : ""}${draft ? " (draft)" : ""}`}
       style={{
         top: offsetPx(session, slotStart),
         height: heightPx(session),
@@ -73,7 +74,7 @@ function SessionBlock({
       </span>
       {session.hosts.length > 0 && (
         <span className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-[#1b1530]/70">
-          {session.hosts.join(", ")}
+          {hostNames(session)}
         </span>
       )}
     </button>
@@ -218,7 +219,7 @@ function ListDay({
                 )}
               </div>
               <div className="mt-0.5 text-[13px] text-ink/65">
-                {[roomName(s.locationId) ?? "No room", s.hosts.join(", ")]
+                {[roomName(s.locationId) ?? "No room", hostNames(s)]
                   .filter(Boolean)
                   .join(" · ")}
               </div>

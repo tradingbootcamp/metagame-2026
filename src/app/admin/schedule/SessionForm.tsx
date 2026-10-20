@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { XIcon } from "lucide-react";
 import { deleteSession, saveSession, type FormState } from "./actions";
+import HostPicker from "./HostPicker";
 import {
   buttonClass,
   fieldClass,
@@ -363,19 +364,10 @@ export default function SessionForm({
             </Field>
           </div>
 
-          <Field
-            label="Hosts, one per line (lead first)"
-            name="hosts"
-            state={state}
-            className="sm:col-span-2"
-          >
-            <textarea
-              name="hosts"
-              rows={2}
-              defaultValue={session?.hosts.join("\n") ?? ""}
-              className={fieldClass}
-            />
-          </Field>
+          <HostPicker
+            initial={session?.hosts ?? []}
+            error={state.field === "hosts" ? state.error : null}
+          />
 
           <Field
             label="Description"

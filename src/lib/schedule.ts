@@ -37,9 +37,20 @@ export type ScheduleSession = {
   ages: Ages | null;
   needs: string | null;
   status: Status;
-  /** Display names in billing order, lead first. */
-  hosts: string[];
+  /** Billing order, lead first. */
+  hosts: ScheduleHost[];
 };
+
+export type ScheduleHost = {
+  userId: string;
+  /** Preferred name, else account name, else email. */
+  name: string;
+  email: string;
+};
+
+export function hostNames(session: Pick<ScheduleSession, "hosts">): string {
+  return session.hosts.map((h) => h.name).join(", ");
+}
 
 export const CONFERENCE_DAYS = [
   { key: "2026-11-06", name: "Friday", dateLabel: "Nov 6" },
