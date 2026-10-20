@@ -16,6 +16,7 @@ import {
   explainDbError,
   insertSample,
   locationImages,
+  moveSessionTo,
   removeLocation,
   removeSample,
   removeSession,
@@ -63,6 +64,24 @@ export async function saveSession(
       ...parsed.value,
       hostIds,
     });
+  } catch (err) {
+    return explainDbError(err);
+  }
+  revalidatePath(PATH);
+  return { ok: true };
+}
+
+/** Drops a session on the grid: new room and start, same length. */
+export async function moveSession(
+  id: string,
+  startsAt: string,
+  locationId: string | null,
+): Promise<FormState> {
+  if (!(await requireAdmin())) return { error: EXPIRED };
+  const start = new Date(startsAt);
+  if (Number.isNaN(start.getTime())) return { error: "That time is invalid." };
+  try {
+    await moveSessionTo(id, start, locationId);
   } catch (err) {
     return explainDbError(err);
   }

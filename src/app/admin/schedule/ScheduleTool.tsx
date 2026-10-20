@@ -1,9 +1,15 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
-import { addSample, clearSample, type FormState } from "./actions";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
+import { addSample, clearSample, moveSession, type FormState } from "./actions";
 import LocationForm from "./LocationForm";
-import ScheduleGrid from "./ScheduleGrid";
+import ScheduleGrid, { GrabHandle, type DropFn } from "./ScheduleGrid";
 import SessionForm, { type SessionDefaults } from "./SessionForm";
 import { buttonClass, smallButtonClass } from "../ui";
 import {
@@ -64,8 +70,22 @@ export default function ScheduleTool({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const close = useCallback(() => setEditing(null), []);
+  // Picked up by its grip; stays held across scrolling and day tabs until a slot is clicked.
+  const [held, setCarrying] = useState<ScheduleSession | null>(null);
+
+  useEffect(() => {
+    if (!held) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCarrying(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [held]);
 
   const days = useMemo(() => buildDays(sessions), [sessions]);
+  const carrying = held
+    ? (sessions.find((s) => s.id === held.id) ?? null)
+    : null;
   const unplaced = sessions.filter((s) => !isPlaced(s));
   const published = sessions.filter((s) => s.status === "published").length;
   const going = useMemo(
@@ -90,6 +110,18 @@ export default function ScheduleTool({
     startTransition(async () => {
       setError((await action()).error ?? null);
     });
+
+  const grab = (session: ScheduleSession) =>
+    setCarrying((held) => (held?.id === session.id ? null : session));
+  const drop: DropFn = (startsAt, locationId) => {
+    if (!carrying || pending) return;
+    const id = carrying.id;
+    startTransition(async () => {
+      const result = await moveSession(id, startsAt.toISOString(), locationId);
+      setError(result.error ?? null);
+      if (!result.error) setCarrying(null);
+    });
+  };
 
   const openSession = (session: ScheduleSession | null) =>
     setEditing({ kind: "session", session });
@@ -148,23 +180,59 @@ export default function ScheduleTool({
         </div>
       </div>
 
-      <ScheduleGrid
-        days={days}
-        locations={locations}
-        going={going}
-        onOpen={openSession}
-        onCreate={createAt}
-      />
+      <div className="space-y-2">
+        {carrying && (
+          <div
+            role="status"
+            className="sticky top-2 z-40 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-navy/30 bg-navy px-3 py-2 text-sm text-white shadow-md"
+          >
+            <span>
+              Moving <span className="font-semibold">{carrying.title}</span>
+              <span className="text-white/70">
+                {pending
+                  ? "…"
+                  : " — click a slot to drop it, or press Esc to cancel."}
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setCarrying(null)}
+              className="rounded border border-white/40 px-2 py-0.5 text-xs font-semibold hover:bg-white/10"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+        <ScheduleGrid
+          days={days}
+          locations={locations}
+          going={going}
+          carrying={carrying}
+          onOpen={openSession}
+          onCreate={createAt}
+          onGrab={grab}
+          onDrop={drop}
+        />
+      </div>
 
       {unplaced.length > 0 && (
         <Section title="Unplaced drafts">
           <ul className="divide-y divide-line rounded-xl border border-line bg-white">
             {unplaced.map((s) => (
-              <li key={s.id}>
+              <li
+                key={s.id}
+                className={`flex items-stretch ${carrying?.id === s.id ? "bg-navy/[0.06]" : ""}`}
+              >
+                <GrabHandle
+                  session={s}
+                  carrying={carrying?.id === s.id}
+                  onGrab={grab}
+                  className="ml-2 w-6 shrink-0"
+                />
                 <button
                   type="button"
                   onClick={() => openSession(s)}
-                  className="flex w-full items-baseline justify-between gap-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-ink/[0.04]"
+                  className="flex min-w-0 flex-1 items-baseline justify-between gap-3 py-2.5 pr-4 pl-2 text-left text-sm transition-colors hover:bg-ink/[0.04]"
                 >
                   <span className="font-semibold">{s.title}</span>
                   <span className="text-ink/60">

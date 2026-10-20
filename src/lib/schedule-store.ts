@@ -3,9 +3,12 @@ import {
   asc,
   count,
   eq,
+  gt,
   ilike,
   inArray,
   like,
+  lt,
+  ne,
   or,
   sql,
 } from "drizzle-orm";
@@ -13,6 +16,7 @@ import { getDb, schema } from "@/db";
 import { getAuth } from "./auth";
 import {
   fromPacificWall,
+  movedTimes,
   type Attendance,
   type RsvpStatus,
   type ScheduleAccount,
@@ -146,6 +150,46 @@ export async function upsertSession(input: SessionInput): Promise<string> {
   // A raised capacity frees seats for the waitlist.
   if (id) await promoteWaitlist(sessionId);
   return sessionId;
+}
+
+/** Moves a session to a room and start time, keeping its length; refuses a clash in that room. */
+export async function moveSessionTo(
+  id: string,
+  start: Date,
+  locationId: string | null,
+): Promise<void> {
+  const db = getDb();
+  const [row] = await db
+    .select({ startsAt: sessions.startsAt, endsAt: sessions.endsAt })
+    .from(sessions)
+    .where(eq(sessions.id, id));
+  if (!row) throw new Error("That session no longer exists.");
+  const { startsAt, endsAt } = movedTimes(
+    {
+      startsAt: row.startsAt?.toISOString() ?? null,
+      endsAt: row.endsAt?.toISOString() ?? null,
+    },
+    start,
+  );
+  if (locationId) {
+    const [clash] = await db
+      .select({ title: sessions.title })
+      .from(sessions)
+      .where(
+        and(
+          eq(sessions.locationId, locationId),
+          ne(sessions.id, id),
+          lt(sessions.startsAt, endsAt),
+          gt(sessions.endsAt, startsAt),
+        ),
+      )
+      .limit(1);
+    if (clash) throw new Error(`That overlaps "${clash.title}" in that room.`);
+  }
+  await db
+    .update(sessions)
+    .set({ startsAt, endsAt, locationId })
+    .where(eq(sessions.id, id));
 }
 
 /** Accounts whose name, preferred name or email contains the query. */

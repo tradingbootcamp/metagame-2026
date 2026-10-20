@@ -1,14 +1,20 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import { GripVerticalIcon } from "lucide-react";
 import { FaListUl, FaThLarge } from "react-icons/fa";
 import {
+  findClash,
   formatPacificTime,
+  fromPacificWall,
   heightPx,
   hostNames,
+  minutesToHHMM,
+  movedTimes,
   offsetPx,
   slotLabel,
   startsInSlot,
+  SLOT_MINUTES,
   SLOT_PX,
   type Day,
   type PlacedSession,
@@ -21,6 +27,8 @@ import type { SessionDefaults } from "./SessionForm";
 type View = "grid" | "list";
 type OpenFn = (s: ScheduleSession) => void;
 type CreateFn = (defaults: SessionDefaults) => void;
+type GrabFn = (s: ScheduleSession) => void;
+export type DropFn = (startsAt: Date, locationId: string | null) => void;
 
 /** Placed sessions with no room land in a column of their own. */
 const NO_ROOM = "__none__";
@@ -44,48 +52,119 @@ function AgeMark({ ages }: { ages: ScheduleSession["ages"] }) {
 const blockStyle = (s: ScheduleSession) =>
   CATEGORY_STYLES[s.category ?? "other"];
 
+/** The grip that picks a session up; the rest of the block still opens it. */
+export function GrabHandle({
+  session,
+  carrying,
+  onGrab,
+  className = "",
+}: {
+  session: ScheduleSession;
+  carrying: boolean;
+  onGrab: GrabFn;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`Move ${session.title}`}
+      aria-pressed={carrying}
+      title="Move: click, then click a slot. Esc cancels."
+      onClick={() => onGrab(session)}
+      className={`flex cursor-grab items-center justify-center rounded text-[#1b1530]/45 transition-colors hover:bg-[#1b1530]/10 hover:text-[#1b1530] ${
+        carrying ? "bg-[#1b1530]/10 text-[#1b1530]" : ""
+      } ${className}`}
+    >
+      <GripVerticalIcon size={14} aria-hidden />
+    </button>
+  );
+}
+
 function SessionBlock({
   session,
   slotStart,
   going,
+  carrying,
   onOpen,
+  onGrab,
 }: {
   session: PlacedSession;
   slotStart: number;
   going: number;
+  /** What's being moved, if anything; blocks let clicks through to the slots meanwhile. */
+  carrying: ScheduleSession | null;
   onOpen: OpenFn;
+  onGrab: GrabFn;
 }) {
   const draft = session.status === "draft";
+  const isCarried = carrying?.id === session.id;
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(session)}
-      title={`${session.title}${session.hosts.length ? " — " + hostNames(session) : ""}${draft ? " (draft)" : ""}`}
+    <div
       style={{
         top: offsetPx(session, slotStart),
         height: heightPx(session),
         ...blockStyle(session),
       }}
-      className={`absolute inset-x-0.5 z-10 overflow-hidden rounded-md border p-1.5 text-left text-[#1b1530] transition-shadow hover:z-20 hover:shadow-[0_2px_10px_rgba(27,21,48,0.25)] ${
+      className={`absolute inset-x-0.5 z-10 overflow-hidden rounded-md border text-[#1b1530] transition-shadow hover:z-20 hover:shadow-[0_2px_10px_rgba(27,21,48,0.25)] ${
         draft ? "border-dashed opacity-60" : ""
+      } ${carrying ? "pointer-events-none" : ""} ${isCarried ? "opacity-30" : ""}`}
+    >
+      <GrabHandle
+        session={session}
+        carrying={isCarried}
+        onGrab={onGrab}
+        className="absolute top-0.5 right-0.5 z-10 h-5 w-4"
+      />
+      <button
+        type="button"
+        onClick={() => onOpen(session)}
+        title={`${session.title}${session.hosts.length ? " — " + hostNames(session) : ""}${draft ? " (draft)" : ""}`}
+        className="block h-full w-full p-1.5 pr-4 text-left"
+      >
+        <span className="flex items-start gap-1 text-[13px] leading-tight font-semibold">
+          <span className="line-clamp-3">{session.title}</span>
+          <AgeMark ages={session.ages} />
+        </span>
+        {session.hosts.length > 0 && (
+          <span className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-[#1b1530]/70">
+            {hostNames(session)}
+          </span>
+        )}
+        {(going > 0 || session.maxCapacity !== null) && (
+          <span className="mt-0.5 block text-[11px] leading-tight text-[#1b1530]/70">
+            👤 {going}
+            {session.maxCapacity !== null && `/${session.maxCapacity}`}
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/** Where the carried session would land, red when it would overlap. */
+function DropPreview({
+  session,
+  heightPx,
+  clash,
+}: {
+  session: ScheduleSession;
+  heightPx: number;
+  clash: ScheduleSession | null;
+}) {
+  return (
+    <div
+      aria-hidden
+      style={{ height: heightPx, ...(clash ? {} : blockStyle(session)) }}
+      className={`pointer-events-none absolute inset-x-0.5 top-0 z-20 overflow-hidden rounded-md border-2 border-dashed p-1.5 text-[13px] leading-tight font-semibold shadow-[0_2px_10px_rgba(27,21,48,0.25)] ${
+        clash
+          ? "border-red-600 bg-red-100/90 text-red-800"
+          : "text-[#1b1530] opacity-85"
       }`}
     >
-      <span className="flex items-start gap-1 text-[13px] leading-tight font-semibold">
-        <span className="line-clamp-3">{session.title}</span>
-        <AgeMark ages={session.ages} />
+      <span className="line-clamp-3">
+        {clash ? `Overlaps ${clash.title}` : session.title}
       </span>
-      {session.hosts.length > 0 && (
-        <span className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-[#1b1530]/70">
-          {hostNames(session)}
-        </span>
-      )}
-      {(going > 0 || session.maxCapacity !== null) && (
-        <span className="mt-0.5 block text-[11px] leading-tight text-[#1b1530]/70">
-          👤 {going}
-          {session.maxCapacity !== null && `/${session.maxCapacity}`}
-        </span>
-      )}
-    </button>
+    </div>
   );
 }
 
@@ -100,15 +179,41 @@ function GridDay({
   day,
   columns,
   going,
+  sessions,
+  carrying,
   onOpen,
   onCreate,
+  onGrab,
+  onDrop,
 }: {
   day: Day;
   columns: Column[];
   going: Record<string, number>;
+  /** Every session, for overlap checks that cross midnight. */
+  sessions: ScheduleSession[];
+  carrying: ScheduleSession | null;
   onOpen: OpenFn;
   onCreate: CreateFn;
+  onGrab: GrabFn;
+  onDrop: DropFn;
 }) {
+  const [hover, setHover] = useState<{
+    dayKey: string;
+    slotStart: number;
+    colId: string;
+  } | null>(null);
+  const target = (slotStart: number, colId: string) => {
+    if (!carrying) return null;
+    const start = fromPacificWall(`${day.key}T${minutesToHHMM(slotStart)}`);
+    if (!start) return null;
+    const locationId = colId === NO_ROOM ? null : colId;
+    const times = movedTimes(carrying, start);
+    return {
+      ...times,
+      locationId,
+      clash: findClash(sessions, { id: carrying.id, locationId, ...times }),
+    };
+  };
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
   const scroller = useRef<HTMLDivElement>(null);
   // Open on the day's usual start; the small hours stay a scroll up.
@@ -119,6 +224,7 @@ function GridDay({
   return (
     <div
       ref={scroller}
+      onMouseLeave={() => setHover(null)}
       className="max-h-[75vh] overflow-auto rounded-xl border border-line bg-white [--col-w:104px] [--time-w:44px] sm:[--col-w:120px] sm:[--time-w:56px]"
     >
       <div className="min-w-fit">
@@ -165,6 +271,13 @@ function GridDay({
                     (s.locationId ?? NO_ROOM) === col.id &&
                     startsInSlot(s, slotStart),
                 );
+                const hovered =
+                  carrying &&
+                  hover?.dayKey === day.key &&
+                  hover.slotStart === slotStart &&
+                  hover.colId === col.id
+                    ? target(slotStart, col.id)
+                    : null;
                 return (
                   <div
                     key={col.id}
@@ -173,15 +286,29 @@ function GridDay({
                   >
                     <button
                       type="button"
-                      aria-label={`New session ${day.name} ${slotLabel(slotStart)}${col.id === NO_ROOM ? "" : ` in ${col.name}`}`}
-                      onClick={() =>
-                        onCreate({
-                          day: day.key,
-                          startMin: slotStart,
-                          locationId: col.id === NO_ROOM ? null : col.id,
-                        })
+                      aria-label={`${carrying ? `Move ${carrying.title} to` : "New session"} ${day.name} ${slotLabel(slotStart)}${col.id === NO_ROOM ? "" : ` in ${col.name}`}`}
+                      onMouseEnter={() =>
+                        setHover({ dayKey: day.key, slotStart, colId: col.id })
                       }
-                      className="absolute inset-0 cursor-cell transition-colors hover:bg-navy/[0.06]"
+                      onClick={() => {
+                        if (!carrying) {
+                          onCreate({
+                            day: day.key,
+                            startMin: slotStart,
+                            locationId: col.id === NO_ROOM ? null : col.id,
+                          });
+                          return;
+                        }
+                        const t = target(slotStart, col.id);
+                        if (t && !t.clash) onDrop(t.startsAt, t.locationId);
+                      }}
+                      className={`absolute inset-0 transition-colors hover:bg-navy/[0.06] ${
+                        !carrying
+                          ? "cursor-cell"
+                          : hovered?.clash
+                            ? "cursor-not-allowed"
+                            : "cursor-copy"
+                      }`}
                     />
                     {inSlot.map((s) => (
                       <SessionBlock
@@ -189,9 +316,24 @@ function GridDay({
                         session={s}
                         slotStart={slotStart}
                         going={going[s.id] ?? 0}
+                        carrying={carrying}
                         onOpen={onOpen}
+                        onGrab={onGrab}
                       />
                     ))}
+                    {carrying && hovered && (
+                      <DropPreview
+                        session={carrying}
+                        clash={hovered.clash}
+                        heightPx={Math.max(
+                          SLOT_PX,
+                          ((hovered.endsAt.getTime() -
+                            hovered.startsAt.getTime()) /
+                            60_000) *
+                            (SLOT_PX / SLOT_MINUTES),
+                        )}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -268,15 +410,21 @@ export default function ScheduleGrid({
   days,
   locations,
   going,
+  carrying,
   onOpen,
   onCreate,
+  onGrab,
+  onDrop,
 }: {
   days: Day[];
   locations: ScheduleLocation[];
   /** Going RSVPs per session id. */
   going: Record<string, number>;
+  carrying: ScheduleSession | null;
   onOpen: OpenFn;
   onCreate: CreateFn;
+  onGrab: GrabFn;
+  onDrop: DropFn;
 }) {
   const [dayIndex, setDayIndex] = useState(0);
   const [view, setView] = useState<View>("grid");
@@ -306,6 +454,7 @@ export default function ScheduleGrid({
     locations.find((l) => l.id === id)?.name ?? null;
 
   const day = days[Math.min(dayIndex, days.length - 1)];
+  const placed = days.flatMap((d) => d.sessions);
 
   return (
     <div className="flex flex-col gap-4">
@@ -406,8 +555,12 @@ export default function ScheduleGrid({
             day={day}
             columns={columns}
             going={going}
+            sessions={placed}
+            carrying={carrying}
             onOpen={onOpen}
             onCreate={onCreate}
+            onGrab={onGrab}
+            onDrop={onDrop}
           />
         )
       ) : (

@@ -224,6 +224,41 @@ export function startsInSlot(
   return m >= slotStart && m < slotStart + SLOT_MINUTES;
 }
 
+/** An unplaced draft dropped on the grid gets an hour, ending on the passing period. */
+export const DEFAULT_DRAFT_MINUTES = 60;
+
+type Times = Pick<ScheduleSession, "startsAt" | "endsAt">;
+
+/** Where a session lands when moved to start at `start`: its length kept, or the draft default. */
+export function movedTimes(
+  session: Times,
+  start: Date,
+): { startsAt: Date; endsAt: Date } {
+  const ms =
+    session.startsAt && session.endsAt
+      ? Date.parse(session.endsAt) - Date.parse(session.startsAt)
+      : (DEFAULT_DRAFT_MINUTES - END_GAP_MINUTES) * 60_000;
+  return { startsAt: start, endsAt: new Date(start.getTime() + ms) };
+}
+
+/** The session already in that room at that time, if any. "No room" never clashes. */
+export function findClash<S extends ScheduleSession>(
+  sessions: S[],
+  move: { id: string; locationId: string | null; startsAt: Date; endsAt: Date },
+): S | null {
+  if (move.locationId === null) return null;
+  return (
+    sessions.find(
+      (s) =>
+        s.id !== move.id &&
+        s.locationId === move.locationId &&
+        isPlaced(s) &&
+        Date.parse(s.startsAt) < move.endsAt.getTime() &&
+        Date.parse(s.endsAt) > move.startsAt.getTime(),
+    ) ?? null
+  );
+}
+
 export type Day = {
   key: string;
   name: string;
