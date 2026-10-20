@@ -5,7 +5,7 @@ import { useState } from "react";
 export const fieldClass =
   "w-full rounded-lg border border-line bg-white px-3 py-2 text-base outline-none focus:border-navy";
 // Native selects ignore padding on the arrow side; draw our own chevron so it sits inside.
-export const selectClass = `${fieldClass.replace("w-full ", "")} max-w-full appearance-none bg-no-repeat pr-9`;
+export const selectClass = `${fieldClass.replace("w-full ", "")} max-w-full appearance-none bg-no-repeat pr-9 disabled:cursor-not-allowed disabled:bg-ink/5 disabled:text-ink/40`;
 export const selectStyle: React.CSSProperties = {
   backgroundImage:
     "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23333' stroke-width='1.5'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E\")",

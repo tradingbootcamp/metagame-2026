@@ -168,11 +168,11 @@ export default function SessionForm({
         >
           <XIcon className="size-[18px]" />
         </button>
-        <DialogTitle className="font-bebas text-2xl tracking-wide text-navy">
+        <DialogTitle className="font-bebas mb-5 text-2xl tracking-wide text-navy">
           {session ? "Edit session" : "New session"}
         </DialogTitle>
-        <DialogDescription className="mt-1 mb-5 text-sm text-ink/60">
-          Times are Pacific. Pick “Not scheduled” to keep a draft unplaced.
+        <DialogDescription className="sr-only">
+          {session ? "Edit this session." : "Add a session to the schedule."}
         </DialogDescription>
 
         <form action={formAction} className="grid gap-4 sm:grid-cols-2">
@@ -241,11 +241,15 @@ export default function SessionForm({
                 className={selectClass}
                 style={selectStyle}
               >
-                {withCurrent(START_TIMES, start).map((m) => (
-                  <option key={m} value={m}>
-                    {slotLabel(m)}
-                  </option>
-                ))}
+                {day ? (
+                  withCurrent(START_TIMES, start).map((m) => (
+                    <option key={m} value={m}>
+                      {slotLabel(m)}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">—</option>
+                )}
               </select>
             </Field>
             <Field label="Ends" name="endsAt" state={state}>
@@ -256,14 +260,18 @@ export default function SessionForm({
                 className={selectClass}
                 style={selectStyle}
               >
-                {withCurrent(
-                  END_TIMES.filter((m) => start === null || m > start),
-                  end,
-                ).map((m) => (
-                  <option key={m} value={m}>
-                    {slotLabel(m)}
-                  </option>
-                ))}
+                {day ? (
+                  withCurrent(
+                    END_TIMES.filter((m) => start === null || m > start),
+                    end,
+                  ).map((m) => (
+                    <option key={m} value={m}>
+                      {slotLabel(m)}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">—</option>
+                )}
               </select>
             </Field>
             <input
