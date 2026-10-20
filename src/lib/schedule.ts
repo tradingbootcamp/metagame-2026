@@ -202,9 +202,9 @@ export type Day = {
   slots: number[];
 };
 
-// An empty day still gets a grid to drop sessions into.
-const EMPTY_DAY_START = 10 * 60;
-const EMPTY_DAY_END = 20 * 60;
+// Every day shows at least this window, widened if a session falls outside it.
+const DAY_START = 9 * 60;
+const DAY_END = 24 * 60;
 
 /**
  * Buckets placed sessions by Pacific day. The three conference days always
@@ -242,18 +242,10 @@ export function buildDays(sessions: ScheduleSession[]): Day[] {
 
   return days.map((day) => {
     const daySessions = byKey.get(day.key) ?? [];
-    let startMin = EMPTY_DAY_START;
-    let endMin = EMPTY_DAY_END;
-    if (daySessions.length > 0) {
-      const starts = daySessions.map((s) => pacificMinutes(s.startsAt));
-      const ends = daySessions.map((s) => pacificMinutes(s.endsAt));
-      startMin = Math.floor(Math.min(...starts) / 60) * 60;
-      endMin = Math.ceil(Math.max(...ends) / SLOT_MINUTES) * SLOT_MINUTES;
-      // A session ending at or past midnight reads as ending at 0 minutes.
-      if (endMin <= startMin) endMin = 24 * 60;
-    }
+    const starts = daySessions.map((s) => pacificMinutes(s.startsAt));
+    const startMin = Math.floor(Math.min(DAY_START, ...starts) / 60) * 60;
     const slots: number[] = [];
-    for (let m = startMin; m < endMin; m += SLOT_MINUTES) slots.push(m);
+    for (let m = startMin; m < DAY_END; m += SLOT_MINUTES) slots.push(m);
     return { ...day, sessions: daySessions, slots };
   });
 }
