@@ -1,7 +1,6 @@
-// Swapping a room's thumbnail and large image, shared by the room form and the
-// JSON API. Upload first, write the row, then delete what was replaced, so a
-// failed save never leaves the room pointing at a deleted file.
-
+// Swapping a room's thumbnail and large image. Upload first, write the row,
+// then delete what was replaced, so a failed save never leaves the room
+// pointing at a deleted file.
 import {
   LARGE_IMAGE_MAX_BYTES,
   THUMBNAIL_MAX_BYTES,

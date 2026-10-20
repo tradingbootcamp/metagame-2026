@@ -11,7 +11,7 @@ import { loadSchedule, upsertLocation } from "@/lib/schedule-store";
 
 export const dynamic = "force-dynamic";
 
-/** Creates a room. Images go through PUT /locations/[id]/image. */
+/** Creates a room. Images only come through the form. */
 export async function POST(request: Request) {
   const access = await authorize();
   if (access instanceof Response) return access;
