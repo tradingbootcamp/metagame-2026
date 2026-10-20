@@ -123,3 +123,24 @@ describe("parseLocationFields", () => {
     ).toBe("displayOrder");
   });
 });
+
+describe("airtableRfpRecordId", () => {
+  const base = { title: "Chess" };
+  it("is left as stored when not mentioned", () => {
+    const r = parseSessionFields(base);
+    expect(r.ok && r.value.airtableRfpRecordId).toBeUndefined();
+  });
+  it("takes a record id, or null to clear", () => {
+    const r = parseSessionFields({
+      ...base,
+      airtableRfpRecordId: "rec0M8Nq1mc3qApko",
+    });
+    expect(r.ok && r.value.airtableRfpRecordId).toBe("rec0M8Nq1mc3qApko");
+    const cleared = parseSessionFields({ ...base, airtableRfpRecordId: null });
+    expect(cleared.ok && cleared.value.airtableRfpRecordId).toBeNull();
+  });
+  it("rejects anything else", () => {
+    const r = parseSessionFields({ ...base, airtableRfpRecordId: "row 12" });
+    expect(!r.ok && r.field).toBe("airtableRfpRecordId");
+  });
+});

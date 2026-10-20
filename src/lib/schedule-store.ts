@@ -88,6 +88,7 @@ export async function loadSchedule(): Promise<Schedule> {
       ages: s.ages,
       needs: s.needs,
       status: s.status,
+      airtableRfpRecordId: s.airtableRfpRecordId,
       hosts: hostsBySession.get(s.id) ?? [],
     })),
   };
@@ -95,9 +96,11 @@ export async function loadSchedule(): Promise<Schedule> {
 
 export type SessionInput = Omit<
   ScheduleSession,
-  "id" | "startsAt" | "endsAt" | "hosts"
+  "id" | "startsAt" | "endsAt" | "hosts" | "airtableRfpRecordId"
 > & {
   id?: string;
+  /** Left as stored when undefined. */
+  airtableRfpRecordId?: string | null;
   startsAt: Date | null;
   endsAt: Date | null;
   /** User ids, lead first. */
@@ -465,6 +468,10 @@ const CONSTRAINT_MESSAGES: Record<string, { field?: string; error: string }> = {
   session_hosts_session_user_unique: {
     field: "hosts",
     error: "Someone is listed as a host twice.",
+  },
+  sessions_airtableRfpRecordId_unique: {
+    field: "airtableRfpRecordId",
+    error: "Another session already links that Airtable row.",
   },
   sessions_slug_unique: {
     field: "slug",

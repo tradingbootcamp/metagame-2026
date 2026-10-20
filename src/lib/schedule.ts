@@ -38,6 +38,8 @@ export type ScheduleSession = {
   ages: Ages | null;
   needs: string | null;
   status: Status;
+  /** The Airtable RFP Submissions row this came from. */
+  airtableRfpRecordId: string | null;
   /** Billing order, lead first. */
   hosts: ScheduleAccount[];
 };

@@ -33,6 +33,8 @@ export type SessionFields = {
   ages: Ages | null;
   needs: string | null;
   status: Status;
+  /** Undefined when the input doesn't mention it, so it's left as stored. */
+  airtableRfpRecordId?: string | null;
 };
 
 export type LocationFields = Omit<ScheduleLocation, "id" | "thumbnailUrl">;
@@ -130,6 +132,21 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
     };
   }
 
+  let airtableRfpRecordId: string | null | undefined;
+  if ("airtableRfpRecordId" in raw) {
+    airtableRfpRecordId = optional(raw, "airtableRfpRecordId");
+    if (
+      airtableRfpRecordId &&
+      !/^rec[A-Za-z0-9]{14}$/.test(airtableRfpRecordId)
+    ) {
+      return {
+        ok: false,
+        field: "airtableRfpRecordId",
+        error: "An Airtable record id, rec followed by 14 letters or digits.",
+      };
+    }
+  }
+
   return {
     ok: true,
     value: {
@@ -145,6 +162,7 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
       ages,
       needs: optional(raw, "needs"),
       status: status ?? "draft",
+      airtableRfpRecordId,
     },
   };
 }
