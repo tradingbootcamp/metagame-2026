@@ -1,2 +1,0 @@
-ALTER TABLE "locations" ADD COLUMN "thumbnail" text;--> statement-breakpoint
-ALTER TABLE "locations" ADD CONSTRAINT "locations_thumbnail_small_image" CHECK ("locations"."thumbnail" like 'data:image/%' and length("locations"."thumbnail") <= 200000);
