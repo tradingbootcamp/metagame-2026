@@ -1,6 +1,6 @@
 {
-  "id": "7212a70b-75e8-454e-8898-714987df003c",
-  "prevId": "c3f98f71-ef5e-4ec9-a23c-736a24e5e6d3",
+  "id": "96d4aa37-6d31-4b93-8ec1-3bdb6aa32eae",
+  "prevId": "55411050-10ec-4ba5-9671-912d815ad098",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -713,8 +713,8 @@
           "notNull": true,
           "default": false
         },
-        "thumbnail": {
-          "name": "thumbnail",
+        "thumbnail_url": {
+          "name": "thumbnail_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -756,9 +756,9 @@
           "name": "locations_capacity_positive",
           "value": "\"locations\".\"capacity\" > 0"
         },
-        "locations_thumbnail_small_image": {
-          "name": "locations_thumbnail_small_image",
-          "value": "\"locations\".\"thumbnail\" like 'data:image/%' and length(\"locations\".\"thumbnail\") <= 200000"
+        "locations_thumbnail_url_https": {
+          "name": "locations_thumbnail_url_https",
+          "value": "\"locations\".\"thumbnail_url\" like 'https://%'"
         }
       },
       "isRLSEnabled": false
@@ -862,12 +862,6 @@
           "name": "user_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
-        },
-        "display_name": {
-          "name": "display_name",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true
         }
       },
@@ -905,7 +899,7 @@
           "tableTo": "user",
           "columnsTo": ["id"],
           "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -914,7 +908,13 @@
           "columns": ["session_id", "position"]
         }
       },
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "session_hosts_session_user_unique": {
+          "name": "session_hosts_session_user_unique",
+          "columns": ["session_id", "user_id"],
+          "nullsNotDistinct": false
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

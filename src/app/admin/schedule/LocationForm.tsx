@@ -10,6 +10,7 @@ import {
 import { XIcon } from "lucide-react";
 import { deleteLocation, saveLocation, type FormState } from "./actions";
 import { buttonClass, fieldClass, smallButtonClass } from "../ui";
+import { downscaleImage } from "@/lib/downscale-image";
 import type { ScheduleLocation } from "@/lib/schedule";
 import {
   Dialog,
@@ -41,31 +42,23 @@ function Field({
 
 const THUMB_PX = 320;
 
-/** Shrinks an image file to a THUMB_PX-bounded data URL. */
-async function toThumbnail(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, THUMB_PX / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  const webp = canvas.toDataURL("image/webp", 0.8);
-  // Browsers that can't encode webp hand back a PNG instead.
-  return webp.startsWith("data:image/webp")
-    ? webp
-    : canvas.toDataURL("image/jpeg", 0.8);
-}
+/**
+ * The room's image as of Save: `url` is the saved Blob URL, or a local preview
+ * of `file` when a new image was picked.
+ */
+type Thumb = { url: string | null; file: File | null };
 
 function ThumbnailPicker({
   value,
   onChange,
   error,
 }: {
-  value: string | null;
-  onChange: (v: string | null) => void;
+  value: Thumb;
+  onChange: (v: Thumb) => void;
   error: string | null;
 }) {
+  const shown = value.url;
+
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -77,7 +70,8 @@ function ThumbnailPicker({
       return;
     }
     try {
-      onChange(await toThumbnail(file));
+      const small = await downscaleImage(file, THUMB_PX);
+      onChange({ url: URL.createObjectURL(small), file: small });
       setProblem(null);
     } catch {
       setProblem("Couldn’t read that image.");
@@ -107,17 +101,17 @@ function ThumbnailPicker({
               : "border-line hover:border-ink/40"
           }`}
         >
-          {value ? (
-            // eslint-disable-next-line @next/next/no-img-element -- data URL
-            <img src={value} alt="" className="h-full w-full object-cover" />
+          {shown ? (
+            // eslint-disable-next-line @next/next/no-img-element -- already thumbnail-sized
+            <img src={shown} alt="" className="h-full w-full object-cover" />
           ) : (
             "Drop an image or click to choose"
           )}
         </button>
-        {value && (
+        {shown && (
           <button
             type="button"
-            onClick={() => onChange(null)}
+            onClick={() => onChange({ url: null, file: null })}
             className={smallButtonClass}
           >
             Remove
@@ -157,7 +151,10 @@ export default function LocationForm({
   const [deleting, startDelete] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [thumbnail, setThumbnail] = useState(location?.thumbnail ?? null);
+  const [thumbnail, setThumbnail] = useState<Thumb>({
+    url: location?.thumbnailUrl ?? null,
+    file: null,
+  });
 
   useEffect(() => {
     if (state.ok) onClose();
@@ -187,7 +184,13 @@ export default function LocationForm({
           Rooms are the grid’s columns, left to right by display order.
         </DialogDescription>
 
-        <form action={formAction} className="grid gap-4">
+        <form
+          action={(fd) => {
+            if (thumbnail.file) fd.set("thumbnailFile", thumbnail.file);
+            formAction(fd);
+          }}
+          className="grid gap-4"
+        >
           {location && <input type="hidden" name="id" value={location.id} />}
 
           <Field label="Name" name="name" state={state}>
@@ -233,7 +236,11 @@ export default function LocationForm({
             onChange={setThumbnail}
             error={state.field === "thumbnail" ? (state.error ?? null) : null}
           />
-          <input type="hidden" name="thumbnail" value={thumbnail ?? ""} />
+          <input
+            type="hidden"
+            name="thumbnailUrl"
+            value={thumbnail.file ? "" : (thumbnail.url ?? "")}
+          />
 
           <label className="flex items-center gap-2 text-sm">
             <input

@@ -1,5 +1,5 @@
 {
-  "id": "c3f98f71-ef5e-4ec9-a23c-736a24e5e6d3",
+  "id": "55411050-10ec-4ba5-9671-912d815ad098",
   "prevId": "13c4e38f-2c64-465b-92a9-433f3652b422",
   "version": "7",
   "dialect": "postgresql",
@@ -713,8 +713,8 @@
           "notNull": true,
           "default": false
         },
-        "thumbnail": {
-          "name": "thumbnail",
+        "thumbnail_url": {
+          "name": "thumbnail_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -756,9 +756,9 @@
           "name": "locations_capacity_positive",
           "value": "\"locations\".\"capacity\" > 0"
         },
-        "locations_thumbnail_small_image": {
-          "name": "locations_thumbnail_small_image",
-          "value": "\"locations\".\"thumbnail\" like 'data:image/%' and length(\"locations\".\"thumbnail\") <= 200000"
+        "locations_thumbnail_url_https": {
+          "name": "locations_thumbnail_url_https",
+          "value": "\"locations\".\"thumbnail_url\" like 'https://%'"
         }
       },
       "isRLSEnabled": false
@@ -862,12 +862,6 @@
           "name": "user_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
-        },
-        "display_name": {
-          "name": "display_name",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true
         }
       },
@@ -904,7 +898,7 @@
           "tableTo": "user",
           "columnsFrom": ["user_id"],
           "columnsTo": ["id"],
-          "onDelete": "set null",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -914,7 +908,13 @@
           "columns": ["session_id", "position"]
         }
       },
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "session_hosts_session_user_unique": {
+          "name": "session_hosts_session_user_unique",
+          "nullsNotDistinct": false,
+          "columns": ["session_id", "user_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

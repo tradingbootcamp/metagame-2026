@@ -261,10 +261,10 @@ export default function ScheduleTool({
                   <td className="px-4 py-2 tabular-nums">{l.displayOrder}</td>
                   <td className="px-4 py-2 font-semibold">
                     <span className="flex items-center gap-2">
-                      {l.thumbnail && (
-                        // eslint-disable-next-line @next/next/no-img-element -- data URL
+                      {l.thumbnailUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element -- already thumbnail-sized
                         <img
-                          src={l.thumbnail}
+                          src={l.thumbnailUrl}
                           alt=""
                           className="h-8 w-10 rounded object-cover"
                         />

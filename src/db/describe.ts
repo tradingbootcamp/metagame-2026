@@ -73,7 +73,7 @@ const TABLE_NOTES: Record<string, string> = {
   sessions:
     "One row per schedule slot. Drafts can be unplaced (null times, no location); only published rows show. airtable_rfp_record_id ties a session to the accepted RFP it was synced from.",
   session_hosts:
-    "Who runs a session, one row per host in billing order (position 0 is the lead), replacing 2025's host_1/2/3 columns. user_id links the host's account when they have one; display_name is what the schedule shows regardless.",
+    "Who runs a session, one row per host in billing order (position 0 is the lead), replacing 2025's host_1/2/3 columns. Every host is an account; the schedule shows the profile's preferred name, else the account name.",
   rsvps:
     "Going or waitlisted, one row per user per session. The rsvps_capacity trigger refuses a going row once the session's max_capacity is reached (null = unlimited).",
   bookmarks: "Sessions a user starred. One row per pair.",

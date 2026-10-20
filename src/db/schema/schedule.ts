@@ -33,8 +33,8 @@ export const locations = pgTable(
     campusLocation: text(),
     displayOrder: integer().notNull().default(100),
     showInSchedule: boolean().notNull().default(false),
-    // A small image as a data URL, downscaled in the browser before upload.
-    thumbnail: text(),
+    // A Vercel Blob URL; the image itself never lives in the database.
+    thumbnailUrl: text(),
     // The Lighthaven Spaces row this was synced from; null for hand-made rooms.
     airtableRecordId: text().unique(),
     ...timestamps,
@@ -42,8 +42,8 @@ export const locations = pgTable(
   (t) => [
     check("locations_capacity_positive", sql`${t.capacity} > 0`),
     check(
-      "locations_thumbnail_small_image",
-      sql`${t.thumbnail} like 'data:image/%' and length(${t.thumbnail}) <= 200000`,
+      "locations_thumbnail_url_https",
+      sql`${t.thumbnailUrl} like 'https://%'`,
     ),
   ],
 );

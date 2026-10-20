@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { EXPIRED, requireAdmin } from "@/lib/admin-auth";
+import { deleteImage, uploadImage } from "@/lib/blob";
 import {
   AGES,
   CATEGORIES,
@@ -18,6 +19,7 @@ import {
   ensureAccount,
   explainDbError,
   insertSample,
+  locationThumbnail,
   removeLocation,
   removeSample,
   removeSession,
@@ -209,23 +211,39 @@ export async function saveLocation(
   if (Number.isNaN(displayOrder))
     return { field: "displayOrder", error: "Whole number." };
 
-  const thumbnail = optional(formData, "thumbnail");
-  if (thumbnail && !thumbnail.startsWith("data:image/"))
-    return { field: "thumbnail", error: "Not an image." };
+  const id = str(formData, "id") || undefined;
+  const previous = id ? await locationThumbnail(id) : null;
+  // The form can only keep the current image or send a new file.
+  let thumbnailUrl =
+    optional(formData, "thumbnailUrl") === previous ? previous : null;
+  let uploaded: string | null = null;
+  const file = formData.get("thumbnailFile");
+  if (file instanceof File && file.size > 0) {
+    try {
+      uploaded = thumbnailUrl = await uploadImage("rooms", file);
+    } catch (err) {
+      return {
+        field: "thumbnail",
+        error: err instanceof Error ? err.message : "Upload failed.",
+      };
+    }
+  }
 
   try {
     await upsertLocation({
-      id: str(formData, "id") || undefined,
+      id,
       name,
       capacity,
       campusLocation: optional(formData, "campusLocation"),
       displayOrder,
       showInSchedule: formData.get("showInSchedule") === "on",
-      thumbnail,
+      thumbnailUrl,
     });
   } catch (err) {
+    await deleteImage(uploaded);
     return explainDbError(err);
   }
+  if (previous !== thumbnailUrl) await deleteImage(previous);
   revalidatePath(PATH);
   return { ok: true };
 }
@@ -233,7 +251,7 @@ export async function saveLocation(
 export async function deleteLocation(id: string): Promise<FormState> {
   if (!(await requireAdmin())) return { error: EXPIRED };
   try {
-    await removeLocation(id);
+    await deleteImage(await removeLocation(id));
   } catch (err) {
     return explainDbError(err);
   }

@@ -16,13 +16,13 @@ CREATE TABLE "locations" (
 	"campus_location" text,
 	"display_order" integer DEFAULT 100 NOT NULL,
 	"show_in_schedule" boolean DEFAULT false NOT NULL,
-	"thumbnail" text,
+	"thumbnail_url" text,
 	"airtable_record_id" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "locations_airtableRecordId_unique" UNIQUE("airtable_record_id"),
 	CONSTRAINT "locations_capacity_positive" CHECK ("locations"."capacity" > 0),
-	CONSTRAINT "locations_thumbnail_small_image" CHECK ("locations"."thumbnail" like 'data:image/%' and length("locations"."thumbnail") <= 200000)
+	CONSTRAINT "locations_thumbnail_url_https" CHECK ("locations"."thumbnail_url" like 'https://%')
 );
 --> statement-breakpoint
 CREATE TABLE "rsvps" (
@@ -36,9 +36,9 @@ CREATE TABLE "rsvps" (
 CREATE TABLE "session_hosts" (
 	"session_id" uuid NOT NULL,
 	"position" integer NOT NULL,
-	"user_id" text,
-	"display_name" text NOT NULL,
-	CONSTRAINT "session_hosts_session_id_position_pk" PRIMARY KEY("session_id","position")
+	"user_id" text NOT NULL,
+	CONSTRAINT "session_hosts_session_id_position_pk" PRIMARY KEY("session_id","position"),
+	CONSTRAINT "session_hosts_session_user_unique" UNIQUE("session_id","user_id")
 );
 --> statement-breakpoint
 CREATE TABLE "sessions" (
@@ -71,7 +71,7 @@ ALTER TABLE "bookmarks" ADD CONSTRAINT "bookmarks_user_id_user_id_fk" FOREIGN KE
 ALTER TABLE "rsvps" ADD CONSTRAINT "rsvps_session_id_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rsvps" ADD CONSTRAINT "rsvps_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session_hosts" ADD CONSTRAINT "session_hosts_session_id_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "session_hosts" ADD CONSTRAINT "session_hosts_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "session_hosts" ADD CONSTRAINT "session_hosts_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "bookmarks_user_id_idx" ON "bookmarks" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "rsvps_user_id_idx" ON "rsvps" USING btree ("user_id");--> statement-breakpoint

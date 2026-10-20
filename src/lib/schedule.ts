@@ -18,8 +18,8 @@ export type ScheduleLocation = {
   campusLocation: string | null;
   displayOrder: number;
   showInSchedule: boolean;
-  /** Data URL, already thumbnail-sized. */
-  thumbnail: string | null;
+  /** Public Vercel Blob URL, already thumbnail-sized. */
+  thumbnailUrl: string | null;
 };
 
 export type ScheduleSession = {

@@ -71,7 +71,7 @@ export async function loadSchedule(): Promise<Schedule> {
       campusLocation: l.campusLocation,
       displayOrder: l.displayOrder,
       showInSchedule: l.showInSchedule,
-      thumbnail: l.thumbnail,
+      thumbnailUrl: l.thumbnailUrl,
     })),
     sessions: sess.map((s) => ({
       id: s.id,
@@ -359,9 +359,25 @@ export async function upsertLocation(input: LocationInput): Promise<string> {
   return inserted.id;
 }
 
-/** Sessions in the room keep their row; location_id goes null. */
-export async function removeLocation(id: string): Promise<void> {
-  await getDb().delete(locations).where(eq(locations.id, id));
+export async function locationThumbnail(id: string): Promise<string | null> {
+  const [row] = await getDb()
+    .select({ url: locations.thumbnailUrl })
+    .from(locations)
+    .where(eq(locations.id, id))
+    .limit(1);
+  return row?.url ?? null;
+}
+
+/**
+ * Sessions in the room keep their row; location_id goes null. Returns the
+ * thumbnail URL so the caller can delete the file.
+ */
+export async function removeLocation(id: string): Promise<string | null> {
+  const [row] = await getDb()
+    .delete(locations)
+    .where(eq(locations.id, id))
+    .returning({ url: locations.thumbnailUrl });
+  return row?.url ?? null;
 }
 
 // Database constraints read back as sentences. Drizzle wraps the driver error,
@@ -391,7 +407,7 @@ const CONSTRAINT_MESSAGES: Record<string, { field?: string; error: string }> = {
     field: "minCapacity",
     error: "Min capacity must be between 0 and the max.",
   },
-  locations_thumbnail_small_image: {
+  locations_thumbnail_url_https: {
     field: "thumbnail",
     error: "That image is too large; try a smaller one.",
   },
