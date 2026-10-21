@@ -65,6 +65,8 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
     {},
   );
   const [claiming, startClaim] = useTransition();
+  // Which ticket's Claim was pressed, so only that button shows progress.
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   const [mineState, setMineState] = useState<ClaimState>({});
   // One admission per person, so offer it only until they hold a ticket.
   const holdsOne = tickets.some((t) => t.mine);
@@ -97,15 +99,17 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                 {shareable(t) && !holdsOne && (
                   <Button
                     size="sm"
+                    // The others wait too, so one click can't claim two.
                     disabled={claiming}
-                    onClick={() =>
+                    onClick={() => {
+                      setClaimingId(t.id);
                       startClaim(async () =>
                         setMineState(await claimMine(t.id)),
-                      )
-                    }
+                      );
+                    }}
                     className="bg-moss px-3 py-1 hover:bg-moss/85"
                   >
-                    {claiming ? "Claiming…" : "Claim"}
+                    {claiming && claimingId === t.id ? "Claiming…" : "Claim"}
                   </Button>
                 )}
                 {shareable(t) && (
