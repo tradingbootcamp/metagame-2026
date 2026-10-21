@@ -2,7 +2,8 @@
 
 import { useRef, useState, useTransition } from "react";
 import { removeAvatar, saveAvatar, type AvatarResult } from "./actions";
-import { downscaleImage } from "@/lib/downscale-image";
+import AvatarCropDialog, { type PickedImage } from "./AvatarCropDialog";
+import { cropImage, type CropArea } from "@/lib/crop-image";
 import { Button } from "@/v2/components/ui/button";
 
 const AVATAR_PX = 512;
@@ -29,6 +30,7 @@ export default function AvatarForm({
   const fileInput = useRef<HTMLInputElement>(null);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [picked, setPicked] = useState<PickedImage | null>(null);
 
   const run = (action: () => Promise<AvatarResult>) =>
     start(async () => {
@@ -45,15 +47,26 @@ export default function AvatarForm({
       setError("That isn’t an image.");
       return;
     }
+    setError(null);
+    setPicked({ file, url: URL.createObjectURL(file) });
+  };
+
+  const close = () => {
+    if (picked) URL.revokeObjectURL(picked.url);
+    setPicked(null);
+  };
+
+  const save = (file: File, area: CropArea) => {
+    close();
     run(async () => {
-      let small: File;
+      let cropped: File;
       try {
-        small = await downscaleImage(file, AVATAR_PX);
+        cropped = await cropImage(file, area, AVATAR_PX);
       } catch {
         return { error: "Couldn’t read that image." };
       }
       const data = new FormData();
-      data.set("image", small);
+      data.set("image", cropped);
       return saveAvatar(data);
     });
   };
@@ -104,6 +117,7 @@ export default function AvatarForm({
           e.target.value = "";
         }}
       />
+      <AvatarCropDialog picked={picked} onCancel={close} onSave={save} />
     </div>
   );
 }

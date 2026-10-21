@@ -10,6 +10,13 @@ export async function downscaleImage(file: File, maxPx: number): Promise<File> {
   canvas.height = Math.round(bitmap.height * scale);
   canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
+  return canvasToImageFile(canvas);
+}
+
+/** Encodes a canvas as WebP, or JPEG where the browser can't encode WebP. */
+export async function canvasToImageFile(
+  canvas: HTMLCanvasElement,
+): Promise<File> {
   const encode = (type: string) =>
     new Promise<Blob | null>((done) => canvas.toBlob(done, type, 0.8));
   // Browsers that can't encode WebP hand back a PNG instead.
