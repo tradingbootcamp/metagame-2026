@@ -131,7 +131,7 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
       </h2>
       {recordId ? (
         <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-          <Link href={`/grade/${recordId}`} className={link}>
+          <Link href={`/grade/${recordId}`} target="_blank" className={link}>
             Grading page
           </Link>
           <a
