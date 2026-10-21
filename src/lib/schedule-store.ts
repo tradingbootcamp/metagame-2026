@@ -29,15 +29,14 @@ import {
   type SessionRsvps,
 } from "./schedule";
 
-const { locations, sessions, sessionHosts, rsvps, bookmarks, user, profiles } =
-  schema;
+const { locations, sessions, sessionHosts, rsvps, bookmarks, user } = schema;
 
-// Matches accountLabel(): preferred name, else account name, else email.
-export const accountName = sql<string>`coalesce(nullif(trim(${profiles.preferredName}), ''), nullif(trim(${user.name}), ''), ${user.email})`;
+// Matches accountLabel(): account name, else email.
+export const accountName = sql<string>`coalesce(nullif(trim(${user.name}), ''), ${user.email})`;
 
 // The same rule without the email, for names other attendees see. Code
 // sign-in can leave the account name blank.
-const publicName = sql<string>`coalesce(nullif(trim(${profiles.preferredName}), ''), nullif(trim(${user.name}), ''), 'Someone')`;
+const publicName = sql<string>`coalesce(nullif(trim(${user.name}), ''), 'Someone')`;
 
 const accountColumns = {
   userId: user.id,
@@ -65,7 +64,6 @@ export async function loadSchedule(): Promise<Schedule> {
       .select({ sessionId: sessionHosts.sessionId, ...accountColumns })
       .from(sessionHosts)
       .innerJoin(user, eq(user.id, sessionHosts.userId))
-      .leftJoin(profiles, eq(profiles.userId, user.id))
       .orderBy(asc(sessionHosts.sessionId), asc(sessionHosts.position)),
   ]);
   const hostsBySession = new Map<string, ScheduleAccount[]>();
@@ -202,7 +200,7 @@ export async function moveSessionTo(
     .where(eq(sessions.id, id));
 }
 
-/** Accounts whose name, preferred name or email contains the query. */
+/** Accounts whose name or email contains the query. */
 export async function searchAccounts(
   query: string,
 ): Promise<ScheduleAccount[]> {
@@ -210,14 +208,7 @@ export async function searchAccounts(
   return getDb()
     .select(accountColumns)
     .from(user)
-    .leftJoin(profiles, eq(profiles.userId, user.id))
-    .where(
-      or(
-        ilike(user.name, q),
-        ilike(user.email, q),
-        ilike(profiles.preferredName, q),
-      ),
-    )
+    .where(or(ilike(user.name, q), ilike(user.email, q)))
     .orderBy(asc(accountName))
     .limit(8);
 }
@@ -242,7 +233,6 @@ export async function findAccount(
   const [found] = await getDb()
     .select(accountColumns)
     .from(user)
-    .leftJoin(profiles, eq(profiles.userId, user.id))
     .where(eq(user.email, email.toLowerCase()))
     .limit(1);
   return found ?? null;
@@ -387,7 +377,6 @@ export async function loadAttendance(): Promise<Attendance> {
       })
       .from(rsvps)
       .innerJoin(user, eq(user.id, rsvps.userId))
-      .leftJoin(profiles, eq(profiles.userId, user.id))
       .orderBy(asc(rsvps.createdAt)),
     db
       .select({ sessionId: bookmarks.sessionId, n: count() })
@@ -428,14 +417,12 @@ export async function loadSessionPlans(sessionId: string) {
       .select({ status: rsvps.status, ...accountColumns })
       .from(rsvps)
       .innerJoin(user, eq(user.id, rsvps.userId))
-      .leftJoin(profiles, eq(profiles.userId, user.id))
       .where(eq(rsvps.sessionId, sessionId))
       .orderBy(asc(rsvps.createdAt)),
     db
       .select(accountColumns)
       .from(bookmarks)
       .innerJoin(user, eq(user.id, bookmarks.userId))
-      .leftJoin(profiles, eq(profiles.userId, user.id))
       .where(eq(bookmarks.sessionId, sessionId))
       .orderBy(asc(bookmarks.createdAt)),
   ]);
@@ -464,7 +451,6 @@ export async function loadSessionRsvps(
       .select({ status: rsvps.status, name: publicName })
       .from(rsvps)
       .innerJoin(user, eq(user.id, rsvps.userId))
-      .leftJoin(profiles, eq(profiles.userId, user.id))
       .where(eq(rsvps.sessionId, sessionId))
       .orderBy(asc(rsvps.createdAt)),
   ]);

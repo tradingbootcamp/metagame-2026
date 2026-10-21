@@ -41,12 +41,7 @@ async function firstSigninStatus(): Promise<FirstSigninStatus> {
     needed: true,
     tickets: ticketStep(rows, user.id, email),
     prefill: {
-      preferredName: prefillName(
-        profile?.preferredName,
-        user.name,
-        rows,
-        email,
-      ),
+      preferredName: prefillName(user.name, rows, email),
       discordHandle: prefillDiscord(profile?.discordHandle, rows, email),
       shareWithRecruiters: profile?.shareWithRecruiters ?? false,
     },

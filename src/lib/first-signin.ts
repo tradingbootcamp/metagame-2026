@@ -74,11 +74,10 @@ export function ticketStep(
 }
 
 /**
- * Display-name prefill: the profile's, else the account's, else the name on the
- * newest ticket bought under this email (a family pack's attendee name).
+ * Name prefill: the account's, else the name on the newest ticket bought under
+ * this email (a family pack's attendee name).
  */
 export function prefillName(
-  profileName: string | null | undefined,
   accountName: string,
   rows: Pick<TicketRow, "purchaserEmail" | "purchaserName" | "createdAt">[],
   email: string,
@@ -86,10 +85,5 @@ export function prefillName(
   const fromTicket = rows
     .filter((t) => t.purchaserEmail === email && t.purchaserName?.trim())
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
-  return (
-    profileName?.trim() ||
-    accountName.trim() ||
-    fromTicket?.purchaserName?.trim() ||
-    ""
-  );
+  return accountName.trim() || fromTicket?.purchaserName?.trim() || "";
 }

@@ -69,13 +69,13 @@ export default async function AccountPage({
             <div className="flex max-w-[960px] flex-col gap-10">
               <AvatarForm
                 imageUrl={profile?.imageUrl ?? null}
-                name={profile?.preferredName || user.name}
+                name={user.name}
               />
               <div className="grid gap-12 md:grid-cols-2">
                 <ProfileForm
                   email={user.email}
                   initialValues={{
-                    name: profile?.preferredName || user.name,
+                    name: user.name,
                     pronouns: profile?.pronouns ?? "",
                     discordHandle: prefillDiscord(
                       profile?.discordHandle,

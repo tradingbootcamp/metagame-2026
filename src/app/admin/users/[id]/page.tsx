@@ -124,8 +124,6 @@ export default async function AdminUserProfilePage(
     plans,
     counts,
   );
-  const displayName = profile?.preferredName?.trim() || user.name.trim();
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -141,7 +139,7 @@ export default async function AdminUserProfilePage(
         </div>
         <div>
           <h1 className="font-bebas text-3xl tracking-wide text-navy">
-            {displayName || user.email}
+            {user.name.trim() || user.email}
           </h1>
           <p className="flex flex-wrap items-center gap-2 text-sm text-ink/60">
             <span className="font-mono text-xs">{user.email}</span>
@@ -158,8 +156,7 @@ export default async function AdminUserProfilePage(
 
       <Section title="Profile">
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
-          <Field label="Display name">{profile?.preferredName}</Field>
-          <Field label="Account name">{user.name || null}</Field>
+          <Field label="Name">{user.name || null}</Field>
           <Field label="Pronouns">{profile?.pronouns}</Field>
           <Field label="Discord">{profile?.discordHandle}</Field>
           <Field label="Public profile">{yesNo(profile?.isPublic)}</Field>

@@ -39,7 +39,7 @@ export const {
 export async function gradeAccess(): Promise<Access | null> {
   const account = await adminSession();
   if (account) {
-    const label = await accountLabel(account.user);
+    const label = accountLabel(account.user);
     // Code sign-in registers without a name: email-only means "Someone else".
     return {
       via: "account",

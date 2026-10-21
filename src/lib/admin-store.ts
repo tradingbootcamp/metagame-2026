@@ -1,11 +1,11 @@
-import { eq, inArray, or, sql } from "drizzle-orm";
+import { inArray, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { AdminAccount } from "@/lib/admin-tickets";
 import { emailKey } from "@/lib/ticket-holder";
 import { accountName } from "@/lib/schedule-store";
 import type { TicketRow } from "@/lib/ticket-store";
 
-const { user, profiles } = schema;
+const { user } = schema;
 
 /** The accounts a set of tickets mentions, by id and by email. */
 export async function ticketAccounts(rows: TicketRow[]): Promise<{
@@ -28,7 +28,6 @@ export async function ticketAccounts(rows: TicketRow[]): Promise<{
       : await getDb()
           .select({ id: user.id, name: accountName, email: user.email })
           .from(user)
-          .leftJoin(profiles, eq(profiles.userId, user.id))
           .where(
             or(
               ids.length ? inArray(user.id, ids) : undefined,

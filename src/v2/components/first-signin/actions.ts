@@ -21,16 +21,15 @@ export async function saveFirstSignin(
   if (!session) return { error: "You've been signed out. Sign in again." };
   const isAdult = yesNo(formData, "isAdult");
   const bringingChildren = yesNo(formData, "bringingChildren");
-  const preferredName = String(formData.get("preferredName") ?? "")
+  const name = String(formData.get("preferredName") ?? "")
     .trim()
     .slice(0, 80);
-  if (isAdult === null || bringingChildren === null || !preferredName)
+  if (isAdult === null || bringingChildren === null || !name)
     return { error: "Fill in the required fields." };
 
   const values = {
     isAdult,
     bringingChildren,
-    preferredName,
     discordHandle:
       cleanDiscordHandle(String(formData.get("discordHandle") ?? ""))?.slice(
         0,
@@ -44,10 +43,9 @@ export async function saveFirstSignin(
     .insert(profiles)
     .values({ userId: session.user.id, ...values })
     .onConflictDoUpdate({ target: profiles.userId, set: values });
-  // One name for people; the account name mirrors it for admin lists and emails.
-  if (preferredName !== session.user.name) {
+  if (name !== session.user.name) {
     await getAuth().api.updateUser({
-      body: { name: preferredName },
+      body: { name },
       headers: await headers(),
     });
   }

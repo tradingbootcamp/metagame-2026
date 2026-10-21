@@ -37,7 +37,7 @@ export const {
 export async function adminAccess(): Promise<Access | null> {
   const account = await adminSession();
   if (account) {
-    const name = await accountLabel(account.user);
+    const name = accountLabel(account.user);
     return { via: "account", name, userId: account.user.id };
   }
   const legacy = await readSession();

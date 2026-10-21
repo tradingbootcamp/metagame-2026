@@ -10,7 +10,7 @@ export const profiles = pgTable(
     userId: text()
       .primaryKey()
       .references(() => user.id, { onDelete: "cascade" }),
-    preferredName: text(),
+    preferredName: text(), // Unread since META-4514; a follow-up migration drops it.
     pronouns: text(),
     discordHandle: text(),
     bio: text(),
