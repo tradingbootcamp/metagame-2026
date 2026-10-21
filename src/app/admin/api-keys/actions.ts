@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb, schema } from "@/db";
-import { can } from "@/lib/access";
+import { can, teamAccess } from "@/lib/access";
 import { getAuth } from "@/lib/auth";
 import { ensureAccount } from "@/lib/schedule-store";
 
@@ -39,11 +39,14 @@ export async function createKey(
 
   try {
     const [existing] = await getDb()
-      .select({ id: user.id, banned: user.banned })
+      .select({ id: user.id, banned: user.banned, role: user.role })
       .from(user)
       .where(eq(user.email, email))
       .limit(1);
     if (existing?.banned) return { error: "That account is banned." };
+    // A key acts as its account, so minting one for an admin is admin-only.
+    if (existing?.role === "admin" && !(await teamAccess())?.admin)
+      return { error: "Only an admin can make a key for an admin account." };
     if (!existing && !name) return { error: "A new account needs a name." };
     const userId = existing?.id ?? (await ensureAccount(name, email)).userId;
     // No headers: the server-only path, which takes a userId instead of

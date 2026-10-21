@@ -60,14 +60,23 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
               {roles.map((r) => (
                 <th key={r.id} className="px-4 py-2 font-medium normal-case">
                   <input
+                    key={r.name}
                     aria-label="Role name"
                     defaultValue={r.name}
                     maxLength={40}
                     disabled={pending}
                     onBlur={(e) => {
-                      const name = e.currentTarget.value.trim();
-                      if (name && name !== r.name)
-                        run(() => renameRole(r.id, name));
+                      const input = e.currentTarget;
+                      const name = input.value.trim();
+                      if (!name || name === r.name) {
+                        input.value = r.name;
+                        return;
+                      }
+                      startTransition(async () => {
+                        const result = await renameRole(r.id, name);
+                        setError(result.error ?? null);
+                        if (result.error) input.value = r.name;
+                      });
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") e.currentTarget.blur();
