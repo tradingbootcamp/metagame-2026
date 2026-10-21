@@ -13,7 +13,7 @@ import { sendAdminErrorEmail, sendTicketConfirmationEmail } from "@/lib/email";
 import { getStripe } from "@/lib/stripe";
 import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
-import { recordTicket } from "@/lib/ticket-store";
+import { currentTicketCode, recordTicket } from "@/lib/ticket-store";
 import {
   dayPassForPaymentLinkUrl,
   tierForCheckoutMetadata,
@@ -216,8 +216,8 @@ export async function POST(request: Request) {
     const purchase: PurchaseRecord = {
       // Prefer the PaymentIntent id (the canonical payment) as the upsert key.
       id: paymentIntent?.id ?? full.id,
-      // Derived from the same id as the upsert key, so retries can't churn it.
-      ticketCode: ticketCode(paymentIntent?.id ?? full.id),
+      // A retry after an unclaim must not write the old code back.
+      ticketCode: await currentTicketCode(paymentIntent?.id ?? full.id),
       customerName: full.customer_details?.name ?? undefined,
       preferredName,
       customerEmail: full.customer_details?.email ?? undefined,

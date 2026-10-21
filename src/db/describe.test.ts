@@ -57,8 +57,12 @@ describe("describeSchema", () => {
       "session",
       "session_hosts",
       "tickets",
+      "tickets",
     ]);
     expect(column("tickets", "owner_user_id").references?.onDelete).toBe(
+      "set null",
+    );
+    expect(column("tickets", "holder_user_id").references?.onDelete).toBe(
       "set null",
     );
   });

@@ -5,7 +5,7 @@ import { PasswordForm, ProfileForm, SignOutButton } from "./AccountForms";
 import AccountTabs from "./AccountTabs";
 import AvatarForm from "./AvatarForm";
 import SessionsPanel from "./SessionsPanel";
-import TicketsPanel, { type TicketView } from "./TicketsPanel";
+import TicketsPanel from "./TicketsPanel";
 import { parseAccountTab } from "./tabs";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
@@ -15,8 +15,8 @@ import {
   loadSchedule,
   loadViewerPlans,
 } from "@/lib/schedule-store";
-import { formatTicketCode } from "@/lib/ticket-code";
-import { emailKey, ticketLabel, ticketsForUser } from "@/lib/ticket-store";
+import { emailKey, ticketsForUser } from "@/lib/ticket-store";
+import { ticketView } from "@/lib/ticket-view";
 
 export const metadata: Metadata = {
   title: "Account — Metagame 2026",
@@ -51,16 +51,7 @@ export default async function AccountPage({
       loadViewerPlans(user.id),
       loadRsvpCounts(),
     ]);
-  const tickets: TicketView[] = rows.map((t) => ({
-    id: t.paymentId,
-    tier: ticketLabel(t.tier),
-    status: t.status,
-    test: t.test,
-    mine: t.ownerUserId === user.id,
-    claimed: t.ownerUserId !== null,
-    // Only the buyer sees the code; it's what they hand to whoever attends.
-    code: t.purchaserEmail === email ? formatTicketCode(t.ticketCode) : null,
-  }));
+  const tickets = rows.map((t) => ticketView(t, user.id, email));
 
   return (
     // Same measure and top clearance as ContentPage, without its title block.

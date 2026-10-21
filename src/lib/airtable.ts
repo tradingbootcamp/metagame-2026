@@ -254,6 +254,58 @@ export async function markPurchaseFailedIfExists(
   return true;
 }
 
+/**
+ * Point a purchase row at its ticket's new code, matched on ID (= the ticket's
+ * payment id, `<intent>:ticket:<n>` for pack admissions). Updates by record
+ * id, so it never creates a row; admin-issued tickets have none.
+ */
+export async function updatePurchaseTicketCode(
+  paymentId: string,
+  code: string,
+): Promise<boolean> {
+  const { AIRTABLE_API_KEY } = env;
+  if (!AIRTABLE_API_KEY) {
+    console.warn(
+      `[purchase] Airtable not configured — ticket code not updated: ${paymentId}`,
+    );
+    return false;
+  }
+
+  const safe = paymentId.replace(/[^0-9A-Za-z_:-]/g, "");
+  if (!safe) return false;
+
+  const tableUrl = `https://api.airtable.com/v0/${airtableConfig.baseId}/${encodeURIComponent(airtableConfig.purchasesTableId)}`;
+  const findRes = await fetch(
+    `${tableUrl}?filterByFormula=${encodeURIComponent(`{ID}='${safe}'`)}&maxRecords=1`,
+    { headers: { Authorization: `Bearer ${AIRTABLE_API_KEY}` } },
+  );
+  if (!findRes.ok) {
+    throw new Error(
+      `Airtable responded ${findRes.status}: ${await findRes.text()}`,
+    );
+  }
+  const found = (await findRes.json()) as { records?: { id: string }[] };
+  const recordId = found.records?.[0]?.id;
+  if (!recordId) return false;
+
+  const patchRes = await fetch(tableUrl, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${AIRTABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      records: [{ id: recordId, fields: { "Ticket Code": code } }],
+    }),
+  });
+  if (!patchRes.ok) {
+    throw new Error(
+      `Airtable responded ${patchRes.status}: ${await patchRes.text()}`,
+    );
+  }
+  return true;
+}
+
 // Lifecycle of a purchase. Card → Paid instantly; ACH bank debits land Pending
 // then settle to Paid (or bounce to Failed) days later. BTC charges land Pending
 // (on-chain processing) then settle to Paid, or land Underpaid. "Underpaid" is a
@@ -275,7 +327,7 @@ export type PurchaseRecord = {
   billingName?: string;
   billingEmail?: string;
   ticketType?: string;
-  ticketCode?: string; // deterministic per-purchase code (see lib/ticket-code.ts)
+  ticketCode?: string; // the ticket's current code: derived from the id until an unclaim reissues it
   couponCode?: string; // promotion code the buyer used, e.g. "EARLYBIRD"
   amountDiscount?: number; // dollars knocked off by the coupon
   btcAmountDiscounted?: number; // whole BTC knocked off by a BTC discount code

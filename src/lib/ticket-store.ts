@@ -1,11 +1,18 @@
 import { and, count, desc, eq, isNull, lte, or } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { env } from "@/env";
-import type { PurchaseRecord, PurchaseStatus } from "@/lib/airtable";
-import { ticketCode } from "@/lib/ticket-code";
+import {
+  updatePurchaseTicketCode,
+  type PurchaseRecord,
+  type PurchaseStatus,
+} from "@/lib/airtable";
+import { sendAdminErrorEmail } from "@/lib/email";
+import { ticketCode, withFreshTicketCode } from "@/lib/ticket-code";
+import { emailKey } from "@/lib/ticket-holder";
 import { getDayPass, getTicket, supporterTier } from "@/lib/tickets";
 
 export { normalizeTicketCode } from "@/lib/ticket-code-format";
+export { emailKey, holdsTicket } from "@/lib/ticket-holder";
 
 type Ticket = typeof schema.tickets.$inferInsert;
 export type TicketRow = typeof schema.tickets.$inferSelect;
@@ -19,8 +26,15 @@ const visible =
     ? eq(tickets.test, false)
     : undefined;
 
-/** How purchaser emails are stored and matched. */
-export const emailKey = (email: string) => email.trim().toLowerCase();
+/** holdsTicket as a WHERE clause. */
+const heldBy = (userId: string, email: string) =>
+  or(
+    eq(tickets.holderUserId, userId),
+    and(
+      isNull(tickets.holderUserId),
+      eq(tickets.purchaserEmail, emailKey(email)),
+    ),
+  );
 
 /** Display name for a stored tier, which may be a tier id ("standard") or already a label. */
 export function ticketLabel(tier: string | null): string {
@@ -53,8 +67,8 @@ export function ticketFromPurchase(purchase: PurchaseRecord): Ticket {
 }
 
 // Upsert on payment id, so a redelivered webhook walks the same row through
-// pending → paid. Blank fields never clobber, and owner_user_id / claimed_at
-// are left alone: a retry must never un-claim a ticket.
+// pending → paid. Blank fields never clobber, and the code, owner and holder
+// are left alone: a retry must never un-claim a ticket or revive an old code.
 export async function recordTicket(purchase: PurchaseRecord): Promise<void> {
   if (!env.DATABASE_URL) {
     console.warn(`[tickets] DATABASE_URL not set — not stored: ${purchase.id}`);
@@ -79,6 +93,22 @@ export async function recordTicket(purchase: PurchaseRecord): Promise<void> {
     .onConflictDoUpdate({ target: schema.tickets.paymentId, set });
 }
 
+/**
+ * The code a payment's ticket has now, for webhooks to record in Airtable:
+ * unclaiming swaps the derived code for a random one.
+ */
+export async function currentTicketCode(paymentId: string): Promise<string> {
+  if (env.DATABASE_URL) {
+    const [row] = await getDb()
+      .select({ code: tickets.ticketCode })
+      .from(tickets)
+      .where(eq(tickets.paymentId, paymentId))
+      .limit(1);
+    if (row) return row.code;
+  }
+  return ticketCode(paymentId);
+}
+
 /** Flip a recorded ticket to failed; no row, no-op. Idempotent. */
 export async function markTicketFailed(paymentId: string): Promise<void> {
   if (!env.DATABASE_URL) return;
@@ -88,7 +118,7 @@ export async function markTicketFailed(paymentId: string): Promise<void> {
     .where(eq(schema.tickets.paymentId, paymentId));
 }
 
-/** Tickets the user owns, plus ones bought with their email. Newest first. */
+/** Tickets the user owns, holds or bought. Newest first. */
 export async function ticketsForUser(
   userId: string,
   email: string,
@@ -101,6 +131,7 @@ export async function ticketsForUser(
         visible,
         or(
           eq(tickets.ownerUserId, userId),
+          eq(tickets.holderUserId, userId),
           eq(tickets.purchaserEmail, emailKey(email)),
         ),
       ),
@@ -153,7 +184,7 @@ export async function claimTicket(
   return result;
 }
 
-/** The buyer claims a ticket they bought, without typing its code. */
+/** The holder claims a ticket for themselves, without typing its code. */
 export async function claimOwnTicket(
   userId: string,
   email: string,
@@ -163,11 +194,7 @@ export async function claimOwnTicket(
     .select({ ticketCode: tickets.ticketCode })
     .from(tickets)
     .where(
-      and(
-        visible,
-        eq(tickets.paymentId, paymentId),
-        eq(tickets.purchaserEmail, emailKey(email)),
-      ),
+      and(visible, eq(tickets.paymentId, paymentId), heldBy(userId, email)),
     )
     .limit(1);
   if (!ticket) return { ok: false, reason: "unknown" };
@@ -206,4 +233,47 @@ async function attemptClaim(
     ok: false,
     reason: existing.status === "pending" ? "unpaid" : "void",
   };
+}
+
+/**
+ * The attendee gives up their spot but keeps the ticket: it becomes theirs to
+ * hold, unclaimed, under a fresh code, so the old one stops working. Null when
+ * they aren't attending on it.
+ */
+export async function unclaimTicket(
+  userId: string,
+  paymentId: string,
+): Promise<TicketRow | null> {
+  const ticket = await withFreshTicketCode(async (code) => {
+    const [row] = await getDb()
+      .update(tickets)
+      .set({
+        ownerUserId: null,
+        claimedAt: null,
+        holderUserId: userId,
+        ticketCode: code,
+      })
+      .where(
+        and(
+          visible,
+          eq(tickets.paymentId, paymentId),
+          eq(tickets.ownerUserId, userId),
+          eq(tickets.status, "paid"),
+        ),
+      )
+      .returning();
+    return row ?? null;
+  });
+  if (!ticket) return null;
+  try {
+    await updatePurchaseTicketCode(ticket.paymentId, ticket.ticketCode);
+  } catch (e) {
+    console.error(`[tickets] Airtable code update failed: ${paymentId}`, e);
+    await sendAdminErrorEmail(
+      `Airtable Ticket Code update failed after an unclaim (payment ${paymentId}); it should read ${ticket.ticketCode}: ${e instanceof Error ? e.message : String(e)}`,
+    ).catch((adminErr) =>
+      console.error("[tickets] admin alert failed:", adminErr),
+    );
+  }
+  return ticket;
 }

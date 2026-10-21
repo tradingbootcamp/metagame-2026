@@ -1,3 +1,4 @@
+import { holdsTicket } from "@/lib/ticket-holder";
 import type { TicketRow } from "@/lib/ticket-store";
 
 /** What the first sign-in modal's ticket step offers. */
@@ -40,13 +41,18 @@ export function firstSigninHidden(pathname: string): boolean {
 
 /**
  * Same rules as the account page's tickets tab: a held ticket ends the step;
- * otherwise paid, unclaimed tickets this email bought get a Claim button;
+ * otherwise paid, unclaimed tickets the user holds get a Claim button;
  * otherwise the code entry.
  */
 export function ticketStep(
   rows: (Pick<
     TicketRow,
-    "paymentId" | "status" | "ownerUserId" | "purchaserEmail" | "createdAt"
+    | "paymentId"
+    | "status"
+    | "ownerUserId"
+    | "purchaserEmail"
+    | "holderUserId"
+    | "createdAt"
   > & { tier: string })[],
   userId: string,
   email: string,
@@ -57,7 +63,7 @@ export function ticketStep(
       (t) =>
         t.status === "paid" &&
         t.ownerUserId === null &&
-        t.purchaserEmail === email,
+        holdsTicket(t, userId, email),
     )
     .map((t) => ({
       id: t.paymentId,

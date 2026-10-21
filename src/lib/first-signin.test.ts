@@ -15,6 +15,7 @@ const row = (
   ownerUserId: null,
   purchaserEmail: "ada@example.com",
   createdAt: new Date("2026-10-03T17:00:00.000Z"),
+  holderUserId: null,
   ...over,
 });
 
@@ -52,6 +53,23 @@ describe("ticketStep", () => {
         "ada@example.com",
       ),
     ).toEqual({ kind: "code" });
+  });
+
+  it("offers tickets the user holds, not ones passed on", () => {
+    expect(
+      ticketStep(
+        [
+          row({ paymentId: "a", holderUserId: "u2" }),
+          row({
+            paymentId: "b",
+            purchaserEmail: "bob@example.com",
+            holderUserId: "u1",
+          }),
+        ],
+        "u1",
+        "ada@example.com",
+      ),
+    ).toEqual({ kind: "claimable", tickets: [{ id: "b", tier: "Standard" }] });
   });
 
   it("skips ahead once the user holds a ticket", () => {

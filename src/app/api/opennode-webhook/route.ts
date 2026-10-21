@@ -14,7 +14,11 @@ import {
 } from "@/lib/opennode";
 import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
-import { markTicketFailed, recordTicket } from "@/lib/ticket-store";
+import {
+  currentTicketCode,
+  markTicketFailed,
+  recordTicket,
+} from "@/lib/ticket-store";
 import { getDayPass } from "@/lib/tickets";
 import { mailingListOptOutUrl } from "@/lib/purchase-buyer";
 import { pickUtm } from "@/lib/utm";
@@ -131,8 +135,8 @@ export async function POST(request: Request) {
   try {
     const purchase: PurchaseRecord = {
       id: charge.id,
-      // Derived from the same id as the upsert key, so retries can't churn it.
-      ticketCode: ticketCode(charge.id),
+      // A retry after an unclaim must not write the old code back.
+      ticketCode: await currentTicketCode(charge.id),
       customerName: meta.name ? String(meta.name) : undefined,
       customerEmail: meta.email ? String(meta.email) : undefined,
       discordHandle: meta.discord ? String(meta.discord) : undefined,

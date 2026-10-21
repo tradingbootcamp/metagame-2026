@@ -13,7 +13,7 @@ import {
 } from "@/lib/family-pack";
 import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
-import { recordTicket } from "@/lib/ticket-store";
+import { currentTicketCode, recordTicket } from "@/lib/ticket-store";
 import { pickUtm } from "@/lib/utm";
 
 export async function recordFamilyPack(
@@ -45,7 +45,8 @@ export async function recordFamilyPack(
   for (const [index, attendee] of tickets.entries()) {
     const purchase: PurchaseRecord = {
       id: attendee.id,
-      ticketCode: attendee.code,
+      // A retry after an unclaim must not write the old code back.
+      ticketCode: await currentTicketCode(attendee.id),
       customerName: attendee.name,
       customerEmail: attendee.email,
       discordHandle: attendee.discord,
