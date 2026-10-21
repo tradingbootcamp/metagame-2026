@@ -127,29 +127,29 @@ function InfoForm({
 
   return (
     <form id={FORM_ID} action={action} className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <div className="grid gap-5 sm:grid-cols-2">
-          <YesNo name="isAdult" label="Are you 18 or older?" />
+      <div className="grid gap-5 sm:grid-cols-2">
+        <YesNo name="isAdult" label="Are you 18 or older?" />
+        <div className="flex flex-col gap-2">
           <YesNo
             name="bringingChildren"
-            label="Are you bringing any children?"
+            label="Are you bringing any children under 13?"
             onChange={setBringingChildren}
           />
+          {bringingChildren && (
+            <a
+              href={CHILD_REGISTRATION_FORM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                NEWSLETTER_LINK,
+                "inline-flex items-center gap-1.5 text-sm",
+              )}
+            >
+              Please register your children
+              <ExternalLink className="size-3.5" aria-hidden />
+            </a>
+          )}
         </div>
-        {bringingChildren && (
-          <a
-            href={CHILD_REGISTRATION_FORM_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              NEWSLETTER_LINK,
-              "inline-flex items-center gap-1.5 text-sm",
-            )}
-          >
-            Please register your children
-            <ExternalLink className="size-3.5" aria-hidden />
-          </a>
-        )}
       </div>
 
       <span className={cn(SECTION, "mt-2")}>Optional</span>
