@@ -1,13 +1,13 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { adminAccess } from "@/lib/admin-auth";
+import { toolAccess } from "@/lib/admin-auth";
 import { publicSchedule } from "@/lib/schedule";
 import { loadSchedule } from "@/lib/schedule-store";
 
-// Pre-launch gate: admins only. canSeeSchedule() for links, prelaunchGate() 404s. Remove at launch.
+// Pre-launch gate: the team only. canSeeSchedule() for links, prelaunchGate() 404s. Remove at launch.
 export async function canSeeSchedule(): Promise<boolean> {
-  return !!(await adminAccess());
+  return !!(await toolAccess("schedule.preview"));
 }
 
 export async function prelaunchGate(): Promise<void> {

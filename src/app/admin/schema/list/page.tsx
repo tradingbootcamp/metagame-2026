@@ -1,12 +1,12 @@
 import { connection } from "next/server";
 import SignIn from "../../SignIn";
-import { adminAccess } from "@/lib/admin-auth";
+import { toolAccess } from "@/lib/admin-auth";
 import { describeSchema, type TableInfo } from "@/db/describe";
 
 export default async function AdminSchemaListPage() {
   await connection();
 
-  if (!(await adminAccess())) {
+  if (!(await toolAccess("schema.view"))) {
     return (
       <div className="px-4 py-8">
         <SignIn next="/admin/schema/list" />

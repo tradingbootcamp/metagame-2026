@@ -15,7 +15,7 @@ import {
   type TicketSort,
 } from "@/lib/admin-tickets";
 import { ticketAccounts } from "@/lib/admin-store";
-import { adminSession } from "@/lib/auth";
+import { can } from "@/lib/access";
 import { formatTicketCode } from "@/lib/ticket-code-format";
 import { allTickets, ticketLabel, ticketsForUser } from "@/lib/ticket-store";
 
@@ -28,7 +28,7 @@ export default async function AdminTicketsPage(
 ) {
   await connection();
 
-  const session = await adminSession();
+  const session = await can("tickets.view");
   if (!session) return <ToolSignIn title="Tickets" next="/admin/tickets" />;
 
   const params = await props.searchParams;

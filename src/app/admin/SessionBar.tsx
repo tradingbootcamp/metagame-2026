@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { signOut } from "./auth-actions";
-import { adminAccess } from "@/lib/admin-auth";
+import { toolAccess } from "@/lib/admin-auth";
 
 /** Who's signed in + sign out, on the right of every tool's header. */
 export default async function SessionBar() {
-  const access = await adminAccess();
+  const access = await toolAccess();
   if (!access) return null;
 
   return (

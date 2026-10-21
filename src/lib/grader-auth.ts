@@ -1,12 +1,13 @@
-import { accountLabel, adminSession, signOutAccount } from "./auth";
+import { can } from "./access";
+import { accountLabel, signOutAccount } from "./auth";
 import { committeeUserId } from "./rfp-sessions";
 import { createSessionAuth, type Session as BaseSession } from "./session-auth";
 import type { Identity } from "./grader-identity";
 
-// Access is a signed-in admin account, which grades as itself. The shared
-// password + "I am" dropdown is the fallback until the committee has accounts
-// (META-1484); it identifies by committee name, which maps to an account by
-// email, so a grade is never saved without one.
+// Access is a signed-in account with `submissions.grade`, which grades as
+// itself. The shared password + "I am" dropdown is the fallback until the
+// committee has accounts (META-1484); it identifies by committee name, which
+// maps to an account by email, so a grade is never saved without one.
 
 /** `identity: null` = password accepted, still need to say who you are. */
 export type Session = BaseSession<Identity>;
@@ -38,7 +39,7 @@ export const {
 
 /** Who may grade on this request, or null. */
 export async function gradeAccess(): Promise<Access | null> {
-  const account = await adminSession();
+  const account = await can("submissions.grade");
   if (account) {
     const label = accountLabel(account.user);
     // Code sign-in registers without a name: email-only means "Someone else".

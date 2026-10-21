@@ -21,6 +21,8 @@ describe("describeSchema", () => {
       "bookmarks",
       "locations",
       "profiles",
+      "role_permissions",
+      "roles",
       "rsvps",
       "session",
       "session_grade_space_options",
@@ -29,6 +31,8 @@ describe("describeSchema", () => {
       "sessions",
       "tickets",
       "user",
+      "user_permission_overrides",
+      "user_roles",
       "verification",
     ]);
   });
@@ -62,6 +66,8 @@ describe("describeSchema", () => {
       "sessions",
       "tickets",
       "tickets",
+      "user_permission_overrides",
+      "user_roles",
     ]);
     expect(column("tickets", "owner_user_id").references?.onDelete).toBe(
       "set null",
@@ -101,6 +107,7 @@ describe("describeSchema", () => {
       "shepherd_match",
       "topic_area",
       "potential_panel",
+      "permission_effect",
     ]);
   });
 
@@ -138,6 +145,7 @@ describe("describeSchema", () => {
   it("groups tables in display order without losing any", () => {
     expect(info.groups.map((g) => g.name)).toEqual([
       "Auth (managed by Better Auth)",
+      "Access",
       "Attendees",
       "Tickets",
       "Schedule",
@@ -149,6 +157,10 @@ describe("describeSchema", () => {
       "account",
       "verification",
       "apikey",
+      "roles",
+      "role_permissions",
+      "user_roles",
+      "user_permission_overrides",
       "profiles",
       "tickets",
       "locations",

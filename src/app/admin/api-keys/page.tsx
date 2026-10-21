@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import KeysPanel, { type KeyRow } from "./KeysPanel";
 import ToolSignIn from "@/components/ToolSignIn";
 import { getDb, schema } from "@/db";
-import { adminSession } from "@/lib/auth";
+import { can } from "@/lib/access";
 
 const when = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -13,10 +13,10 @@ const when = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Los_Angeles",
 });
 
-// Account-only: minting a key grants the admin role, which needs an admin session.
+// Account-only: a key acts as an account, so the password fallback can't mint one.
 export default async function AdminApiKeysPage() {
   await connection();
-  const session = await adminSession();
+  const session = await can("api_keys.manage");
   if (!session) return <ToolSignIn title="API keys" next="/admin/api-keys" />;
 
   const { apikey, user } = schema;

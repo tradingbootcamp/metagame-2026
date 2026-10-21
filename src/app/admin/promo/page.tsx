@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import SignIn from "../SignIn";
 import { NameForm } from "../SignInForms";
 import PromoTool from "./PromoTool";
-import { adminAccess } from "@/lib/admin-auth";
+import { toolAccess } from "@/lib/admin-auth";
 import { listCoupons, type Coupon } from "@/lib/promo-codes-stripe";
 import { siteOriginFromHeaders } from "@/lib/site-origin";
 import { getPromoStripe, promoMode } from "@/lib/stripe-promo";
@@ -12,7 +12,7 @@ export default async function AdminPromoPage() {
   // static at build time.
   await connection();
 
-  const access = await adminAccess();
+  const access = await toolAccess("promo.manage");
   if (!access) return <SignIn next="/admin/promo" />;
   if (!access.name) return <NameForm />;
 

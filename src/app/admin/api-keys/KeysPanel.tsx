@@ -46,7 +46,8 @@ export default function KeysPanel({ rows }: { rows: KeyRow[] }) {
         <h2 className="font-bebas text-xl tracking-wide text-navy">New key</h2>
         <p className="text-sm text-ink/60">
           Requests carrying the key act as this account, which is made if it
-          doesn’t exist. The API only admits admins; grant the role on Users.
+          doesn’t exist. The schedule API admits accounts that can manage the
+          schedule; give it a role or a grant on Users.
         </p>
         <label className="block text-sm">
           Account email

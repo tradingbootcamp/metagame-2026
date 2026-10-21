@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import SignIn from "../SignIn";
 import { NameForm } from "../SignInForms";
 import ScheduleTool from "./ScheduleTool";
-import { adminAccess } from "@/lib/admin-auth";
+import { toolAccess } from "@/lib/admin-auth";
 import {
   loadAttendance,
   loadSchedule,
@@ -14,7 +14,7 @@ export default async function AdminSchedulePage() {
   // static at build time.
   await connection();
 
-  const access = await adminAccess();
+  const access = await toolAccess("schedule.manage");
   if (!access) return <SignIn next="/admin/schedule" />;
   if (!access.name) return <NameForm />;
 

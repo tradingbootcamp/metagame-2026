@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import SignIn from "../SignIn";
-import { adminAccess } from "@/lib/admin-auth";
+import { toolAccess } from "@/lib/admin-auth";
 
 // Liam ERD static site, generated into public/schema-erd at build time
 // (scripts/build-erd.mjs). The files under public/ are fetchable without the
@@ -9,7 +9,7 @@ import { adminAccess } from "@/lib/admin-auth";
 export default async function AdminSchemaPage() {
   await connection();
 
-  if (!(await adminAccess())) {
+  if (!(await toolAccess("schema.view"))) {
     return (
       <div className="px-4 py-8">
         <SignIn next="/admin/schema" />

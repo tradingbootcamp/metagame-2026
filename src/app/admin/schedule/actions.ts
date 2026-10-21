@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { EXPIRED, requireAdmin } from "@/lib/admin-auth";
+import { EXPIRED, requireAccess } from "@/lib/admin-auth";
 import { deleteImage } from "@/lib/blob";
 import { gradingSummary, type GradingSummary } from "@/lib/rfp-sessions";
 import { ImageUploadError, replaceRoomImages } from "@/lib/room-images";
@@ -65,7 +65,7 @@ export async function saveSession(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
 
   const parsed = parseSessionFields(fields(formData));
   if (!parsed.ok) return { field: parsed.field, error: parsed.error };
@@ -93,7 +93,7 @@ export async function moveSession(
   startsAt: string,
   locationId: string | null,
 ): Promise<FormState> {
-  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
   const start = new Date(startsAt);
   if (Number.isNaN(start.getTime())) return { error: "That time is invalid." };
   try {
@@ -106,7 +106,7 @@ export async function moveSession(
 }
 
 export async function findAccounts(query: string): Promise<ScheduleAccount[]> {
-  if (!(await requireAdmin())) return [];
+  if (!(await requireAccess("schedule.manage"))) return [];
   const q = query.trim();
   return q.length < 2 ? [] : searchAccounts(q);
 }
@@ -120,7 +120,7 @@ export async function addAccount(
   name: string,
   email: string,
 ): Promise<NewAccountResult> {
-  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
   name = name.trim();
   email = email.trim().toLowerCase();
   if (!name) return { error: "Name is required." };
@@ -138,7 +138,7 @@ export async function addRsvpFor(
   sessionId: string,
   userId: string,
 ): Promise<FormState> {
-  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
   try {
     await rsvp(sessionId, userId);
   } catch (err) {
@@ -152,7 +152,7 @@ export async function removeRsvpFor(
   sessionId: string,
   userId: string,
 ): Promise<FormState> {
-  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
   try {
     await cancelRsvp(sessionId, userId);
   } catch (err) {
@@ -163,7 +163,7 @@ export async function removeRsvpFor(
 }
 
 export async function deleteSession(id: string): Promise<FormState> {
-  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
   try {
     await removeSession(id);
   } catch (err) {
@@ -177,7 +177,7 @@ export async function saveLocation(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
 
   const parsed = parseLocationFields(fields(formData));
   if (!parsed.ok) return { field: parsed.field, error: parsed.error };
@@ -217,7 +217,7 @@ export async function saveLocation(
 }
 
 export async function deleteLocation(id: string): Promise<FormState> {
-  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
   try {
     const images = await removeLocation(id);
     await deleteImage(images?.thumbnailUrl ?? null);
@@ -233,7 +233,7 @@ export async function deleteLocation(id: string): Promise<FormState> {
 const sampleAllowed = process.env.NODE_ENV === "development";
 
 export async function addSample(): Promise<FormState> {
-  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
   if (!sampleAllowed) return { error: "Sample data is dev-only." };
   try {
     await insertSample();
@@ -245,7 +245,7 @@ export async function addSample(): Promise<FormState> {
 }
 
 export async function clearSample(): Promise<FormState> {
-  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
   if (!sampleAllowed) return { error: "Sample data is dev-only." };
   try {
     await removeSample();

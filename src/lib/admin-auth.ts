@@ -1,9 +1,12 @@
-import { accountLabel, adminSession, signOutAccount } from "./auth";
+import { can, teamAccess } from "./access";
+import { accountLabel, signOutAccount } from "./auth";
+import { ADMIN_PASSWORD_PERMISSIONS, type Permission } from "./permissions";
 import { createSessionAuth, type Session as BaseSession } from "./session-auth";
 
-// Team-only tools under /admin. Access is a signed-in account with the admin
-// role; the shared password + self-asserted name is a fallback until the whole
-// team has accounts (META-1484), then it goes.
+// Team-only tools under /admin. Access is a signed-in account holding the
+// tool's permission (src/lib/permissions.ts); the shared password + self-asserted
+// name is a fallback until the whole team has accounts (META-1484), then it
+// goes. A password session holds the fixed ADMIN_PASSWORD_PERMISSIONS set.
 
 export type AdminIdentity = { name: string };
 export type Session = BaseSession<AdminIdentity>;
@@ -33,12 +36,22 @@ export const {
   parseIdentity,
 });
 
-/** Who may use the team tools on this request, or null. */
-export async function adminAccess(): Promise<Access | null> {
-  const account = await adminSession();
+/**
+ * Who may use the tool this permission gates on this request, or null. With
+ * no permission: anyone with any team access, for the index and header.
+ */
+export async function toolAccess(
+  permission?: Permission,
+): Promise<Access | null> {
+  const account = permission
+    ? await can(permission)
+    : (await teamAccess())?.session;
   if (account) {
     const name = accountLabel(account.user);
     return { via: "account", name, userId: account.user.id };
+  }
+  if (permission && !ADMIN_PASSWORD_PERMISSIONS.includes(permission)) {
+    return null;
   }
   const legacy = await readSession();
   return legacy
@@ -50,18 +63,17 @@ export type NamedAccess = Access & { name: string };
 
 export const EXPIRED = "Your session expired. Reload.";
 
-/**
- * The one check for server actions: an admin with a name to put on what they
- * create, or null. Swap for `can()` when the permission system lands.
- */
-export async function requireAdmin(): Promise<NamedAccess | null> {
-  const access = await adminAccess();
+/** The one check for server actions: someone with the permission and a name to put on what they create, or null. */
+export async function requireAccess(
+  permission: Permission,
+): Promise<NamedAccess | null> {
+  const access = await toolAccess(permission);
   return access?.name ? (access as NamedAccess) : null;
 }
 
 /** Ends whichever session let them in; an account signs out of the site. */
 export async function endAccess(): Promise<void> {
-  const access = await adminAccess();
+  const access = await toolAccess();
   await endSession();
   if (access?.via === "account") await signOutAccount();
 }
