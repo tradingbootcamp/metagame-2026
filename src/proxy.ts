@@ -6,7 +6,8 @@ import { NextResponse, type NextRequest } from "next/server";
 export function proxy(request: NextRequest) {
   if (getSessionCookie(request)) return NextResponse.next();
   const login = new URL("/login", request.url);
-  login.searchParams.set("next", request.nextUrl.pathname);
+  const { pathname, search } = request.nextUrl;
+  login.searchParams.set("next", pathname + search);
   return NextResponse.redirect(login);
 }
 
