@@ -72,7 +72,7 @@ export function ticketFromPurchase(purchase: PurchaseRecord): Ticket {
     tier: purchase.ticketType ?? null,
     amountCents:
       purchase.amount != null ? Math.round(purchase.amount * 100) : null,
-    couponCode: purchase.couponCode?.trim() || null,
+    couponCode: purchase.couponCode?.trim().toUpperCase() || null,
     purchaserEmail: emailKey(purchase.customerEmail ?? "") || null,
     purchaserName: purchase.preferredName ?? purchase.customerName ?? null,
     purchaserDiscord: cleanDiscordHandle(purchase.discordHandle) ?? null,

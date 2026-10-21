@@ -34,7 +34,7 @@ describe("ticketFromPurchase", () => {
         .purchaserDiscord,
     ).toBe("ada_l");
     expect(
-      ticketFromPurchase({ ...stripe, couponCode: " EARLYBIRD " }).couponCode,
+      ticketFromPurchase({ ...stripe, couponCode: " earlyBird " }).couponCode,
     ).toBe("EARLYBIRD");
   });
 
