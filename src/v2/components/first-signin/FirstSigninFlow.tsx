@@ -91,7 +91,12 @@ export default function FirstSigninFlow() {
         </div>
         <InfoForm prefill={status.prefill} action={action} state={state} />
         <div className="flex flex-col gap-3">
-          <span className={LABEL}>Your ticket</span>
+          <h3 className={`${HEADING} text-[22px] text-cream`}>
+            {status.tickets.kind === "claimable" &&
+            status.tickets.tickets.length > 1
+              ? "Tickets"
+              : "Ticket"}
+          </h3>
           <TicketSection tickets={status.tickets} />
         </div>
         <Button
@@ -284,13 +289,15 @@ function TicketSection({ tickets }: { tickets: TicketStep }) {
       ) : (
         <ClaimByCode onClaimed={setClaimed} />
       )}
-      <p className="text-sm text-cream/70">
-        No ticket yet? That&apos;s fine, you can{" "}
-        <Link href={TICKETS_HREF} target="_blank" className={NEWSLETTER_LINK}>
-          buy one
-        </Link>{" "}
-        any time.
-      </p>
+      {tickets.kind === "code" && (
+        <p className="text-sm text-cream/70">
+          No ticket yet? That&apos;s fine, you can{" "}
+          <Link href={TICKETS_HREF} target="_blank" className={NEWSLETTER_LINK}>
+            buy one
+          </Link>{" "}
+          any time.
+        </p>
+      )}
     </>
   );
 }
