@@ -10,6 +10,7 @@ import { parseAccountTab } from "./tabs";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
 import { currentSession, hasPassword } from "@/lib/auth";
+import { prefillDiscord } from "@/lib/discord-handle";
 import {
   loadRsvpCounts,
   loadSchedule,
@@ -77,7 +78,11 @@ export default async function AccountPage({
                     name: user.name,
                     preferredName: profile?.preferredName ?? "",
                     pronouns: profile?.pronouns ?? "",
-                    discordHandle: profile?.discordHandle ?? "",
+                    discordHandle: prefillDiscord(
+                      profile?.discordHandle,
+                      rows,
+                      email,
+                    ),
                     bio: profile?.bio ?? "",
                     isPublic: profile?.isPublic ?? false,
                   }}

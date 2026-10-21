@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { accountsConfigured, currentSession } from "@/lib/auth";
+import { prefillDiscord } from "@/lib/discord-handle";
 import {
   firstSigninNeeded,
   prefillName,
@@ -46,7 +47,7 @@ async function firstSigninStatus(): Promise<FirstSigninStatus> {
         rows,
         email,
       ),
-      discordHandle: profile?.discordHandle ?? "",
+      discordHandle: prefillDiscord(profile?.discordHandle, rows, email),
       shareWithRecruiters: profile?.shareWithRecruiters ?? false,
     },
   };

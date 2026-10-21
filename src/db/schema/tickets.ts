@@ -42,6 +42,7 @@ export const tickets = pgTable(
     amountCents: integer(),
     purchaserEmail: text(),
     purchaserName: text(),
+    purchaserDiscord: text(),
     ownerUserId: text().references(() => user.id, { onDelete: "set null" }),
     claimedAt: timestamp({ withTimezone: true }),
     holderUserId: text().references(() => user.id, { onDelete: "set null" }),

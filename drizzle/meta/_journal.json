@@ -78,6 +78,13 @@
       "when": 1792552808891,
       "tag": "0010_ticket_holder",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792552978545,
+      "tag": "0011_ticket_purchaser_discord",
+      "breakpoints": true
     }
   ]
 }

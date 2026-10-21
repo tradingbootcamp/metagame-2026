@@ -6,6 +6,7 @@ import {
   type PurchaseRecord,
   type PurchaseStatus,
 } from "@/lib/airtable";
+import { cleanDiscordHandle } from "@/lib/discord-handle";
 import { sendAdminErrorEmail } from "@/lib/email";
 import { ticketCode, withFreshTicketCode } from "@/lib/ticket-code";
 import { emailKey } from "@/lib/ticket-holder";
@@ -63,6 +64,7 @@ export function ticketFromPurchase(purchase: PurchaseRecord): Ticket {
       purchase.amount != null ? Math.round(purchase.amount * 100) : null,
     purchaserEmail: emailKey(purchase.customerEmail ?? "") || null,
     purchaserName: purchase.preferredName ?? purchase.customerName ?? null,
+    purchaserDiscord: cleanDiscordHandle(purchase.discordHandle) ?? null,
   };
 }
 
@@ -75,8 +77,15 @@ export async function recordTicket(purchase: PurchaseRecord): Promise<void> {
     return;
   }
   const row = ticketFromPurchase(purchase);
-  const { status, test, tier, amountCents, purchaserEmail, purchaserName } =
-    row;
+  const {
+    status,
+    test,
+    tier,
+    amountCents,
+    purchaserEmail,
+    purchaserName,
+    purchaserDiscord,
+  } = row;
   const set = Object.fromEntries(
     Object.entries({
       status,
@@ -85,6 +94,7 @@ export async function recordTicket(purchase: PurchaseRecord): Promise<void> {
       amountCents,
       purchaserEmail,
       purchaserName,
+      purchaserDiscord,
     }).filter(([, v]) => v != null),
   );
   await getDb()
