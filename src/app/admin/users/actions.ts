@@ -12,7 +12,7 @@ const message = (err: unknown) =>
 
 // Role and ban changes go through Better Auth's admin plugin, which only lets
 // `user.role = 'admin'` accounts make them, so `users.manage` alone isn't
-// enough here (roles and per-permission overrides are on the profile page).
+// enough here (roles and per-permission grants are on the profile page).
 // Changing your own row is refused so the last admin can't lock everyone out.
 async function refused(userId: string): Promise<Result | null> {
   const access = await teamAccess();

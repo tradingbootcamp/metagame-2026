@@ -31,7 +31,7 @@ describe("describeSchema", () => {
       "sessions",
       "tickets",
       "user",
-      "user_permission_overrides",
+      "user_permission_grants",
       "user_roles",
       "verification",
     ]);
@@ -66,7 +66,7 @@ describe("describeSchema", () => {
       "sessions",
       "tickets",
       "tickets",
-      "user_permission_overrides",
+      "user_permission_grants",
       "user_roles",
     ]);
     expect(column("tickets", "owner_user_id").references?.onDelete).toBe(
@@ -106,7 +106,6 @@ describe("describeSchema", () => {
       "shepherd_match",
       "topic_area",
       "potential_panel",
-      "permission_effect",
     ]);
   });
 
@@ -159,7 +158,7 @@ describe("describeSchema", () => {
       "roles",
       "role_permissions",
       "user_roles",
-      "user_permission_overrides",
+      "user_permission_grants",
       "profiles",
       "tickets",
       "locations",

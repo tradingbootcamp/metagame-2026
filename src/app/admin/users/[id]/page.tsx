@@ -20,7 +20,7 @@ import {
 import { ticketPeople, ticketRoles } from "@/lib/admin-tickets";
 import { ticketAccounts } from "@/lib/admin-store";
 import { listRoles, userAccess } from "@/lib/permission-store";
-import { explainPermissions } from "@/lib/permissions";
+import { explainPermissions, isPermission } from "@/lib/permissions";
 import {
   loadRsvpCounts,
   loadSchedule,
@@ -93,8 +93,8 @@ function SessionList({
   );
 }
 
-// Admin role and ban changes stay on the users table; roles and permission
-// overrides are edited here.
+// Admin role and ban changes stay on the users table; roles and per-user
+// grants are edited here.
 export default async function AdminUserProfilePage(
   props: PageProps<"/admin/users/[id]">,
 ) {
@@ -132,9 +132,7 @@ export default async function AdminUserProfilePage(
       name: r.name,
       assigned: held.roleIds.includes(r.id),
     })),
-    overrides: Object.fromEntries(
-      held.overrides.map((o) => [o.permission, o.effect]),
-    ) as AccessView["overrides"],
+    grants: held.grants.filter(isPermission),
     explanation: explainPermissions(held),
   };
   const { accounts, byEmail } = await ticketAccounts(tickets);

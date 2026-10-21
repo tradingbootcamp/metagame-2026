@@ -1,13 +1,8 @@
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/db";
-import {
-  isPermission,
-  type AccessInput,
-  type OverrideEffect,
-  type Permission,
-} from "./permissions";
+import { isPermission, type AccessInput, type Permission } from "./permissions";
 
-const { roles, rolePermissions, userRoles, userPermissionOverrides } = schema;
+const { roles, rolePermissions, userRoles, userPermissionGrants } = schema;
 
 export type Role = {
   id: string;
@@ -79,7 +74,7 @@ export async function userAccess(
   admin: boolean,
 ): Promise<AccessInput & { roleIds: string[] }> {
   const db = getDb();
-  const [held, overrides] = await Promise.all([
+  const [held, grants] = await Promise.all([
     db
       .select({
         id: roles.id,
@@ -92,12 +87,9 @@ export async function userAccess(
       .where(eq(userRoles.userId, userId))
       .orderBy(asc(roles.name)),
     db
-      .select({
-        permission: userPermissionOverrides.permission,
-        effect: userPermissionOverrides.effect,
-      })
-      .from(userPermissionOverrides)
-      .where(eq(userPermissionOverrides.userId, userId)),
+      .select({ permission: userPermissionGrants.permission })
+      .from(userPermissionGrants)
+      .where(eq(userPermissionGrants.userId, userId)),
   ]);
   const byRole = new Map<string, { name: string; permissions: string[] }>();
   for (const row of held) {
@@ -109,7 +101,7 @@ export async function userAccess(
     admin,
     roles: [...byRole.values()],
     roleIds: [...byRole.keys()],
-    overrides,
+    grants: grants.map((g) => g.permission),
   };
 }
 
@@ -145,31 +137,24 @@ export async function setUserRole(
   }
 }
 
-/** `null` clears the override, so the roles decide again. */
-export async function setUserOverride(
+export async function setUserGrant(
   userId: string,
   permission: Permission,
-  effect: OverrideEffect | null,
+  granted: boolean,
 ): Promise<void> {
   const db = getDb();
-  if (effect) {
+  if (granted) {
     await db
-      .insert(userPermissionOverrides)
-      .values({ userId, permission, effect })
-      .onConflictDoUpdate({
-        target: [
-          userPermissionOverrides.userId,
-          userPermissionOverrides.permission,
-        ],
-        set: { effect },
-      });
+      .insert(userPermissionGrants)
+      .values({ userId, permission })
+      .onConflictDoNothing();
   } else {
     await db
-      .delete(userPermissionOverrides)
+      .delete(userPermissionGrants)
       .where(
         and(
-          eq(userPermissionOverrides.userId, userId),
-          eq(userPermissionOverrides.permission, permission),
+          eq(userPermissionGrants.userId, userId),
+          eq(userPermissionGrants.permission, permission),
         ),
       );
   }

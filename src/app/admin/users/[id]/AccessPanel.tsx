@@ -2,14 +2,12 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { assignRole, setOverride, type Result } from "./actions";
-import { selectClass, selectStyle } from "../../ui";
+import { assignRole, setGrant, type Result } from "./actions";
 import {
   describeSource,
   PERMISSION_KEYS,
   PERMISSIONS,
   type Explanation,
-  type OverrideEffect,
   type Permission,
 } from "@/lib/permissions";
 
@@ -19,15 +17,9 @@ export type AccessView = {
   /** The viewer's own page: shown, not editable. */
   self: boolean;
   roles: { id: string; name: string; assigned: boolean }[];
-  overrides: Partial<Record<Permission, OverrideEffect>>;
+  grants: Permission[];
   explanation: Record<Permission, Explanation>;
 };
-
-const OVERRIDES = [
-  { value: "", label: "Inherit" },
-  { value: "grant", label: "Grant" },
-  { value: "deny", label: "Deny" },
-];
 
 export default function AccessPanel({ access }: { access: AccessView }) {
   const [error, setError] = useState<string | null>(null);
@@ -43,8 +35,8 @@ export default function AccessPanel({ access }: { access: AccessView }) {
     <div className="space-y-5 text-sm">
       {access.admin && (
         <p className="rounded-lg bg-navy/5 px-3 py-2 text-navy">
-          Admin accounts hold every permission; the roles and overrides below
-          are kept but don’t apply until the admin role is removed.
+          Admin accounts hold every permission; the roles and grants below are
+          kept but don’t apply until the admin role is removed.
         </p>
       )}
       {access.self && (
@@ -95,7 +87,7 @@ export default function AccessPanel({ access }: { access: AccessView }) {
               <th className="px-3 py-2 font-medium">Permission</th>
               <th className="px-3 py-2 font-medium">Effective</th>
               <th className="px-3 py-2 font-medium">From</th>
-              <th className="px-3 py-2 font-medium">Override</th>
+              <th className="px-3 py-2 font-medium">Grant</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -118,23 +110,17 @@ export default function AccessPanel({ access }: { access: AccessView }) {
                       : sources.map(describeSource).join(", ")}
                   </td>
                   <td className="px-3 py-2">
-                    <select
-                      aria-label={`${PERMISSIONS[key].label} override`}
-                      value={access.overrides[key] ?? ""}
+                    <input
+                      type="checkbox"
+                      aria-label={`Grant ${PERMISSIONS[key].label}`}
+                      checked={access.grants.includes(key)}
                       disabled={locked}
                       onChange={(e) => {
-                        const v = e.currentTarget.value as OverrideEffect | "";
-                        run(() => setOverride(access.userId, key, v || null));
+                        const on = e.currentTarget.checked;
+                        run(() => setGrant(access.userId, key, on));
                       }}
-                      className={selectClass}
-                      style={selectStyle}
-                    >
-                      {OVERRIDES.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
+                      className="size-4 accent-meeple"
+                    />
                   </td>
                 </tr>
               );

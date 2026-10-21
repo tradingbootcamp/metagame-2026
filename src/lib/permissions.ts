@@ -1,5 +1,5 @@
 // The permission catalog and the pure resolution over it. One entry per gate
-// the code enforces; the roles and per-user overrides that grant them live in
+// the code enforces; the roles and per-user grants that hold them live in
 // Postgres (src/db/schema/permissions.ts) and are read by src/lib/access.ts.
 // Adding a gate means adding its key here, nothing else.
 
@@ -62,19 +62,17 @@ export const ADMIN_PASSWORD_PERMISSIONS: readonly Permission[] = [
   "schema.view",
 ];
 
-export type OverrideEffect = "grant" | "deny";
-
 export type AccessInput = {
-  /** Better Auth `user.role = 'admin'`: holds everything, overrides included. */
+  /** Better Auth `user.role = 'admin'`: holds everything. */
   admin: boolean;
   roles: readonly { name: string; permissions: readonly string[] }[];
-  overrides: readonly { permission: string; effect: OverrideEffect }[];
+  /** Per-user grants on top of the roles. */
+  grants: readonly string[];
 };
 
-/** Why an account holds (or lacks) a permission, in precedence order. */
+/** Why an account holds a permission, in precedence order. */
 export type Source =
   | { kind: "admin" }
-  | { kind: "deny" }
   | { kind: "grant" }
   | { kind: "role"; role: string }
   | { kind: "implied"; by: Permission };
@@ -101,24 +99,13 @@ const implied = (p: Permission): readonly Permission[] =>
   ((PERMISSIONS[p] as { implies?: readonly Permission[] }).implies ??
     []) as readonly Permission[];
 
-/**
- * Effective = expand(role permissions ∪ grants) − denies. A deny beats
- * everything but the admin bypass, including a permission implied by one the
- * account still holds.
- */
+/** Effective = expand(role permissions ∪ grants). */
 export function effectivePermissions(input: AccessInput): Set<Permission> {
   if (input.admin) return new Set(PERMISSION_KEYS);
-  const held = expand([
+  return expand([
     ...input.roles.flatMap((r) => r.permissions),
-    ...input.overrides
-      .filter((o) => o.effect === "grant")
-      .map((o) => o.permission),
+    ...input.grants,
   ]);
-  for (const o of input.overrides) {
-    if (o.effect === "deny" && isPermission(o.permission))
-      held.delete(o.permission);
-  }
-  return held;
 }
 
 /** `effectivePermissions` plus where each one comes from, for the admin UI. */
@@ -130,8 +117,7 @@ export function explainPermissions(
   for (const p of PERMISSION_KEYS) {
     const sources: Source[] = [];
     if (input.admin) sources.push({ kind: "admin" });
-    const override = input.overrides.find((o) => o.permission === p);
-    if (override) sources.push({ kind: override.effect });
+    if (input.grants.includes(p)) sources.push({ kind: "grant" });
     for (const r of input.roles) {
       if (r.permissions.includes(p))
         sources.push({ kind: "role", role: r.name });
@@ -150,8 +136,6 @@ export function describeSource(source: Source): string {
   switch (source.kind) {
     case "admin":
       return "Admin";
-    case "deny":
-      return "Denied";
     case "grant":
       return "Granted";
     case "role":
