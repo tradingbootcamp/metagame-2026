@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { ExternalLink } from "lucide-react";
+import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { claim, claimMine, type ClaimState } from "@/app/(v2)/account/actions";
 import {
   firstSigninHidden,
@@ -85,7 +86,7 @@ export default function FirstSigninFlow() {
             One-time required info
           </DialogTitle>
           <DialogDescription className="mt-2 text-[15px] text-cream/80">
-            Two quick questions, then a few optional extras.
+            We need a few basic pieces of info for your account.
           </DialogDescription>
         </div>
         <InfoForm prefill={status.prefill} action={action} state={state} />
@@ -148,21 +149,43 @@ function InfoForm({
 
       <span className={cn(SECTION, "mt-2")}>Optional</span>
       <label className="flex flex-col gap-1.5">
-        <span className={LABEL}>Display name</span>
+        <span className="flex flex-col gap-0.5">
+          <span className={LABEL}>Display name</span>
+          <span className="text-sm text-cream/65">
+            How you appear as a session host/attendee, on your badge, etc.
+          </span>
+        </span>
         <Input
           name="preferredName"
           defaultValue={prefill.preferredName}
           maxLength={80}
         />
       </label>
-      <label className="flex flex-col gap-1.5">
-        <span className={LABEL}>Discord handle</span>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+          <label htmlFor="first-signin-discord" className={LABEL}>
+            Discord handle
+          </label>
+          <a
+            href={SOCIAL_LINKS.DISCORD}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              NEWSLETTER_LINK,
+              "inline-flex items-center gap-1.5 text-sm",
+            )}
+          >
+            Join our Discord
+            <ExternalLink className="size-3.5" aria-hidden />
+          </a>
+        </div>
         <Input
+          id="first-signin-discord"
           name="discordHandle"
           defaultValue={prefill.discordHandle}
           maxLength={40}
         />
-      </label>
+      </div>
       <label className="flex items-center gap-2.5 text-base text-cream">
         <input
           type="checkbox"
