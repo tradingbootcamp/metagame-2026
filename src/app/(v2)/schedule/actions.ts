@@ -1,16 +1,24 @@
 "use server";
 
 import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 import { getDb, schema } from "@/db";
 import { currentSession } from "@/lib/auth";
-import type { RsvpStatus } from "@/lib/schedule";
-import { cancelRsvp, rsvp, setBookmark } from "@/lib/schedule-store";
+import type { RsvpStatus, SessionRsvps } from "@/lib/schedule";
+import {
+  cancelRsvp,
+  loadSessionRsvps,
+  rsvp,
+  setBookmark,
+} from "@/lib/schedule-store";
 
-export type PlanResult = { error?: string; status?: RsvpStatus | null };
-
-// Pages that show RSVPs or bookmarks.
-const PATHS = ["/admin/schedule", "/account"];
+// No revalidatePath: it would re-render the whole current route behind every
+// click. The caller updates in place from this result.
+export type PlanResult = {
+  error?: string;
+  status?: RsvpStatus | null;
+  bookmarked?: boolean;
+  rsvps?: SessionRsvps;
+};
 
 /** The signed-in user, if they may act on this session. */
 async function attendee(sessionId: string): Promise<string | PlanResult> {
@@ -32,15 +40,12 @@ async function attendee(sessionId: string): Promise<string | PlanResult> {
 
 async function act(
   sessionId: string,
-  run: (userId: string) => Promise<RsvpStatus | null | void>,
+  run: (userId: string) => Promise<PlanResult>,
 ): Promise<PlanResult> {
   const who = await attendee(sessionId);
   if (typeof who !== "string") return who;
   try {
-    const status = await run(who);
-    for (const p of PATHS) revalidatePath(p);
-    revalidatePath("/schedule", "layout");
-    return status === undefined ? {} : { status };
+    return await run(who);
   } catch (err) {
     return { error: err instanceof Error ? err.message : String(err) };
   }
@@ -48,13 +53,16 @@ async function act(
 
 /** Going, or waitlisted when the session is full. */
 export async function rsvpTo(sessionId: string): Promise<PlanResult> {
-  return act(sessionId, (userId) => rsvp(sessionId, userId));
+  return act(sessionId, async (userId) => {
+    const status = await rsvp(sessionId, userId);
+    return { status, rsvps: await loadSessionRsvps(sessionId, userId) };
+  });
 }
 
 export async function unRsvp(sessionId: string): Promise<PlanResult> {
   return act(sessionId, async (userId) => {
     await cancelRsvp(sessionId, userId);
-    return null;
+    return { status: null, rsvps: await loadSessionRsvps(sessionId, userId) };
   });
 }
 
@@ -62,5 +70,8 @@ export async function bookmark(
   sessionId: string,
   on: boolean,
 ): Promise<PlanResult> {
-  return act(sessionId, (userId) => setBookmark(sessionId, userId, on));
+  return act(sessionId, async (userId) => {
+    await setBookmark(sessionId, userId, on);
+    return { bookmarked: on };
+  });
 }

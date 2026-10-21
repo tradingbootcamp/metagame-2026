@@ -18,11 +18,10 @@ import {
   hostNames,
   type Ages,
   type Category,
-  type SessionRsvps,
 } from "@/lib/schedule";
 import { loadSessionRsvps, loadViewerPlans } from "@/lib/schedule-store";
 import { loadPublicSchedule, loadRawSchedule } from "@/app/(v2)/schedule/data";
-import PlanButtons from "@/v2/components/schedule/PlanButtons";
+import SessionPlans from "@/v2/components/schedule/SessionPlans";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
 import { HEADING } from "@/v2/components/styles";
 
@@ -53,36 +52,6 @@ export async function sessionMetadata(slug: string): Promise<Metadata> {
     title: `${session.title} — Metagame 2026`,
     robots: { index: false },
   };
-}
-
-function Attendees({ rsvps }: { rsvps: SessionRsvps }) {
-  const counts = [
-    `${rsvps.going} going`,
-    rsvps.waitlist > 0 ? `${rsvps.waitlist} waitlisted` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  if (!rsvps.names) return <p className="text-[15px]">{counts}</p>;
-  const list = (title: string, names: string[]) =>
-    names.length > 0 && (
-      <div>
-        <p className="mb-1 text-xs tracking-[0.12em] text-[#1b1530]/55 uppercase">
-          {title}
-        </p>
-        <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[15px]">
-          {names.map((name, i) => (
-            <li key={i}>{name}</li>
-          ))}
-        </ul>
-      </div>
-    );
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-[15px]">{counts}</p>
-      {list("Going", rsvps.names.going)}
-      {list("Waitlist", rsvps.names.waitlist)}
-    </div>
-  );
 }
 
 async function schedulerNotes(recordId: string) {
@@ -267,25 +236,28 @@ export default async function SessionDetails({
         <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-[0.04em] text-navy">
           Who&rsquo;s coming
         </h2>
-        {plans ? (
-          <PlanButtons
-            sessionId={session.id}
-            status={plans.rsvps[session.id] ?? null}
-            bookmarked={plans.bookmarks.includes(session.id)}
-            full={cap !== null && rsvps.going >= cap}
-          />
-        ) : (
-          <p className="text-sm text-[#1b1530]/60">
-            <Link
-              href={`/login?next=${encodeURIComponent(`/schedule/${slug}`)}`}
-              className="font-semibold text-navy underline"
-            >
-              Sign in
-            </Link>{" "}
-            to RSVP or bookmark.
-          </p>
-        )}
-        <Attendees rsvps={rsvps} />
+        <SessionPlans
+          sessionId={session.id}
+          capacity={cap}
+          rsvps={rsvps}
+          plan={
+            plans && {
+              status: plans.rsvps[session.id] ?? null,
+              bookmarked: plans.bookmarks.includes(session.id),
+            }
+          }
+          signIn={
+            <p className="text-sm text-[#1b1530]/60">
+              <Link
+                href={`/login?next=${encodeURIComponent(`/schedule/${slug}`)}`}
+                className="font-semibold text-navy underline"
+              >
+                Sign in
+              </Link>{" "}
+              to RSVP or bookmark.
+            </p>
+          }
+        />
         {plans && !rsvps.names && (
           <p className="text-sm text-[#1b1530]/60">
             Claim your ticket to see who&rsquo;s coming.
