@@ -1,8 +1,11 @@
 "use client";
 
+import { TicketIcon } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { removeUser, setBanned, setRole, type Result } from "./actions";
 import { fieldClass, smallButtonClass } from "../ui";
+import { ticketBadge } from "@/lib/admin-tickets";
 import { Button } from "@/v2/components/ui/button";
 import {
   Dialog,
@@ -21,7 +24,23 @@ export type UserRow = {
   joined: string;
   /** The viewer's own row has no buttons. */
   self: boolean;
+  /** Tickets they've claimed. */
+  tickets: number;
 };
+
+function TicketCell({ id, count }: { id: string; count: number }) {
+  const { has, label } = ticketBadge(count);
+  return (
+    <Link
+      href={`/admin/tickets?user=${encodeURIComponent(id)}`}
+      title={has ? `${count} claimed` : "No claimed ticket"}
+      className={`inline-flex items-center gap-1 hover:text-meeple ${has ? "text-navy" : "text-ink/25"}`}
+    >
+      <TicketIcon className="size-4" aria-label="Tickets" />
+      {label && <span className="text-xs font-semibold">{label}</span>}
+    </Link>
+  );
+}
 
 export default function UsersTable({
   rows,
@@ -69,6 +88,7 @@ export default function UsersTable({
             <tr>
               <th className="px-4 py-2 font-medium">Name</th>
               <th className="px-4 py-2 font-medium">Email</th>
+              <th className="px-4 py-2 font-medium">Ticket</th>
               <th className="px-4 py-2 font-medium">Joined</th>
               <th className="px-4 py-2 font-medium">Access</th>
               <th className="px-4 py-2 font-medium" />
@@ -77,12 +97,22 @@ export default function UsersTable({
           <tbody className="divide-y divide-line">
             {rows.map((u) => (
               <tr key={u.id} className={u.banned ? "text-ink/50" : ""}>
-                <td className="px-4 py-2">{u.name}</td>
+                <td className="px-4 py-2">
+                  <Link
+                    href={`/admin/users/${u.id}`}
+                    className="text-navy underline-offset-2 hover:text-meeple hover:underline"
+                  >
+                    {u.name.trim() || "Unnamed"}
+                  </Link>
+                </td>
                 <td className="px-4 py-2 font-mono text-xs">
                   {u.email}
                   {!u.emailVerified && (
                     <span className="ml-2 text-ink/40">unverified</span>
                   )}
+                </td>
+                <td className="px-4 py-2">
+                  <TicketCell id={u.id} count={u.tickets} />
                 </td>
                 <td className="px-4 py-2 whitespace-nowrap">{u.joined}</td>
                 <td className="px-4 py-2 whitespace-nowrap">
@@ -134,7 +164,7 @@ export default function UsersTable({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-ink/50">
+                <td colSpan={6} className="px-4 py-6 text-center text-ink/50">
                   No accounts{query && " match"}.
                 </td>
               </tr>

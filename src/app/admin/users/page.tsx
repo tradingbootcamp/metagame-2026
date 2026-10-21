@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import UsersTable, { type UserRow } from "./UsersTable";
 import ToolSignIn from "@/components/ToolSignIn";
 import { adminSession, getAuth } from "@/lib/auth";
+import { claimedCounts } from "@/lib/ticket-store";
 
 const PAGE_SIZE = 100;
 
@@ -34,6 +35,7 @@ export default async function AdminUsersPage(props: PageProps<"/admin/users">) {
     },
     headers: await headers(),
   });
+  const claimed = await claimedCounts(users.map((u) => u.id));
   const rows: UserRow[] = users.map((u) => ({
     id: u.id,
     name: u.name,
@@ -43,6 +45,7 @@ export default async function AdminUsersPage(props: PageProps<"/admin/users">) {
     banned: Boolean(u.banned),
     joined: joined.format(new Date(u.createdAt)),
     self: u.id === session.user.id,
+    tickets: claimed.get(u.id) ?? 0,
   }));
 
   return (

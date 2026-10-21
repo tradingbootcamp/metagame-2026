@@ -22,6 +22,11 @@ const TOOLS = [
     blurb: "Accounts: grant team access, ban, delete.",
   },
   {
+    href: "/admin/tickets",
+    name: "Tickets",
+    blurb: "Every ticket with its buyer, holder and attendee.",
+  },
+  {
     href: "/admin/schedule",
     name: "Schedule",
     blurb: "Rooms and sessions for the 2026 program, on a day-by-room grid.",

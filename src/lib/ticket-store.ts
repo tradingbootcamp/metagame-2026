@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, lte, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { env } from "@/env";
 import {
@@ -153,6 +153,28 @@ export async function ticketsForUser(
       ),
     )
     .orderBy(desc(tickets.createdAt));
+}
+
+/** Every ticket, newest first, for the admin table. */
+export async function allTickets(): Promise<TicketRow[]> {
+  return getDb()
+    .select()
+    .from(tickets)
+    .where(visible)
+    .orderBy(desc(tickets.createdAt));
+}
+
+/** How many tickets each of these accounts has claimed; absent means none. */
+export async function claimedCounts(
+  userIds: string[],
+): Promise<Map<string, number>> {
+  if (userIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({ userId: tickets.ownerUserId, n: count() })
+    .from(tickets)
+    .where(and(visible, inArray(tickets.ownerUserId, userIds)))
+    .groupBy(tickets.ownerUserId);
+  return new Map(rows.map((r) => [r.userId!, r.n]));
 }
 
 export type ClaimResult =

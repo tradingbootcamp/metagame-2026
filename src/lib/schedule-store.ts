@@ -30,7 +30,7 @@ const { locations, sessions, sessionHosts, rsvps, bookmarks, user, profiles } =
   schema;
 
 // Matches accountLabel(): preferred name, else account name, else email.
-const accountName = sql<string>`coalesce(nullif(trim(${profiles.preferredName}), ''), nullif(trim(${user.name}), ''), ${user.email})`;
+export const accountName = sql<string>`coalesce(nullif(trim(${profiles.preferredName}), ''), nullif(trim(${user.name}), ''), ${user.email})`;
 
 const accountColumns = {
   userId: user.id,
