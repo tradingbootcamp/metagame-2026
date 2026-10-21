@@ -153,43 +153,46 @@ function InfoForm({
       </div>
 
       <span className={cn(SECTION, "mt-2")}>Optional</span>
-      <label className="flex flex-col gap-1.5">
-        <span className="flex flex-col gap-0.5">
-          <span className={LABEL}>Display name</span>
-          <span className="text-sm text-cream/65">
-            How you appear as a session host/attendee, on your badge, etc.
+      {/* Bottom-aligned so the two inputs line up despite different label heights. */}
+      <div className="grid gap-5 sm:grid-cols-2 sm:items-end">
+        <label className="flex flex-col gap-1.5">
+          <span className="flex flex-col gap-0.5">
+            <span className={LABEL}>Display name</span>
+            <span className="text-sm text-cream/65">
+              How you appear as a session host/attendee, on your badge, etc.
+            </span>
           </span>
-        </span>
-        <Input
-          name="preferredName"
-          defaultValue={prefill.preferredName}
-          maxLength={80}
-        />
-      </label>
-      <div className="flex flex-col gap-1.5">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-          <label htmlFor="first-signin-discord" className={LABEL}>
-            Discord handle
-          </label>
-          <a
-            href={SOCIAL_LINKS.DISCORD}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              NEWSLETTER_LINK,
-              "inline-flex items-center gap-1.5 text-sm",
-            )}
-          >
-            Join our Discord
-            <ExternalLink className="size-3.5" aria-hidden />
-          </a>
+          <Input
+            name="preferredName"
+            defaultValue={prefill.preferredName}
+            maxLength={80}
+          />
+        </label>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+            <label htmlFor="first-signin-discord" className={LABEL}>
+              Discord handle
+            </label>
+            <a
+              href={SOCIAL_LINKS.DISCORD}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                NEWSLETTER_LINK,
+                "inline-flex items-center gap-1.5 text-sm",
+              )}
+            >
+              Join our Discord
+              <ExternalLink className="size-3.5" aria-hidden />
+            </a>
+          </div>
+          <Input
+            id="first-signin-discord"
+            name="discordHandle"
+            defaultValue={prefill.discordHandle}
+            maxLength={40}
+          />
         </div>
-        <Input
-          id="first-signin-discord"
-          name="discordHandle"
-          defaultValue={prefill.discordHandle}
-          maxLength={40}
-        />
       </div>
       <label className="flex items-center gap-2.5 text-base text-cream">
         <input
