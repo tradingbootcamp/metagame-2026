@@ -81,7 +81,7 @@ export default function SessionsPanel({
         )}
       />
       <List
-        title="Your plans"
+        title="Your RSVPs"
         empty="You haven't RSVP'd to anything yet."
         rows={sessions.plans}
         render={plan}
