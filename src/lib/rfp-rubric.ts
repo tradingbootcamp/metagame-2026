@@ -1,6 +1,14 @@
 import { unstable_cache } from "next/cache";
 import { env } from "@/env";
 import { airtableConfig } from "@/lib/airtable-config";
+import {
+  GRADER_FIELD,
+  NEXT_STEPS_DECIDE,
+  NEXT_STEPS_FIELD,
+  NEXT_STEPS_GRADE,
+  SHEPHERD_FIELD,
+  VERDICT_FIELD,
+} from "@/lib/rfp-fields";
 
 // Fields are addressed by name, like the rest of src/lib/airtable.ts. Renaming a
 // column in Airtable breaks the matching entry here, so rename in both places.
@@ -229,12 +237,23 @@ export const SHEPHERD_NOTES_FIELDS = [
     description:
       "Whether the host has a ticket, whether a free/comp ticket was offered, and its current state.",
   },
+  {
+    field: "Session marketing consent",
+    label: "Session marketing consent",
+    kind: "checkbox",
+    description:
+      "Checked when the host has agreed to us marketing their session on social media and/or the website. Unchecked means consent has not been recorded; it does not necessarily mean they declined.",
+  },
 ] as const;
 
-export const GRADER_FIELD = "Rubric: Grader";
-export const VERDICT_FIELD = "Verdict";
-export const NEXT_STEPS_FIELD = "Next steps";
-export const SHEPHERD_FIELD = "Shepherd";
+export {
+  GRADER_FIELD,
+  NEXT_STEPS_DECIDE,
+  NEXT_STEPS_FIELD,
+  NEXT_STEPS_GRADE,
+  SHEPHERD_FIELD,
+  VERDICT_FIELD,
+};
 
 const VERDICT_OPTIONS = [
   "Confirmed",
@@ -246,11 +265,6 @@ const VERDICT_OPTIONS = [
   "Sponsorship / product placement potential — send Night Market form",
   "This is running a game, probably fine",
 ] as const;
-
-/** Where a proposal waits while it's still with its grader. */
-export const NEXT_STEPS_GRADE = "1. Grade";
-/** Where a grader's save moves it once the rubric is done. */
-export const NEXT_STEPS_DECIDE = "2. Committee decision";
 
 // Numbered in Airtable, so this order is the pipeline order. The trailing space
 // on "7. None!" is in the option name itself — don't trim it or the write fails.
@@ -311,7 +325,8 @@ type Writable =
   | { kind: "select"; options: readonly string[] }
   | { kind: "multiSelect"; options: readonly string[] }
   | { kind: "text" }
-  | { kind: "number" };
+  | { kind: "number" }
+  | { kind: "checkbox" };
 
 /** Committed fallback, used when the schema can't be read (see fieldSchema). */
 const WRITABLE_FALLBACK: Record<string, Writable> = {
@@ -672,7 +687,7 @@ async function fieldSchema(): Promise<Record<string, FieldSchema>> {
 export type ResolvedField = {
   field: string;
   label: string;
-  kind: "select" | "multiSelect" | "text" | "number";
+  kind: "select" | "multiSelect" | "text" | "number" | "checkbox";
   options: readonly string[];
   description?: string;
 };
@@ -798,6 +813,11 @@ export async function sanitizeGrades(
 
     if (spec.kind === "text") {
       if (typeof value === "string") out[field] = value.trim();
+      continue;
+    }
+    if (spec.kind === "checkbox") {
+      // Airtable clears a checkbox on false; the form sends "true" or "false".
+      out[field] = value === true || value === "true";
       continue;
     }
     if (spec.kind === "number") {

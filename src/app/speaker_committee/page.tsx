@@ -1,0 +1,343 @@
+import Link from "next/link";
+import { connection } from "next/server";
+import ScheduleBoard, { type QueueRow } from "./ScheduleBoard";
+import {
+  compare,
+  groupLabel,
+  myCounts,
+  stepsOf,
+  tabRows,
+  TABS,
+  type Tab,
+  type TabKey,
+} from "./pipeline";
+import {
+  PATH,
+  SORTS,
+  SubmissionGroup,
+  type Row,
+  type SortKey,
+  type SortState,
+  type TableMeta,
+} from "./SubmissionTable";
+import ToolSignIn from "@/components/ToolSignIn";
+import { accountLabel, adminSession } from "@/lib/auth";
+import { matchLabel } from "@/lib/name-match";
+import { durationMinutes, SHEPHERD_FIELD } from "@/lib/rfp-fields";
+import {
+  DECISION_FIELDS,
+  GRADER_FIELD,
+  listSubmissions,
+  NEXT_STEPS_FIELD,
+  optionColors,
+  resolveEditableFields,
+  resolveGraderNames,
+  VERDICT_FIELD,
+  type Submission,
+} from "@/lib/rfp-rubric";
+import {
+  CATEGORIES,
+  DEFAULT_DRAFT_MINUTES,
+  END_GAP_MINUTES,
+  type Category,
+} from "@/lib/schedule";
+import { loadRsvpCounts, loadSchedule } from "@/lib/schedule-store";
+
+const MODES = [
+  { key: "mine", label: "Assigned to me" },
+  { key: "all", label: "All" },
+] as const;
+type Mode = (typeof MODES)[number]["key"];
+
+const first = (value: string | string[] | undefined) =>
+  (Array.isArray(value) ? value[0] : value) ?? "";
+
+const toRow = (s: Submission): Row => ({
+  id: s.id,
+  title: s.title,
+  host: s.host,
+  grader: s.grader,
+  shepherd: s.shepherd,
+  verdict: s.verdict,
+  nextSteps: s.nextSteps,
+});
+
+/** Only seeds the drag preview's colour; the server re-reads the record on drop. */
+function categoryHint(value: unknown): Category | null {
+  const s = (Array.isArray(value) ? value.join(" ") : String(value ?? ""))
+    .toLowerCase()
+    .trim();
+  if (!s) return null;
+  return (
+    CATEGORIES.find((c) => c !== "other" && s.includes(c)) ??
+    (/lecture|panel/.test(s) ? "talk" : "other")
+  );
+}
+
+function PipelineTabs({
+  active,
+  mode,
+  counts,
+}: {
+  active: TabKey;
+  mode: Mode;
+  counts: Record<TabKey, number> | null;
+}) {
+  return (
+    <nav aria-label="Pipeline" className="-mx-4 overflow-x-auto px-4 pb-1">
+      <ol className="flex min-w-max">
+        {TABS.map((t, i) => {
+          const on = t.key === active;
+          const n = counts?.[t.key] ?? 0;
+          // Chevrons: each step notched on the left and pointed on the right,
+          // overlapping its neighbour so the row reads as one flow.
+          const shape =
+            i === 0
+              ? "polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)"
+              : "polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%)";
+          return (
+            <li key={t.key} className={i > 0 ? "-ml-1.5" : ""}>
+              <Link
+                href={{ pathname: PATH, query: { who: mode, tab: t.key } }}
+                aria-current={on ? "page" : undefined}
+                style={{ clipPath: shape }}
+                className={`flex items-center gap-1.5 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                  i === 0 ? "pr-6 pl-4" : "pr-6 pl-6"
+                } ${on ? "bg-navy text-cream" : "bg-ink/8 text-ink/70 hover:bg-ink/14"} ${
+                  // "All" stands apart from the steps that follow it.
+                  i === 0 ? "mr-2" : ""
+                }`}
+              >
+                {t.label}
+                {counts && (
+                  <span
+                    title={`${n} assigned to you`}
+                    className={`min-w-5 rounded-full px-1.5 text-center text-xs tabular-nums ${
+                      n > 0
+                        ? "bg-meeple text-white"
+                        : on
+                          ? "bg-cream/20 text-cream/70"
+                          : "bg-ink/8 text-ink/40"
+                    }`}
+                  >
+                    {n}
+                  </span>
+                )}
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+export default async function SpeakerCommitteePage(
+  props: PageProps<"/speaker_committee">,
+) {
+  // Per-request on every branch, or the sign-in branch gets baked in as
+  // static at build time.
+  await connection();
+
+  // Accounts only: the /grade password cookie is scoped to /grade.
+  const account = await adminSession();
+  if (!account) {
+    return <ToolSignIn title="Speaker committee" next={PATH} />;
+  }
+
+  const submissions = await listSubmissions();
+  const label = await accountLabel(account.user);
+  // Code sign-in registers without a name; with no name there's nothing to
+  // match the Grader and Shepherd columns against.
+  const me =
+    label === account.user.email
+      ? null
+      : matchLabel(label, await resolveGraderNames(submissions));
+
+  const params = await props.searchParams;
+  const mode: Mode =
+    me === null ? "all" : first(params.who) === "all" ? "all" : "mine";
+  const mineOnly = mode === "mine";
+  const tab: Tab = TABS.find((t) => t.key === first(params.tab)) ?? TABS[0];
+  const rawQuery = first(params.q);
+  const query = rawQuery.trim().toLowerCase();
+  const sort = (SORTS.find((s) => s === first(params.sort)) ??
+    "proposal") as SortKey;
+  const dir = first(params.dir) === "desc" ? "desc" : "asc";
+  const state: SortState = {
+    sort,
+    dir,
+    q: rawQuery,
+    base: { who: mode, tab: tab.key },
+  };
+
+  const decisionFields = await resolveEditableFields(DECISION_FIELDS);
+  const meta: TableMeta = {
+    options: Object.fromEntries(
+      decisionFields.map((f) => [f.field, [...f.options]]),
+    ),
+    colors: await optionColors([
+      GRADER_FIELD,
+      VERDICT_FIELD,
+      NEXT_STEPS_FIELD,
+      SHEPHERD_FIELD,
+    ]),
+    shepherdInfo: decisionFields.find((f) => f.field === SHEPHERD_FIELD)
+      ?.description,
+  };
+
+  const rows = submissions.map(toRow);
+  const visible = tabRows(rows, tab, me, mineOnly)
+    .filter(
+      (s) =>
+        !query ||
+        s.title.toLowerCase().includes(query) ||
+        s.host.toLowerCase().includes(query),
+    )
+    .sort((a, b) => (dir === "asc" ? 1 : -1) * compare(a, b, sort));
+
+  const header = (
+    <div className="space-y-4">
+      <nav className="flex flex-wrap items-center gap-2">
+        {MODES.map((m) => {
+          const disabled = m.key === "mine" && me === null;
+          const cls = `rounded-full px-3.5 py-1.5 text-sm transition-colors ${
+            m.key === mode
+              ? "bg-navy text-cream"
+              : "bg-ink/6 text-ink/70 hover:bg-ink/12"
+          }`;
+          return disabled ? (
+            <span
+              key={m.key}
+              title="Add your name on /account to match the Grader and Shepherd columns."
+              className={`${cls} cursor-not-allowed opacity-50`}
+            >
+              {m.label}
+            </span>
+          ) : (
+            <Link
+              key={m.key}
+              href={{ pathname: PATH, query: { who: m.key, tab: tab.key } }}
+              className={cls}
+            >
+              {m.label}
+            </Link>
+          );
+        })}
+      </nav>
+      <PipelineTabs
+        active={tab.key}
+        mode={mode}
+        counts={me === null ? null : myCounts(rows, me)}
+      />
+    </div>
+  );
+
+  if (tab.key === "schedule") {
+    const [schedule, rsvps] = await Promise.all([
+      loadSchedule(),
+      loadRsvpCounts(),
+    ]);
+    const byId = new Map(submissions.map((s) => [s.id, s]));
+    const queue: QueueRow[] = visible.map((r) => {
+      const fields = byId.get(r.id)?.fields ?? {};
+      return {
+        ...r,
+        minutes:
+          durationMinutes(fields.Duration) ??
+          DEFAULT_DRAFT_MINUTES - END_GAP_MINUTES,
+        category: categoryHint(fields.Category),
+      };
+    });
+    const mine = (s: (typeof schedule.sessions)[number]) => {
+      const row = s.airtableRfpRecordId
+        ? byId.get(s.airtableRfpRecordId)
+        : undefined;
+      return (
+        (row !== undefined && row.shepherd === me) ||
+        (s.shepherd !== null && s.shepherd.userId === account.user.id)
+      );
+    };
+    return (
+      <div className="space-y-6">
+        {header}
+        <ScheduleBoard
+          sessions={schedule.sessions}
+          queue={queue}
+          locations={schedule.locations}
+          going={Object.fromEntries(
+            Object.entries(rsvps).map(([id, c]) => [id, c.going]),
+          )}
+          proposals={Object.fromEntries(rows.map((r) => [r.id, r]))}
+          mutedIds={
+            mineOnly
+              ? schedule.sessions.filter((s) => !mine(s)).map((s) => s.id)
+              : []
+          }
+          showInQueue={rows
+            .filter((r) => !mineOnly || r.shepherd === me)
+            .map((r) => r.id)}
+          title="Needs to be scheduled"
+          state={state}
+          meta={meta}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {header}
+
+      {/* Plain GET form: filtering needs no client JS. */}
+      <form action={PATH} className="flex gap-2">
+        <input type="hidden" name="who" value={mode} />
+        <input type="hidden" name="tab" value={tab.key} />
+        <input type="hidden" name="sort" value={sort} />
+        <input type="hidden" name="dir" value={dir} />
+        <input
+          type="search"
+          name="q"
+          defaultValue={rawQuery}
+          placeholder="Search title or host"
+          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-navy"
+        />
+        <button
+          type="submit"
+          className="rounded-lg border border-line px-4 text-sm hover:bg-ink/5"
+        >
+          Search
+        </button>
+      </form>
+
+      {visible.length === 0 ? (
+        <p className="py-8 text-center text-sm text-ink/55">
+          {query
+            ? "No proposals match. Try clearing the search."
+            : mineOnly
+              ? "Nothing here is assigned to you."
+              : "Nothing at this step."}
+        </p>
+      ) : tab.key === "all" ? (
+        <div className="space-y-6">
+          {stepsOf(visible).map((step) => (
+            <SubmissionGroup
+              key={step ?? "untriaged"}
+              title={groupLabel(step)}
+              rows={visible.filter((s) => s.nextSteps === step)}
+              state={state}
+              meta={meta}
+            />
+          ))}
+        </div>
+      ) : (
+        <SubmissionGroup
+          title={tab.label}
+          rows={visible}
+          state={state}
+          meta={meta}
+        />
+      )}
+    </div>
+  );
+}

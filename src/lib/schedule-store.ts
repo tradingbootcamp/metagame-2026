@@ -19,6 +19,7 @@ import {
   fromPacificWall,
   movedTimes,
   outsideHours,
+  slugify,
   summarizeRsvps,
   type Attendance,
   type RsvpStatus,
@@ -187,27 +188,102 @@ export async function moveSessionTo(
     },
     start,
   );
-  const outside = outsideHours(startsAt, endsAt);
-  if (outside) throw new Error(outside.error);
-  if (locationId) {
-    const [clash] = await db
-      .select({ title: sessions.title })
-      .from(sessions)
-      .where(
-        and(
-          eq(sessions.locationId, locationId),
-          ne(sessions.id, id),
-          lt(sessions.startsAt, endsAt),
-          gt(sessions.endsAt, startsAt),
-        ),
-      )
-      .limit(1);
-    if (clash) throw new Error(`That overlaps "${clash.title}" in that room.`);
-  }
+  await assertSlotFree(id, startsAt, endsAt, locationId);
   await db
     .update(sessions)
     .set({ startsAt, endsAt, locationId })
     .where(eq(sessions.id, id));
+}
+
+/** Throws when the times fall outside schedule hours or overlap another session in the room. */
+async function assertSlotFree(
+  id: string | null,
+  startsAt: Date,
+  endsAt: Date,
+  locationId: string | null,
+): Promise<void> {
+  const outside = outsideHours(startsAt, endsAt);
+  if (outside) throw new Error(outside.error);
+  if (!locationId) return;
+  const [clash] = await getDb()
+    .select({ title: sessions.title })
+    .from(sessions)
+    .where(
+      and(
+        eq(sessions.locationId, locationId),
+        id ? ne(sessions.id, id) : undefined,
+        lt(sessions.startsAt, endsAt),
+        gt(sessions.endsAt, startsAt),
+      ),
+    )
+    .limit(1);
+  if (clash) throw new Error(`That overlaps "${clash.title}" in that room.`);
+}
+
+export type RfpPlacement = {
+  recordId: string;
+  startsAt: Date;
+  endsAt: Date;
+  locationId: string | null;
+  /** Only used when the proposal has no session yet. */
+  draft: Omit<
+    SessionInput,
+    "id" | "slug" | "startsAt" | "endsAt" | "locationId" | "status"
+  >;
+};
+
+/**
+ * Puts a proposal on the grid: moves the session already made from it, or
+ * makes a draft one. Refuses a clash like moveSessionTo.
+ */
+export async function placeRfpSession(p: RfpPlacement): Promise<string> {
+  const db = getDb();
+  const [existing] = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(eq(sessions.airtableRfpRecordId, p.recordId))
+    .limit(1);
+  await assertSlotFree(
+    existing?.id ?? null,
+    p.startsAt,
+    p.endsAt,
+    p.locationId,
+  );
+  const times = {
+    startsAt: p.startsAt,
+    endsAt: p.endsAt,
+    locationId: p.locationId,
+  };
+  if (existing) {
+    await db.update(sessions).set(times).where(eq(sessions.id, existing.id));
+    return existing.id;
+  }
+  const base = slugify(p.draft.title) || "session";
+  const slug = (await sessionIdBySlug(base))
+    ? `${base}-${p.recordId.slice(-5).toLowerCase()}`
+    : base;
+  return upsertSession({
+    ...p.draft,
+    ...times,
+    slug,
+    status: "draft",
+    airtableRfpRecordId: p.recordId,
+  });
+}
+
+/**
+ * Takes a session off the grid, keeping the row and its edits for when it's
+ * placed again. Unplaced sessions can't be published, so it drops to draft.
+ * Returns the RFP it came from, if any.
+ */
+export async function unplaceSession(id: string): Promise<string | null> {
+  const [row] = await getDb()
+    .update(sessions)
+    .set({ startsAt: null, endsAt: null, status: "draft" })
+    .where(eq(sessions.id, id))
+    .returning({ recordId: sessions.airtableRfpRecordId });
+  if (!row) throw new Error("That session no longer exists.");
+  return row.recordId;
 }
 
 /** Accounts whose name or email contains the query. */

@@ -123,6 +123,7 @@ export default async function AdminUserProfilePage(
     schedule.locations,
     plans,
     counts,
+    true,
   );
   return (
     <div className="space-y-6">

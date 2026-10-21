@@ -54,8 +54,19 @@ export function GrabHandle({
       type="button"
       aria-label={`Move ${session.title}`}
       aria-pressed={carrying}
-      title="Move: click, then click a slot. Esc cancels."
+      title="Move: drag it to a slot, or click, then click a slot. Esc cancels."
       onClick={() => onGrab(session)}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", session.id);
+        // Deferred: re-rendering the drag source inside dragstart cancels the drag in Chrome.
+        if (!carrying) setTimeout(() => onGrab(session));
+      }}
+      // A drag let go anywhere but a slot drops the hold rather than leaving it held.
+      onDragEnd={(e) => {
+        if (e.dataTransfer.dropEffect === "none") onGrab(session);
+      }}
       className={`flex cursor-grab items-center justify-center rounded text-[#1b1530]/45 transition-colors hover:bg-[#1b1530]/10 hover:text-[#1b1530] ${
         carrying ? "bg-[#1b1530]/10 text-[#1b1530]" : ""
       } ${className}`}
@@ -70,6 +81,7 @@ function SessionBlock({
   slotStart,
   going,
   carrying,
+  muted,
   onOpen,
   onGrab,
 }: {
@@ -78,6 +90,8 @@ function SessionBlock({
   going: number;
   /** What's being moved, if anything; blocks let clicks through to the slots meanwhile. */
   carrying: ScheduleSession | null;
+  /** Shown greyed for reference, with no grip. */
+  muted: boolean;
   onOpen: OpenFn;
   onGrab: GrabFn;
 }) {
@@ -91,15 +105,19 @@ function SessionBlock({
         ...blockStyle(session),
       }}
       className={`absolute inset-x-0.5 z-10 overflow-hidden rounded-md border text-[#1b1530] transition-shadow hover:z-20 hover:shadow-[0_2px_10px_rgba(27,21,48,0.25)] ${
-        draft ? "border-dashed opacity-60" : ""
-      } ${carrying ? "pointer-events-none" : ""} ${isCarried ? "opacity-30" : ""}`}
+        draft ? "border-dashed" : ""
+      } ${muted ? "opacity-35 grayscale" : draft ? "opacity-60" : ""} ${
+        carrying ? "pointer-events-none" : ""
+      } ${isCarried ? "opacity-30" : ""}`}
     >
-      <GrabHandle
-        session={session}
-        carrying={isCarried}
-        onGrab={onGrab}
-        className="absolute top-0.5 right-0.5 z-10 h-5 w-4"
-      />
+      {!muted && (
+        <GrabHandle
+          session={session}
+          carrying={isCarried}
+          onGrab={onGrab}
+          className="absolute top-0.5 right-0.5 z-10 h-5 w-4"
+        />
+      )}
       <button
         type="button"
         onClick={() => onOpen(session)}
@@ -156,6 +174,8 @@ function GridDay({
   going,
   sessions,
   carrying,
+  carryMinutes,
+  muted,
   onOpen,
   onCreate,
   onGrab,
@@ -167,8 +187,10 @@ function GridDay({
   /** Every session, for overlap checks that cross midnight. */
   sessions: ScheduleSession[];
   carrying: ScheduleSession | null;
+  carryMinutes?: number;
+  muted?: (s: ScheduleSession) => boolean;
   onOpen: OpenFn;
-  onCreate: CreateFn;
+  onCreate?: CreateFn;
   onGrab: GrabFn;
   onDrop: DropFn;
 }) {
@@ -182,7 +204,12 @@ function GridDay({
     const start = fromPacificWall(`${day.key}T${minutesToHHMM(slotStart)}`);
     if (!start) return null;
     const locationId = colId === NO_ROOM ? null : colId;
-    const times = movedTimes(carrying, start);
+    const times = carryMinutes
+      ? {
+          startsAt: start,
+          endsAt: new Date(start.getTime() + carryMinutes * 60_000),
+        }
+      : movedTimes(carrying, start);
     const clashFor = (
       t: { startsAt: Date; endsAt: Date },
       locationId: string | null,
@@ -259,12 +286,26 @@ function GridDay({
                     <button
                       type="button"
                       aria-label={`${carrying ? `Move ${carrying.title} to` : "New session"} ${day.name} ${slotLabel(slotStart)}${col.id === NO_ROOM ? "" : ` in ${col.name}`}`}
+                      disabled={!carrying && !onCreate}
                       onMouseEnter={() =>
                         setHover({ dayKey: day.key, slotStart, colId: col.id })
                       }
+                      onDragEnter={() =>
+                        setHover({ dayKey: day.key, slotStart, colId: col.id })
+                      }
+                      onDragOver={(e) => {
+                        const t = target(slotStart, col.id);
+                        // Accepting the drag is what lets it drop here.
+                        if (t && !t.blocked) e.preventDefault();
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const t = target(slotStart, col.id);
+                        if (t && !t.blocked) onDrop(t.startsAt, t.locationId);
+                      }}
                       onClick={() => {
                         if (!carrying) {
-                          onCreate({
+                          onCreate?.({
                             day: day.key,
                             startMin: slotStart,
                             locationId: col.id === NO_ROOM ? null : col.id,
@@ -274,9 +315,11 @@ function GridDay({
                         const t = target(slotStart, col.id);
                         if (t && !t.blocked) onDrop(t.startsAt, t.locationId);
                       }}
-                      className={`absolute inset-0 transition-colors hover:bg-navy/[0.06] ${
+                      className={`absolute inset-0 transition-colors enabled:hover:bg-navy/[0.06] ${
                         !carrying
-                          ? "cursor-cell"
+                          ? onCreate
+                            ? "cursor-cell"
+                            : "cursor-default"
                           : hovered?.blocked
                             ? "cursor-not-allowed"
                             : "cursor-copy"
@@ -289,6 +332,7 @@ function GridDay({
                         slotStart={slotStart}
                         going={going[s.id] ?? 0}
                         carrying={carrying}
+                        muted={muted?.(s) ?? false}
                         onOpen={onOpen}
                         onGrab={onGrab}
                       />
@@ -383,6 +427,8 @@ export default function ScheduleGrid({
   locations,
   going,
   carrying,
+  carryMinutes,
+  muted,
   onOpen,
   onCreate,
   onGrab,
@@ -393,8 +439,13 @@ export default function ScheduleGrid({
   /** Going RSVPs per session id. */
   going: Record<string, number>;
   carrying: ScheduleSession | null;
+  /** Length to book for a carried session that has no times of its own yet. */
+  carryMinutes?: number;
+  /** Sessions to show greyed and fixed, for reference. */
+  muted?: (s: ScheduleSession) => boolean;
   onOpen: OpenFn;
-  onCreate: CreateFn;
+  /** Clicking an empty slot; without it empty slots only take drops. */
+  onCreate?: CreateFn;
   onGrab: GrabFn;
   onDrop: DropFn;
 }) {
@@ -529,6 +580,8 @@ export default function ScheduleGrid({
             going={going}
             sessions={placed}
             carrying={carrying}
+            carryMinutes={carryMinutes}
+            muted={muted}
             onOpen={onOpen}
             onCreate={onCreate}
             onGrab={onGrab}

@@ -23,6 +23,8 @@ describe("describeSchema", () => {
       "profiles",
       "rsvps",
       "session",
+      "session_grade_space_options",
+      "session_grades",
       "session_hosts",
       "sessions",
       "tickets",
@@ -55,6 +57,7 @@ describe("describeSchema", () => {
       "profiles",
       "rsvps",
       "session",
+      "session_grades",
       "session_hosts",
       "sessions",
       "tickets",
@@ -87,7 +90,32 @@ describe("describeSchema", () => {
       "session_ages",
       "session_status",
       "rsvp_status",
+      "session_phase",
+      "session_verdict",
+      "speaker_tier",
+      "megagame_interest",
+      "session_dropins",
+      "discord_status",
+      "rubric_grade",
+      "shepherd_match",
+      "topic_area",
+      "potential_panel",
     ]);
+  });
+
+  it("keeps one grade per grader and links grades to rooms", () => {
+    expect(column("session_grades", "session_id").references).toEqual({
+      table: "sessions",
+      column: "id",
+      onDelete: "cascade",
+    });
+    expect(column("session_grades", "submitted_at").nullable).toBe(true);
+    expect(column("session_grades", "topic_areas").type).toBe("topic_area[]");
+    expect(
+      column("session_grade_space_options", "location_id").references?.table,
+    ).toBe("locations");
+    expect(column("sessions", "phase").nullable).toBe(true);
+    expect(column("sessions", "verdict").nullable).toBe(true);
   });
 
   it("marks keys and uniqueness", () => {
@@ -112,6 +140,7 @@ describe("describeSchema", () => {
       "Attendees",
       "Tickets",
       "Schedule",
+      "Grading",
     ]);
     expect(info.groups.flatMap((g) => g.tables.map((t) => t.name))).toEqual([
       "user",
@@ -126,6 +155,8 @@ describe("describeSchema", () => {
       "session_hosts",
       "rsvps",
       "bookmarks",
+      "session_grades",
+      "session_grade_space_options",
     ]);
   });
 });

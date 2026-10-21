@@ -10,7 +10,7 @@ import { parseAccountTab } from "./tabs";
 import { canSeeSchedule } from "../schedule/data";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
-import { currentSession, hasPassword } from "@/lib/auth";
+import { adminSession, currentSession, hasPassword } from "@/lib/auth";
 import { prefillDiscord } from "@/lib/discord-handle";
 import {
   loadRsvpCounts,
@@ -40,20 +40,29 @@ export default async function AccountPage({
   const { user } = session;
 
   const email = emailKey(user.email);
-  const [[profile], passwordSet, rows, schedule, plans, counts, linkable] =
-    await Promise.all([
-      getDb()
-        .select()
-        .from(schema.profiles)
-        .where(eq(schema.profiles.userId, user.id))
-        .limit(1),
-      hasPassword(user.id),
-      ticketsForUser(user.id, email),
-      loadSchedule(),
-      loadViewerPlans(user.id),
-      loadRsvpCounts(),
-      canSeeSchedule(),
-    ]);
+  const [
+    [profile],
+    passwordSet,
+    rows,
+    schedule,
+    plans,
+    counts,
+    linkable,
+    admin,
+  ] = await Promise.all([
+    getDb()
+      .select()
+      .from(schema.profiles)
+      .where(eq(schema.profiles.userId, user.id))
+      .limit(1),
+    hasPassword(user.id),
+    ticketsForUser(user.id, email),
+    loadSchedule(),
+    loadViewerPlans(user.id),
+    loadRsvpCounts(),
+    canSeeSchedule(),
+    adminSession(),
+  ]);
   const tickets = rows.map((t) => ticketView(t, user.id, email));
 
   return (
@@ -110,6 +119,7 @@ export default async function AccountPage({
                 schedule.locations,
                 plans,
                 counts,
+                admin !== null,
               )}
             />
           ),

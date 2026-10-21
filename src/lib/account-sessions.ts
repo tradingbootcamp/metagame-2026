@@ -50,8 +50,9 @@ function byTime(a: ScheduleSession, b: ScheduleSession): number {
 }
 
 /**
- * The account page's session lists. Hosts see their own drafts; RSVPs and
- * bookmarks only count on published sessions, since that's all attendees see.
+ * The account page's session lists. Only published sessions count, since
+ * drafts include proposals the committee hasn't accepted; an admin viewer
+ * also sees the drafts they host.
  */
 export function accountSessions(
   userId: string,
@@ -59,6 +60,7 @@ export function accountSessions(
   locations: Pick<ScheduleLocation, "id" | "name">[],
   plans: ViewerPlans,
   goingCounts: Record<string, { going: number }>,
+  viewerIsAdmin: boolean,
 ): AccountSessions {
   const rooms = new Map(locations.map((l) => [l.id, l.name]));
   const marked = new Set(plans.bookmarks);
@@ -80,7 +82,7 @@ export function accountSessions(
   const sorted = [...sessions].sort(byTime);
   const published = sorted.filter((s) => s.status === "published");
   return {
-    running: sorted
+    running: (viewerIsAdmin ? sorted : published)
       .filter((s) => s.hosts.some((h) => h.userId === userId))
       .map(row),
     plans: published.filter((s) => plans.rsvps[s.id]).map(row),

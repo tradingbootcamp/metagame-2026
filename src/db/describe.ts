@@ -54,6 +54,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
   Attendees: ["profiles"],
   Tickets: ["tickets"],
   Schedule: ["locations", "sessions", "session_hosts", "rsvps", "bookmarks"],
+  Grading: ["session_grades", "session_grade_space_options"],
 };
 
 // What each table is for, in one line. Reviewed alongside the columns.
@@ -68,18 +69,22 @@ const TABLE_NOTES: Record<string, string> = {
   apikey:
     "API keys (Better Auth api-key plugin), minted on /admin/api-keys. A request carrying one in x-api-key acts as the owning user (reference_id), so the admin gate applies as it does to pages. Only the hash is stored; start shows the first characters for telling keys apart.",
   profiles:
-    'Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field. image_url is the profile picture, a 512px Vercel Blob URL. is_adult ("18 or older?") and bringing_children are the first sign-in modal\'s required answers; it keeps opening while either is null. share_with_recruiters opts in to the name-and-email list sponsors who are hiring receive. preferred_name is unused; the name lives in user.name.',
+    'Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field. image_url is the profile picture, a 512px Vercel Blob URL. is_adult ("18 or older?") and bringing_children are the first sign-in modal\'s required answers; it keeps opening while either is null. share_with_recruiters opts in to the name-and-email list sponsors who are hiring receive. website is a link the person gave (a host\'s RFP "Link"). preferred_name is unused; the name lives in user.name.',
   tickets:
     "One row per purchase, keyed by the payment id the webhooks upsert on. Airtable keeps the finance detail; this holds what admission needs. owner_user_id (the attendee) is set only by claiming the ticket code, never by email match. holder_user_id is who has the code to pass on or claim; null means the buyer (purchaser_email). purchaser_discord is the Discord handle typed at checkout (leading @ stripped), used to prefill an empty profile Discord. Unclaiming clears the owner, makes them the holder and issues a fresh random code.",
   locations:
     "Rooms and spaces sessions happen in. display_order and show_in_schedule drive the schedule columns; airtable_record_id ties a room to its Lighthaven Spaces row. thumbnail_url (what the schedule shows) and image_url (a large copy for detail views) are Vercel Blob URLs.",
   sessions:
-    "One row per schedule slot. Drafts can be unplaced (null times, no location); only published rows show. airtable_rfp_record_id ties a session to the accepted RFP it was synced from. shepherd_user_id is the committee member shepherding it (null if none; the name shown is read from the account).",
+    "One row per schedule slot. Drafts can be unplaced (null times, no location); only published rows show. airtable_rfp_record_id ties a session to the accepted RFP it was synced from. shepherd_user_id is the committee member shepherding it (null if none; the name shown is read from the account). Every RFP submission is a session: phase is its stage in the committee pipeline (separate from status), verdict the committee's call, and the remaining text columns hold the host's RFP answers and the committee's logistics notes. All of these are admin-only and null for sessions that never came through the RFP.",
   session_hosts:
     "Who runs a session, one row per host in billing order (position 0 is the lead), replacing 2025's host_1/2/3 columns. Every host is an account; the schedule shows the account name.",
   rsvps:
     "Going or waitlisted, one row per user per session. The rsvps_capacity trigger refuses a going row once the session's max_capacity is reached (null = unlimited).",
   bookmarks: "Sessions a user starred. One row per pair.",
+  session_grades:
+    "One committee member's grade of a proposal, one row per session and grader; re-grading overwrites it. A row with submitted_at null is an assignment not yet graded. topic_areas and potential_panels are multi-selects as enum arrays. Deleting a grader's account is refused while they have grades, since these are the only copy.",
+  session_grade_space_options:
+    "The rooms a grader thinks would suit the session, one row per grade and location.",
 };
 
 function columnName(column: PgColumn): string {

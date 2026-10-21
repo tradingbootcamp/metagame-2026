@@ -74,6 +74,25 @@ function Field({
         />
       )}
 
+      {field.kind === "checkbox" && (
+        <label className="mt-1.5 flex w-fit cursor-pointer items-center gap-2 text-[15px] text-ink/80">
+          <input
+            id={field.field}
+            type="checkbox"
+            name={field.field}
+            value="true"
+            defaultChecked={initial[field.field] === true}
+            className="h-4 w-4 accent-navy"
+          />
+          Yes
+        </label>
+      )}
+      {field.kind === "checkbox" && (
+        // After the box on purpose: the save reads a field's first value, so
+        // this "false" only counts when the box is unticked and sends nothing.
+        <input type="hidden" name={field.field} value="false" />
+      )}
+
       {field.kind === "number" && (
         <input
           id={field.field}

@@ -42,28 +42,29 @@ describe("sessionWhen", () => {
 });
 
 describe("accountSessions", () => {
-  it("lists hosted sessions, drafts included, scheduled first", () => {
-    const out = accountSessions(
-      "me",
-      [
-        session({ id: "tba", title: "A", hosts: [host("me")] }),
-        session({
-          id: "late",
-          startsAt: "2026-11-08T18:00:00.000Z",
-          hosts: [host("x"), host("me")],
-        }),
-        session({
-          id: "draft",
-          status: "draft",
-          startsAt: "2026-11-07T18:00:00.000Z",
-          hosts: [host("me")],
-        }),
-        session({ id: "other", hosts: [host("x")] }),
-      ],
-      [],
-      noPlans,
-      {},
-    );
+  const hosted = [
+    session({ id: "tba", title: "A", hosts: [host("me")] }),
+    session({
+      id: "late",
+      startsAt: "2026-11-08T18:00:00.000Z",
+      hosts: [host("x"), host("me")],
+    }),
+    session({
+      id: "draft",
+      status: "draft",
+      startsAt: "2026-11-07T18:00:00.000Z",
+      hosts: [host("me")],
+    }),
+    session({ id: "other", hosts: [host("x")] }),
+  ];
+
+  it("hides hosted drafts from non-admins", () => {
+    const out = accountSessions("me", hosted, [], noPlans, {}, false);
+    expect(out.running.map((r) => r.id)).toEqual(["late", "tba"]);
+  });
+
+  it("lists an admin's hosted sessions, drafts included, scheduled first", () => {
+    const out = accountSessions("me", hosted, [], noPlans, {}, true);
     expect(out.running.map((r) => [r.id, r.lead, r.status])).toEqual([
       ["draft", true, "draft"],
       ["late", false, "published"],
@@ -98,6 +99,7 @@ describe("accountSessions", () => {
         bookmarks: ["going", "starred", "hidden"],
       },
       { going: { going: 2 } },
+      false,
     );
     expect(out.plans.map((r) => [r.id, r.rsvp])).toEqual([
       ["going", "going"],
