@@ -194,7 +194,7 @@ function InfoForm({
           />
         </div>
       </div>
-      <label className="flex items-center gap-2.5 text-base text-cream">
+      <label className={cn("flex items-center gap-2.5", LABEL)}>
         <input
           type="checkbox"
           name="isPublic"
@@ -205,16 +205,18 @@ function InfoForm({
         />
         Show profile publicly?
       </label>
-      <label className="flex items-start gap-2.5 text-base text-cream">
+      <label className={cn("flex items-start gap-2.5", LABEL)}>
         <input
           type="checkbox"
           name="shareWithRecruiters"
           defaultChecked={prefill.shareWithRecruiters}
-          className="mt-1 size-4 shrink-0 accent-meeple"
+          className="mt-0.5 size-4 shrink-0 accent-meeple"
         />
         <span className="flex flex-col gap-0.5">
           Share contact info with recruiters?
-          <span className="text-sm text-cream/65">{RECRUITERS_INFO}</span>
+          <span className="text-sm font-normal text-cream/65">
+            {RECRUITERS_INFO}
+          </span>
         </span>
       </label>
       {state.error && (
