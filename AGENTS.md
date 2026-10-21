@@ -33,8 +33,8 @@ ownership, and the schedule.
 
 The payment webhooks write each purchase to Airtable and then to `tickets`
 through `recordTicket()` in `src/lib/ticket-store.ts`, upserting on the payment
-id so retries can't duplicate. `pnpm db:backfill-tickets` loads purchases made
-before that from Airtable (dry run by default, `--apply` writes). A ticket is
+id so retries can't duplicate. Purchases from before that were backfilled
+from Airtable once (2026-10-20). A ticket is
 owned only once its code is claimed; a matching purchaser email shows the
 buyer their tickets but never grants ownership.
 
