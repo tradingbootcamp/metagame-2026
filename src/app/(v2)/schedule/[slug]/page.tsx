@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import {
   FaMapMarkerAlt,
   FaRegClock,
   FaUserFriends,
   FaUsers,
 } from "react-icons/fa";
+import { adminAccess } from "@/lib/admin-auth";
+import { airtableConfig } from "@/lib/airtable-config";
 import { currentSession } from "@/lib/auth";
+import { getSubmission, SCHEDULER_NOTES_FIELD } from "@/lib/rfp-rubric";
 import {
   formatPacificDay,
   formatPacificTime,
@@ -20,7 +24,7 @@ import { loadSessionRsvps, loadViewerPlans } from "@/lib/schedule-store";
 import PlanButtons from "@/v2/components/schedule/PlanButtons";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
 import { HEADING } from "@/v2/components/styles";
-import { loadPublicSchedule, prelaunchGate } from "../data";
+import { loadPublicSchedule, loadRawSchedule, prelaunchGate } from "../data";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -84,12 +88,84 @@ function Attendees({ rsvps }: { rsvps: SessionRsvps }) {
   );
 }
 
+async function schedulerNotes(recordId: string) {
+  try {
+    const submission = await getSubmission(recordId);
+    if (!submission) return { ok: false as const };
+    const notes = submission.fields[SCHEDULER_NOTES_FIELD];
+    return {
+      ok: true as const,
+      notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
+    };
+  } catch (err) {
+    console.error("Airtable RFP fetch failed", recordId, err);
+    return { ok: false as const };
+  }
+}
+
+function AdminNote({ title, text }: { title: string; text: string }) {
+  return (
+    <div>
+      <p className="mb-1 text-xs tracking-[0.12em] text-[#1b1530]/55 uppercase">
+        {title}
+      </p>
+      <p className="text-[15px] leading-relaxed whitespace-pre-wrap text-[#1b1530]/85">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+async function AdminDetails({ sessionId }: { sessionId: string }) {
+  const { sessions } = await loadRawSchedule();
+  const raw = sessions.find((s) => s.id === sessionId);
+  const recordId = raw?.airtableRfpRecordId ?? null;
+  const needs = raw?.needs?.trim() || null;
+  const airtable = recordId ? await schedulerNotes(recordId) : null;
+  const link = "font-semibold text-navy underline";
+
+  return (
+    <section className="mt-10 flex flex-col gap-4 border-t border-dashed border-line pt-6">
+      <h2 className="font-[family-name:var(--font-bebas)] text-2xl tracking-[0.04em] text-[#1b1530]/55">
+        Admin only
+      </h2>
+      {recordId ? (
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+          <Link href={`/grade/${recordId}`} className={link}>
+            Grading page
+          </Link>
+          <a
+            href={`https://airtable.com/${airtableConfig.baseId}/${airtableConfig.rfpSubmissionsTableId}/${recordId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={link}
+          >
+            Airtable record
+          </a>
+        </div>
+      ) : (
+        <p className="text-sm text-[#1b1530]/60">No RFP linked</p>
+      )}
+      {airtable && !airtable.ok && (
+        <p className="text-sm text-[#1b1530]/60">
+          Couldn&rsquo;t load Airtable record
+        </p>
+      )}
+      {airtable?.ok && airtable.notes && (
+        <AdminNote title="Grader notes for scheduler" text={airtable.notes} />
+      )}
+      {needs && <AdminNote title="Needs" text={needs} />}
+    </section>
+  );
+}
+
 export default async function SessionPage({ params }: Props) {
   await prelaunchGate();
   const { slug } = await params;
-  const [{ session, room }, account] = await Promise.all([
+  const [{ session, room }, account, admin] = await Promise.all([
     findSession(slug),
     currentSession(),
+    adminAccess(),
   ]);
   const viewerId = account?.user.id ?? null;
   const [rsvps, plans] = await Promise.all([
@@ -218,6 +294,12 @@ export default async function SessionPage({ params }: Props) {
           </p>
         )}
       </section>
+
+      {admin && (
+        <Suspense>
+          <AdminDetails sessionId={session.id} />
+        </Suspense>
+      )}
     </div>
   );
 }

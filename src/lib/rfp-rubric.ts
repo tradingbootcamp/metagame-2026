@@ -118,6 +118,8 @@ const PANEL_OPTIONS = [
 // `description` is the column's Airtable description, shown behind the ⓘ next to
 // each label. Kept verbatim so the tooltip says what the Airtable field says.
 
+export const SCHEDULER_NOTES_FIELD = "Grader Notes for Scheduler";
+
 /** The non-rubric fields the grading form writes, in the order they're shown. */
 export const META_FIELDS = [
   {
@@ -158,7 +160,7 @@ export const META_FIELDS = [
       "Select all the spaces that would be a good fit for this session.",
   },
   {
-    field: "Grader Notes for Scheduler",
+    field: SCHEDULER_NOTES_FIELD,
     label: "Notes for the scheduler",
     kind: "text",
     description:

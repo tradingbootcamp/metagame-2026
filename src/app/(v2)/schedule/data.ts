@@ -15,6 +15,8 @@ export async function prelaunchGate(): Promise<void> {
   if (!(await canSeeSchedule())) notFound();
 }
 
+export const loadRawSchedule = cache(loadSchedule);
+
 export const loadPublicSchedule = cache(async () =>
-  publicSchedule(await loadSchedule()),
+  publicSchedule(await loadRawSchedule()),
 );
