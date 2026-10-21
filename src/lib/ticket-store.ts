@@ -187,6 +187,18 @@ export async function claimedCounts(
   return new Map(rows.map((r) => [r.userId!, r.n]));
 }
 
+/** Whether the user has claimed a paid ticket as their own. */
+export async function hasClaimedTicket(userId: string): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ id: tickets.paymentId })
+    .from(tickets)
+    .where(
+      and(visible, eq(tickets.ownerUserId, userId), eq(tickets.status, "paid")),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
 export type ClaimResult =
   | { ok: true; ticket: TicketRow }
   | {

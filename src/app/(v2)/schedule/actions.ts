@@ -39,6 +39,7 @@ async function act(
   try {
     const status = await run(who);
     for (const p of PATHS) revalidatePath(p);
+    revalidatePath("/schedule", "layout");
     return status === undefined ? {} : { status };
   } catch (err) {
     return { error: err instanceof Error ? err.message : String(err) };

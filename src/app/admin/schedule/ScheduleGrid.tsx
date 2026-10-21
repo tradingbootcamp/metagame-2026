@@ -4,6 +4,7 @@ import { useState } from "react";
 import { GripVerticalIcon } from "lucide-react";
 import { FaListUl, FaThLarge } from "react-icons/fa";
 import {
+  cellSessions,
   findClash,
   formatPacificTime,
   fromPacificWall,
@@ -13,8 +14,8 @@ import {
   movedTimes,
   offsetPx,
   outsideHours,
+  NO_ROOM,
   slotLabel,
-  startsInSlot,
   SLOT_MINUTES,
   SLOT_PX,
   type Day,
@@ -22,7 +23,12 @@ import {
   type ScheduleLocation,
   type ScheduleSession,
 } from "@/lib/schedule";
-import { CATEGORY_STYLES, LEGEND } from "@/v2/lib/schedule-styles";
+import {
+  AgeMark,
+  BlockSummary,
+  blockStyle,
+} from "@/v2/components/schedule/SessionBits";
+import { LEGEND } from "@/v2/lib/schedule-styles";
 import type { SessionDefaults } from "./SessionForm";
 
 type View = "grid" | "list";
@@ -30,28 +36,6 @@ type OpenFn = (s: ScheduleSession) => void;
 type CreateFn = (defaults: SessionDefaults) => void;
 type GrabFn = (s: ScheduleSession) => void;
 export type DropFn = (startsAt: Date, locationId: string | null) => void;
-
-/** Placed sessions with no room land in a column of their own. */
-const NO_ROOM = "__none__";
-
-function AgeMark({ ages }: { ages: ScheduleSession["ages"] }) {
-  if (ages === "adults")
-    return (
-      <span aria-label="18+" className="shrink-0">
-        🔞
-      </span>
-    );
-  if (ages === "kids")
-    return (
-      <span aria-label="Kid-friendly" className="shrink-0">
-        🐥
-      </span>
-    );
-  return null;
-}
-
-const blockStyle = (s: ScheduleSession) =>
-  CATEGORY_STYLES[s.category ?? "other"];
 
 /** The grip that picks a session up; the rest of the block still opens it. */
 export function GrabHandle({
@@ -122,15 +106,7 @@ function SessionBlock({
         title={`${session.title}${session.hosts.length ? " — " + hostNames(session) : ""}${draft ? " (draft)" : ""}`}
         className="block h-full w-full p-1.5 pr-4 text-left"
       >
-        <span className="flex items-start gap-1 text-[13px] leading-tight font-semibold">
-          <span className="line-clamp-3">{session.title}</span>
-          <AgeMark ages={session.ages} />
-        </span>
-        {session.hosts.length > 0 && (
-          <span className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-[#1b1530]/70">
-            {hostNames(session)}
-          </span>
-        )}
+        <BlockSummary session={session} />
         {(going > 0 || session.maxCapacity !== null) && (
           <span className="mt-0.5 block text-[11px] leading-tight text-[#1b1530]/70">
             👤 {going}
@@ -266,11 +242,7 @@ function GridDay({
                 {slotLabel(slotStart)}
               </div>
               {columns.map((col) => {
-                const inSlot = day.sessions.filter(
-                  (s) =>
-                    (s.locationId ?? NO_ROOM) === col.id &&
-                    startsInSlot(s, slotStart),
-                );
+                const inSlot = cellSessions(day.sessions, col.id, slotStart);
                 const hovered =
                   carrying &&
                   hover?.dayKey === day.key &&

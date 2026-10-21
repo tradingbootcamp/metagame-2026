@@ -14,16 +14,19 @@ import {
 } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { getAuth } from "./auth";
+import { hasClaimedTicket } from "./ticket-store";
 import {
   fromPacificWall,
   movedTimes,
   outsideHours,
+  summarizeRsvps,
   type Attendance,
   type RsvpStatus,
   type ScheduleAccount,
   type ViewerPlans,
   type ScheduleLocation,
   type ScheduleSession,
+  type SessionRsvps,
 } from "./schedule";
 
 const { locations, sessions, sessionHosts, rsvps, bookmarks, user, profiles } =
@@ -31,6 +34,10 @@ const { locations, sessions, sessionHosts, rsvps, bookmarks, user, profiles } =
 
 // Matches accountLabel(): preferred name, else account name, else email.
 export const accountName = sql<string>`coalesce(nullif(trim(${profiles.preferredName}), ''), nullif(trim(${user.name}), ''), ${user.email})`;
+
+// The same rule without the email, for names other attendees see. Code
+// sign-in can leave the account name blank.
+const publicName = sql<string>`coalesce(nullif(trim(${profiles.preferredName}), ''), nullif(trim(${user.name}), ''), 'Someone')`;
 
 const accountColumns = {
   userId: user.id,
@@ -441,6 +448,27 @@ export async function loadSessionPlans(sessionId: string) {
     waitlist: with_("waitlist"),
     bookmarkedBy: marked,
   };
+}
+
+/**
+ * One session's RSVPs for the public page. Names only for a viewer who has
+ * claimed a paid ticket; everyone else gets counts.
+ */
+export async function loadSessionRsvps(
+  sessionId: string,
+  viewerId: string | null,
+): Promise<SessionRsvps> {
+  const [showNames, rows] = await Promise.all([
+    viewerId ? hasClaimedTicket(viewerId) : false,
+    getDb()
+      .select({ status: rsvps.status, name: publicName })
+      .from(rsvps)
+      .innerJoin(user, eq(user.id, rsvps.userId))
+      .leftJoin(profiles, eq(profiles.userId, user.id))
+      .where(eq(rsvps.sessionId, sessionId))
+      .orderBy(asc(rsvps.createdAt)),
+  ]);
+  return summarizeRsvps(rows, showNames);
 }
 
 /** One account's RSVPs and bookmarks, by session slug. */

@@ -70,7 +70,31 @@ export type ViewerPlans = {
   bookmarks: string[];
 };
 
-export function hostNames(session: Pick<ScheduleSession, "hosts">): string {
+/** One session's RSVPs as the public page may show them. */
+export type SessionRsvps = {
+  going: number;
+  waitlist: number;
+  /** Null unless the viewer may see who's coming. */
+  names: { going: string[]; waitlist: string[] } | null;
+};
+
+/** Counts for everyone; names only when `showNames`. Rows earliest first. */
+export function summarizeRsvps(
+  rows: { status: RsvpStatus; name: string }[],
+  showNames: boolean,
+): SessionRsvps {
+  const going = rows.filter((r) => r.status === "going").map((r) => r.name);
+  const waitlist = rows
+    .filter((r) => r.status === "waitlist")
+    .map((r) => r.name);
+  return {
+    going: going.length,
+    waitlist: waitlist.length,
+    names: showNames ? { going, waitlist } : null,
+  };
+}
+
+export function hostNames(session: { hosts: { name: string }[] }): string {
   return session.hosts.map((h) => h.name).join(", ");
 }
 
@@ -233,27 +257,27 @@ const PX_PER_MIN = 2;
 export const SLOT_MINUTES = 30;
 export const SLOT_PX = SLOT_MINUTES * PX_PER_MIN;
 
-/** A session with both times set; the grid only places these. */
-export type PlacedSession = ScheduleSession & {
-  startsAt: string;
-  endsAt: string;
-};
+type Timed = Pick<ScheduleSession, "startsAt" | "endsAt">;
 
-export function isPlaced(s: ScheduleSession): s is PlacedSession {
+/** A session with both times set; the grid only places these. */
+export type Placed<S extends Timed> = S & { startsAt: string; endsAt: string };
+export type PlacedSession = Placed<ScheduleSession>;
+
+export function isPlaced<S extends Timed>(s: S): s is Placed<S> {
   return s.startsAt !== null && s.endsAt !== null;
 }
 
-export function offsetPx(session: PlacedSession, slotStart: number): number {
+export function offsetPx(session: Placed<Timed>, slotStart: number): number {
   return Math.max(0, pacificMinutes(session.startsAt) - slotStart) * PX_PER_MIN;
 }
 
-export function heightPx(session: PlacedSession): number {
+export function heightPx(session: Placed<Timed>): number {
   const dur = pacificMinutes(session.endsAt) - pacificMinutes(session.startsAt);
   return Math.max(SLOT_PX, dur * PX_PER_MIN);
 }
 
 export function startsInSlot(
-  session: PlacedSession,
+  session: Placed<Timed>,
   slotStart: number,
 ): boolean {
   const m = pacificMinutes(session.startsAt);
@@ -295,17 +319,31 @@ export function findClash<S extends ScheduleSession>(
   );
 }
 
-export type Day = {
+/** Grid column id for placed sessions with no room. */
+export const NO_ROOM = "__none__";
+
+/** The sessions a grid cell draws: in that column, starting in that slot. */
+export function cellSessions<S extends Timed & { locationId: string | null }>(
+  sessions: Placed<S>[],
+  columnId: string,
+  slotStart: number,
+): Placed<S>[] {
+  return sessions.filter(
+    (s) => (s.locationId ?? NO_ROOM) === columnId && startsInSlot(s, slotStart),
+  );
+}
+
+export type Day<S extends Timed = ScheduleSession> = {
   key: string;
   name: string;
   dateLabel: string;
-  sessions: PlacedSession[];
+  sessions: Placed<S>[];
   /** 30-minute slot starts (minutes since Pacific midnight), open to midnight. */
   slots: number[];
 };
 
 /** The day's slots; reaches earlier only to show a session saved before opening. */
-function daySlots(dayKey: string, sessions: PlacedSession[]): number[] {
+function daySlots(dayKey: string, sessions: Placed<Timed>[]): number[] {
   const earliest = Math.min(
     opensAt(dayKey),
     ...sessions.map((s) => pacificMinutes(s.startsAt)),
@@ -321,18 +359,18 @@ function daySlots(dayKey: string, sessions: PlacedSession[]): number[] {
  * appear, in order; any other day a session lands on is appended after them
  * so nothing is hidden from the editor.
  */
-export function buildDays(sessions: ScheduleSession[]): Day[] {
+export function buildDays<S extends Timed>(sessions: S[]): Day<S>[] {
   const placed = sessions
-    .filter(isPlaced)
+    .filter((s): s is Placed<S> => isPlaced(s))
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 
-  const byKey = new Map<string, PlacedSession[]>();
+  const byKey = new Map<string, Placed<S>[]>();
   for (const s of placed) {
     const key = pacificDayKey(s.startsAt);
     byKey.set(key, [...(byKey.get(key) ?? []), s]);
   }
 
-  const days: Omit<Day, "sessions" | "slots">[] = [...CONFERENCE_DAYS];
+  const days: Omit<Day<S>, "sessions" | "slots">[] = [...CONFERENCE_DAYS];
   for (const key of [...byKey.keys()].sort()) {
     if (days.some((d) => d.key === key)) continue;
     const iso = byKey.get(key)![0].startsAt;
@@ -354,6 +392,63 @@ export function buildDays(sessions: ScheduleSession[]): Day[] {
     const sessions = byKey.get(day.key) ?? [];
     return { ...day, sessions, slots: daySlots(day.key, sessions) };
   });
+}
+
+/** What the public schedule may show of a session: published only, hosts without emails. */
+export type PublicSession = Pick<
+  ScheduleSession,
+  | "id"
+  | "slug"
+  | "title"
+  | "description"
+  | "category"
+  | "locationId"
+  | "maxCapacity"
+  | "ages"
+> & { startsAt: string; endsAt: string; hosts: { name: string }[] };
+
+export type PublicLocation = Pick<
+  ScheduleLocation,
+  "id" | "name" | "capacity" | "campusLocation" | "thumbnailUrl" | "imageUrl"
+>;
+
+/**
+ * The published, placed sessions and the rooms to show them in: every room
+ * marked for the schedule, plus any other room a published session uses so
+ * nothing published goes missing.
+ */
+export function publicSchedule(schedule: {
+  locations: ScheduleLocation[];
+  sessions: ScheduleSession[];
+}): { locations: PublicLocation[]; sessions: PublicSession[] } {
+  const sessions: PublicSession[] = schedule.sessions
+    .filter((s) => s.status === "published")
+    .filter(isPlaced)
+    .map((s) => ({
+      id: s.id,
+      slug: s.slug,
+      title: s.title,
+      description: s.description,
+      category: s.category,
+      startsAt: s.startsAt,
+      endsAt: s.endsAt,
+      locationId: s.locationId,
+      maxCapacity: s.maxCapacity,
+      ages: s.ages,
+      hosts: s.hosts.map((h) => ({ name: h.name })),
+    }));
+  const used = new Set(sessions.map((s) => s.locationId));
+  const locations = schedule.locations
+    .filter((l) => l.showInSchedule || used.has(l.id))
+    .map((l) => ({
+      id: l.id,
+      name: l.name,
+      capacity: l.capacity,
+      campusLocation: l.campusLocation,
+      thumbnailUrl: l.thumbnailUrl,
+      imageUrl: l.imageUrl,
+    }));
+  return { locations, sessions };
 }
 
 /** "my-session-title" from "My Session Title!", capped so slugs stay short. */
