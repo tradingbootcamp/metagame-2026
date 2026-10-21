@@ -3,6 +3,7 @@ import { getDb, schema } from "@/db";
 import { env } from "@/env";
 import type { PurchaseRecord, PurchaseStatus } from "@/lib/airtable";
 import { ticketCode } from "@/lib/ticket-code";
+import { getDayPass, getTicket, supporterTier } from "@/lib/tickets";
 
 export { normalizeTicketCode } from "@/lib/ticket-code-format";
 
@@ -21,8 +22,12 @@ const visible =
 /** How purchaser emails are stored and matched. */
 export const emailKey = (email: string) => email.trim().toLowerCase();
 
-export const ticketLabel = (tier: string | null) =>
-  tier ?? "Metagame 2026 ticket";
+/** Display name for a stored tier, which may be a tier id ("standard") or already a label. */
+export function ticketLabel(tier: string | null): string {
+  if (!tier) return "Metagame 2026 ticket";
+  if (tier === supporterTier.id) return supporterTier.label;
+  return getTicket(tier)?.label ?? getDayPass(tier)?.label ?? tier;
+}
 
 const STATUS: Record<PurchaseStatus, Ticket["status"]> = {
   Pending: "pending",

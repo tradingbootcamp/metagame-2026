@@ -122,7 +122,6 @@ function InfoForm({
 
   return (
     <form id={FORM_ID} action={action} className="flex flex-col gap-5">
-      <span className={SECTION}>Required</span>
       <YesNo name="isAdult" label="Are you 18 or older?" />
       <div className="flex flex-col gap-2">
         <YesNo
@@ -204,7 +203,13 @@ function YesNo({
 }) {
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className={cn(LABEL, "mb-2")}>{label}</legend>
+      <legend className={cn(LABEL, "mb-2")}>
+        {label}
+        <span aria-hidden className="ml-0.5 text-red-400">
+          *
+        </span>
+        <span className="sr-only"> (required)</span>
+      </legend>
       <div className="flex gap-2">
         {(["yes", "no"] as const).map((v) => (
           <label
@@ -272,8 +277,11 @@ function TicketSection({ tickets }: { tickets: TicketStep }) {
     <>
       <p className="text-[15px] text-cream/80">
         {tickets.kind === "claimable"
-          ? "You bought these. Claim one to attend on it, or pass its code on from your account page."
+          ? foundCopy(tickets.tickets.length)
           : "Got a ticket code? Enter it to claim the ticket for your account."}
+      </p>
+      <p className="text-[15px] font-semibold text-cream">
+        You will need a claimed ticket in order to attend.
       </p>
       {tickets.kind === "claimable" ? (
         <ClaimMine tickets={tickets.tickets} onClaimed={setClaimed} />
@@ -291,14 +299,30 @@ function TicketSection({ tickets }: { tickets: TicketStep }) {
   );
 }
 
+function foundCopy(n: number): string {
+  return n === 1
+    ? "We found a ticket purchased under your email. Click Claim to use it yourself, or share its code from your account page to transfer it."
+    : `We found ${n} tickets purchased under your email. Click Claim to use one yourself, and share the others' codes from your account page to transfer them.`;
+}
+
+const purchased = (iso: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(iso));
+
 function ClaimMine({
   tickets,
   onClaimed,
 }: {
-  tickets: { id: string; tier: string }[];
+  tickets: { id: string; tier: string; purchasedAt: string }[];
   onClaimed: (tier: string) => void;
 }) {
   const [pending, start] = useTransition();
+  // Which Claim was pressed, so only that button shows progress.
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   const [state, setState] = useState<ClaimState>({});
   return (
     <div className="flex flex-col gap-2">
@@ -308,20 +332,26 @@ function ClaimMine({
             key={t.id}
             className="flex items-center justify-between gap-4 px-4 py-3"
           >
-            <span className="font-semibold text-cream">{t.tier}</span>
+            <span className="flex flex-col">
+              <span className="font-semibold text-cream">{t.tier}</span>
+              <span className="text-xs text-cream/60">
+                Purchased {purchased(t.purchasedAt)}
+              </span>
+            </span>
             <Button
               type="button"
               size="sm"
               disabled={pending}
-              onClick={() =>
+              onClick={() => {
+                setClaimingId(t.id);
                 start(async () => {
                   const result = await claimMine(t.id);
                   setState(result);
                   if (result.claimed) onClaimed(result.claimed);
-                })
-              }
+                });
+              }}
             >
-              {pending ? "Claiming…" : "Claim"}
+              {pending && claimingId === t.id ? "Claiming…" : "Claim"}
             </Button>
           </li>
         ))}

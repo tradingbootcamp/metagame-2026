@@ -3,7 +3,11 @@ import type { TicketRow } from "@/lib/ticket-store";
 /** What the first sign-in modal's ticket step offers. */
 export type TicketStep =
   | { kind: "held" }
-  | { kind: "claimable"; tickets: { id: string; tier: string }[] }
+  | {
+      kind: "claimable";
+      /** `purchasedAt` is an ISO timestamp. */
+      tickets: { id: string; tier: string; purchasedAt: string }[];
+    }
   | { kind: "code" };
 
 export type FirstSigninPrefill = {
@@ -43,7 +47,7 @@ export function firstSigninHidden(pathname: string): boolean {
 export function ticketStep(
   rows: (Pick<
     TicketRow,
-    "paymentId" | "status" | "ownerUserId" | "purchaserEmail"
+    "paymentId" | "status" | "ownerUserId" | "purchaserEmail" | "createdAt"
   > & { tier: string })[],
   userId: string,
   email: string,
@@ -56,6 +60,10 @@ export function ticketStep(
         t.ownerUserId === null &&
         t.purchaserEmail === email,
     )
-    .map((t) => ({ id: t.paymentId, tier: t.tier }));
+    .map((t) => ({
+      id: t.paymentId,
+      tier: t.tier,
+      purchasedAt: t.createdAt.toISOString(),
+    }));
   return tickets.length > 0 ? { kind: "claimable", tickets } : { kind: "code" };
 }

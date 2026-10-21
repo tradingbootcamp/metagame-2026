@@ -13,6 +13,7 @@ const row = (
   status: "paid",
   ownerUserId: null,
   purchaserEmail: "ada@example.com",
+  createdAt: new Date("2026-10-03T17:00:00.000Z"),
   ...over,
 });
 
@@ -36,8 +37,8 @@ describe("ticketStep", () => {
     ).toEqual({
       kind: "claimable",
       tickets: [
-        { id: "a", tier: "Standard" },
-        { id: "d", tier: "Day pass" },
+        { id: "a", tier: "Standard", purchasedAt: "2026-10-03T17:00:00.000Z" },
+        { id: "d", tier: "Day pass", purchasedAt: "2026-10-03T17:00:00.000Z" },
       ],
     });
   });
