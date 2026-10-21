@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { Popover } from "radix-ui";
-import { ExternalLink, Info } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { claim, claimMine, type ClaimState } from "@/app/(v2)/account/actions";
 import {
   firstSigninHidden,
@@ -122,13 +121,15 @@ function InfoForm({
 
   return (
     <form id={FORM_ID} action={action} className="flex flex-col gap-5">
-      <YesNo name="isAdult" label="Are you 18 or older?" />
       <div className="flex flex-col gap-2">
-        <YesNo
-          name="bringingChildren"
-          label="Are you bringing any children?"
-          onChange={setBringingChildren}
-        />
+        <div className="grid gap-5 sm:grid-cols-2">
+          <YesNo name="isAdult" label="Are you 18 or older?" />
+          <YesNo
+            name="bringingChildren"
+            label="Are you bringing any children?"
+            onChange={setBringingChildren}
+          />
+        </div>
         {bringingChildren && (
           <a
             href={CHILD_REGISTRATION_FORM_URL}
@@ -169,20 +170,20 @@ function InfoForm({
           defaultChecked={prefill.isPublic}
           className="size-4 accent-meeple"
         />
-        Show my profile publicly?
+        Show profile publicly?
       </label>
-      <div className="flex items-center gap-2">
-        <label className="flex items-center gap-2.5 text-base text-cream">
-          <input
-            type="checkbox"
-            name="shareWithRecruiters"
-            defaultChecked={prefill.shareWithRecruiters}
-            className="size-4 accent-meeple"
-          />
-          Share my info with recruiters
-        </label>
-        <InfoTip text={RECRUITERS_INFO} />
-      </div>
+      <label className="flex items-start gap-2.5 text-base text-cream">
+        <input
+          type="checkbox"
+          name="shareWithRecruiters"
+          defaultChecked={prefill.shareWithRecruiters}
+          className="mt-1 size-4 shrink-0 accent-meeple"
+        />
+        <span className="flex flex-col gap-0.5">
+          Share contact info with recruiters?
+          <span className="text-sm text-cream/65">{RECRUITERS_INFO}</span>
+        </span>
+      </label>
       {state.error && (
         <p aria-live="polite" className="text-sm text-salmon">
           {state.error}
@@ -229,36 +230,6 @@ function YesNo({
         ))}
       </div>
     </fieldset>
-  );
-}
-
-// Opens on hover and on tap, so it works on touch screens too.
-function InfoTip({ text }: { text: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger
-        type="button"
-        aria-label="What's this?"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        className="flex size-7 items-center justify-center rounded-full text-cream/60 outline-none hover:text-cream focus-visible:ring-2 focus-visible:ring-ring/60"
-      >
-        <Info className="size-4" />
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          side="top"
-          sideOffset={6}
-          collisionPadding={16}
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          className="z-[60] max-w-[280px] rounded-lg bg-cream px-3 py-2 text-sm text-ink shadow-xl"
-        >
-          {text}
-          <Popover.Arrow className="fill-cream" />
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
   );
 }
 
