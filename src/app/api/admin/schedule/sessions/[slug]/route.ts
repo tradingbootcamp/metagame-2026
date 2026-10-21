@@ -6,6 +6,7 @@ import {
   json,
   readBody,
   resolveHosts,
+  resolveShepherd,
   sessionBySlug,
   sessionToRaw,
 } from "@/lib/schedule-api";
@@ -28,7 +29,7 @@ export async function PUT(request: Request, ctx: Ctx) {
   return write(request, ctx, (body) => body);
 }
 
-/** Changes only the fields given; `hosts` left out keeps the host list. */
+/** Changes only the fields given; `hosts` or `shepherd` left out keeps it. */
 export async function PATCH(request: Request, ctx: Ctx) {
   return write(request, ctx, (body, current) => ({ ...current, ...body }));
 }
@@ -52,12 +53,18 @@ async function write(
   if (!parsed.ok) return error(parsed.error, 400, parsed.field);
   const hosts = await resolveHosts(raw.hosts ?? []);
   if ("error" in hosts) return error(hosts.error, 400, hosts.field);
+  const shepherd = await resolveShepherd(
+    raw.shepherd,
+    parsed.value.shepherdUserId,
+  );
+  if ("error" in shepherd) return error(shepherd.error, 400, shepherd.field);
 
   try {
     await upsertSession({
       id: current.id,
       ...parsed.value,
       hostIds: hosts.ids,
+      shepherdUserId: shepherd.id,
     });
   } catch (err) {
     return failed(err);

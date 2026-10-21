@@ -20,6 +20,7 @@ const session = (over: Partial<ScheduleSession>): ScheduleSession => ({
   status: "published",
   airtableRfpRecordId: null,
   hosts: [],
+  shepherd: null,
   ...over,
 });
 

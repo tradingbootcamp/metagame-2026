@@ -91,6 +91,7 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
   const raw = sessions.find((s) => s.id === sessionId);
   const recordId = raw?.airtableRfpRecordId ?? null;
   const needs = raw?.needs?.trim() || null;
+  const shepherd = raw?.shepherd ?? null;
   const link = "font-semibold text-navy underline";
 
   return (
@@ -118,6 +119,11 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
         </div>
       ) : (
         <p className={MUTED}>No RFP linked</p>
+      )}
+      {shepherd && (
+        <p className="text-[15px] text-[#1b1530]/85">
+          <span className="text-[#1b1530]/55">Shepherd:</span> {shepherd.name}
+        </p>
       )}
       {recordId && (
         <Suspense fallback={<p className={MUTED}>Loading grader notes…</p>}>

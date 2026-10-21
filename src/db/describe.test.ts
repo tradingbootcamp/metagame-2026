@@ -56,6 +56,7 @@ describe("describeSchema", () => {
       "rsvps",
       "session",
       "session_hosts",
+      "sessions",
       "tickets",
       "tickets",
     ]);
@@ -63,6 +64,9 @@ describe("describeSchema", () => {
       "set null",
     );
     expect(column("tickets", "holder_user_id").references?.onDelete).toBe(
+      "set null",
+    );
+    expect(column("sessions", "shepherd_user_id").references?.onDelete).toBe(
       "set null",
     );
   });

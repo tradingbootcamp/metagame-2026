@@ -2,13 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { rfpLinks } from "@/lib/rfp-links";
+import type { ScheduleAccount } from "@/lib/schedule";
 import { loadSchedulerNotes, type SchedulerNotes } from "./actions";
 
 const MUTED = "text-xs text-ink/50";
 const LINK = "font-medium text-navy underline";
 
-/** The session's RFP: links out, and the grader's notes for the scheduler. */
-export default function RfpPanel({ recordId }: { recordId: string | null }) {
+/** The session's RFP: links out, its shepherd, and the grader's notes for the scheduler. */
+export default function RfpPanel({
+  recordId,
+  shepherd,
+}: {
+  recordId: string | null;
+  shepherd: ScheduleAccount | null;
+}) {
   const [result, setResult] = useState<SchedulerNotes | null>(null);
 
   useEffect(() => {
@@ -22,8 +29,19 @@ export default function RfpPanel({ recordId }: { recordId: string | null }) {
     };
   }, [recordId]);
 
+  const shepherdLine = shepherd && (
+    <p className="text-ink/85">
+      <span className="text-ink/50">Shepherd:</span> {shepherd.name}
+    </p>
+  );
+
   if (!recordId) {
-    return <p className={`${MUTED} sm:col-span-2`}>No RFP linked</p>;
+    return (
+      <div className="flex flex-col gap-1 text-sm sm:col-span-2">
+        <p className={MUTED}>No RFP linked</p>
+        {shepherdLine}
+      </div>
+    );
   }
   const links = rfpLinks(recordId);
 
@@ -42,6 +60,7 @@ export default function RfpPanel({ recordId }: { recordId: string | null }) {
           Airtable record
         </a>
       </div>
+      {shepherdLine}
       {!result ? (
         <p className={MUTED}>Loading grader notes…</p>
       ) : "error" in result ? (

@@ -25,6 +25,7 @@ const session = (over: Partial<ScheduleSession>): ScheduleSession => ({
   status: "published",
   airtableRfpRecordId: "rec1",
   hosts: [{ userId: "u1", name: "Ada", email: "ada@example.com" }],
+  shepherd: { userId: "u9", name: "Grace", email: "grace@example.com" },
   ...over,
 });
 
@@ -83,6 +84,8 @@ describe("publicSchedule", () => {
     expect(json).not.toContain("ada@example.com");
     expect(json).not.toContain("a projector");
     expect(json).not.toContain("rec1");
+    expect(json).not.toContain("Grace");
+    expect(json).not.toContain("u9");
     expect(sessions[0].hosts).toEqual([{ name: "Ada" }]);
   });
 
