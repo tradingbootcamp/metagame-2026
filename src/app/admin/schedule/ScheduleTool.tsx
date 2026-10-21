@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useOptimistic,
   useState,
   useTransition,
 } from "react";
@@ -18,6 +19,7 @@ import {
   formatPacificTime,
   hostNames,
   isPlaced,
+  movedTimes,
   type Attendance,
   type ScheduleLocation,
   type ScheduleSession,
@@ -53,8 +55,10 @@ function Section({
   );
 }
 
+type Move = Pick<ScheduleSession, "id" | "startsAt" | "endsAt" | "locationId">;
+
 export default function ScheduleTool({
-  sessions,
+  sessions: saved,
   locations,
   attendance,
   viewer,
@@ -72,6 +76,10 @@ export default function ScheduleTool({
   const close = useCallback(() => setEditing(null), []);
   // Picked up by its grip; stays held across scrolling and day tabs until a slot is clicked.
   const [held, setCarrying] = useState<ScheduleSession | null>(null);
+  // A dropped session shows in its new slot while the move saves; a failed save snaps it back.
+  const [sessions, applyMove] = useOptimistic(saved, (all, move: Move) =>
+    all.map((s) => (s.id === move.id ? { ...s, ...move } : s)),
+  );
 
   useEffect(() => {
     if (!held) return;
@@ -114,12 +122,19 @@ export default function ScheduleTool({
   const grab = (session: ScheduleSession) =>
     setCarrying((held) => (held?.id === session.id ? null : session));
   const drop: DropFn = (startsAt, locationId) => {
-    if (!carrying || pending) return;
+    if (!carrying) return;
     const id = carrying.id;
+    const times = movedTimes(carrying, startsAt);
+    setCarrying(null);
     startTransition(async () => {
+      applyMove({
+        id,
+        startsAt: times.startsAt.toISOString(),
+        endsAt: times.endsAt.toISOString(),
+        locationId,
+      });
       const result = await moveSession(id, startsAt.toISOString(), locationId);
       setError(result.error ?? null);
-      if (!result.error) setCarrying(null);
     });
   };
 
@@ -189,9 +204,8 @@ export default function ScheduleTool({
             <span>
               Moving <span className="font-semibold">{carrying.title}</span>
               <span className="text-white/70">
-                {pending
-                  ? "…"
-                  : " — click a slot to drop it, or press Esc to cancel."}
+                {" "}
+                — click a slot to drop it, or press Esc to cancel.
               </span>
             </span>
             <button
