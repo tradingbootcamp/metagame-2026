@@ -159,7 +159,7 @@ function InfoForm({
           <span className="flex flex-col gap-0.5">
             <span className={LABEL}>Display name</span>
             <span className="text-sm text-cream/65">
-              How you appear as a session host/attendee, on your badge, etc.
+              On RSVPs, hosting, badge, etc.
             </span>
           </span>
           <Input
