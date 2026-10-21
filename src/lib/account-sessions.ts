@@ -10,6 +10,7 @@ import {
 
 export type AccountSessionRow = {
   id: string;
+  slug: string;
   title: string;
   status: Status;
   /** "Sat, Nov 7 · 10:00 AM – 10:55 AM", or null while unscheduled. */
@@ -60,6 +61,7 @@ export function accountSessions(
   const marked = new Set(plans.bookmarks);
   const row = (s: ScheduleSession): AccountSessionRow => ({
     id: s.id,
+    slug: s.slug,
     title: s.title,
     status: s.status,
     when: sessionWhen(s),

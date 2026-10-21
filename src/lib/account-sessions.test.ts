@@ -91,6 +91,7 @@ describe("accountSessions", () => {
       ["wait", "waitlist"],
     ]);
     expect(out.plans[0]).toMatchObject({
+      slug: "going",
       room: "Bayes",
       bookmarked: true,
       full: true,

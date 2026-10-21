@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import type {
   AccountSessionRow,
@@ -7,11 +8,27 @@ import PlanButtons from "@/v2/components/schedule/PlanButtons";
 
 const TAG = "rounded px-1.5 py-0.5 text-xs font-semibold";
 
-function Row({ s, children }: { s: AccountSessionRow; children?: ReactNode }) {
+function Row({
+  s,
+  linkable,
+  children,
+}: {
+  s: AccountSessionRow;
+  linkable: boolean;
+  children?: ReactNode;
+}) {
   return (
     <li className="flex flex-col gap-2 px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="text-base font-semibold text-ink">{s.title}</span>
+        <span className="text-base font-semibold text-ink">
+          {linkable ? (
+            <Link href={`/schedule/${s.slug}`} className="hover:underline">
+              {s.title}
+            </Link>
+          ) : (
+            s.title
+          )}
+        </span>
         {s.status === "draft" && (
           <span className={`${TAG} bg-tan/30 text-ink`}>Draft</span>
         )}
@@ -50,8 +67,8 @@ function List({
   );
 }
 
-const plan = (s: AccountSessionRow) => (
-  <Row key={s.id} s={s}>
+const plan = (linkable: boolean) => (s: AccountSessionRow) => (
+  <Row key={s.id} s={s} linkable={linkable}>
     <PlanButtons
       sessionId={s.id}
       status={s.rsvp}
@@ -63,8 +80,10 @@ const plan = (s: AccountSessionRow) => (
 
 export default function SessionsPanel({
   sessions,
+  linkable,
 }: {
   sessions: AccountSessions;
+  linkable: boolean;
 }) {
   return (
     <div className="flex max-w-[960px] flex-col gap-12">
@@ -73,7 +92,7 @@ export default function SessionsPanel({
         empty="You're not hosting any sessions."
         rows={sessions.running}
         render={(s) => (
-          <Row key={s.id} s={s}>
+          <Row key={s.id} s={s} linkable={linkable}>
             <span className="text-xs text-ink/50">
               {s.lead ? "Lead host" : "Co-host"}
             </span>
@@ -84,14 +103,14 @@ export default function SessionsPanel({
         title="Your RSVPs"
         empty="You haven't RSVP'd to anything yet."
         rows={sessions.plans}
-        render={plan}
+        render={plan(linkable)}
       />
       {sessions.bookmarks.length > 0 && (
         <List
           title="Bookmarked"
           empty=""
           rows={sessions.bookmarks}
-          render={plan}
+          render={plan(linkable)}
         />
       )}
     </div>
