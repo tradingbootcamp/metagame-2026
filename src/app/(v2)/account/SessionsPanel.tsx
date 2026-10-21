@@ -70,7 +70,7 @@ function List({
   );
 }
 
-const plan = (linkable: boolean) => (s: AccountSessionRow) => (
+const plan = (s: AccountSessionRow, linkable: boolean) => (
   <Row key={s.id} s={s} linkable={linkable}>
     <PlanButtons
       sessionId={s.id}
@@ -106,14 +106,14 @@ export default function SessionsPanel({
         title="Your RSVPs"
         empty="You haven't RSVP'd to anything yet."
         rows={sessions.plans}
-        render={plan(linkable)}
+        render={(s) => plan(s, linkable)}
       />
       {sessions.bookmarks.length > 0 && (
         <List
           title="Bookmarked"
           empty=""
           rows={sessions.bookmarks}
-          render={plan(linkable)}
+          render={(s) => plan(s, linkable)}
         />
       )}
     </div>
