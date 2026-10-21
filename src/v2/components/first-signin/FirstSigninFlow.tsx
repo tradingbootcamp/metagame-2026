@@ -190,7 +190,9 @@ function InfoForm({
         <input
           type="checkbox"
           name="isPublic"
-          defaultChecked={prefill.isPublic}
+          // The column defaults to false, so "never chose" looks like "no";
+          // the modal is the one place everyone chooses, and it starts on.
+          defaultChecked
           className="size-4 accent-meeple"
         />
         Show profile publicly?

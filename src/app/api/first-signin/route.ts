@@ -41,7 +41,6 @@ async function firstSigninStatus(): Promise<FirstSigninStatus> {
     prefill: {
       preferredName: profile?.preferredName || user.name,
       discordHandle: profile?.discordHandle ?? "",
-      isPublic: profile?.isPublic ?? false,
       shareWithRecruiters: profile?.shareWithRecruiters ?? false,
     },
   };

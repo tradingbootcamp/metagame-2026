@@ -13,7 +13,6 @@ export type TicketStep =
 export type FirstSigninPrefill = {
   preferredName: string;
   discordHandle: string;
-  isPublic: boolean;
   shareWithRecruiters: boolean;
 };
 
