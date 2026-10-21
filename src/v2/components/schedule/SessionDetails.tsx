@@ -46,6 +46,8 @@ async function findSession(slug: string) {
   return { session, room };
 }
 
+export const SESSION_TITLE_ID = "session-title";
+
 export async function sessionMetadata(slug: string): Promise<Metadata> {
   const { session } = await findSession(slug);
   return {
@@ -126,13 +128,7 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
 }
 
 /** Callers must apply prelaunchGate() first. */
-export default async function SessionDetails({
-  slug,
-  titleId,
-}: {
-  slug: string;
-  titleId?: string;
-}) {
+export default async function SessionDetails({ slug }: { slug: string }) {
   const [{ session, room }, account, admin] = await Promise.all([
     findSession(slug),
     currentSession(),
@@ -157,12 +153,12 @@ export default async function SessionDetails({
         className="block h-2 w-16 rounded-full border"
         style={blockStyle(session)}
       />
-      <h1
-        id={titleId}
+      <h2
+        id={SESSION_TITLE_ID}
         className={`${HEADING} mt-4 text-[clamp(30px,5vw,48px)] text-navy`}
       >
         {session.title}
-      </h1>
+      </h2>
 
       {tags.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
