@@ -1,4 +1,7 @@
 import { createHash } from "node:crypto";
+import { TICKET_CODE_LENGTH } from "@/lib/ticket-code-format";
+
+export { formatTicketCode } from "@/lib/ticket-code-format";
 
 // Crockford-style: no I/L/O/U, so codes survive being read aloud or retyped.
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -13,13 +16,8 @@ const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 export function ticketCode(paymentId: string): string {
   const hash = createHash("sha256").update(paymentId).digest();
   let code = "";
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < TICKET_CODE_LENGTH; i++) {
     code += ALPHABET[hash[i] % ALPHABET.length];
   }
   return code;
-}
-
-/** Display form: "A2C4EF" → "A2C-4EF". Stored dashless. */
-export function formatTicketCode(code: string): string {
-  return `${code.slice(0, 3)}-${code.slice(3)}`;
 }

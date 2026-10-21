@@ -4,6 +4,8 @@ import { env } from "@/env";
 import type { PurchaseRecord, PurchaseStatus } from "@/lib/airtable";
 import { ticketCode } from "@/lib/ticket-code";
 
+export { normalizeTicketCode } from "@/lib/ticket-code-format";
+
 type Ticket = typeof schema.tickets.$inferInsert;
 export type TicketRow = typeof schema.tickets.$inferSelect;
 
@@ -99,19 +101,6 @@ export async function ticketsForUser(
       ),
     )
     .orderBy(desc(tickets.createdAt));
-}
-
-/**
- * Typed codes: case, dashes and spaces don't matter; I/L read as 1, O as 0,
- * U as V. The alphabet has none of I/L/O/U.
- */
-export function normalizeTicketCode(input: string): string {
-  return input
-    .toUpperCase()
-    .replace(/[^0-9A-Z]/g, "")
-    .replace(/[IL]/g, "1")
-    .replace(/O/g, "0")
-    .replace(/U/g, "V");
 }
 
 export type ClaimResult =

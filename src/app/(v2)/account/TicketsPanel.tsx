@@ -3,8 +3,11 @@
 import { useActionState } from "react";
 import { claim, type ClaimState } from "./actions";
 import { Button } from "@/v2/components/ui/button";
-import { Input } from "@/v2/components/ui/input";
-import { FIELD_LIGHT } from "@/v2/components/styles";
+import PinInput from "@/v2/components/auth/PinInput";
+import {
+  TICKET_CODE_LENGTH,
+  normalizeTicketCode,
+} from "@/lib/ticket-code-format";
 import type { TicketRow } from "@/lib/ticket-store";
 
 export type TicketView = {
@@ -70,18 +73,26 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
         </ul>
       )}
       <form action={action} className="flex flex-col gap-2">
-        <label className="text-sm font-semibold text-navy" htmlFor="code">
+        <label
+          id="code-label"
+          className="text-sm font-semibold text-navy"
+          htmlFor="code"
+        >
           Have a ticket code? Claim it here.
         </label>
-        <div className="flex max-w-sm gap-2">
-          <Input
-            id="code"
-            name="code"
-            placeholder="A2C-4EF"
-            autoComplete="off"
-            required
-            className={`${FIELD_LIGHT} font-mono uppercase`}
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <div role="group" aria-labelledby="code-label">
+            <PinInput
+              name="code"
+              id="code"
+              length={TICKET_CODE_LENGTH}
+              dashAfter={3}
+              alphanumeric
+              normalize={normalizeTicketCode}
+              autoFocus={false}
+              disabled={pending}
+            />
+          </div>
           <Button type="submit" disabled={pending}>
             {pending ? "Claiming…" : "Claim"}
           </Button>
