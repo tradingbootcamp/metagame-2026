@@ -4,7 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { requireAdmin, type NamedAccess } from "./admin-auth";
+import { requireAccess, type NamedAccess } from "./admin-auth";
 import { API_KEY_HEADER, getAuth } from "./auth";
 import {
   toPacificWall,
@@ -26,17 +26,17 @@ export const error = (message: string, status: number, field?: string) =>
   json({ error: message, ...(field && { field }) }, status);
 
 /**
- * The caller when they're an admin, else the 401/403 to send. Accepts a
- * browser session too, so an admin can hit GET from the address bar.
+ * The caller when they may manage the schedule, else the 401/403 to send.
+ * Accepts a browser session too, so a team member can hit GET from the address bar.
  */
 export async function authorize(): Promise<NamedAccess | Response> {
-  const access = await requireAdmin();
+  const access = await requireAccess("schedule.manage");
   if (access) return access;
   const key = (await headers()).get(API_KEY_HEADER);
   if (!key) return error(`Send an API key in ${API_KEY_HEADER}.`, 401);
   const { valid } = await getAuth().api.verifyApiKey({ body: { key } });
   return valid
-    ? error("That key's account isn't an admin.", 403)
+    ? error("That key's account can't manage the schedule.", 403)
     : error("Invalid API key.", 401);
 }
 

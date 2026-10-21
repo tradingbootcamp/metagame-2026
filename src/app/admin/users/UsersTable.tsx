@@ -20,6 +20,7 @@ export type UserRow = {
   email: string;
   emailVerified: boolean;
   admin: boolean;
+  roles: string[];
   banned: boolean;
   joined: string;
   /** The viewer's own row has no buttons. */
@@ -52,6 +53,8 @@ export default function UsersTable({
   total: number;
   query: string;
   truncated: boolean;
+  /** Only `user.role = 'admin'` accounts may change roles, bans and delete. */
+  viewerIsAdmin: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -124,12 +127,23 @@ export default function UsersTable({
                     <span className="rounded bg-navy/10 px-1.5 py-0.5 text-xs font-semibold text-navy">
                       Admin
                     </span>
+                  ) : u.roles.length > 0 ? (
+                    <span className="flex flex-wrap gap-1">
+                      {u.roles.map((r) => (
+                        <span
+                          key={r}
+                          className="rounded bg-sky px-1.5 py-0.5 text-xs font-semibold text-navy"
+                        >
+                          {r}
+                        </span>
+                      ))}
+                    </span>
                   ) : (
                     <span className="text-ink/50">—</span>
                   )}
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
-                  {!u.self && (
+                  {!u.self && viewerIsAdmin && (
                     <span className="inline-flex gap-2">
                       <button
                         type="button"

@@ -3,7 +3,7 @@ import Link from "next/link";
 import BackToTools from "../BackToTools";
 import SessionBar from "../SessionBar";
 import ViewToggle from "./ViewToggle";
-import { adminAccess } from "@/lib/admin-auth";
+import { toolAccess } from "@/lib/admin-auth";
 
 export const metadata: Metadata = {
   title: "Database Schema — Metagame",
@@ -15,7 +15,7 @@ export default async function AdminSchemaLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const access = await adminAccess();
+  const access = await toolAccess("schema.view");
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">

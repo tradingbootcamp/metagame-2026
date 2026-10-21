@@ -62,8 +62,8 @@ function createAuth() {
       }),
       admin(),
       // A request with `x-api-key: <key>` reads as a session for the key's
-      // owner, so adminSession() gates the JSON API the same way it gates the
-      // pages. Keys are minted on /admin/api-keys.
+      // owner, so can() gates the JSON API the same way it gates the pages.
+      // Keys are minted on /admin/api-keys.
       apiKey({
         apiKeyHeaders: API_KEY_HEADER,
         defaultPrefix: "mg_",
@@ -126,28 +126,6 @@ export const currentSession = cache(async (): Promise<Session | null> => {
   // to prerender a page through getAuth() (which needs the env).
   const requestHeaders = await headers();
   return getAuth().api.getSession({ headers: requestHeaders });
-});
-
-/**
- * The session when its user holds the `admin` role and isn't banned, else
- * null. The break-glass check every team tool gates on until META-1483.
- * Reads the database, not the cookie cache, so a revoke or ban applies at
- * once; and never throws, so the password fallback survives a database outage.
- */
-export const adminSession = cache(async (): Promise<Session | null> => {
-  if (!accountsConfigured()) return null;
-  let session: Session | null;
-  try {
-    session = await getAuth().api.getSession({
-      headers: await headers(),
-      query: { disableCookieCache: true },
-    });
-  } catch (e) {
-    console.error("[auth] session read failed", e);
-    return null;
-  }
-  const user = session?.user;
-  return user?.role === "admin" && !user.banned ? session : null;
 });
 
 /**

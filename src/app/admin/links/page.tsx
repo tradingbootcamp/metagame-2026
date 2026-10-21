@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import SignIn from "../SignIn";
 import { NameForm } from "../SignInForms";
 import LinksTool from "./LinksTool";
-import { adminAccess } from "@/lib/admin-auth";
+import { toolAccess } from "@/lib/admin-auth";
 import { matchLabel } from "@/lib/name-match";
 import { siteOriginFromHeaders } from "@/lib/site-origin";
 import { listTrackingLinks, loadLinkOptions } from "@/lib/tracking-links";
@@ -12,7 +12,7 @@ export default async function AdminLinksPage() {
   // static at build time.
   await connection();
 
-  const access = await adminAccess();
+  const access = await toolAccess("links.manage");
   if (!access) return <SignIn next="/admin/links" />;
   if (!access.name) return <NameForm />;
 

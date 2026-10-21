@@ -3,7 +3,8 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb, schema } from "@/db";
-import { adminSession, getAuth } from "@/lib/auth";
+import { can } from "@/lib/access";
+import { getAuth } from "@/lib/auth";
 import { ensureAccount } from "@/lib/schedule-store";
 
 const PATH = "/admin/api-keys";
@@ -19,16 +20,16 @@ const message = (err: unknown) =>
 
 /**
  * Mints a key for the account with this email, making the account if needed.
- * A key acts as its account, so it only reaches admin routes once the account
- * is an admin. The key is returned once and never stored.
+ * A key acts as its account, so it only reaches a route once the account
+ * holds that route's permission. The key is returned once and never stored.
  */
 export async function createKey(
   email: string,
   name: string,
   label: string,
 ): Promise<CreateResult> {
-  const session = await adminSession();
-  if (!session) return { error: "Sign in with an admin account to do that." };
+  if (!(await can("api_keys.manage")))
+    return { error: "Sign in with an account that manages API keys." };
   email = email.trim().toLowerCase();
   name = name.trim();
   label = label.trim();
@@ -59,8 +60,8 @@ export async function createKey(
 
 /** Deletes the row; the plugin's own delete only reaches the caller's keys. */
 export async function revokeKey(id: string): Promise<Result> {
-  const session = await adminSession();
-  if (!session) return { error: "Sign in with an admin account to do that." };
+  if (!(await can("api_keys.manage")))
+    return { error: "Sign in with an account that manages API keys." };
   try {
     await getDb().delete(apikey).where(eq(apikey.id, id));
   } catch (err) {

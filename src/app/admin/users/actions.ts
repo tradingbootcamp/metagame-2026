@@ -2,20 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { adminSession, getAuth } from "@/lib/auth";
+import { teamAccess } from "@/lib/access";
+import { getAuth } from "@/lib/auth";
 
 export type Result = { error?: string };
 
 const message = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
 
-// Role and ban changes go through Better Auth's admin plugin, which checks the
-// caller's session itself, so only an admin account can make them. Changing
-// your own row is refused so the last admin can't lock everyone out.
+// Role and ban changes go through Better Auth's admin plugin, which only lets
+// `user.role = 'admin'` accounts make them, so `users.manage` alone isn't
+// enough here (roles and per-permission overrides are on the profile page).
+// Changing your own row is refused so the last admin can't lock everyone out.
 async function refused(userId: string): Promise<Result | null> {
-  const session = await adminSession();
-  if (!session) return { error: "Sign in with an admin account to do that." };
-  if (session.user.id === userId) {
+  const access = await teamAccess();
+  if (!access?.admin) return { error: "Only an admin account can do that." };
+  if (access.session.user.id === userId) {
     return { error: "You can't change your own access." };
   }
   return null;
