@@ -82,7 +82,13 @@ describe("shepherdWrite", () => {
       fields: { Shepherd: "Pat" },
       typecast: true,
     });
-    expect(shepherdWrite(null).fields).toEqual({ Shepherd: null });
+    expect(shepherdWrite(null)?.fields).toEqual({ Shepherd: null });
+  });
+
+  it("skips a shepherd whose only name is an email or blank", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(shepherdWrite({ email: "x@y.z", name: "x@y.z" })).toBeNull();
+    expect(shepherdWrite({ email: "x@y.z", name: " " })).toBeNull();
   });
 });
 

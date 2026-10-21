@@ -150,8 +150,15 @@ const MAX_CROWD = 10000;
 
 function count(body: Record<string, unknown>, key: string): number | null {
   const v = body[key];
-  if (v === null || v === undefined || v === "") return null;
-  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  if (v === null || v === undefined) return null;
+  const text = typeof v === "string" ? v.trim() : null;
+  if (text === "") return null;
+  const n =
+    typeof v === "number"
+      ? v
+      : text !== null && /^\d+$/.test(text)
+        ? Number(text)
+        : NaN;
   if (!Number.isInteger(n) || n < 0 || n > MAX_CROWD) {
     throw new InvalidField(
       key,
@@ -315,7 +322,8 @@ export function formToBody(formData: FormData): Record<string, unknown> {
   for (const key of new Set(formData.keys())) {
     if (key.startsWith("$ACTION")) continue;
     const values = formData.getAll(key).map(String);
-    body[key] = LIST_FIELDS.has(key) ? values.filter(Boolean) : values[0];
+    // The last value wins, so a hidden default before a checkbox reads as ticked.
+    body[key] = LIST_FIELDS.has(key) ? values.filter(Boolean) : values.at(-1);
   }
   if (ADVANCE_FIELD in body) body[ADVANCE_FIELD] = body[ADVANCE_FIELD] === "1";
   return body;

@@ -92,6 +92,17 @@ describe("parseGrade strictness", () => {
     expect(parseGrade({ expectedCrowdSize: 10000 }, []).ok).toBe(true);
     expect(parseGrade({ expectedCrowdSize: 10001 }, []).ok).toBe(false);
     expect(parseGrade({ expectedCrowdSize: true }, []).ok).toBe(false);
+    for (const bad of ["1e3", "0x10", "-1", "4.5"]) {
+      expect(parseGrade({ expectedCrowdSize: bad }, []).ok).toBe(false);
+    }
+    expect(parseGrade({ expectedCrowdSize: " 12 " }, [])).toMatchObject({
+      ok: true,
+      value: { grade: { expectedCrowdSize: 12 } },
+    });
+    expect(parseGrade({ expectedCrowdSize: " " }, [])).toMatchObject({
+      ok: true,
+      value: { grade: { expectedCrowdSize: null } },
+    });
   });
 });
 
@@ -124,6 +135,7 @@ describe("formToBody", () => {
     form.append("topicAreas", "");
     form.append("topicAreas", "larps");
     form.append("topicAreas", "ttrpgs");
+    form.append("advance", "0");
     form.append("advance", "1");
     form.append("$ACTION_ID_abc", "");
     const r = parseGrade(formToBody(form), []);

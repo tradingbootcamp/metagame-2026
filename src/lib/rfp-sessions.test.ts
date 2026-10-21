@@ -35,9 +35,13 @@ describe("attributedGrader", () => {
 });
 
 describe("nextStepsMayChange", () => {
-  it("follows a grade save only when it advances", () => {
-    expect(nextStepsMayChange({ kind: "grade", advance: false })).toBe(false);
-    expect(nextStepsMayChange({ kind: "grade", advance: true })).toBe(true);
+  it("follows a grade save when it advances or the session is grading", () => {
+    const save = (advance: boolean, phase: "grading" | "shepherding") =>
+      nextStepsMayChange({ kind: "grade", advance, phase });
+    expect(save(false, "shepherding")).toBe(false);
+    expect(save(true, "shepherding")).toBe(true);
+    // The first grade row moves "0. Assign grader" to "1. Grade".
+    expect(save(false, "grading")).toBe(true);
   });
 
   it("follows an assignment only while grading", () => {

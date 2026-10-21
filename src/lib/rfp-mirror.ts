@@ -67,15 +67,17 @@ export type MirrorGroup = Fields | Write | null;
  */
 export function shepherdWrite(
   shepherd: { email: string; name: string } | null,
-): Write {
-  return {
-    fields: {
-      Shepherd: shepherd
-        ? (committeeName(shepherd.email) ?? shepherd.name)
-        : null,
-    },
-    typecast: true,
-  };
+): Write | null {
+  if (shepherd === null) return { fields: { Shepherd: null }, typecast: true };
+  const name = committeeName(shepherd.email) ?? (shepherd.name.trim() || null);
+  // An email would become a Shepherd option; better to leave the cell alone.
+  if (!name || name.includes("@")) {
+    console.warn(
+      `[rfp-mirror] no name for shepherd ${shepherd.email}; skipping Shepherd`,
+    );
+    return null;
+  }
+  return { fields: { Shepherd: name }, typecast: true };
 }
 
 const SPACE_LABEL_BY_LOCATION = Object.fromEntries(

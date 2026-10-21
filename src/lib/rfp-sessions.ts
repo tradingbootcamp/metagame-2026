@@ -456,7 +456,7 @@ async function mirrorState(sessionId: string): Promise<MirrorState | null> {
 }
 
 export type MirrorTrigger =
-  | { kind: "grade"; advance: boolean }
+  | { kind: "grade"; advance: boolean; phase: Phase | null }
   | { kind: "assignment"; phase: Phase | null }
   | { kind: "update"; update: RfpSessionUpdate; phase: Phase | null };
 
@@ -467,7 +467,8 @@ export type MirrorTrigger =
 export function nextStepsMayChange(t: MirrorTrigger): boolean {
   switch (t.kind) {
     case "grade":
-      return t.advance;
+      // A save in grading can make the first grade row: "0." becomes "1.".
+      return t.advance || t.phase === "grading";
     case "assignment":
       return t.phase === "grading";
     case "update":
@@ -497,8 +498,10 @@ async function mirrorSession(
   }
 }
 
-const withPhase = (t: MirrorTrigger, phase: Phase | null): MirrorTrigger =>
-  t.kind === "grade" ? t : { ...t, phase };
+const withPhase = (t: MirrorTrigger, phase: Phase | null): MirrorTrigger => ({
+  ...t,
+  phase,
+});
 
 export type RfpSessionUpdate = {
   phase?: Phase | null;
@@ -673,7 +676,7 @@ export async function saveGrade(
   // Airtable holds one grade per row, so the latest save wins there.
   await mirrorSession(
     sessionId,
-    { kind: "grade", advance: input.advance },
+    { kind: "grade", advance: input.advance, phase: null },
     (s) => [
       {
         ...gradeFields(input.grade, spaceNames),
