@@ -247,11 +247,14 @@ export async function submitGrades(
   try {
     const rfpSession = await getRfpSession(sessionId);
     if (!rfpSession) return { error: "That session no longer exists." };
-    const mine = rfpSession.grades.some((g) => g.grader.userId === userId);
-    if (mine || !isEmptyGrade(grade.value)) {
+    const submitted = rfpSession.grades.some(
+      (g) => g.grader.userId === userId && g.submittedAt !== null,
+    );
+    if (submitted || !isEmptyGrade(grade.value)) {
       await saveGrade(sessionId, userId, grade.value);
     } else if (Object.keys(grade.value.session).length > 0) {
-      // Notes alone, from someone who isn't grading: no grade row is made.
+      // Notes alone, from someone without a submitted grade: no empty grade is
+      // submitted, even over an open assignment.
       await updateRfpSession(sessionId, { text: grade.value.session });
     }
     if (consent !== undefined && consent !== loadedConsent) {

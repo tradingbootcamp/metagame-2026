@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import GradeForm from "./GradeForm";
 import InfoTip from "../InfoTip";
 import { swatch } from "@/lib/airtable-colors";
-import { SPACE_OPTIONS_FIELD } from "@/lib/grade-input";
+import { GRADE_KEYS, SPACE_OPTIONS_FIELD } from "@/lib/grade-input";
 import { gradeAccess, graderUserId } from "@/lib/grader-auth";
 import {
   MEGAGAME_INTEREST_LABELS,
@@ -155,7 +155,7 @@ function contactOf(s: RfpSession): ShepherdContact {
 /** A grade's values keyed the way the form names them. */
 function formValues(grade: Grade): Record<string, unknown> {
   return {
-    ...grade,
+    ...Object.fromEntries(GRADE_KEYS.map((k) => [k, grade[k]])),
     [SPACE_OPTIONS_FIELD]: grade.spaceOptions.map((s) => s.locationId),
   };
 }
