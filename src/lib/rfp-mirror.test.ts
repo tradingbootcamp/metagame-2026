@@ -2,12 +2,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GradeValues } from "./grade-input";
 import type { MirrorState } from "./rfp-sessions";
 import {
-  committeeField,
   gradeFields,
+  graderField,
   mirror,
   nextStepsField,
   sessionFields,
+  shepherdWrite,
 } from "./rfp-mirror";
+
+vi.mock("@/env", () => ({ env: { AIRTABLE_API_KEY: "test" } }));
 
 const grade: GradeValues = {
   operationalEase: "good",
@@ -49,23 +52,37 @@ describe("gradeFields", () => {
   });
 });
 
-describe("committeeField", () => {
-  it("names the account as the select does", () => {
-    expect(committeeField("Shepherd", "jbromels@gmail.com")).toEqual({
-      Shepherd: "John Bromels",
+describe("graderField", () => {
+  it("names a committee member as the select does", () => {
+    expect(graderField({ email: "jbromels@gmail.com" })).toEqual({
+      "Rubric: Grader": "John Bromels",
     });
   });
 
-  it("clears the shepherd but marks the grader Unassigned", () => {
-    expect(committeeField("Shepherd", null)).toEqual({ Shepherd: null });
-    expect(committeeField("Rubric: Grader", null)).toEqual({
-      "Rubric: Grader": "Unassigned",
+  it("writes Other for anyone the Grader select doesn't list", () => {
+    expect(graderField({ email: "ja.kopczynski@gmail.com" })).toEqual({
+      "Rubric: Grader": "Other",
+    });
+    expect(graderField({ email: "new@example.com" })).toEqual({
+      "Rubric: Grader": "Other",
     });
   });
 
-  it("skips an account Airtable has no option for", () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    expect(committeeField("Shepherd", "new@example.com")).toBeNull();
+  it("marks nobody Unassigned", () => {
+    expect(graderField(null)).toEqual({ "Rubric: Grader": "Unassigned" });
+  });
+});
+
+describe("shepherdWrite", () => {
+  it("uses the committee name, else the display name, with typecast on", () => {
+    expect(
+      shepherdWrite({ email: "jbromels@gmail.com", name: "John" }),
+    ).toEqual({ fields: { Shepherd: "John Bromels" }, typecast: true });
+    expect(shepherdWrite({ email: "new@example.com", name: "Pat" })).toEqual({
+      fields: { Shepherd: "Pat" },
+      typecast: true,
+    });
+    expect(shepherdWrite(null).fields).toEqual({ Shepherd: null });
   });
 });
 
@@ -75,8 +92,8 @@ describe("nextStepsField", () => {
     phase: "grading",
     verdict: null,
     graded: false,
-    shepherdEmail: null,
-    graderEmail: null,
+    shepherd: null,
+    grader: null,
   };
   it("reads the grade rows and shepherd off the state", () => {
     expect(nextStepsField(state)).toEqual({ "Next steps": "0. Assign grader" });
@@ -110,5 +127,27 @@ describe("mirror", () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     mirror("recAAAAAAAAAAAAAA", { Verdict: "Confirmed" });
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("sends plain fields with typecast off and a Write as given", async () => {
+    vi.stubEnv("RFP_AIRTABLE_MIRROR", "1");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}"));
+    mirror(
+      "recAAAAAAAAAAAAAA",
+      { Verdict: "Confirmed" },
+      null,
+      {},
+      shepherdWrite({ email: "new@example.com", name: "Pat" }),
+    );
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+    const bodies = fetchSpy.mock.calls.map(([, init]) =>
+      JSON.parse(String(init?.body)),
+    );
+    expect(bodies).toEqual([
+      { fields: { Verdict: "Confirmed" }, typecast: false },
+      { fields: { Shepherd: "Pat" }, typecast: true },
+    ]);
   });
 });

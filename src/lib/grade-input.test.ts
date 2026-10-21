@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formToBody, parseGrade, parseSessionText } from "./grade-input";
+import {
+  formToBody,
+  gradeBody,
+  parseGrade,
+  parseSessionText,
+} from "./grade-input";
 
 const ROOM = "11111111-1111-1111-1111-111111111111";
 
@@ -57,6 +62,61 @@ describe("parseGrade", () => {
   });
 });
 
+describe("parseGrade strictness", () => {
+  it("refuses keys that aren't grade fields", () => {
+    expect(parseGrade({ fun: "good", phase: "deciding" }, [])).toEqual({
+      ok: false,
+      field: "phase",
+      error: "Unknown field phase.",
+    });
+    expect(parseGrade({ graderEmail: "a@b.co" }, []).ok).toBe(true);
+  });
+
+  it("wants advance as a boolean", () => {
+    expect(parseGrade({ advance: true }, [])).toMatchObject({
+      ok: true,
+      value: { advance: true },
+    });
+    expect(parseGrade({ advance: "1" }, []).ok).toBe(false);
+  });
+
+  it("takes space options as ids or as GET's {locationId}", () => {
+    expect(
+      parseGrade({ spaceOptions: [{ locationId: ROOM, name: "Rat Park" }] }, [
+        ROOM,
+      ]),
+    ).toMatchObject({ ok: true, value: { spaceLocationIds: [ROOM] } });
+  });
+
+  it("caps the crowd size and refuses booleans", () => {
+    expect(parseGrade({ expectedCrowdSize: 10000 }, []).ok).toBe(true);
+    expect(parseGrade({ expectedCrowdSize: 10001 }, []).ok).toBe(false);
+    expect(parseGrade({ expectedCrowdSize: true }, []).ok).toBe(false);
+  });
+});
+
+describe("gradeBody", () => {
+  it("round-trips a stored grade so a partial edit keeps the rest", () => {
+    const stored = parseGrade(
+      { fun: "best", topicAreas: ["larps"], spaceOptions: [ROOM] },
+      [ROOM],
+    );
+    if (!stored.ok) throw new Error("setup");
+    const merged = parseGrade(
+      { ...gradeBody(stored.value.grade, [ROOM]), qualityNotes: "solid" },
+      [ROOM],
+    );
+    expect(merged).toMatchObject({
+      ok: true,
+      value: {
+        grade: { fun: "best", topicAreas: ["larps"], qualityNotes: "solid" },
+        spaceLocationIds: [ROOM],
+        session: {},
+      },
+    });
+  });
+});
+
 describe("formToBody", () => {
   it("collects multi-selects and takes the first of anything else", () => {
     const form = new FormData();
@@ -65,6 +125,7 @@ describe("formToBody", () => {
     form.append("topicAreas", "larps");
     form.append("topicAreas", "ttrpgs");
     form.append("advance", "1");
+    form.append("$ACTION_ID_abc", "");
     const r = parseGrade(formToBody(form), []);
     expect(r.ok && r.value.grade.fun).toBe("good");
     expect(r.ok && r.value.grade.topicAreas).toEqual(["larps", "ttrpgs"]);

@@ -1,7 +1,6 @@
 import {
   and,
   asc,
-  desc,
   eq,
   exists,
   inArray,
@@ -20,13 +19,14 @@ import {
   SPACE_OPTION_LOCATIONS,
 } from "./rfp-labels";
 import {
-  committeeField,
   gradeFields,
+  graderField,
   mirror,
   nextStepsField,
   sessionFields,
+  shepherdWrite,
   verdictField,
-  type Fields,
+  type MirrorGroup,
 } from "./rfp-mirror";
 import { accountName } from "./schedule-store";
 
@@ -97,7 +97,7 @@ export type RfpSession = {
   shepherd: Account | null;
   /** Oldest first. */
   grades: Grade[];
-  /** The latest-assigned grader, the one Airtable's single Grader shows. */
+  /** attributedGrader's grader: the one Airtable's single Grader shows. */
   grader: Account | null;
   /** The whole sessions row, for the RFP answers and committee notes. */
   row: typeof sessions.$inferSelect;
@@ -289,7 +289,7 @@ async function loadRfpSessions(where: SQL | undefined): Promise<RfpSession[]> {
       // A left join yields an all-null object when there's no shepherd.
       shepherd: shepherd?.userId ? withCommittee(shepherd) : null,
       grades: sessionGradeRows,
-      grader: sessionGradeRows.at(-1)?.grader ?? null,
+      grader: attributedGrader(sessionGradeRows)?.grader ?? null,
       row: session,
     };
   });
@@ -300,6 +300,27 @@ export function listRfpSessions(
   filter: RfpSessionFilter = {},
 ): Promise<RfpSession[]> {
   return loadRfpSessions(filterWhere(filter));
+}
+
+type GradeTimes = {
+  submittedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+/**
+ * The grade a session is attributed to: the most recently saved submitted
+ * one, else the latest assignment.
+ */
+export function attributedGrader<G extends GradeTimes>(grades: G[]): G | null {
+  const submitted = grades.filter((g) => g.submittedAt !== null);
+  const pool = submitted.length > 0 ? submitted : grades;
+  const time = (g: G) =>
+    (submitted.length > 0 ? g.updatedAt : g.createdAt).getTime();
+  return pool.reduce<G | null>(
+    (best, g) => (best === null || time(g) > time(best) ? g : best),
+    null,
+  );
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -379,51 +400,105 @@ export async function spaceOptionLocations(): Promise<
 
 // ── Writes ───────────────────────────────────────────────────────────────────
 
+type MirrorAccount = { email: string; name: string };
+
 /** What the Airtable mirror needs to know about a session after a write. */
 export type MirrorState = {
   recordId: string | null;
   phase: Phase | null;
   verdict: Verdict | null;
   graded: boolean;
-  shepherdEmail: string | null;
-  /** The latest-assigned grader's email. */
-  graderEmail: string | null;
+  shepherd: MirrorAccount | null;
+  /** attributedGrader's account: whose grade Airtable's single row shows. */
+  grader: MirrorAccount | null;
 };
 
 async function mirrorState(sessionId: string): Promise<MirrorState | null> {
-  const latestGrader = getDb()
-    .select({ email: user.email })
-    .from(sessionGrades)
-    .innerJoin(user, eq(user.id, sessionGrades.graderUserId))
-    .where(eq(sessionGrades.sessionId, sessions.id))
-    .orderBy(desc(sessionGrades.createdAt), desc(sessionGrades.id))
-    .limit(1);
-  const [row] = await getDb()
-    .select({
-      recordId: sessions.airtableRfpRecordId,
-      phase: sessions.phase,
-      verdict: sessions.verdict,
-      shepherdEmail: user.email,
-      graderEmail: sql<string | null>`(${latestGrader})`,
-    })
-    .from(sessions)
-    .leftJoin(user, eq(user.id, sessions.shepherdUserId))
-    .where(eq(sessions.id, sessionId));
-  return row ? { ...row, graded: row.graderEmail !== null } : null;
+  const db = getDb();
+  const [[row], grades] = await Promise.all([
+    db
+      .select({
+        recordId: sessions.airtableRfpRecordId,
+        phase: sessions.phase,
+        verdict: sessions.verdict,
+        shepherdEmail: user.email,
+        shepherdName: accountName,
+      })
+      .from(sessions)
+      .leftJoin(user, eq(user.id, sessions.shepherdUserId))
+      .leftJoin(profiles, eq(profiles.userId, user.id))
+      .where(eq(sessions.id, sessionId)),
+    db
+      .select({
+        email: user.email,
+        name: accountName,
+        submittedAt: sessionGrades.submittedAt,
+        createdAt: sessionGrades.createdAt,
+        updatedAt: sessionGrades.updatedAt,
+      })
+      .from(sessionGrades)
+      .innerJoin(user, eq(user.id, sessionGrades.graderUserId))
+      .leftJoin(profiles, eq(profiles.userId, user.id))
+      .where(eq(sessionGrades.sessionId, sessionId)),
+  ]);
+  if (!row) return null;
+  const grader = attributedGrader(grades);
+  return {
+    recordId: row.recordId,
+    phase: row.phase,
+    verdict: row.verdict,
+    graded: grades.length > 0,
+    shepherd: row.shepherdEmail
+      ? { email: row.shepherdEmail, name: row.shepherdName }
+      : null,
+    grader: grader && { email: grader.email, name: grader.name },
+  };
+}
+
+export type MirrorTrigger =
+  | { kind: "grade"; advance: boolean }
+  | { kind: "assignment"; phase: Phase | null }
+  | { kind: "update"; update: RfpSessionUpdate; phase: Phase | null };
+
+/**
+ * Whether a write can move "Next steps", so the mirror leaves it alone
+ * otherwise. `phase` is the session's phase after the write.
+ */
+export function nextStepsMayChange(t: MirrorTrigger): boolean {
+  switch (t.kind) {
+    case "grade":
+      return t.advance;
+    case "assignment":
+      return t.phase === "grading";
+    case "update":
+      return (
+        "phase" in t.update ||
+        ("shepherdUserId" in t.update && t.phase === "shepherding")
+      );
+  }
 }
 
 /** Copy a write onto the RFP row. Never throws: the database write stands. */
 async function mirrorSession(
   sessionId: string,
-  groups: (state: MirrorState) => (Fields | null)[],
+  trigger: MirrorTrigger | null,
+  groups: (state: MirrorState) => MirrorGroup[],
 ): Promise<void> {
   try {
     const state = await mirrorState(sessionId);
-    if (state?.recordId) mirror(state.recordId, ...groups(state));
+    if (!state?.recordId) return;
+    const steps =
+      trigger && nextStepsMayChange(withPhase(trigger, state.phase))
+        ? nextStepsField(state)
+        : null;
+    mirror(state.recordId, ...groups(state), steps);
   } catch (err) {
     console.error(`[rfp-mirror] couldn't read session ${sessionId}:`, err);
   }
 }
+
+const withPhase = (t: MirrorTrigger, phase: Phase | null): MirrorTrigger =>
+  t.kind === "grade" ? t : { ...t, phase };
 
 export type RfpSessionUpdate = {
   phase?: Phase | null;
@@ -448,30 +523,18 @@ export async function updateRfpSession(
     .returning({ id: sessions.id });
   if (!row) throw new Error("That session no longer exists.");
 
-  await mirrorSession(sessionId, (s) => [
-    {
-      // "Next steps" follows the shepherd too: shepherding reads 4 or 5 by
-      // whether there is one.
-      ...("phase" in update || "shepherdUserId" in update
-        ? nextStepsField(s)
-        : {}),
-      ...("verdict" in update ? verdictField(s) : {}),
-      ...sessionFields(text, update.speakerTier),
-    },
-    "shepherdUserId" in update
-      ? committeeField("Shepherd", s.shepherdEmail)
-      : null,
-  ]);
+  await mirrorSession(
+    sessionId,
+    { kind: "update", update, phase: null },
+    (s) => [
+      {
+        ...("verdict" in update ? verdictField(s) : {}),
+        ...sessionFields(text, update.speakerTier),
+      },
+      "shepherdUserId" in update ? shepherdWrite(s.shepherd) : null,
+    ],
+  );
 }
-
-export const setPhase = (sessionId: string, phase: Phase | null) =>
-  updateRfpSession(sessionId, { phase });
-
-export const setVerdict = (sessionId: string, verdict: Verdict | null) =>
-  updateRfpSession(sessionId, { verdict });
-
-export const setShepherd = (sessionId: string, userId: string | null) =>
-  updateRfpSession(sessionId, { shepherdUserId: userId });
 
 /** Assign a grader: an unsubmitted grade row. A no-op if they have one. */
 export async function assignGrader(
@@ -482,42 +545,47 @@ export async function assignGrader(
     .insert(sessionGrades)
     .values({ sessionId, graderUserId: userId })
     .onConflictDoNothing();
-  await mirrorSession(sessionId, (s) => [
-    committeeField("Rubric: Grader", s.graderEmail),
-    nextStepsField(s),
+  await mirrorSession(sessionId, { kind: "assignment", phase: null }, (s) => [
+    graderField(s.grader),
   ]);
 }
 
 /**
- * Take back an assignment. Only an unsubmitted one: a submitted grade is never
- * thrown away from here. Returns whether a row was removed.
+ * Take back an assignment. Only an unsubmitted one: a submitted grade is
+ * never thrown away from here.
  */
 export async function unassignGrader(
   sessionId: string,
   userId: string,
-): Promise<boolean> {
-  const removed = await getDb()
+): Promise<"removed" | "submitted" | "missing"> {
+  const db = getDb();
+  const mine = and(
+    eq(sessionGrades.sessionId, sessionId),
+    eq(sessionGrades.graderUserId, userId),
+  );
+  const removed = await db
     .delete(sessionGrades)
-    .where(
-      and(
-        eq(sessionGrades.sessionId, sessionId),
-        eq(sessionGrades.graderUserId, userId),
-        isNull(sessionGrades.submittedAt),
-      ),
-    )
+    .where(and(mine, isNull(sessionGrades.submittedAt)))
     .returning({ id: sessionGrades.id });
-  if (removed.length === 0) return false;
-  await mirrorSession(sessionId, (s) => [
-    committeeField("Rubric: Grader", s.graderEmail),
-    nextStepsField(s),
+  if (removed.length === 0) {
+    const [kept] = await db
+      .select({ id: sessionGrades.id })
+      .from(sessionGrades)
+      .where(mine);
+    return kept ? "submitted" : "missing";
+  }
+  await mirrorSession(sessionId, { kind: "assignment", phase: null }, (s) => [
+    graderField(s.grader),
   ]);
-  return true;
+  return "removed";
 }
 
 /**
  * Save the grader's own grade, replacing every field of their row (inserting
- * it if they had none, which also counts as submitting it), its space options,
- * and the session notes the grading form also edits. One transaction.
+ * it if they had none, which also counts as submitting it), its space
+ * options, and the session notes in `input.session`. Notes are written only
+ * when present, and they're shared by everyone grading the session, so callers
+ * should send only the notes the grader actually changed. One transaction.
  */
 export async function saveGrade(
   sessionId: string,
@@ -599,24 +667,19 @@ export async function saveGrade(
       : []),
   ]);
 
-  const [graderEmail, spaces] = await Promise.all([
-    db
-      .select({ email: user.email })
-      .from(user)
-      .where(eq(user.id, graderUserId))
-      .then((rows) => rows[0]?.email ?? null),
-    spaceOptionLocations(),
-  ]);
-  const spaceNames = spaces
+  const spaceNames = (await spaceOptionLocations())
     .filter((l) => input.spaceLocationIds.includes(l.id))
     .map((l) => l.name);
   // Airtable holds one grade per row, so the latest save wins there.
-  await mirrorSession(sessionId, (s) => [
-    {
-      ...gradeFields(input.grade, spaceNames),
-      ...sessionFields(input.session),
-      ...nextStepsField(s),
-    },
-    committeeField("Rubric: Grader", graderEmail),
-  ]);
+  await mirrorSession(
+    sessionId,
+    { kind: "grade", advance: input.advance },
+    (s) => [
+      {
+        ...gradeFields(input.grade, spaceNames),
+        ...sessionFields(input.session),
+      },
+      graderField(s.grader),
+    ],
+  );
 }

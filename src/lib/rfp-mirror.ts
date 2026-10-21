@@ -34,7 +34,7 @@ export const mirrorEnabled = () =>
 export const nextStepsField = (state: MirrorState): Fields => ({
   "Next steps": nextStepsFor(state.phase, {
     graded: state.graded,
-    shepherded: state.shepherdEmail !== null,
+    shepherded: state.shepherd !== null,
   }),
 });
 
@@ -42,23 +42,40 @@ export const verdictField = (state: MirrorState): Fields => ({
   Verdict: label(VERDICT_LABELS, state.verdict),
 });
 
+/** Committee names the "Rubric: Grader" select lacks. */
+const NOT_GRADER_OPTIONS = new Set(["Jisk", "Julian Wise"]);
+
 /**
- * A Grader or Shepherd select from an account. Null when the account isn't a
- * committee name Airtable knows, so the caller skips the write.
+ * "Rubric: Grader" for the attributed grader. Anyone the select doesn't list
+ * is written as its "Other" option.
  */
-export function committeeField(
-  field: "Rubric: Grader" | "Shepherd",
-  email: string | null,
-): Fields | null {
-  if (email === null) {
-    return { [field]: field === "Rubric: Grader" ? "Unassigned" : null };
-  }
-  const name = committeeName(email);
-  if (!name) {
-    console.warn(`[rfp-mirror] ${email} has no ${field} option; skipping`);
-    return null;
-  }
-  return { [field]: name };
+export function graderField(grader: { email: string } | null): Fields {
+  if (grader === null) return { "Rubric: Grader": "Unassigned" };
+  const name = committeeName(grader.email);
+  return {
+    "Rubric: Grader": name && !NOT_GRADER_OPTIONS.has(name) ? name : "Other",
+  };
+}
+
+/** A PATCH of its own, with typecast on or off. */
+export type Write = { fields: Fields; typecast: boolean };
+export type MirrorGroup = Fields | Write | null;
+
+/**
+ * "Shepherd" for an account, by committee name else display name. Typecast is
+ * on, so a new shepherd is added to the select's options as it saves.
+ */
+export function shepherdWrite(
+  shepherd: { email: string; name: string } | null,
+): Write {
+  return {
+    fields: {
+      Shepherd: shepherd
+        ? (committeeName(shepherd.email) ?? shepherd.name)
+        : null,
+    },
+    typecast: true,
+  };
 }
 
 const SPACE_LABEL_BY_LOCATION = Object.fromEntries(
@@ -137,7 +154,7 @@ export function sessionFields(
   return out;
 }
 
-async function patch(recordId: string, fields: Fields) {
+async function patch(recordId: string, { fields, typecast }: Write) {
   const { AIRTABLE_API_KEY } = env;
   if (!AIRTABLE_API_KEY) throw new Error("Airtable is not configured");
   const res = await fetch(
@@ -149,8 +166,7 @@ async function patch(recordId: string, fields: Fields) {
         Authorization: `Bearer ${AIRTABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
-      // typecast off: a label that isn't an option fails instead of minting one.
-      body: JSON.stringify({ fields, typecast: false }),
+      body: JSON.stringify({ fields, typecast }),
     },
   );
   if (!res.ok) {
@@ -158,19 +174,23 @@ async function patch(recordId: string, fields: Fields) {
   }
 }
 
+const isWrite = (g: Fields | Write): g is Write =>
+  "typecast" in g && typeof g.typecast === "boolean" && "fields" in g;
+
 /**
  * Copy fields onto the RFP row once the response is sent. Each group is its
- * own PATCH, so one rejected option (a grader Airtable doesn't list) doesn't
- * sink the rest.
+ * own PATCH, so one rejected value doesn't sink the rest. Plain fields go with
+ * typecast off: a label that isn't an option fails instead of minting one.
  */
 export function mirror(
   recordId: string | null,
-  ...groups: (Fields | null)[]
+  ...groups: MirrorGroup[]
 ): void {
   if (!recordId) return;
-  const writes = groups.filter(
-    (g): g is Fields => g !== null && Object.keys(g).length > 0,
-  );
+  const writes = groups
+    .filter((g): g is Fields | Write => g !== null)
+    .map((g) => (isWrite(g) ? g : { fields: g, typecast: false }))
+    .filter((w) => Object.keys(w.fields).length > 0);
   if (writes.length === 0) return;
   if (!mirrorEnabled()) {
     console.info(
@@ -180,9 +200,9 @@ export function mirror(
     return;
   }
   const task = async () => {
-    for (const fields of writes) {
+    for (const write of writes) {
       try {
-        await patch(recordId, fields);
+        await patch(recordId, write);
       } catch (err) {
         console.error(`[rfp-mirror] ${recordId} failed:`, err);
       }

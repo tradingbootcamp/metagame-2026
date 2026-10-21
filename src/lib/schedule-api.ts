@@ -56,7 +56,10 @@ export async function readBody(request: Request): Promise<Raw | Response> {
 /** `explainDbError` as a response: a constraint is the caller's fault. */
 export function failed(err: unknown): Response {
   const { field, error: message } = explainDbError(err);
-  return error(message, field ? 400 : 500, field);
+  if (field) return error(message, 400, field);
+  // Anything else may be raw SQL; keep it in the logs.
+  console.error("[admin api] write failed:", err);
+  return error("Couldn't save.", 500);
 }
 
 export function done() {

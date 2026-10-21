@@ -1,8 +1,10 @@
 import { assignGrader, unassignGrader } from "@/lib/rfp-sessions";
 import {
   findRfpSession,
+  inPipeline,
   namedGrader,
-  resolveAccount,
+  NOT_IN_PIPELINE,
+  resolveGrader,
 } from "@/lib/rfp-sessions-api";
 import { authorize, error, failed, json, readBody } from "@/lib/schedule-api";
 
@@ -15,19 +17,28 @@ async function target(request: Request, ctx: Ctx) {
   if (access instanceof Response) return access;
   const body = await readBody(request);
   if (body instanceof Response) return body;
+  const unknown = Object.keys(body).find(
+    (k) => k !== "graderUserId" && k !== "graderEmail",
+  );
+  if (unknown) return error(`Unknown field ${unknown}.`, 400, unknown);
   const named = namedGrader(body);
   if (!named.ok) return error(named.error, 400, named.field);
   if (named.value === undefined) {
-    return error("Name the grader with graderUserId or graderEmail.", 400);
+    return error(
+      "Name the grader with graderUserId or graderEmail.",
+      400,
+      "graderUserId",
+    );
   }
-  const userId = await resolveAccount(named.value);
-  if (!userId) return error(`No account for ${named.value}.`, 400, "grader");
+  const grader = await resolveGrader(named.value);
+  if ("error" in grader) return error(grader.error, 400, "graderUserId");
   const rfpSession = await findRfpSession((await ctx.params).id);
   if (!rfpSession) return error("No such session.", 404);
-  return { sessionId: rfpSession.sessionId, userId };
+  if (!inPipeline(rfpSession)) return error(NOT_IN_PIPELINE, 409);
+  return { sessionId: rfpSession.sessionId, userId: grader.userId };
 }
 
-/** Assigns a grader: an unsubmitted grade row. A no-op if they have one. */
+/** Assigns a committee member to grade: an unsubmitted grade row. A no-op if they have one. */
 export async function POST(request: Request, ctx: Ctx) {
   const t = await target(request, ctx);
   if (t instanceof Response) return t;
@@ -39,13 +50,17 @@ export async function POST(request: Request, ctx: Ctx) {
   return json({ session: await findRfpSession(t.sessionId) });
 }
 
-/** Takes back an assignment; a submitted grade is kept (409). */
+/** Takes back an assignment: 404 without one, 409 once the grade is submitted. */
 export async function DELETE(request: Request, ctx: Ctx) {
   const t = await target(request, ctx);
   if (t instanceof Response) return t;
   try {
-    if (!(await unassignGrader(t.sessionId, t.userId))) {
-      return error("No unsubmitted assignment for that grader.", 409);
+    const result = await unassignGrader(t.sessionId, t.userId);
+    if (result === "missing") {
+      return error("That grader isn't assigned.", 404);
+    }
+    if (result === "submitted") {
+      return error("That grade is submitted; it can't be unassigned.", 409);
     }
   } catch (err) {
     return failed(err);

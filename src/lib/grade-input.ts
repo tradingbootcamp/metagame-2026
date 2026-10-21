@@ -146,26 +146,89 @@ function enumList<V extends string>(
   ].filter((item): item is V => item !== null);
 }
 
+const MAX_CROWD = 10000;
+
 function count(body: Record<string, unknown>, key: string): number | null {
   const v = body[key];
   if (v === null || v === undefined || v === "") return null;
-  const n = typeof v === "number" ? v : Number(v);
-  if (!Number.isInteger(n) || n < 0) {
-    throw new InvalidField(key, `${key} must be a whole number, 0 or more.`);
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  if (!Number.isInteger(n) || n < 0 || n > MAX_CROWD) {
+    throw new InvalidField(
+      key,
+      `${key} must be a whole number from 0 to ${MAX_CROWD}.`,
+    );
   }
   return n;
+}
+
+/** The keys of a grade body besides the session notes. */
+export const GRADE_KEYS = [
+  ...RUBRIC_KEYS,
+  "verdictRecommendation",
+  "qualityNotes",
+  "schedulerNotes",
+  "shepherdMatch",
+  "topicAreas",
+  "potentialPanels",
+  "megagameIntegration",
+  "expectedCrowdSize",
+  "allowDropins",
+] as const satisfies readonly (keyof GradeValues)[];
+
+/** Who the grade is for, when an admin saves someone else's. */
+export const GRADER_KEYS = ["graderUserId", "graderEmail"] as const;
+
+const ALLOWED_KEYS = new Set<string>([
+  ...GRADE_KEYS,
+  ...GRADE_FORM_SESSION_KEYS,
+  ...GRADER_KEYS,
+  SPACE_OPTIONS_FIELD,
+  ADVANCE_FIELD,
+]);
+
+/** Location ids from `["id"]` or `[{locationId}]`, as GET returns them. */
+function spaceIds(
+  body: Record<string, unknown>,
+  locationIds: readonly string[],
+) {
+  const v = body[SPACE_OPTIONS_FIELD];
+  if (v === null || v === undefined) return [];
+  const ids = Array.isArray(v)
+    ? v.map((item) =>
+        typeof item === "string"
+          ? item
+          : item && typeof item === "object" && "locationId" in item
+            ? (item as { locationId: unknown }).locationId
+            : null,
+      )
+    : null;
+  if (
+    !ids ||
+    ids.some((id) => typeof id !== "string" || !locationIds.includes(id))
+  ) {
+    throw new InvalidField(
+      SPACE_OPTIONS_FIELD,
+      `${SPACE_OPTIONS_FIELD} must be a list of space-option location ids.`,
+    );
+  }
+  return [...new Set(ids as string[])];
 }
 
 /**
  * A whole grade, checked against the enums; anything left out is cleared,
  * since saving replaces the grader's row. Session notes are only touched when
- * present. `locationIds` are the rooms a grade may suggest.
+ * present. Unknown keys are refused. `locationIds` are the rooms a grade may
+ * suggest.
  */
 export function parseGrade(
   body: Record<string, unknown>,
   locationIds: readonly string[],
 ): Parsed<GradeInput> {
   try {
+    const unknown = Object.keys(body).find((k) => !ALLOWED_KEYS.has(k));
+    if (unknown !== undefined) {
+      throw new InvalidField(unknown, `Unknown field ${unknown}.`);
+    }
     const rubric = Object.fromEntries(
       RUBRIC_KEYS.map((key) => [
         key,
@@ -173,23 +236,18 @@ export function parseGrade(
       ]),
     ) as Record<RubricKey, RubricGrade | null>;
 
-    const spaces = body[SPACE_OPTIONS_FIELD] ?? [];
-    if (
-      !Array.isArray(spaces) ||
-      spaces.some((id) => typeof id !== "string" || !locationIds.includes(id))
-    ) {
-      throw new InvalidField(
-        SPACE_OPTIONS_FIELD,
-        `${SPACE_OPTIONS_FIELD} must be a list of space-option location ids.`,
-      );
-    }
-
     const session: SessionText = {};
     for (const key of GRADE_FORM_SESSION_KEYS) {
       if (key in body) session[key] = optionalText(body, key);
     }
 
-    const advance = body[ADVANCE_FIELD];
+    const advance = body[ADVANCE_FIELD] ?? false;
+    if (typeof advance !== "boolean") {
+      throw new InvalidField(
+        ADVANCE_FIELD,
+        `${ADVANCE_FIELD} must be true or false.`,
+      );
+    }
     return {
       ok: true,
       value: {
@@ -217,9 +275,9 @@ export function parseGrade(
           expectedCrowdSize: count(body, "expectedCrowdSize"),
           allowDropins: optionalEnum(body, "allowDropins", DROPINS_LABELS),
         },
-        spaceLocationIds: [...new Set(spaces as string[])],
+        spaceLocationIds: spaceIds(body, locationIds),
         session,
-        advance: advance === true || advance === "1",
+        advance,
       },
     };
   } catch (err) {
@@ -228,19 +286,38 @@ export function parseGrade(
   }
 }
 
+/**
+ * A stored grade as a parseGrade body, so a partial edit can be laid over it
+ * and saved whole.
+ */
+export function gradeBody(
+  grade: GradeValues,
+  spaceLocationIds: readonly string[],
+): Record<string, unknown> {
+  return {
+    ...Object.fromEntries(GRADE_KEYS.map((key) => [key, grade[key]])),
+    [SPACE_OPTIONS_FIELD]: [...spaceLocationIds],
+  };
+}
+
 const LIST_FIELDS = new Set<string>([
   "topicAreas",
   "potentialPanels",
   SPACE_OPTIONS_FIELD,
 ]);
 
-/** The grading form's FormData in parseGrade's shape. */
+/**
+ * The grading form's FormData in parseGrade's shape. Drops the keys React
+ * adds for server actions; a ticked advance box posts "1".
+ */
 export function formToBody(formData: FormData): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   for (const key of new Set(formData.keys())) {
+    if (key.startsWith("$ACTION")) continue;
     const values = formData.getAll(key).map(String);
     body[key] = LIST_FIELDS.has(key) ? values.filter(Boolean) : values[0];
   }
+  if (ADVANCE_FIELD in body) body[ADVANCE_FIELD] = body[ADVANCE_FIELD] === "1";
   return body;
 }
 

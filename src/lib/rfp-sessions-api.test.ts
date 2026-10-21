@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  committeeMember,
   namedGrader,
   parseRfpSessionPatch,
   parseRfpSessionQuery,
@@ -68,5 +69,39 @@ describe("namedGrader", () => {
       value: "x@y.z",
     });
     expect(namedGrader({ graderUserId: "" }).ok).toBe(false);
+  });
+});
+
+describe("parseRfpSessionPatch strictness", () => {
+  it("refuses unknown keys and a shepherd object", () => {
+    expect(parseRfpSessionPatch({ title: "x" })).toEqual({
+      ok: false,
+      field: "title",
+      error: "Unknown field title.",
+    });
+    const r = parseRfpSessionPatch({ shepherd: { email: "a@b.co" } });
+    expect(!r.ok && r.error).toMatch(/shepherdEmail/);
+  });
+
+  it("refuses a blank shepherd and both an id and an email", () => {
+    expect(parseRfpSessionPatch({ shepherdEmail: " " }).ok).toBe(false);
+    expect(
+      parseRfpSessionPatch({ shepherdEmail: "a@b.co", shepherdUserId: "u" }).ok,
+    ).toBe(false);
+  });
+
+  it("refuses both grader keys too", () => {
+    expect(namedGrader({ graderEmail: "a@b.co", graderUserId: "u" }).ok).toBe(
+      false,
+    );
+  });
+});
+
+describe("committeeMember", () => {
+  const committee = [{ userId: "u1", email: "Ben@Metagame.games" }];
+  it("matches by user id or email, case-insensitively", () => {
+    expect(committeeMember(committee, "u1")).toBe(committee[0]);
+    expect(committeeMember(committee, "ben@metagame.games")).toBe(committee[0]);
+    expect(committeeMember(committee, "someone@else.com")).toBeNull();
   });
 });
