@@ -40,8 +40,8 @@ const RECRUITERS_INFO =
 
 type Open = Extract<FirstSigninStatus, { needed: true }>;
 
-// Asked from the client so the layout stays static. Re-asked on leaving
-// /login, since signing in navigates client-side and the layout never remounts.
+// Asked from the client so the layout stays static. Re-asked on every
+// navigation: signing up or in happens client-side and the layout never remounts.
 export default function FirstSigninFlow() {
   const pathname = usePathname();
   const hidden = firstSigninHidden(pathname);
@@ -70,7 +70,7 @@ export default function FirstSigninFlow() {
     return () => {
       live = false;
     };
-  }, [hidden, status, done]);
+  }, [pathname, hidden, status, done]);
 
   if (!status || done || hidden) return null;
   return (
