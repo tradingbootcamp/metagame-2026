@@ -33,9 +33,12 @@ export default function RfpPanel({
   return (
     <div className="flex flex-col gap-2 rounded-md border border-line bg-cream/40 px-3 py-2.5 text-sm sm:col-span-2">
       <div className="flex flex-wrap gap-x-4 gap-y-1">
-        <a href={gradeLink(sessionId)} target="_blank" className={LINK}>
-          Grading page
-        </a>
+        {(recordId ||
+          (result && "inPipeline" in result && result.inPipeline)) && (
+          <a href={gradeLink(sessionId)} target="_blank" className={LINK}>
+            Grading page
+          </a>
+        )}
         {recordId ? (
           <a
             href={airtableRfpLink(recordId)}
@@ -65,7 +68,10 @@ export default function RfpPanel({
               Grader notes for scheduler
             </p>
             {result.notes.map((n) => (
-              <p key={n.grader} className="whitespace-pre-wrap text-ink/85">
+              <p
+                key={n.graderUserId}
+                className="whitespace-pre-wrap text-ink/85"
+              >
                 {result.notes.length > 1 && (
                   <span className="text-ink/50">{n.grader}: </span>
                 )}

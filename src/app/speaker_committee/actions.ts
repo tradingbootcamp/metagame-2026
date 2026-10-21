@@ -3,14 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { adminSession, signOutAccount } from "@/lib/auth";
 import { durationMinutes } from "@/lib/rfp-fields";
-import { getRfpSession, updateRfpSession } from "@/lib/rfp-sessions";
-import { DEFAULT_DRAFT_MINUTES, END_GAP_MINUTES } from "@/lib/schedule";
 import {
-  explainDbError,
-  moveSessionTo,
-  placeSession,
-  unplaceSession,
-} from "@/lib/schedule-store";
+  getRfpSession,
+  placeRfpSession,
+  unplaceRfpSession,
+} from "@/lib/rfp-sessions";
+import { DEFAULT_DRAFT_MINUTES, END_GAP_MINUTES } from "@/lib/schedule";
+import { explainDbError, moveSessionTo } from "@/lib/schedule-store";
 
 export type Result = { error?: string };
 
@@ -42,13 +41,12 @@ export async function scheduleProposal(
     DEFAULT_DRAFT_MINUTES - END_GAP_MINUTES;
 
   try {
-    await placeSession(
+    await placeRfpSession(
       sessionId,
       start,
       new Date(start.getTime() + minutes * 60_000),
       locationId,
     );
-    await updateRfpSession(sessionId, { phase: "ready" });
   } catch (err) {
     return explainDbError(err);
   }
@@ -74,15 +72,11 @@ export async function moveScheduled(
   return {};
 }
 
-/** Takes a session off the grid and its proposal back to "Add to schedule". */
+/** Takes a session off the grid; a ready proposal goes back to "Add to schedule". */
 export async function unschedule(sessionId: string): Promise<Result> {
   if (!(await adminSession())) return { error: EXPIRED };
   try {
-    await unplaceSession(sessionId);
-    const rfpSession = await getRfpSession(sessionId);
-    if (rfpSession && (rfpSession.recordId || rfpSession.phase)) {
-      await updateRfpSession(sessionId, { phase: "scheduling" });
-    }
+    await unplaceRfpSession(sessionId);
   } catch (err) {
     return explainDbError(err);
   }

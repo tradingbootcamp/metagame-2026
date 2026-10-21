@@ -29,6 +29,7 @@ export default function InlineSelect({
 }) {
   const [current, setCurrent] = useState(value ?? "");
   const [failed, setFailed] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
 
   const tone = swatch(colors[current]);
@@ -44,12 +45,18 @@ export default function InlineSelect({
     const previous = current;
     setCurrent(next);
     setFailed(null);
+    setNote(null);
     startSaving(async () => {
       const result = await setPipelineField(sessionId, field, next);
-      if (result?.error) {
+      if (result.error) {
         setCurrent(previous);
         setFailed(result.error);
+        return;
       }
+      // What's stored can differ from the pick: a step that can't stick yet,
+      // or a grader added beside one who already graded.
+      if (result.value !== undefined) setCurrent(result.value ?? "");
+      setNote(result.note ?? null);
     });
   }
 
@@ -57,14 +64,14 @@ export default function InlineSelect({
     <span className="relative block min-w-0">
       <select
         aria-label={field}
-        title={failed ?? (current || "Not set")}
+        title={failed ?? note ?? (current || "Not set")}
         value={current}
         disabled={saving}
         onChange={(event) => change(event.target.value)}
         style={tone ?? undefined}
         className={`w-full cursor-pointer appearance-none truncate rounded-full py-1 pr-5 pl-2.5 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/60 ${
           saving ? "opacity-60" : ""
-        } ${failed ? "ring-2 ring-meeple" : ""} ${
+        } ${failed ? "ring-2 ring-meeple" : note ? "ring-2 ring-tan" : ""} ${
           tone ? "" : "bg-ink/6 text-ink/55"
         }`}
       >

@@ -9,7 +9,12 @@ import {
   MEGAGAME_INTEREST_LABELS,
   RUBRIC_GRADE_LABELS,
 } from "@/lib/rfp-labels";
-import { committeeLabel, PIPELINE_COLORS, toRow } from "@/lib/rfp-pipeline";
+import {
+  committeeLabel,
+  hostNames,
+  PIPELINE_COLORS,
+  toRow,
+} from "@/lib/rfp-pipeline";
 import {
   CONTEXT_FIELDS,
   MARKETING_CONSENT_FIELD,
@@ -116,7 +121,7 @@ function contextOf(s: RfpSession): RfpContext {
   const { row } = s;
   return {
     title: s.title,
-    host: s.hosts.map((h) => h.name).join(", ") || null,
+    host: hostNames(s.hosts) || null,
     description: row.description,
     context: row.context,
     category: row.category ? CATEGORY_LABEL[row.category] : null,
@@ -239,7 +244,7 @@ export default async function SubmissionPage(props: PageProps<"/grade/[id]">) {
           <h1 className="font-bebas text-3xl tracking-wide text-navy">
             {rfpSession.title}
           </h1>
-          <p className="text-ink/60">{row.host}</p>
+          <p className="text-ink/60">{row.host || "—"}</p>
         </div>
       </header>
 

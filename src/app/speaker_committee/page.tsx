@@ -113,7 +113,14 @@ export default async function SpeakerCommitteePage(
   const rows = rfpSessions.map(toRow);
 
   const params = await props.searchParams;
-  const mode: Mode = first(params.who) === "all" ? "all" : "mine";
+  // Someone with nothing assigned lands on All rather than an empty board.
+  const hasMine = rows.some(
+    (r) => r.graderIds.includes(me) || r.shepherdId === me,
+  );
+  const mode: Mode =
+    first(params.who) === "all" || (!first(params.who) && !hasMine)
+      ? "all"
+      : "mine";
   const mineOnly = mode === "mine";
   const tab: Tab = TABS.find((t) => t.key === first(params.tab)) ?? TABS[0];
   const rawQuery = first(params.q);
@@ -174,6 +181,7 @@ export default async function SpeakerCommitteePage(
       loadRsvpCounts(),
     ]);
     const byId = new Map(rfpSessions.map((s) => [s.sessionId, s]));
+    // Accepted and not on the grid yet; placed ones show on the grid instead.
     const queue: QueueRow[] = visible.map((r) => {
       const row = byId.get(r.id)?.row;
       return {

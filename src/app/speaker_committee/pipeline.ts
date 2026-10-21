@@ -51,8 +51,9 @@ export const TABS = [
   {
     key: "schedule",
     label: "Schedule",
-    // Placed sessions are "ready" and show on the grid, not in a list.
-    in: (r) => r.phase === "scheduling",
+    // Accepted but not on the grid, whichever of the two phases it's in;
+    // placed sessions show on the grid instead.
+    in: (r) => (r.phase === "scheduling" || r.phase === "ready") && !r.placed,
     role: "shepherd",
   },
 ] as const satisfies readonly {

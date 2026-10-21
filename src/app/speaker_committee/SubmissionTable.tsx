@@ -155,7 +155,7 @@ export function SubmissionGroup({
                   {row.title}
                 </Link>
                 <span className="block truncate text-sm text-ink/55">
-                  {row.host}
+                  {row.host || "—"}
                 </span>
               </span>
               {pill(row, "grader", row.grader, "Grader")}

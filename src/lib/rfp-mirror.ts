@@ -2,9 +2,9 @@ import { after } from "next/server";
 import { env } from "@/env";
 import { airtableConfig } from "./airtable-config";
 import type { GradeValues, SessionText, SessionTextKey } from "./grade-input";
+import { committeeName } from "./rfp-committee";
 import type { MirrorState, SpeakerTier } from "./rfp-sessions";
 import {
-  committeeName,
   DROPINS_LABELS,
   GRADER_VERDICT_LABELS,
   nextStepsFor,

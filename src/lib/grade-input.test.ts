@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formToBody,
+  isEmptyGrade,
   gradeBody,
   parseGrade,
   parseSessionText,
@@ -150,5 +151,31 @@ describe("parseSessionText", () => {
     const r = parseSessionText({ rickiNotes: "  ", context: "x", phase: "y" });
     expect(r.ok && r.value).toEqual({ rickiNotes: null, context: "x" });
     expect(parseSessionText({ context: 3 }).ok).toBe(false);
+  });
+});
+
+describe("isEmptyGrade", () => {
+  const empty = parseGrade({}, ["loc-1"]);
+  if (!empty.ok) throw new Error(empty.error);
+
+  it("is true for a body with nothing but notes", () => {
+    expect(isEmptyGrade(empty.value)).toBe(true);
+    const notes = parseGrade({ ticketState: "comp" }, ["loc-1"]);
+    if (!notes.ok) throw new Error(notes.error);
+    expect(isEmptyGrade(notes.value)).toBe(true);
+  });
+
+  it("is false once anything is scored, listed, suggested or advanced", () => {
+    for (const body of [
+      { fun: "best" },
+      { topicAreas: ["larps"] },
+      { spaceOptions: ["loc-1"] },
+      { advance: true },
+      { expectedCrowdSize: 0 },
+    ]) {
+      const parsed = parseGrade(body, ["loc-1"]);
+      if (!parsed.ok) throw new Error(parsed.error);
+      expect(isEmptyGrade(parsed.value), JSON.stringify(body)).toBe(false);
+    }
   });
 });

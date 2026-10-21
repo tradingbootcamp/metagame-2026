@@ -162,29 +162,23 @@ export function nextStepsFor(
 }
 
 /**
- * Committee members as the Grader and Shepherd selects name them, and the
- * account email each maps to. The Grader select lacks Jisk and Julian Wise.
+ * Committee members as the Grader and Shepherd selects name them. Their
+ * account emails live server-side in rfp-committee.ts; this file is bundled
+ * for the browser. The Grader select lacks Jisk and Julian Wise.
  */
-export const COMMITTEE_EMAILS: Record<string, string> = {
-  "John Bromels": "jbromels@gmail.com",
-  "Brian Smiley": "brian@metagame.games",
-  "Ben Karcher": "ben@metagame.games",
-  "Brendan Hurst": "brendan@metagame.games",
-  "Tommy Honton": "tommy@tommyhonton.com",
-  "Sparr Risher": "sparr0@gmail.com",
-  "Michael Sheely": "michael.sheely2@gmail.com",
-  "Ricki Heicklen": "ricki@metagame.games",
-  Jisk: "ja.kopczynski@gmail.com",
-  "Scott Gillies": "scottdgillies@gmail.com",
-  "Julian Wise": "julian.w.wise@gmail.com",
-};
-
-/** The committee option name for an account email, if it has one. */
-export function committeeName(email: string): string | null {
-  const lower = email.toLowerCase();
-  const hit = Object.entries(COMMITTEE_EMAILS).find(([, e]) => e === lower);
-  return hit ? hit[0] : null;
-}
+export const COMMITTEE_NAMES: readonly string[] = [
+  "John Bromels",
+  "Brian Smiley",
+  "Ben Karcher",
+  "Brendan Hurst",
+  "Tommy Honton",
+  "Sparr Risher",
+  "Michael Sheely",
+  "Ricki Heicklen",
+  "Jisk",
+  "Scott Gillies",
+  "Julian Wise",
+];
 
 /** "Lighthaven Space Options" label → locations.name. */
 export const SPACE_OPTION_LOCATIONS: Record<string, string> = {

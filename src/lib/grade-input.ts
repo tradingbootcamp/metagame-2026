@@ -110,8 +110,11 @@ export function optionalText(body: Record<string, unknown>, key: string) {
   if (v === null || v === undefined) return null;
   if (typeof v !== "string")
     throw new InvalidField(key, `${key} must be text.`);
-  return v.trim() || null;
+  return normalizeText(v) || null;
 }
+
+/** Line endings to \n and trimmed, so stored and compared text agree. */
+export const normalizeText = (v: string) => v.replace(/\r\n?/g, "\n").trim();
 
 /** One enum value, or null when absent/blank. */
 export function optionalEnum<V extends string>(
@@ -291,6 +294,18 @@ export function parseGrade(
     if (err instanceof InvalidField) return invalid(err.field, err.message);
     throw err;
   }
+}
+
+/** No scores, answers, rooms or advance: nothing a grade row should be made of. */
+export function isEmptyGrade(input: GradeInput): boolean {
+  return (
+    GRADE_KEYS.every((key) => {
+      const v = input.grade[key];
+      return v === null || (Array.isArray(v) && v.length === 0);
+    }) &&
+    input.spaceLocationIds.length === 0 &&
+    !input.advance
+  );
 }
 
 /**

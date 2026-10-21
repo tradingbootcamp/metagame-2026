@@ -5,8 +5,8 @@ import { GraderPicker } from "./SignInForms";
 import { gradeAccess, graderUserId } from "@/lib/grader-auth";
 import InfoTip from "./InfoTip";
 import InlineSelect from "./InlineSelect";
+import { COMMITTEE_NAMES } from "@/lib/rfp-labels";
 import {
-  COMMITTEE_NAMES,
   groupLabel,
   NEXT_STEPS_ORDER,
   PIPELINE_COLORS,
@@ -193,7 +193,7 @@ function Group({
                   {row.title}
                 </Link>
                 <span className="block truncate text-sm text-ink/55">
-                  {row.host}
+                  {row.host || "—"}
                 </span>
               </span>
               {pill(row, "grader", row.grader, "Grader")}

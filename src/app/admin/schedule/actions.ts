@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { EXPIRED, requireAdmin } from "@/lib/admin-auth";
 import { deleteImage } from "@/lib/blob";
-import { getRfpSession, schedulerNotes } from "@/lib/rfp-sessions";
+import { gradingSummary, type GradingSummary } from "@/lib/rfp-sessions";
 import { ImageUploadError, replaceRoomImages } from "@/lib/room-images";
 import { type ScheduleAccount } from "@/lib/schedule";
 import {
@@ -46,17 +46,15 @@ const optional = (formData: FormData, key: string) =>
 /** The form's text fields; repeated names (hostId) collapse to one, so read those separately. */
 const fields = (formData: FormData): Raw => Object.fromEntries(formData);
 
-export type SchedulerNotes =
-  | { notes: { grader: string; text: string }[] }
-  | { error: string };
+export type SchedulerNotes = GradingSummary | { error: string };
 
 export async function loadSchedulerNotes(
   sessionId: string,
 ): Promise<SchedulerNotes> {
   if (!(await requireAdmin())) return { error: EXPIRED };
   try {
-    const rfpSession = await getRfpSession(sessionId);
-    if (rfpSession) return { notes: schedulerNotes(rfpSession) };
+    const summary = await gradingSummary(sessionId);
+    if (summary) return summary;
   } catch (err) {
     console.error("[admin/schedule] grades read failed", sessionId, err);
   }

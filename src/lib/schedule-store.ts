@@ -195,7 +195,7 @@ export async function moveSessionTo(
 }
 
 /** Throws when the times fall outside schedule hours or overlap another session in the room. */
-async function assertSlotFree(
+export async function assertSlotFree(
   id: string | null,
   startsAt: Date,
   endsAt: Date,
@@ -217,35 +217,6 @@ async function assertSlotFree(
     )
     .limit(1);
   if (clash) throw new Error(`That overlaps "${clash.title}" in that room.`);
-}
-
-/** Puts a session on the grid at exactly these times; refuses a clash like moveSessionTo. */
-export async function placeSession(
-  id: string,
-  startsAt: Date,
-  endsAt: Date,
-  locationId: string | null,
-): Promise<void> {
-  await assertSlotFree(id, startsAt, endsAt, locationId);
-  const [row] = await getDb()
-    .update(sessions)
-    .set({ startsAt, endsAt, locationId })
-    .where(eq(sessions.id, id))
-    .returning({ id: sessions.id });
-  if (!row) throw new Error("That session no longer exists.");
-}
-
-/**
- * Takes a session off the grid, keeping the row and its edits for when it's
- * placed again. Unplaced sessions can't be published, so it drops to draft.
- */
-export async function unplaceSession(id: string): Promise<void> {
-  const [row] = await getDb()
-    .update(sessions)
-    .set({ startsAt: null, endsAt: null, status: "draft" })
-    .where(eq(sessions.id, id))
-    .returning({ id: sessions.id });
-  if (!row) throw new Error("That session no longer exists.");
 }
 
 /** Accounts whose name or email contains the query. */

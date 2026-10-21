@@ -8,6 +8,7 @@ const row = (over: Partial<Row>): Row => ({
   title: "A",
   host: "",
   phase: null,
+  placed: false,
   grader: null,
   graderIds: [],
   shepherd: null,
@@ -28,7 +29,9 @@ const rows = [
   row({ id: "6", phase: "shepherding" }),
   row({ id: "7", phase: "scheduling", shepherdId: "ana" }),
   row({ id: "8", phase: "scheduling", shepherdId: "bo" }),
-  row({ id: "9", phase: "ready", shepherdId: "ana" }),
+  row({ id: "9", phase: "ready", shepherdId: "ana", placed: true }),
+  row({ id: "10", phase: "ready", shepherdId: "ana" }),
+  row({ id: "11", phase: "scheduling", shepherdId: "ana", placed: true }),
 ];
 const ids = (rs: Row[]) => rs.map((r) => r.id);
 
@@ -48,8 +51,9 @@ describe("tabRows", () => {
     expect(ids(tabRows(rows, tab("schedule"), "ana", false))).toEqual([
       "7",
       "8",
+      "10",
     ]);
-    expect(ids(tabRows(rows, tab("all"), "ana", false))).toHaveLength(9);
+    expect(ids(tabRows(rows, tab("all"), "ana", false))).toHaveLength(11);
   });
 
   it("filters grading tabs by grader and shepherding tabs by shepherd", () => {
@@ -72,9 +76,9 @@ describe("tabRows", () => {
 describe("myCounts", () => {
   it("counts the viewer's rows per tab, leaving placed sessions out of Schedule", () => {
     const counts = myCounts(rows, "ana");
-    expect(counts.all).toBe(5);
+    expect(counts.all).toBe(7);
     expect(counts.grade).toBe(1);
-    expect(counts.schedule).toBe(1);
+    expect(counts.schedule).toBe(2);
     expect(counts["assign-grader"]).toBe(0);
   });
 });

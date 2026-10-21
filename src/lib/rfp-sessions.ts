@@ -2,6 +2,7 @@ import {
   and,
   asc,
   eq,
+  ne,
   exists,
   inArray,
   isNotNull,
@@ -12,12 +13,8 @@ import {
 } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { GradeInput, GradeValues, SessionText } from "./grade-input";
-import {
-  committeeName,
-  COMMITTEE_EMAILS,
-  nextStepsFor,
-  SPACE_OPTION_LOCATIONS,
-} from "./rfp-labels";
+import { COMMITTEE_EMAILS, committeeName } from "./rfp-committee";
+import { nextStepsFor, SPACE_OPTION_LOCATIONS } from "./rfp-labels";
 import {
   gradeFields,
   graderField,
@@ -28,7 +25,7 @@ import {
   verdictField,
   type MirrorGroup,
 } from "./rfp-mirror";
-import { accountName } from "./schedule-store";
+import { accountName, assertSlotFree } from "./schedule-store";
 
 // The RFP pipeline in Postgres: sessions that came through the RFP or were
 // given a phase, their grades, and the committee's edits. Every write is copied onto
@@ -295,14 +292,48 @@ async function loadRfpSessions(where: SQL | undefined): Promise<RfpSession[]> {
   });
 }
 
-/** Each submitted grade's note to whoever schedules the session. */
-export function schedulerNotes(
-  s: RfpSession,
-): { grader: string; text: string }[] {
-  return s.grades.flatMap((g) => {
-    const text = g.schedulerNotes?.trim();
-    return g.submittedAt && text ? [{ grader: g.grader.name, text }] : [];
-  });
+export type GradingSummary = {
+  /** Imported from an RFP or given a phase: the grading page applies. */
+  inPipeline: boolean;
+  /** Each submitted grade's note to whoever schedules the session. */
+  notes: { graderUserId: string; grader: string; text: string }[];
+};
+
+/** What the schedule's admin views show about a session's grading. */
+export async function gradingSummary(
+  sessionId: string,
+): Promise<GradingSummary | null> {
+  const db = getDb();
+  const [[row], notes] = await Promise.all([
+    db
+      .select({ recordId: sessions.airtableRfpRecordId, phase: sessions.phase })
+      .from(sessions)
+      .where(eq(sessions.id, sessionId)),
+    db
+      .select({
+        graderUserId: user.id,
+        grader: accountName,
+        text: sessionGrades.schedulerNotes,
+      })
+      .from(sessionGrades)
+      .innerJoin(user, eq(user.id, sessionGrades.graderUserId))
+      .where(
+        and(
+          eq(sessionGrades.sessionId, sessionId),
+          isNotNull(sessionGrades.submittedAt),
+          isNotNull(sessionGrades.schedulerNotes),
+        ),
+      )
+      .orderBy(asc(sessionGrades.createdAt)),
+  ]);
+  if (!row) return null;
+  return {
+    inPipeline: row.recordId !== null || row.phase !== null,
+    notes: notes.flatMap((n) => {
+      const text = n.text?.trim();
+      return text ? [{ ...n, text }] : [];
+    }),
+  };
 }
 
 /** Every RFP session matching the filter, by title. */
@@ -695,5 +726,118 @@ export async function saveGrade(
       },
       graderField(s.grader),
     ],
+  );
+}
+
+/** The committee accounts with a submitted grade on the session. */
+async function submittedGraders(sessionId: string): Promise<Account[]> {
+  const rows = await getDb()
+    .select(accountColumns)
+    .from(sessionGrades)
+    .innerJoin(user, eq(user.id, sessionGrades.graderUserId))
+    .where(
+      and(
+        eq(sessionGrades.sessionId, sessionId),
+        isNotNull(sessionGrades.submittedAt),
+      ),
+    )
+    .orderBy(asc(sessionGrades.createdAt));
+  return rows.map(withCommittee);
+}
+
+/**
+ * Make `userId` the session's one open assignment: adds theirs and drops
+ * every other unsubmitted one in one batch. Submitted grades stay, and are
+ * returned so the caller can say who still shows as grader.
+ */
+export async function reassignGrader(
+  sessionId: string,
+  userId: string,
+): Promise<{ submitted: Account[] }> {
+  const db = getDb();
+  await db.batch([
+    db
+      .insert(sessionGrades)
+      .values({ sessionId, graderUserId: userId })
+      .onConflictDoNothing(),
+    db
+      .delete(sessionGrades)
+      .where(
+        and(
+          eq(sessionGrades.sessionId, sessionId),
+          ne(sessionGrades.graderUserId, userId),
+          isNull(sessionGrades.submittedAt),
+        ),
+      ),
+  ]);
+  await mirrorSession(sessionId, { kind: "assignment", phase: null }, (s) => [
+    graderField(s.grader),
+  ]);
+  return { submitted: await submittedGraders(sessionId) };
+}
+
+/** Drop every open assignment; submitted grades stay and are returned. */
+export async function clearGraders(
+  sessionId: string,
+): Promise<{ submitted: Account[] }> {
+  await getDb()
+    .delete(sessionGrades)
+    .where(
+      and(
+        eq(sessionGrades.sessionId, sessionId),
+        isNull(sessionGrades.submittedAt),
+      ),
+    );
+  await mirrorSession(sessionId, { kind: "assignment", phase: null }, (s) => [
+    graderField(s.grader),
+  ]);
+  return { submitted: await submittedGraders(sessionId) };
+}
+
+/**
+ * Put a proposal on the grid and mark it ready, in one statement. Refuses a
+ * clash like moveSessionTo.
+ */
+export async function placeRfpSession(
+  sessionId: string,
+  startsAt: Date,
+  endsAt: Date,
+  locationId: string | null,
+): Promise<void> {
+  await assertSlotFree(sessionId, startsAt, endsAt, locationId);
+  const [row] = await getDb()
+    .update(sessions)
+    .set({ startsAt, endsAt, locationId, phase: "ready" })
+    .where(eq(sessions.id, sessionId))
+    .returning({ id: sessions.id });
+  if (!row) throw new Error("That session no longer exists.");
+  await mirrorSession(
+    sessionId,
+    { kind: "update", update: { phase: "ready" }, phase: null },
+    () => [],
+  );
+}
+
+/**
+ * Take a session off the grid, keeping the row and its edits. Unplaced
+ * sessions can't be published, so it drops to draft; a ready proposal goes
+ * back to scheduling, any other phase is left alone.
+ */
+export async function unplaceRfpSession(sessionId: string): Promise<void> {
+  const [row] = await getDb()
+    .update(sessions)
+    .set({
+      startsAt: null,
+      endsAt: null,
+      status: "draft",
+      phase: sql`case when ${sessions.phase} = 'ready' then 'scheduling'::session_phase else ${sessions.phase} end`,
+    })
+    .where(eq(sessions.id, sessionId))
+    .returning({ id: sessions.id });
+  if (!row) throw new Error("That session no longer exists.");
+  await mirrorSession(
+    sessionId,
+    { kind: "update", update: { phase: "scheduling" }, phase: null },
+    () => [],
   );
 }

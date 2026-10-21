@@ -11,7 +11,7 @@ import {
 import { adminAccess } from "@/lib/admin-auth";
 import { currentSession } from "@/lib/auth";
 import { airtableRfpLink, gradeLink } from "@/lib/rfp-links";
-import { getRfpSession, schedulerNotes } from "@/lib/rfp-sessions";
+import { gradingSummary } from "@/lib/rfp-sessions";
 import {
   formatPacificDay,
   formatPacificTime,
@@ -59,16 +59,16 @@ export async function sessionMetadata(slug: string): Promise<Metadata> {
 const MUTED = "text-sm text-[#1b1530]/60";
 
 async function GraderNotes({ sessionId }: { sessionId: string }) {
-  let rfpSession = null;
+  let summary = null;
   try {
-    rfpSession = await getRfpSession(sessionId);
+    summary = await gradingSummary(sessionId);
   } catch (err) {
     console.error("grades read failed", sessionId, err);
   }
-  if (!rfpSession) {
+  if (!summary) {
     return <p className={MUTED}>Couldn&rsquo;t load the grades</p>;
   }
-  const notes = schedulerNotes(rfpSession);
+  const { notes } = summary;
   if (notes.length === 0) return null;
   return (
     <AdminNote
@@ -99,6 +99,7 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
   const { sessions } = await loadRawSchedule();
   const raw = sessions.find((s) => s.id === sessionId);
   const recordId = raw?.airtableRfpRecordId ?? null;
+  const inPipeline = (await gradingSummary(sessionId))?.inPipeline ?? false;
   const needs = raw?.needs?.trim() || null;
   const shepherd = raw?.shepherd ?? null;
   const link = "font-semibold text-navy underline";
@@ -109,9 +110,11 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
         Admin only
       </h2>
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-        <Link href={gradeLink(sessionId)} target="_blank" className={link}>
-          Grading page
-        </Link>
+        {(recordId || inPipeline) && (
+          <Link href={gradeLink(sessionId)} target="_blank" className={link}>
+            Grading page
+          </Link>
+        )}
         {recordId ? (
           <a
             href={airtableRfpLink(recordId)}

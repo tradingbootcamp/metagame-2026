@@ -1,9 +1,5 @@
 import type { RfpSession } from "./rfp-sessions";
-import {
-  COMMITTEE_EMAILS,
-  NEXT_STEPS_PHASE,
-  VERDICT_LABELS,
-} from "./rfp-labels";
+import { NEXT_STEPS_PHASE, VERDICT_LABELS } from "./rfp-labels";
 
 // The pipeline columns as the /grade and /speaker_committee tables show them:
 // one row per session, each select's option labels, and the pill colours.
@@ -22,8 +18,11 @@ export type Row = {
   /** The session id. */
   id: string;
   title: string;
+  /** The hosts' names; empty when none has one. */
   host: string;
   phase: RfpSession["phase"];
+  /** On the grid: has a start time. */
+  placed: boolean;
   /** The latest-assigned grader's committee name, as the Grader column shows. */
   grader: string | null;
   graderIds: string[];
@@ -35,18 +34,29 @@ export type Row = {
   nextSteps: string | null;
 };
 
+/** A name worth showing: null when the account only has its email. */
+export const shownName = (name: string) => (name.includes("@") ? null : name);
+
 /** How the Grader and Shepherd columns name an account. */
 export const committeeLabel = (a: {
   name: string;
   committeeName: string | null;
-}) => a.committeeName ?? a.name;
+}) => a.committeeName ?? shownName(a.name) ?? "(no name)";
+
+/** Hosts' names for a row; empty when none has one, so it sorts like no host. */
+export const hostNames = (hosts: { name: string }[]) =>
+  hosts
+    .map((h) => shownName(h.name))
+    .filter((n): n is string => n !== null)
+    .join(", ");
 
 export function toRow(s: RfpSession): Row {
   return {
     id: s.sessionId,
     title: s.title,
-    host: s.hosts.map((h) => h.name).join(", "),
+    host: hostNames(s.hosts),
     phase: s.phase,
+    placed: s.row.startsAt !== null,
     grader: s.grader ? committeeLabel(s.grader) : null,
     graderIds: s.grades.map((g) => g.grader.userId),
     shepherd: s.shepherd ? committeeLabel(s.shepherd) : null,
@@ -60,9 +70,6 @@ export function toRow(s: RfpSession): Row {
 export const VERDICT_ORDER: readonly string[] = Object.values(VERDICT_LABELS);
 export const NEXT_STEPS_ORDER: readonly string[] =
   Object.keys(NEXT_STEPS_PHASE);
-
-/** The whole committee, whether or not they have an account yet. */
-export const COMMITTEE_NAMES: readonly string[] = Object.keys(COMMITTEE_EMAILS);
 
 export const SHEPHERD_INFO =
   "The individual responsible for emailing, meeting with, following up with, and ensuring this speaker has a good experience on an ongoing basis";

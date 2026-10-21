@@ -226,7 +226,7 @@ export default function ScheduleBoard({
   };
 
   const open = openId ? board.sessions.find((s) => s.id === openId) : null;
-  const openRow = open ? proposals[open.id] : undefined;
+  const openRow = open ? proposals[sessionIdOf(open)] : undefined;
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? "No room";
 
@@ -355,7 +355,7 @@ export default function ScheduleBoard({
               </dl>
             )}
             <RfpPanel
-              sessionId={open.id}
+              sessionId={sessionIdOf(open)}
               recordId={open.airtableRfpRecordId}
               shepherd={open.shepherd}
             />

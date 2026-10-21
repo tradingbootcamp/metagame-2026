@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { sessionPhase } from "@/db/schema";
-import { committeeName, NEXT_STEPS_PHASE, nextStepsFor } from "./rfp-labels";
+import { NEXT_STEPS_PHASE, nextStepsFor } from "./rfp-labels";
 
 const none = { graded: false, shepherded: false };
 
@@ -34,12 +34,5 @@ describe("nextStepsFor", () => {
         }
       }
     }
-  });
-});
-
-describe("committeeName", () => {
-  it("finds the select's name by email, case-insensitively", () => {
-    expect(committeeName("Ricki@Metagame.Games")).toBe("Ricki Heicklen");
-    expect(committeeName("someone@example.com")).toBeNull();
   });
 });

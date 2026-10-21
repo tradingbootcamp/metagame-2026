@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import {
   formToBody,
   GRADE_FORM_SESSION_KEYS,
+  isEmptyGrade,
+  normalizeText,
   parseGrade,
 } from "@/lib/grade-input";
 import {
@@ -15,21 +17,28 @@ import {
   startSession,
 } from "@/lib/grader-auth";
 import { SOMEONE_ELSE } from "@/lib/grader-identity";
-import { fromLabel, NEXT_STEPS_PHASE, VERDICT_LABELS } from "@/lib/rfp-labels";
 import {
   COMMITTEE_NAMES,
+  fromLabel,
+  NEXT_STEPS_PHASE,
+  VERDICT_LABELS,
+} from "@/lib/rfp-labels";
+import {
+  committeeLabel,
   PIPELINE_FIELDS,
+  toRow,
   type PipelineField,
 } from "@/lib/rfp-pipeline";
 import { loadedKey, MARKETING_CONSENT_FIELD } from "@/lib/rfp-rubric";
 import {
-  assignGrader,
+  clearGraders,
   committeeUserId,
   getRfpSession,
+  reassignGrader,
   saveGrade,
   spaceOptionLocations,
-  unassignGrader,
   updateRfpSession,
+  type Account,
 } from "@/lib/rfp-sessions";
 import { explainDbError } from "@/lib/schedule-store";
 
@@ -88,21 +97,35 @@ async function committeeAccount(
     : { error: `${name} has no account yet, so they can't be assigned.` };
 }
 
+export type PipelineResult = {
+  error?: string;
+  /** The column's label as now stored, which may differ from what was picked. */
+  value?: string | null;
+  /** Why the stored value isn't the one picked. */
+  note?: string;
+};
+
+const names = (accounts: Account[]) => accounts.map(committeeLabel).join(", ");
+
 /**
  * One-column save from the overview's row dropdowns. The value is the option
- * label as the column shows it; blank clears.
+ * label as the column shows it; blank clears. Returns the label as stored,
+ * since a pick can resolve to a different step or grader.
  */
 export async function setPipelineField(
   sessionId: string,
   field: PipelineField,
   value: string,
-): Promise<{ error?: string }> {
+): Promise<PipelineResult> {
   if (!(await gradeAccess())?.identity)
     return { error: "Your session expired." };
   if (!PIPELINE_FIELDS.includes(field)) {
     return { error: "That field isn't editable here." };
   }
+  const before = await getRfpSession(sessionId);
+  if (!before) return { error: "That session no longer exists." };
 
+  let note: string | undefined;
   try {
     switch (field) {
       case "verdict": {
@@ -112,9 +135,21 @@ export async function setPipelineField(
         break;
       }
       case "nextSteps": {
-        const phase = value ? NEXT_STEPS_PHASE[value] : null;
-        if (value && !phase) return { error: "Unrecognised value." };
-        await updateRfpSession(sessionId, { phase: phase ?? null });
+        if (value && !Object.hasOwn(NEXT_STEPS_PHASE, value)) {
+          return { error: "Unrecognised value." };
+        }
+        let phase = value ? NEXT_STEPS_PHASE[value] : null;
+        // Only imported proposals survive without a phase; anything else
+        // would drop out of the pipeline pages.
+        if (phase === null && before.recordId === null) {
+          return { error: "This session has no RFP row; pick a step." };
+        }
+        if (phase === "ready" && before.row.startsAt === null) {
+          phase = "scheduling";
+          note =
+            "Not on the schedule yet, so it waits at “6. Add to schedule”.";
+        }
+        await updateRfpSession(sessionId, { phase });
         break;
       }
       case "shepherd": {
@@ -128,23 +163,21 @@ export async function setPipelineField(
         break;
       }
       case "grader": {
-        // The column shows the attributed grader; changing it reassigns,
-        // except a submitted grade is never thrown away.
-        const current = (await getRfpSession(sessionId))?.grader ?? null;
+        // One select over possibly several grade rows: a pick replaces the
+        // open assignments, and submitted grades are never thrown away.
         if (!value) {
-          if (!current) break;
-          if (
-            (await unassignGrader(sessionId, current.userId)) === "submitted"
-          ) {
-            return { error: `${current.name} has already graded this.` };
+          const { submitted } = await clearGraders(sessionId);
+          if (submitted.length > 0) {
+            note = `${names(submitted)} already graded this; only open assignments were cleared.`;
           }
           break;
         }
         const account = await committeeAccount(value);
         if ("error" in account) return account;
-        await assignGrader(sessionId, account.userId);
-        if (current && current.userId !== account.userId) {
-          await unassignGrader(sessionId, current.userId);
+        const { submitted } = await reassignGrader(sessionId, account.userId);
+        const others = submitted.filter((a) => a.userId !== account.userId);
+        if (others.length > 0) {
+          note = `${names(others)} already graded this; ${value} was added as another grader.`;
         }
         break;
       }
@@ -154,10 +187,11 @@ export async function setPipelineField(
     return explainDbError(err);
   }
 
+  const after = await getRfpSession(sessionId);
   // Deliberately not revalidating /grade: re-sorting the list under the cursor
   // mid-edit is worse than it being one refresh stale.
   revalidatePath(`/grade/${sessionId}`);
-  return {};
+  return { value: after ? toRow(after)[field] : null, note };
 }
 
 export type SaveState = { savedAt?: number; error?: string };
@@ -182,18 +216,26 @@ export async function submitGrades(
 
   const body = formToBody(formData);
   // A session column, not part of the grade. The box posts "true" alongside a
-  // hidden "false", so ticked means any "true".
+  // hidden "false", so ticked means any "true"; it's only written when it
+  // differs from what the page loaded.
   const consent = formData.has(MARKETING_CONSENT_FIELD)
     ? formData.getAll(MARKETING_CONSENT_FIELD).includes("true")
     : undefined;
+  const loadedConsent = body[loadedKey(MARKETING_CONSENT_FIELD)] === "true";
   delete body[MARKETING_CONSENT_FIELD];
+  delete body[loadedKey(MARKETING_CONSENT_FIELD)];
   // The notes are shared by everyone grading the session, so only the ones
   // this form changed are sent; a stale form must not overwrite newer notes.
   for (const key of GRADE_FORM_SESSION_KEYS) {
     const loaded = body[loadedKey(key)];
     delete body[loadedKey(key)];
-    if (key in body && String(body[key] ?? "").trim() === String(loaded ?? ""))
+    if (
+      key in body &&
+      normalizeText(String(body[key] ?? "")) ===
+        normalizeText(String(loaded ?? ""))
+    ) {
       delete body[key];
+    }
   }
   const spaces = await spaceOptionLocations();
   const grade = parseGrade(
@@ -203,11 +245,17 @@ export async function submitGrades(
   if (!grade.ok) return { error: grade.error };
 
   try {
-    await saveGrade(sessionId, userId, grade.value);
-    if (consent !== undefined) {
-      await updateRfpSession(sessionId, {
-        marketingConsent: consent,
-      });
+    const rfpSession = await getRfpSession(sessionId);
+    if (!rfpSession) return { error: "That session no longer exists." };
+    const mine = rfpSession.grades.some((g) => g.grader.userId === userId);
+    if (mine || !isEmptyGrade(grade.value)) {
+      await saveGrade(sessionId, userId, grade.value);
+    } else if (Object.keys(grade.value.session).length > 0) {
+      // Notes alone, from someone who isn't grading: no grade row is made.
+      await updateRfpSession(sessionId, { text: grade.value.session });
+    }
+    if (consent !== undefined && consent !== loadedConsent) {
+      await updateRfpSession(sessionId, { marketingConsent: consent });
     }
   } catch (err) {
     console.error("[grade] failed to save:", err);

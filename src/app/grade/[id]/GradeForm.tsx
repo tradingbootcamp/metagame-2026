@@ -110,6 +110,13 @@ function Field({
         // only says "unticked" when the box itself sent nothing.
         <input type="hidden" name={field.key} value="false" />
       )}
+      {field.kind === "checkbox" && loaded && (
+        <input
+          type="hidden"
+          name={loadedKey(field.key)}
+          value={initial[field.key] === true ? "true" : "false"}
+        />
+      )}
 
       {field.kind === "number" && (
         <input
