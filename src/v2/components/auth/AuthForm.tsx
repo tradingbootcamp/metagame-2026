@@ -101,7 +101,16 @@ export default function AuthForm({
     return (
       <form action={action} className={FORM}>
         {hidden}
-        <input type="hidden" name="email" value={state.email} />
+        {/* A real (hidden) username field, so password managers treat this as
+            a new-password form for this account instead of guessing. */}
+        <input
+          type="email"
+          name="email"
+          value={state.email}
+          autoComplete="username"
+          readOnly
+          hidden
+        />
         {state.notice && <p className="text-sm text-ink/70">{state.notice}</p>}
         <p className="text-base text-ink">
           {state.replacing

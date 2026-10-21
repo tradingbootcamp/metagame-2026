@@ -193,6 +193,14 @@ export function PasswordForm({
       <h2 className="font-grotesk text-2xl font-bold text-navy">
         {hasPassword ? "Change password" : "Set a password"}
       </h2>
+      {/* Tells password managers which account these new-password fields belong to. */}
+      <input
+        type="email"
+        value={email}
+        autoComplete="username"
+        readOnly
+        hidden
+      />
       {!hasPassword && (
         <p className="text-sm text-ink/70">
           Optional. You can always sign in with an emailed code instead.
