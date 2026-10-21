@@ -148,6 +148,27 @@ export async function claimTicket(
   return result;
 }
 
+/** The buyer claims a ticket they bought, without typing its code. */
+export async function claimOwnTicket(
+  userId: string,
+  email: string,
+  paymentId: string,
+): Promise<ClaimResult> {
+  const [ticket] = await getDb()
+    .select({ ticketCode: tickets.ticketCode })
+    .from(tickets)
+    .where(
+      and(
+        visible,
+        eq(tickets.paymentId, paymentId),
+        eq(tickets.purchaserEmail, emailKey(email)),
+      ),
+    )
+    .limit(1);
+  if (!ticket) return { ok: false, reason: "unknown" };
+  return attemptClaim(userId, ticket.ticketCode);
+}
+
 // One conditional UPDATE, so two people entering the same code can't both win.
 async function attemptClaim(
   userId: string,

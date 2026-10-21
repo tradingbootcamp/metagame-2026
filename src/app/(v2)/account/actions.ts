@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { getDb, schema } from "@/db";
 import { currentSession, getAuth, hasPassword } from "@/lib/auth";
 import {
+  claimOwnTicket,
   claimTicket,
   normalizeTicketCode,
   ticketLabel,
@@ -174,6 +175,19 @@ export async function claim(
   const code = normalizeTicketCode(String(formData.get("code") ?? ""));
   if (code.length !== 6) return { error: "Codes are 6 characters." };
   const result = await claimTicket(session.user.id, code);
+  if (!result.ok) return { error: CLAIM_ERRORS[result.reason] };
+  revalidatePath("/account");
+  return { claimed: ticketLabel(result.ticket.tier) };
+}
+
+/** Claims a ticket the signed-in user bought, by its row rather than its code. */
+export async function claimMine(paymentId: string): Promise<ClaimState> {
+  const session = await requireSession();
+  const result = await claimOwnTicket(
+    session.user.id,
+    session.user.email,
+    paymentId,
+  );
   if (!result.ok) return { error: CLAIM_ERRORS[result.reason] };
   revalidatePath("/account");
   return { claimed: ticketLabel(result.ticket.tier) };

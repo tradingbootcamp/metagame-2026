@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { claim, type ClaimState } from "./actions";
+import { useActionState, useState, useTransition } from "react";
+import { claim, claimMine, type ClaimState } from "./actions";
 import { Button } from "@/v2/components/ui/button";
 import PinInput from "@/v2/components/auth/PinInput";
 import {
@@ -9,6 +9,7 @@ import {
   normalizeTicketCode,
 } from "@/lib/ticket-code-format";
 import type { TicketRow } from "@/lib/ticket-store";
+import { useCopy } from "@/v2/lib/use-copy";
 
 export type TicketView = {
   id: string;
@@ -30,11 +31,37 @@ function badge(t: TicketView): { text: string; tone: string } {
   return { text: "Unclaimed", tone: "bg-meeple/10 text-meeple" };
 }
 
+/** The buyer's code, to copy and pass on to whoever's attending. */
+function ShareCode({ code }: { code: string }) {
+  const { status, copy } = useCopy();
+  return (
+    <span className="flex items-center gap-2 text-sm text-ink/70">
+      Share code to transfer:
+      <span className="font-mono text-ink">{code}</span>
+      <button
+        type="button"
+        onClick={() => copy(code)}
+        className="rounded border border-line px-2 py-0.5 text-xs font-semibold text-navy hover:border-navy"
+      >
+        {status === "copied"
+          ? "Copied"
+          : status === "failed"
+            ? "Couldn't copy"
+            : "Copy"}
+      </button>
+    </span>
+  );
+}
+
 export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
   const [state, action, pending] = useActionState<ClaimState, FormData>(
     claim,
     {},
   );
+  const [claiming, startClaim] = useTransition();
+  const [mineState, setMineState] = useState<ClaimState>({});
+  // One admission per person, so offer it only until they hold a ticket.
+  const holdsOne = tickets.some((t) => t.mine);
 
   return (
     <section className="mt-12 flex max-w-[960px] flex-col gap-4">
@@ -61,16 +88,39 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                 >
                   {b.text}
                 </span>
-                {t.code && (
-                  <span className="ml-auto text-sm text-ink/70">
-                    Code <span className="font-mono text-ink">{t.code}</span>
-                    {!t.claimed && " — give it to whoever's attending"}
+                {t.code && !t.claimed && t.status === "paid" && (
+                  <span className="ml-auto flex flex-wrap items-center gap-3">
+                    <ShareCode code={t.code} />
+                    {!holdsOne && (
+                      <Button
+                        size="sm"
+                        disabled={claiming}
+                        onClick={() =>
+                          startClaim(async () =>
+                            setMineState(await claimMine(t.id)),
+                          )
+                        }
+                      >
+                        {claiming ? "Claiming…" : "Claim for myself"}
+                      </Button>
+                    )}
                   </span>
                 )}
               </li>
             );
           })}
         </ul>
+      )}
+      {(mineState.error || mineState.claimed) && (
+        <p aria-live="polite" className="text-sm">
+          {mineState.error ? (
+            <span className="text-meeple">{mineState.error}</span>
+          ) : (
+            <span className="text-ink/70">
+              {mineState.claimed} is now yours.
+            </span>
+          )}
+        </p>
       )}
       <form action={action} className="flex flex-col gap-2">
         <label

@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 export const fieldClass =
   "w-full rounded-lg border border-line bg-white px-3 py-2 text-base outline-none focus:border-navy";
 // Native selects ignore padding on the arrow side; draw our own chevron so it sits inside.
@@ -33,18 +31,4 @@ export function Card({
   );
 }
 
-type CopyStatus = "idle" | "copied" | "failed";
-
-export function useCopy() {
-  const [status, setStatus] = useState<CopyStatus>("idle");
-  const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setStatus("copied");
-    } catch {
-      setStatus("failed");
-    }
-    setTimeout(() => setStatus("idle"), 2000);
-  };
-  return { status, copy };
-}
+export { useCopy } from "@/v2/lib/use-copy";
