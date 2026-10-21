@@ -120,7 +120,7 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                 {t.mine && t.status === "paid" && confirmingId !== t.id && (
                   <span className="ml-auto flex items-center gap-3">
                     <span className="text-sm text-ink/60">
-                      Release this ticket to share with someone else.
+                      Unclaim this ticket to pass it on to someone else.
                     </span>
                     <button
                       type="button"
@@ -135,9 +135,9 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                 {t.mine && confirmingId === t.id && (
                   <span className="flex basis-full flex-wrap items-center gap-3 pt-1">
                     <span className="text-sm text-ink/70">
-                      Release your spot? You&apos;ll keep this ticket with a new
-                      code, so you can pass it on or claim it again. The old
-                      code stops working.
+                      Unclaim this ticket? You&apos;ll keep it with a new code,
+                      so you can pass it on or claim it again. The old code
+                      stops working.
                     </span>
                     <Button
                       size="sm"
@@ -150,7 +150,7 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                       }
                       className="px-3 py-1"
                     >
-                      {unclaiming ? "Releasing…" : "Release my spot"}
+                      {unclaiming ? "Unclaiming…" : "Unclaim ticket"}
                     </Button>
                     <button
                       type="button"
@@ -184,8 +184,7 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
             <span className="text-meeple">{unclaimState.error}</span>
           ) : (
             <span className="text-ink/70">
-              You&apos;ve released your spot on {unclaimState.released}. It has
-              a new code to pass on or claim.
+              Ticket unclaimed. It has a new code to pass on or claim.
             </span>
           )}
         </p>
