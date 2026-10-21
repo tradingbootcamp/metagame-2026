@@ -26,23 +26,6 @@ export function firstSigninNeeded(
   return profile?.isAdult == null || profile.bringingChildren == null;
 }
 
-/**
- * The profile's own handle, else one typed at checkout. Prefers tickets bought
- * under the user's email, since a ticket someone else bought for them carries
- * the buyer's handle.
- */
-export function discordPrefill(
-  profileHandle: string | null | undefined,
-  rows: Pick<TicketRow, "purchaserEmail" | "purchaserDiscord">[],
-  email: string,
-): string {
-  if (profileHandle?.trim()) return profileHandle;
-  const own = rows.find(
-    (t) => t.purchaserEmail === email && t.purchaserDiscord,
-  );
-  return own?.purchaserDiscord ?? "";
-}
-
 const HIDDEN_PREFIXES = ["/login", "/admin", "/grade"];
 
 /** Pages the modal stays off: signing in, and the team tools. */

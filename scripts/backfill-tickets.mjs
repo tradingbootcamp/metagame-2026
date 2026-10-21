@@ -8,7 +8,6 @@
 // Needs AIRTABLE_API_KEY and DATABASE_URL (from .env.local when unset).
 import { neon } from "@neondatabase/serverless";
 import { airtableConfig } from "../src/lib/airtable-config.ts";
-import { cleanDiscordHandle } from "../src/lib/discord-handle.ts";
 import { ticketCode } from "../src/lib/ticket-code.ts";
 
 try {
@@ -46,7 +45,6 @@ async function* purchases() {
     "Amount",
     "Ticket Type",
     "Ticket Code",
-    "Discord Handle",
   ]) {
     url.searchParams.append("fields[]", f);
   }
@@ -84,7 +82,6 @@ for await (const f of purchases()) {
     amountCents: f.Amount != null ? Math.round(f.Amount * 100) : null,
     purchaserEmail: f["Customer Email"]?.trim().toLowerCase() || null,
     purchaserName: f["Preferred Name"] ?? f["Customer Name"] ?? null,
-    purchaserDiscord: cleanDiscordHandle(f["Discord Handle"]),
   });
 }
 
@@ -93,7 +90,7 @@ for (const s of skipped) console.log(`  skip ${s}`);
 if (!apply) {
   for (const r of rows) {
     console.log(
-      `  ${r.paymentId} ${r.status} ${r.ticketCode} ${r.purchaserEmail ?? "-"} ${r.purchaserDiscord ?? "-"}`,
+      `  ${r.paymentId} ${r.status} ${r.ticketCode} ${r.purchaserEmail ?? "-"}`,
     );
   }
   console.log("Dry run. Pass --apply to write.");
@@ -104,10 +101,9 @@ const sql = neon(DATABASE_URL);
 for (const r of rows) {
   await sql`
     insert into tickets (payment_id, ticket_code, source, status, test, tier,
-      amount_cents, purchaser_email, purchaser_name, purchaser_discord)
+      amount_cents, purchaser_email, purchaser_name)
     values (${r.paymentId}, ${r.ticketCode}, ${r.source}, ${r.status}, ${r.test},
-      ${r.tier}, ${r.amountCents}, ${r.purchaserEmail}, ${r.purchaserName},
-      ${r.purchaserDiscord})
+      ${r.tier}, ${r.amountCents}, ${r.purchaserEmail}, ${r.purchaserName})
     on conflict (payment_id) do update set
       status = excluded.status,
       test = excluded.test,
@@ -115,7 +111,6 @@ for (const r of rows) {
       amount_cents = coalesce(excluded.amount_cents, tickets.amount_cents),
       purchaser_email = coalesce(excluded.purchaser_email, tickets.purchaser_email),
       purchaser_name = coalesce(excluded.purchaser_name, tickets.purchaser_name),
-      purchaser_discord = coalesce(tickets.purchaser_discord, excluded.purchaser_discord),
       updated_at = now()
   `;
 }

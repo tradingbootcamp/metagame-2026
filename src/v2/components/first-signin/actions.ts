@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { getDb, schema } from "@/db";
 import { currentSession } from "@/lib/auth";
-import { cleanDiscordHandle } from "@/lib/discord-handle";
 
 export type FirstSigninState = { error?: string; saved?: boolean };
 
@@ -30,11 +29,12 @@ export async function saveFirstSignin(
       String(formData.get("preferredName") ?? "")
         .trim()
         .slice(0, 80) || null,
+    // People often type "@name"; Discord usernames can't contain "@".
     discordHandle:
-      cleanDiscordHandle(String(formData.get("discordHandle") ?? ""))?.slice(
-        0,
-        40,
-      ) ?? null,
+      String(formData.get("discordHandle") ?? "")
+        .trim()
+        .replace(/^@+\s*/, "")
+        .slice(0, 40) || null,
     isPublic: formData.get("isPublic") === "on",
     shareWithRecruiters: formData.get("shareWithRecruiters") === "on",
   };

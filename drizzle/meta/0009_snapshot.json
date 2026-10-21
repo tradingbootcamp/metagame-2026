@@ -1,5 +1,5 @@
 {
-  "id": "2cb8d0db-9bc3-4002-ab45-863ded1759d8",
+  "id": "a78d4eb0-9ed5-45ea-b6b4-3166ccae5339",
   "prevId": "e369b5ae-564a-4e7b-a118-fd89566498af",
   "version": "7",
   "dialect": "postgresql",
@@ -733,12 +733,6 @@
         },
         "purchaser_name": {
           "name": "purchaser_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "purchaser_discord": {
-          "name": "purchaser_discord",
           "type": "text",
           "primaryKey": false,
           "notNull": false

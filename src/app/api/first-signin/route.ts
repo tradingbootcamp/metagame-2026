@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { accountsConfigured, currentSession } from "@/lib/auth";
 import {
-  discordPrefill,
   firstSigninNeeded,
   ticketStep,
   type FirstSigninStatus,
@@ -41,7 +40,7 @@ async function firstSigninStatus(): Promise<FirstSigninStatus> {
     tickets: ticketStep(rows, user.id, email),
     prefill: {
       preferredName: profile?.preferredName || user.name,
-      discordHandle: discordPrefill(profile?.discordHandle, rows, email),
+      discordHandle: profile?.discordHandle ?? "",
       isPublic: profile?.isPublic ?? false,
       shareWithRecruiters: profile?.shareWithRecruiters ?? false,
     },

@@ -1,4 +1,3 @@
-import { cleanDiscordHandle } from "@/lib/discord-handle";
 import { stripeMode, ticketTiers } from "@/lib/tickets";
 
 export const FAMILY_PACK = {
@@ -39,7 +38,7 @@ export function parsePackAttendees(value: unknown): PackAttendee[] {
       (discord != null && typeof discord !== "string")
     )
       throw new Error("Enter each attendee's name and email.");
-    const handle = cleanDiscordHandle(discord);
+    const handle = discord?.trim().replace(/^@+\s*/, "");
     const attendee: PackAttendee = {
       name: name.trim(),
       email: email.trim(),
