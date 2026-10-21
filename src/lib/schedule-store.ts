@@ -68,8 +68,7 @@ export async function loadSchedule(): Promise<Schedule> {
     db
       .select({ sessionId: sessions.id, ...accountColumns })
       .from(sessions)
-      .innerJoin(user, eq(user.id, sessions.shepherdUserId))
-      .leftJoin(profiles, eq(profiles.userId, user.id)),
+      .innerJoin(user, eq(user.id, sessions.shepherdUserId)),
   ]);
   const shepherdBySession = new Map(
     shepherds.map(({ sessionId, ...account }) => [sessionId, account]),
