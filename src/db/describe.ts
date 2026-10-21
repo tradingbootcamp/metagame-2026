@@ -51,12 +51,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
     "verification",
     "apikey",
   ],
-  Access: [
-    "roles",
-    "role_permissions",
-    "user_roles",
-    "user_permission_overrides",
-  ],
+  Access: ["roles", "role_permissions", "user_roles", "user_permission_grants"],
   Attendees: ["profiles"],
   Tickets: ["tickets"],
   Schedule: ["locations", "sessions", "session_hosts", "rsvps", "bookmarks"],
@@ -65,7 +60,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
 
 // What each table is for, in one line. Reviewed alongside the columns.
 const TABLE_NOTES: Record<string, string> = {
-  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique. role (user | admin) and the ban fields come from the admin plugin and can't be changed through the normal account-update path; admin is the break-glass superuser that bypasses the permission system (roles, user_permission_overrides) and is only set by SQL.",
+  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique. role (user | admin) and the ban fields come from the admin plugin and can't be changed through the normal account-update path; admin is the break-glass superuser that bypasses the permission system (roles, user_permission_grants) and is only set by SQL.",
   session:
     "Signed-in browser sessions. Deleting a user removes their sessions (cascade).",
   account:
@@ -79,8 +74,8 @@ const TABLE_NOTES: Record<string, string> = {
   role_permissions:
     "The permission keys a role grants, one row each. Text, not an enum, so adding a permission to the catalog needs no migration.",
   user_roles: "Which roles each account holds. One row per pair.",
-  user_permission_overrides:
-    "Per-account adjustments on top of roles: a grant adds a permission, a deny removes it however it was earned. One row per account per permission; no row means inherit from roles.",
+  user_permission_grants:
+    "Permissions an account holds on top of its roles, one row each. Grants only: there is no deny.",
   profiles:
     'Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field. image_url is the profile picture, a 512px Vercel Blob URL. is_adult ("18 or older?") and bringing_children are the first sign-in modal\'s required answers; it keeps opening while either is null. share_with_recruiters opts in to the name-and-email list sponsors who are hiring receive. website is a link the person gave (a host\'s RFP "Link").',
   tickets:

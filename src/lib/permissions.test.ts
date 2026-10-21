@@ -12,7 +12,7 @@ import {
 const input = (over: Partial<AccessInput>): AccessInput => ({
   admin: false,
   roles: [],
-  overrides: [],
+  grants: [],
   ...over,
 });
 
@@ -48,7 +48,7 @@ describe("effectivePermissions", () => {
     const got = effectivePermissions(
       input({
         roles: [volunteer, { name: "Door", permissions: ["tickets.view"] }],
-        overrides: [{ permission: "promo.manage", effect: "grant" }],
+        grants: ["promo.manage"],
       }),
     );
     expect([...got].sort()).toEqual([
@@ -59,33 +59,13 @@ describe("effectivePermissions", () => {
     ]);
   });
 
-  it("lets a deny beat a role, and an implied permission", () => {
-    const denied = effectivePermissions(
-      input({
-        roles: [volunteer],
-        overrides: [{ permission: "schedule.manage", effect: "deny" }],
-      }),
-    );
-    expect(denied.has("schedule.manage")).toBe(false);
-    expect(denied.has("schedule.preview")).toBe(true);
-
-    const previewDenied = effectivePermissions(
-      input({
-        roles: [volunteer],
-        overrides: [{ permission: "schedule.preview", effect: "deny" }],
-      }),
-    );
-    expect(previewDenied.has("schedule.manage")).toBe(true);
-    expect(previewDenied.has("schedule.preview")).toBe(false);
+  it("expands a grant's implications", () => {
+    const got = effectivePermissions(input({ grants: ["schedule.manage"] }));
+    expect([...got].sort()).toEqual(["schedule.manage", "schedule.preview"]);
   });
 
-  it("gives admins everything, denies included", () => {
-    const got = effectivePermissions(
-      input({
-        admin: true,
-        overrides: [{ permission: "users.manage", effect: "deny" }],
-      }),
-    );
+  it("gives admins everything", () => {
+    const got = effectivePermissions(input({ admin: true }));
     expect(got.size).toBe(PERMISSION_KEYS.length);
   });
 
@@ -102,16 +82,16 @@ describe("explainPermissions", () => {
     const got = explainPermissions(
       input({
         roles: [volunteer],
-        overrides: [{ permission: "schedule.preview", effect: "deny" }],
+        grants: ["schedule.manage"],
       }),
     );
     expect(got["schedule.manage"]).toEqual({
       effective: true,
-      sources: [{ kind: "role", role: "Volunteer" }],
+      sources: [{ kind: "grant" }, { kind: "role", role: "Volunteer" }],
     });
     expect(got["schedule.preview"]).toEqual({
-      effective: false,
-      sources: [{ kind: "deny" }, { kind: "implied", by: "schedule.manage" }],
+      effective: true,
+      sources: [{ kind: "implied", by: "schedule.manage" }],
     });
     expect(got["users.manage"]).toEqual({ effective: false, sources: [] });
   });

@@ -50,7 +50,7 @@ again.
 
 Team tools (`/admin/*`, `/grade`) each gate on a permission from the catalog
 in `src/lib/permissions.ts`; `can(permission)` in `src/lib/access.ts` is the
-one check, resolving roles (`/admin/roles`) and per-user grants/denies
+one check, resolving roles (`/admin/roles`) and per-user grants
 (`/admin/users/[id]`) per request. `user.role = 'admin'` (Better Auth's admin
 plugin) bypasses it all and is only set by SQL or by another admin on
 `/admin/users`; the first admin is bootstrapped by hand in the Neon console:

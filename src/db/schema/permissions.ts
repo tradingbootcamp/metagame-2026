@@ -1,6 +1,5 @@
 import {
   index,
-  pgEnum,
   pgTable,
   primaryKey,
   text,
@@ -13,8 +12,6 @@ import { timestamps, user } from "./auth";
 // src/lib/permissions.ts, stored as text so adding one needs no migration;
 // a key dropped from the catalog is ignored when read. `user.role = 'admin'`
 // stays the superuser bypass and is set only by SQL, never from here.
-
-export const permissionEffect = pgEnum("permission_effect", ["grant", "deny"]);
 
 export const roles = pgTable("roles", {
   id: uuid().primaryKey().defaultRandom(),
@@ -50,17 +47,16 @@ export const userRoles = pgTable(
   ],
 );
 
-// A grant adds a permission on top of the user's roles; a deny removes one
-// however it was earned (a deny beats any role).
-export const userPermissionOverrides = pgTable(
-  "user_permission_overrides",
+// Permissions an account holds on top of its roles. Grants only: there is no
+// deny, so removing access means removing the role or the grant.
+export const userPermissionGrants = pgTable(
+  "user_permission_grants",
   {
     userId: text()
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     permission: text().notNull(),
-    effect: permissionEffect().notNull(),
-    ...timestamps,
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.permission] })],
 );

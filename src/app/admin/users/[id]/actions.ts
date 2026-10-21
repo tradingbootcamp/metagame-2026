@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/lib/access";
-import { setUserOverride, setUserRole } from "@/lib/permission-store";
+import { setUserGrant, setUserRole } from "@/lib/permission-store";
 import { isPermission } from "@/lib/permissions";
 
 export type Result = { error?: string };
@@ -35,13 +35,11 @@ export async function assignRole(
   return run(userId, () => setUserRole(userId, roleId, assigned));
 }
 
-export async function setOverride(
+export async function setGrant(
   userId: string,
   permission: string,
-  effect: "grant" | "deny" | null,
+  granted: boolean,
 ): Promise<Result> {
   if (!isPermission(permission)) return { error: "Unknown permission." };
-  if (effect !== "grant" && effect !== "deny" && effect !== null)
-    return { error: "Unknown override." };
-  return run(userId, () => setUserOverride(userId, permission, effect));
+  return run(userId, () => setUserGrant(userId, permission, granted));
 }
