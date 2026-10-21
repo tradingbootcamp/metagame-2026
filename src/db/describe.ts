@@ -68,7 +68,7 @@ const TABLE_NOTES: Record<string, string> = {
   apikey:
     "API keys (Better Auth api-key plugin), minted on /admin/api-keys. A request carrying one in x-api-key acts as the owning user (reference_id), so the admin gate applies as it does to pages. Only the hash is stored; start shows the first characters for telling keys apart.",
   profiles:
-    'Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field. image_url is the profile picture, a 512px Vercel Blob URL. is_adult ("18 or older?") and bringing_children are the first sign-in modal\'s required answers; it keeps opening while either is null. share_with_recruiters opts in to the name-and-email list sponsors who are hiring receive.',
+    'Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field. image_url is the profile picture, a 512px Vercel Blob URL. is_adult ("18 or older?") and bringing_children are the first sign-in modal\'s required answers; it keeps opening while either is null. share_with_recruiters opts in to the name-and-email list sponsors who are hiring receive. preferred_name is unused; the name lives in user.name.',
   tickets:
     "One row per purchase, keyed by the payment id the webhooks upsert on. Airtable keeps the finance detail; this holds what admission needs. owner_user_id (the attendee) is set only by claiming the ticket code, never by email match. holder_user_id is who has the code to pass on or claim; null means the buyer (purchaser_email). purchaser_discord is the Discord handle typed at checkout (leading @ stripped), used to prefill an empty profile Discord. Unclaiming clears the owner, makes them the holder and issues a fresh random code.",
   locations:
@@ -76,7 +76,7 @@ const TABLE_NOTES: Record<string, string> = {
   sessions:
     "One row per schedule slot. Drafts can be unplaced (null times, no location); only published rows show. airtable_rfp_record_id ties a session to the accepted RFP it was synced from.",
   session_hosts:
-    "Who runs a session, one row per host in billing order (position 0 is the lead), replacing 2025's host_1/2/3 columns. Every host is an account; the schedule shows the profile's preferred name, else the account name.",
+    "Who runs a session, one row per host in billing order (position 0 is the lead), replacing 2025's host_1/2/3 columns. Every host is an account; the schedule shows the account name.",
   rsvps:
     "Going or waitlisted, one row per user per session. The rsvps_capacity trigger refuses a going row once the session's max_capacity is reached (null = unlimited).",
   bookmarks: "Sessions a user starred. One row per pair.",
