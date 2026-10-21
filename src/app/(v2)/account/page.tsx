@@ -75,8 +75,7 @@ export default async function AccountPage({
                 <ProfileForm
                   email={user.email}
                   initialValues={{
-                    name: user.name,
-                    preferredName: profile?.preferredName ?? "",
+                    name: profile?.preferredName || user.name,
                     pronouns: profile?.pronouns ?? "",
                     discordHandle: prefillDiscord(
                       profile?.discordHandle,

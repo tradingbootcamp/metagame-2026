@@ -41,13 +41,14 @@ export async function updateProfile(
   if (!name) return { error: "Enter your name." };
 
   const values = {
-    preferredName: text(formData, "preferredName", 80),
+    preferredName: name,
     pronouns: text(formData, "pronouns", 40),
     discordHandle: text(formData, "discordHandle", 40),
     bio: text(formData, "bio", 1000),
     isPublic: formData.get("isPublic") === "on",
   };
 
+  // One name for people; the account name mirrors it for admin lists and emails.
   if (name !== session.user.name) {
     await getAuth().api.updateUser({
       body: { name },

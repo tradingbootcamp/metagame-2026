@@ -38,7 +38,6 @@ function Status({ state, saved }: { state: FormState; saved: string }) {
 
 export type ProfileValues = {
   name: string;
-  preferredName: string;
   pronouns: string;
   discordHandle: string;
   bio: string;
@@ -59,7 +58,12 @@ export function ProfileForm({
     <form action={action} className="flex flex-col gap-4">
       <h2 className="font-grotesk text-2xl font-bold text-navy">Profile</h2>
       <label className="flex flex-col gap-1.5">
-        <span className={LABEL}>Name</span>
+        <span className="flex flex-col gap-0.5">
+          <span className={LABEL}>Name</span>
+          <span className="text-sm text-ink/60">
+            On RSVPs, hosting, badge, etc.
+          </span>
+        </span>
         <Input
           name="name"
           defaultValue={v.name}
@@ -73,16 +77,6 @@ export function ProfileForm({
         <span className={LABEL}>Email</span>
         <p className="text-base text-ink">{email}</p>
       </div>
-      <label className="flex flex-col gap-1.5">
-        <span className={LABEL}>Preferred name</span>
-        <Input
-          name="preferredName"
-          defaultValue={v.preferredName}
-          placeholder="What your badge should say"
-          maxLength={80}
-          className={FIELD_LIGHT}
-        />
-      </label>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5">
           <span className={LABEL}>Pronouns</span>
