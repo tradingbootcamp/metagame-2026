@@ -146,7 +146,7 @@ export default async function SpeakerCommitteePage(
   }
 
   const submissions = await listSubmissions();
-  const label = await accountLabel(account.user);
+  const label = accountLabel(account.user);
   // Code sign-in registers without a name; with no name there's nothing to
   // match the Grader and Shepherd columns against.
   const me =

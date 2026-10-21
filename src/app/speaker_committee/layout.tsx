@@ -14,7 +14,7 @@ export default async function SpeakerCommitteeLayout({
   children: React.ReactNode;
 }) {
   const account = await adminSession();
-  const label = account ? await accountLabel(account.user) : null;
+  const label = account ? accountLabel(account.user) : null;
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
