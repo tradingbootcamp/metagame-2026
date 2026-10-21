@@ -1,24 +1,4 @@
-// The RFP pipeline columns, apart from rfp-rubric.ts so client components can
-// name them without pulling in the Airtable client and its env.
-
 import { END_GAP_MINUTES } from "./schedule";
-
-export const GRADER_FIELD = "Rubric: Grader";
-export const VERDICT_FIELD = "Verdict";
-export const NEXT_STEPS_FIELD = "Next steps";
-export const SHEPHERD_FIELD = "Shepherd";
-
-export const NEXT_STEPS_ASSIGN_GRADER = "0. Assign grader";
-/** Where a proposal waits while it's still with its grader. */
-export const NEXT_STEPS_GRADE = "1. Grade";
-/** Where a grader's save moves it once the rubric is done. */
-export const NEXT_STEPS_DECIDE = "2. Committee decision";
-export const NEXT_STEPS_ASSIGN_SHEPHERD = "4. Assign shepherd";
-export const NEXT_STEPS_SHEPHERD_MEETING = "5. Shepherd meeting";
-/** Accepted and waiting for a slot; taking it off the schedule returns it here. */
-export const NEXT_STEPS_SCHEDULE = "6. Add to schedule";
-/** Placed on the schedule. The trailing space is in the option name itself. */
-export const NEXT_STEPS_DONE = "7. None! We're good :) ";
 
 /**
  * Minutes a proposal's free-text Duration ("1 hour", "90 min", "1.5 hrs")

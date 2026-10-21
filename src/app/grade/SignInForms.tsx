@@ -76,13 +76,6 @@ export function GraderPicker({ graders }: { graders: string[] }) {
           {state.error}
         </p>
       </form>
-      {graders.length === 0 && (
-        <p className="text-sm text-ink/60">
-          The Airtable “Rubric: Grader” and “Shepherd” columns have no names to
-          choose from yet. Add them as options on either column and they’ll show
-          up here.
-        </p>
-      )}
     </Card>
   );
 }

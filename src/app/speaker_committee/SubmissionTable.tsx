@@ -2,23 +2,18 @@ import Link from "next/link";
 import InfoTip from "@/app/grade/InfoTip";
 import InlineSelect from "@/app/grade/InlineSelect";
 import {
-  GRADER_FIELD,
-  NEXT_STEPS_FIELD,
-  SHEPHERD_FIELD,
-  VERDICT_FIELD,
-} from "@/lib/rfp-fields";
-import type { Submission } from "@/lib/rfp-rubric";
+  PIPELINE_COLORS,
+  SHEPHERD_INFO,
+  type PipelineField,
+  type Row,
+} from "@/lib/rfp-pipeline";
 
 // The /grade overview's grouped table, rendered from the server page and from
 // the schedule tab's client component alike, so no server-only imports here.
 
 export const PATH = "/speaker_committee";
 
-/** What a row needs; the schedule tab ships these to the client without the rest of the record. */
-export type Row = Pick<
-  Submission,
-  "id" | "title" | "host" | "grader" | "shepherd" | "verdict" | "nextSteps"
->;
+export type { Row };
 
 export const SORTS = [
   "proposal",
@@ -38,11 +33,9 @@ export type SortState = {
   base: Record<string, string>;
 };
 
-/** Pill options and colours per pipeline column, plus the Shepherd ⓘ text. */
+/** Pill options per pipeline column. */
 export type TableMeta = {
-  options: Record<string, string[]>;
-  colors: Record<string, Record<string, string>>;
-  shepherdInfo?: string;
+  options: Record<PipelineField, readonly string[]>;
 };
 
 function SortLink({
@@ -103,7 +96,7 @@ export function SubmissionGroup({
 
   const pill = (
     row: Row,
-    field: string,
+    field: PipelineField,
     value: string | null,
     label: string,
   ) => (
@@ -111,12 +104,11 @@ export function SubmissionGroup({
       {/* Below lg the columns stack, so they need their own labels. */}
       <span className="shrink-0 text-xs text-ink/40 lg:hidden">{label}</span>
       <InlineSelect
-        recordId={row.id}
+        sessionId={row.id}
         field={field}
         value={value}
-        options={meta.options[field] ?? []}
-        colors={meta.colors[field] ?? {}}
-        allowAdd={field === SHEPHERD_FIELD}
+        options={meta.options[field]}
+        colors={PIPELINE_COLORS[field]}
       />
     </span>
   );
@@ -144,7 +136,7 @@ export function SubmissionGroup({
           <SortLink column="next" label="Next steps" state={state} />
           <span className="flex items-center whitespace-nowrap">
             <SortLink column="shepherd" label="Shepherd" state={state} />
-            {meta.shepherdInfo && <InfoTip text={meta.shepherdInfo} />}
+            <InfoTip text={SHEPHERD_INFO} />
           </span>
         </div>
 
@@ -166,10 +158,10 @@ export function SubmissionGroup({
                   {row.host}
                 </span>
               </span>
-              {pill(row, GRADER_FIELD, row.grader, "Grader")}
-              {pill(row, VERDICT_FIELD, row.verdict, "Verdict")}
-              {pill(row, NEXT_STEPS_FIELD, row.nextSteps, "Next steps")}
-              {pill(row, SHEPHERD_FIELD, row.shepherd, "Shepherd")}
+              {pill(row, "grader", row.grader, "Grader")}
+              {pill(row, "verdict", row.verdict, "Verdict")}
+              {pill(row, "nextSteps", row.nextSteps, "Next steps")}
+              {pill(row, "shepherd", row.shepherd, "Shepherd")}
             </li>
           ))}
         </ul>

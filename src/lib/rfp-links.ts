@@ -1,7 +1,8 @@
 import { airtableConfig } from "./airtable-config";
 
-/** Where an RFP submission lives: its grading page and its Airtable row. */
-export const rfpLinks = (recordId: string) => ({
-  grade: `/grade/${recordId}`,
-  airtable: `https://airtable.com/${airtableConfig.baseId}/${airtableConfig.rfpSubmissionsTableId}/${recordId}`,
-});
+/** A session's grading page. */
+export const gradeLink = (sessionId: string) => `/grade/${sessionId}`;
+
+/** The Airtable RFP Submissions row a session was imported from. */
+export const airtableRfpLink = (recordId: string) =>
+  `https://airtable.com/${airtableConfig.baseId}/${airtableConfig.rfpSubmissionsTableId}/${recordId}`;

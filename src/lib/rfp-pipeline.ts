@@ -1,0 +1,134 @@
+import type { RfpSession } from "./rfp-sessions";
+import {
+  COMMITTEE_EMAILS,
+  NEXT_STEPS_PHASE,
+  VERDICT_LABELS,
+} from "./rfp-labels";
+
+// The pipeline columns as the /grade and /speaker_committee tables show them:
+// one row per session, each select's option labels, and the pill colours.
+// Plain data with a type-only import, so client components can use it.
+
+/** The columns a row's inline dropdowns edit. */
+export const PIPELINE_FIELDS = [
+  "grader",
+  "verdict",
+  "nextSteps",
+  "shepherd",
+] as const;
+export type PipelineField = (typeof PIPELINE_FIELDS)[number];
+
+export type Row = {
+  /** The session id. */
+  id: string;
+  title: string;
+  host: string;
+  phase: RfpSession["phase"];
+  /** The latest-assigned grader's committee name, as the Grader column shows. */
+  grader: string | null;
+  graderIds: string[];
+  shepherd: string | null;
+  shepherdId: string | null;
+  /** The Verdict option label. */
+  verdict: string | null;
+  /** The "Next steps" option the phase stands for. */
+  nextSteps: string | null;
+};
+
+/** How the Grader and Shepherd columns name an account. */
+export const committeeLabel = (a: {
+  name: string;
+  committeeName: string | null;
+}) => a.committeeName ?? a.name;
+
+export function toRow(s: RfpSession): Row {
+  return {
+    id: s.sessionId,
+    title: s.title,
+    host: s.hosts.map((h) => h.name).join(", "),
+    phase: s.phase,
+    grader: s.grader ? committeeLabel(s.grader) : null,
+    graderIds: s.grades.map((g) => g.grader.userId),
+    shepherd: s.shepherd ? committeeLabel(s.shepherd) : null,
+    shepherdId: s.shepherd?.userId ?? null,
+    verdict: s.verdict ? VERDICT_LABELS[s.verdict] : null,
+    nextSteps: s.nextSteps,
+  };
+}
+
+/** The selects' own order, so sorting reads the way the columns do. */
+export const VERDICT_ORDER: readonly string[] = Object.values(VERDICT_LABELS);
+export const NEXT_STEPS_ORDER: readonly string[] =
+  Object.keys(NEXT_STEPS_PHASE);
+
+/** The whole committee, whether or not they have an account yet. */
+export const COMMITTEE_NAMES: readonly string[] = Object.keys(COMMITTEE_EMAILS);
+
+export const SHEPHERD_INFO =
+  "The individual responsible for emailing, meeting with, following up with, and ensuring this speaker has a good experience on an ongoing basis";
+
+// Airtable's own option colours (see airtable-colors.ts for the tokens), so
+// the pills here read the way they do in the base.
+const COMMITTEE_COLORS: Record<string, string> = {
+  "John Bromels": "purpleLight2",
+  "Brian Smiley": "purpleLight1",
+  "Ben Karcher": "yellowLight2",
+  "Brendan Hurst": "yellowLight1",
+  "Tommy Honton": "orangeLight2",
+  "Sparr Risher": "orangeLight1",
+  "Michael Sheely": "pinkLight2",
+  "Ricki Heicklen": "pinkLight1",
+  Jisk: "blueLight2",
+  "Scott Gillies": "blueLight2",
+  "Julian Wise": "blueLight2",
+};
+
+export const PIPELINE_COLORS: Record<PipelineField, Record<string, string>> = {
+  grader: COMMITTEE_COLORS,
+  shepherd: COMMITTEE_COLORS,
+  verdict: {
+    Confirmed: "greenLight1",
+    Probably: "greenLight2",
+    "needs follow up": "yellowLight2",
+    "Unconference schedule": "purpleLight2",
+    Unlikely: "redLight2",
+    Rejected: "redLight1",
+    "N/A": "grayLight2",
+  },
+  nextSteps: {
+    "0. Assign grader": "tealLight2",
+    "1. Grade": "cyanLight2",
+    "2. Committee decision": "cyanLight1",
+    "3. Email speaker with verdict": "cyanBright",
+    "4. Assign shepherd": "blueLight2",
+    "5. Shepherd meeting": "blueLight1",
+    "6. Add to schedule": "blueBright",
+    "7. None! We're good :) ": "grayLight2",
+    "N/A": "grayLight2",
+  },
+};
+
+/** Blank or unrecognised values sort after everything known. */
+export const rank = (order: readonly string[], value: string | null) => {
+  const i = value ? order.indexOf(value) : -1;
+  return i === -1 ? order.length : i;
+};
+
+// Groups drop the numbering the option names carry. Anything not named here
+// just loses its "N. " prefix.
+const GROUP_LABELS: Record<string, string> = {
+  "1. Grade": "To grade",
+  "7. None! We're good :) ": "All set",
+};
+
+export const groupLabel = (step: string | null) =>
+  step === null
+    ? "Not triaged yet"
+    : (GROUP_LABELS[step] ?? step.replace(/^\d+\.\s*/, "").trim());
+
+/** The steps present among the rows, in pipeline order with untriaged first. */
+export function stepsOf(rows: Row[]): (string | null)[] {
+  return [null, ...NEXT_STEPS_ORDER].filter((step) =>
+    rows.some((s) => s.nextSteps === step),
+  );
+}

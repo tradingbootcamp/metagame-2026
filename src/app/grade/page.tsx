@@ -2,23 +2,23 @@ import Link from "next/link";
 import { connection } from "next/server";
 import SignIn from "./SignIn";
 import { GraderPicker } from "./SignInForms";
-import { gradeAccess } from "@/lib/grader-auth";
-import { identityName, type Identity } from "@/lib/grader-identity";
-import { matchLabel } from "@/lib/name-match";
+import { gradeAccess, graderUserId } from "@/lib/grader-auth";
 import InfoTip from "./InfoTip";
 import InlineSelect from "./InlineSelect";
 import {
-  GRADER_FIELD,
-  listSubmissions,
-  NEXT_STEPS_FIELD,
-  optionColors,
-  resolveEditableFields,
-  resolveGraderNames,
-  DECISION_FIELDS,
-  SHEPHERD_FIELD,
-  VERDICT_FIELD,
-  type Submission,
-} from "@/lib/rfp-rubric";
+  COMMITTEE_NAMES,
+  groupLabel,
+  NEXT_STEPS_ORDER,
+  PIPELINE_COLORS,
+  rank,
+  SHEPHERD_INFO,
+  stepsOf,
+  toRow,
+  VERDICT_ORDER,
+  type PipelineField,
+  type Row,
+} from "@/lib/rfp-pipeline";
+import { committeeAccounts, listRfpSessions } from "@/lib/rfp-sessions";
 
 const VIEWS = [
   { key: "grading", label: "Grading assigned to me" },
@@ -38,57 +38,15 @@ const SORTS = [
 ] as const;
 type SortKey = (typeof SORTS)[number];
 
-// Airtable's own select order, so sorting reads the way the column does there.
-const VERDICT_ORDER = [
-  "Confirmed",
-  "Probably yes",
-  "This is running a game, probably fine",
-  "Needs modification but could be promising",
-  "Sponsorship / product placement potential — send Night Market form",
-  "Probably no",
-  "Rejected",
-  "N/A",
-];
-
-const NEXT_STEPS_ORDER = [
-  "0. Assign grader",
-  "1. Grade",
-  "2. Committee decision",
-  "3. Email speaker with verdict",
-  "4. Assign shepherd",
-  "5. Shepherd meeting",
-  "6. Add to schedule",
-  "7. None! We're good :) ",
-  "N/A",
-];
-
-/** Blank or unrecognised values sort after everything known. */
-const rank = (order: string[], value: string | null) => {
-  const i = value ? order.indexOf(value) : -1;
-  return i === -1 ? order.length : i;
-};
-
 const first = (value: string | string[] | undefined) =>
   (Array.isArray(value) ? value[0] : value) ?? "";
 
-// The list is grouped by pipeline step, so the headings drop the numbering the
-// option names carry. Anything not named here just loses its "N. " prefix.
-const GROUP_LABELS: Record<string, string> = {
-  "1. Grade": "To grade",
-  "7. None! We're good :) ": "All set",
-};
-
-const groupLabel = (step: string | null) =>
-  step === null
-    ? "Not triaged yet"
-    : (GROUP_LABELS[step] ?? step.replace(/^\d+\.\s*/, "").trim());
-
-function compare(a: Submission, b: Submission, sort: SortKey) {
+function compare(a: Row, b: Row, sort: SortKey) {
   if (sort === "host") {
     return a.host.localeCompare(b.host) || a.title.localeCompare(b.title);
   }
   if (sort === "grader" || sort === "shepherd") {
-    const who = (s: Submission) => (sort === "grader" ? s.grader : s.shepherd);
+    const who = (s: Row) => (sort === "grader" ? s.grader : s.shepherd);
     // "￿" keeps unassigned rows at the bottom of an ascending sort.
     return (
       (who(a) || "￿").localeCompare(who(b) || "￿") ||
@@ -155,33 +113,44 @@ function SortLink({
 
 function Group({
   title,
-  submissions,
+  rows,
   state,
-  colors,
-  decisionOptions,
-  descriptions,
+  options,
 }: {
   title: string;
-  submissions: Submission[];
+  rows: Row[];
   state: SortState;
-  colors: Record<string, Record<string, string>>;
-  decisionOptions: Record<string, string[]>;
-  /** Airtable column descriptions, shown behind the ⓘ in the header. */
-  descriptions: Record<string, string | undefined>;
+  options: Record<PipelineField, readonly string[]>;
 }) {
-  if (submissions.length === 0) return null;
-
-  const shepherdInfo = descriptions[SHEPHERD_FIELD];
+  if (rows.length === 0) return null;
 
   // Everything past the title is sized to its content so the title keeps the
   // rest.
   const cols = "lg:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem_6.5rem]";
 
+  const pill = (
+    row: Row,
+    field: PipelineField,
+    value: string | null,
+    label: string,
+  ) => (
+    <span className="flex min-w-0 items-center gap-1.5">
+      {/* Below lg the columns stack, so they need their own labels. */}
+      <span className="shrink-0 text-xs text-ink/40 lg:hidden">{label}</span>
+      <InlineSelect
+        sessionId={row.id}
+        field={field}
+        value={value}
+        options={options[field]}
+        colors={PIPELINE_COLORS[field]}
+      />
+    </span>
+  );
+
   return (
     <section>
       <h2 className="font-bebas mb-2 text-lg tracking-wide text-navy">
-        {title}{" "}
-        <span className="text-ink/40 tabular-nums">{submissions.length}</span>
+        {title} <span className="text-ink/40 tabular-nums">{rows.length}</span>
       </h2>
 
       <div className="overflow-hidden rounded-xl border border-line bg-white">
@@ -204,83 +173,35 @@ function Group({
               rather than forcing the header to wrap. */}
           <span className="flex items-center whitespace-nowrap">
             <SortLink column="shepherd" label="Shepherd" state={state} />
-            {shepherdInfo && <InfoTip text={shepherdInfo} />}
+            <InfoTip text={SHEPHERD_INFO} />
           </span>
         </div>
 
         <ul className="divide-y divide-line">
-          {submissions.map((submission) => {
-            // Not a whole-row link any more: the row holds dropdowns now, and a
-            // stray click navigating away mid-edit would be worse.
-            return (
-              <li
-                key={submission.id}
-                className={`grid gap-1.5 px-4 py-3 transition-colors hover:bg-cream lg:items-center lg:gap-4 ${cols}`}
-              >
-                <span className="min-w-0">
-                  <Link
-                    href={`/grade/${submission.id}`}
-                    className="block truncate font-medium text-navy hover:text-meeple hover:underline"
-                  >
-                    {submission.title}
-                  </Link>
-                  <span className="block truncate text-sm text-ink/55">
-                    {submission.host}
-                  </span>
+          {rows.map((row) => (
+            // Not a whole-row link: the row holds dropdowns, and a stray click
+            // navigating away mid-edit would be worse.
+            <li
+              key={row.id}
+              className={`grid gap-1.5 px-4 py-3 transition-colors hover:bg-cream lg:items-center lg:gap-4 ${cols}`}
+            >
+              <span className="min-w-0">
+                <Link
+                  href={`/grade/${row.id}`}
+                  className="block truncate font-medium text-navy hover:text-meeple hover:underline"
+                >
+                  {row.title}
+                </Link>
+                <span className="block truncate text-sm text-ink/55">
+                  {row.host}
                 </span>
-                <span className="flex min-w-0 items-center gap-1.5">
-                  {/* Below lg the columns stack, so they need their own labels. */}
-                  <span className="shrink-0 text-xs text-ink/40 lg:hidden">
-                    Grader
-                  </span>
-                  <InlineSelect
-                    recordId={submission.id}
-                    field={GRADER_FIELD}
-                    value={submission.grader}
-                    options={decisionOptions[GRADER_FIELD]}
-                    colors={colors[GRADER_FIELD]}
-                  />
-                </span>
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="shrink-0 text-xs text-ink/40 lg:hidden">
-                    Verdict
-                  </span>
-                  <InlineSelect
-                    recordId={submission.id}
-                    field={VERDICT_FIELD}
-                    value={submission.verdict}
-                    options={decisionOptions[VERDICT_FIELD]}
-                    colors={colors[VERDICT_FIELD]}
-                  />
-                </span>
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="shrink-0 text-xs text-ink/40 lg:hidden">
-                    Next steps
-                  </span>
-                  <InlineSelect
-                    recordId={submission.id}
-                    field={NEXT_STEPS_FIELD}
-                    value={submission.nextSteps}
-                    options={decisionOptions[NEXT_STEPS_FIELD]}
-                    colors={colors[NEXT_STEPS_FIELD]}
-                  />
-                </span>
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span className="shrink-0 text-xs text-ink/40 lg:hidden">
-                    Shepherd
-                  </span>
-                  <InlineSelect
-                    recordId={submission.id}
-                    field={SHEPHERD_FIELD}
-                    value={submission.shepherd}
-                    options={decisionOptions[SHEPHERD_FIELD]}
-                    colors={colors[SHEPHERD_FIELD]}
-                    allowAdd
-                  />
-                </span>
-              </li>
-            );
-          })}
+              </span>
+              {pill(row, "grader", row.grader, "Grader")}
+              {pill(row, "verdict", row.verdict, "Verdict")}
+              {pill(row, "nextSteps", row.nextSteps, "Next steps")}
+              {pill(row, "shepherd", row.shepherd, "Shepherd")}
+            </li>
+          ))}
         </ul>
       </div>
     </section>
@@ -295,24 +216,18 @@ export default async function GradePage(props: PageProps<"/grade">) {
 
   const access = await gradeAccess();
   if (!access) return <SignIn />;
+  if (!access.identity) return <GraderPicker graders={[...COMMITTEE_NAMES]} />;
 
-  const submissions = await listSubmissions();
-  let identity: Identity;
-  if (access.identity) {
-    identity = access.identity;
-  } else {
-    return <GraderPicker graders={await resolveGraderNames(submissions)} />;
-  }
-  if (access.via === "account" && identity.kind === "grader") {
-    // The Airtable roster's spelling, so the "assigned to me" tabs match.
-    const roster = await resolveGraderNames(submissions);
-    identity = { kind: "grader", name: matchLabel(identity.name, roster) };
-  }
+  const [rfpSessions, committee, me] = await Promise.all([
+    listRfpSessions(),
+    committeeAccounts(),
+    graderUserId(access),
+  ]);
+  const rows = rfpSessions.map(toRow);
 
-  // Null for "Someone else": no name to match rows against, so there's nothing
-  // for the "assigned to me" tabs to hold and they're dropped rather than shown
+  // Null for "Someone else" or a name without an account: nothing to match
+  // rows against, so the "assigned to me" tabs are dropped rather than shown
   // empty.
-  const me = identityName(identity);
   const views = me === null ? VIEWS.filter((v) => v.key === "all") : VIEWS;
 
   const params = await props.searchParams;
@@ -327,23 +242,17 @@ export default async function GradePage(props: PageProps<"/grade">) {
   const dir = first(params.dir) === "desc" ? "desc" : "asc";
   const state: SortState = { sort, dir, view, q: rawQuery };
 
-  const decisionFields = await resolveEditableFields(DECISION_FIELDS);
-  const decisionOptions = Object.fromEntries(
-    decisionFields.map((f) => [f.field, [...f.options]]),
-  );
-  const descriptions = Object.fromEntries(
-    decisionFields.map((f) => [f.field, f.description]),
-  );
-  const colors = await optionColors([
-    GRADER_FIELD,
-    VERDICT_FIELD,
-    NEXT_STEPS_FIELD,
-    SHEPHERD_FIELD,
-  ]);
-  const byView: Record<ViewKey, Submission[]> = {
-    grading: submissions.filter((s) => s.grader === me),
-    shepherding: submissions.filter((s) => s.shepherd === me),
-    all: submissions,
+  const names = committee.map((a) => a.committeeName);
+  const options: Record<PipelineField, readonly string[]> = {
+    grader: names,
+    shepherd: names,
+    verdict: VERDICT_ORDER,
+    nextSteps: NEXT_STEPS_ORDER,
+  };
+  const byView: Record<ViewKey, Row[]> = {
+    grading: rows.filter((s) => me !== null && s.graderIds.includes(me)),
+    shepherding: rows.filter((s) => me !== null && s.shepherdId === me),
+    all: rows,
   };
   const visible = byView[view]
     .filter(
@@ -353,21 +262,6 @@ export default async function GradePage(props: PageProps<"/grade">) {
         s.host.toLowerCase().includes(query),
     )
     .sort((a, b) => (dir === "asc" ? 1 : -1) * compare(a, b, sort));
-
-  // One section per pipeline step, in pipeline order, untriaged rows first —
-  // those are the newest submissions and the easiest to lose track of. Any
-  // step Airtable has gained since NEXT_STEPS_ORDER was written gets a section
-  // of its own at the end, rather than its rows vanishing from the page.
-  const steps: (string | null)[] = [
-    ...[null, ...NEXT_STEPS_ORDER].filter((step) =>
-      visible.some((s) => s.nextSteps === step),
-    ),
-    ...new Set(
-      visible
-        .map((s) => s.nextSteps)
-        .filter((step) => step !== null && !NEXT_STEPS_ORDER.includes(step)),
-    ),
-  ];
 
   return (
     <div className="space-y-5">
@@ -415,16 +309,17 @@ export default async function GradePage(props: PageProps<"/grade">) {
           No proposals match.{query && " Try clearing the search."}
         </p>
       ) : (
+        // One section per pipeline step, in pipeline order, untriaged rows
+        // first — those are the newest submissions and the easiest to lose
+        // track of.
         <div className="space-y-6">
-          {steps.map((step) => (
+          {stepsOf(visible).map((step) => (
             <Group
               key={step ?? "untriaged"}
               title={groupLabel(step)}
-              submissions={visible.filter((s) => s.nextSteps === step)}
+              rows={visible.filter((s) => s.nextSteps === step)}
               state={state}
-              colors={colors}
-              decisionOptions={decisionOptions}
-              descriptions={descriptions}
+              options={options}
             />
           ))}
         </div>

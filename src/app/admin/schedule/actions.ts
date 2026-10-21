@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { EXPIRED, requireAdmin } from "@/lib/admin-auth";
 import { deleteImage } from "@/lib/blob";
-import { cachedSubmission, schedulerNotes } from "@/lib/rfp-rubric";
+import { getRfpSession, schedulerNotes } from "@/lib/rfp-sessions";
 import { ImageUploadError, replaceRoomImages } from "@/lib/room-images";
 import { type ScheduleAccount } from "@/lib/schedule";
 import {
@@ -46,19 +46,21 @@ const optional = (formData: FormData, key: string) =>
 /** The form's text fields; repeated names (hostId) collapse to one, so read those separately. */
 const fields = (formData: FormData): Raw => Object.fromEntries(formData);
 
-export type SchedulerNotes = { notes: string | null } | { error: string };
+export type SchedulerNotes =
+  | { notes: { grader: string; text: string }[] }
+  | { error: string };
 
 export async function loadSchedulerNotes(
-  recordId: string,
+  sessionId: string,
 ): Promise<SchedulerNotes> {
   if (!(await requireAdmin())) return { error: EXPIRED };
   try {
-    const submission = await cachedSubmission(recordId);
-    if (submission) return { notes: schedulerNotes(submission) };
+    const rfpSession = await getRfpSession(sessionId);
+    if (rfpSession) return { notes: schedulerNotes(rfpSession) };
   } catch (err) {
-    console.error("Airtable RFP fetch failed", recordId, err);
+    console.error("[admin/schedule] grades read failed", sessionId, err);
   }
-  return { error: "Couldn’t load Airtable record" };
+  return { error: "Couldn’t load the grades" };
 }
 
 export async function saveSession(

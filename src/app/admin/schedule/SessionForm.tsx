@@ -217,6 +217,7 @@ export default function SessionForm({
 
           {session && (
             <RfpPanel
+              sessionId={session.id}
               recordId={session.airtableRfpRecordId}
               shepherd={session.shepherd}
             />

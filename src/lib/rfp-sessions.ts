@@ -295,6 +295,16 @@ async function loadRfpSessions(where: SQL | undefined): Promise<RfpSession[]> {
   });
 }
 
+/** Each submitted grade's note to whoever schedules the session. */
+export function schedulerNotes(
+  s: RfpSession,
+): { grader: string; text: string }[] {
+  return s.grades.flatMap((g) => {
+    const text = g.schedulerNotes?.trim();
+    return g.submittedAt && text ? [{ grader: g.grader.name, text }] : [];
+  });
+}
+
 /** Every RFP session matching the filter, by title. */
 export function listRfpSessions(
   filter: RfpSessionFilter = {},
@@ -508,6 +518,7 @@ export type RfpSessionUpdate = {
   verdict?: Verdict | null;
   shepherdUserId?: string | null;
   speakerTier?: SpeakerTier | null;
+  marketingConsent?: boolean | null;
   text?: SessionText;
 };
 
@@ -532,7 +543,7 @@ export async function updateRfpSession(
     (s) => [
       {
         ...("verdict" in update ? verdictField(s) : {}),
-        ...sessionFields(text, update.speakerTier),
+        ...sessionFields(text, update.speakerTier, update.marketingConsent),
       },
       "shepherdUserId" in update ? shepherdWrite(s.shepherd) : null,
     ],

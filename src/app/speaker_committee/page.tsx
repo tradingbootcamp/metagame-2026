@@ -15,32 +15,16 @@ import {
   PATH,
   SORTS,
   SubmissionGroup,
-  type Row,
   type SortKey,
   type SortState,
   type TableMeta,
 } from "./SubmissionTable";
 import ToolSignIn from "@/components/ToolSignIn";
-import { accountLabel, adminSession } from "@/lib/auth";
-import { matchLabel } from "@/lib/name-match";
-import { durationMinutes, SHEPHERD_FIELD } from "@/lib/rfp-fields";
-import {
-  DECISION_FIELDS,
-  GRADER_FIELD,
-  listSubmissions,
-  NEXT_STEPS_FIELD,
-  optionColors,
-  resolveEditableFields,
-  resolveGraderNames,
-  VERDICT_FIELD,
-  type Submission,
-} from "@/lib/rfp-rubric";
-import {
-  CATEGORIES,
-  DEFAULT_DRAFT_MINUTES,
-  END_GAP_MINUTES,
-  type Category,
-} from "@/lib/schedule";
+import { adminSession } from "@/lib/auth";
+import { durationMinutes } from "@/lib/rfp-fields";
+import { NEXT_STEPS_ORDER, toRow, VERDICT_ORDER } from "@/lib/rfp-pipeline";
+import { committeeAccounts, listRfpSessions } from "@/lib/rfp-sessions";
+import { DEFAULT_DRAFT_MINUTES, END_GAP_MINUTES } from "@/lib/schedule";
 import { loadRsvpCounts, loadSchedule } from "@/lib/schedule-store";
 
 const MODES = [
@@ -52,28 +36,6 @@ type Mode = (typeof MODES)[number]["key"];
 const first = (value: string | string[] | undefined) =>
   (Array.isArray(value) ? value[0] : value) ?? "";
 
-const toRow = (s: Submission): Row => ({
-  id: s.id,
-  title: s.title,
-  host: s.host,
-  grader: s.grader,
-  shepherd: s.shepherd,
-  verdict: s.verdict,
-  nextSteps: s.nextSteps,
-});
-
-/** Only seeds the drag preview's colour; the server re-reads the record on drop. */
-function categoryHint(value: unknown): Category | null {
-  const s = (Array.isArray(value) ? value.join(" ") : String(value ?? ""))
-    .toLowerCase()
-    .trim();
-  if (!s) return null;
-  return (
-    CATEGORIES.find((c) => c !== "other" && s.includes(c)) ??
-    (/lecture|panel/.test(s) ? "talk" : "other")
-  );
-}
-
 function PipelineTabs({
   active,
   mode,
@@ -81,14 +43,14 @@ function PipelineTabs({
 }: {
   active: TabKey;
   mode: Mode;
-  counts: Record<TabKey, number> | null;
+  counts: Record<TabKey, number>;
 }) {
   return (
     <nav aria-label="Pipeline" className="-mx-4 overflow-x-auto px-4 pb-1">
       <ol className="flex min-w-max">
         {TABS.map((t, i) => {
           const on = t.key === active;
-          const n = counts?.[t.key] ?? 0;
+          const n = counts[t.key];
           // Chevrons: each step notched on the left and pointed on the right,
           // overlapping its neighbour so the row reads as one flow.
           const shape =
@@ -109,20 +71,18 @@ function PipelineTabs({
                 }`}
               >
                 {t.label}
-                {counts && (
-                  <span
-                    title={`${n} assigned to you`}
-                    className={`min-w-5 rounded-full px-1.5 text-center text-xs tabular-nums ${
-                      n > 0
-                        ? "bg-meeple text-white"
-                        : on
-                          ? "bg-cream/20 text-cream/70"
-                          : "bg-ink/8 text-ink/40"
-                    }`}
-                  >
-                    {n}
-                  </span>
-                )}
+                <span
+                  title={`${n} assigned to you`}
+                  className={`min-w-5 rounded-full px-1.5 text-center text-xs tabular-nums ${
+                    n > 0
+                      ? "bg-meeple text-white"
+                      : on
+                        ? "bg-cream/20 text-cream/70"
+                        : "bg-ink/8 text-ink/40"
+                  }`}
+                >
+                  {n}
+                </span>
               </Link>
             </li>
           );
@@ -144,19 +104,16 @@ export default async function SpeakerCommitteePage(
   if (!account) {
     return <ToolSignIn title="Speaker committee" next={PATH} />;
   }
+  const me = account.user.id;
 
-  const submissions = await listSubmissions();
-  const label = accountLabel(account.user);
-  // Code sign-in registers without a name; with no name there's nothing to
-  // match the Grader and Shepherd columns against.
-  const me =
-    label === account.user.email
-      ? null
-      : matchLabel(label, await resolveGraderNames(submissions));
+  const [rfpSessions, committee] = await Promise.all([
+    listRfpSessions(),
+    committeeAccounts(),
+  ]);
+  const rows = rfpSessions.map(toRow);
 
   const params = await props.searchParams;
-  const mode: Mode =
-    me === null ? "all" : first(params.who) === "all" ? "all" : "mine";
+  const mode: Mode = first(params.who) === "all" ? "all" : "mine";
   const mineOnly = mode === "mine";
   const tab: Tab = TABS.find((t) => t.key === first(params.tab)) ?? TABS[0];
   const rawQuery = first(params.q);
@@ -171,22 +128,16 @@ export default async function SpeakerCommitteePage(
     base: { who: mode, tab: tab.key },
   };
 
-  const decisionFields = await resolveEditableFields(DECISION_FIELDS);
+  const names = committee.map((a) => a.committeeName);
   const meta: TableMeta = {
-    options: Object.fromEntries(
-      decisionFields.map((f) => [f.field, [...f.options]]),
-    ),
-    colors: await optionColors([
-      GRADER_FIELD,
-      VERDICT_FIELD,
-      NEXT_STEPS_FIELD,
-      SHEPHERD_FIELD,
-    ]),
-    shepherdInfo: decisionFields.find((f) => f.field === SHEPHERD_FIELD)
-      ?.description,
+    options: {
+      grader: names,
+      shepherd: names,
+      verdict: VERDICT_ORDER,
+      nextSteps: NEXT_STEPS_ORDER,
+    },
   };
 
-  const rows = submissions.map(toRow);
   const visible = tabRows(rows, tab, me, mineOnly)
     .filter(
       (s) =>
@@ -199,37 +150,21 @@ export default async function SpeakerCommitteePage(
   const header = (
     <div className="space-y-4">
       <nav className="flex flex-wrap items-center gap-2">
-        {MODES.map((m) => {
-          const disabled = m.key === "mine" && me === null;
-          const cls = `rounded-full px-3.5 py-1.5 text-sm transition-colors ${
-            m.key === mode
-              ? "bg-navy text-cream"
-              : "bg-ink/6 text-ink/70 hover:bg-ink/12"
-          }`;
-          return disabled ? (
-            <span
-              key={m.key}
-              title="Add your name on /account to match the Grader and Shepherd columns."
-              className={`${cls} cursor-not-allowed opacity-50`}
-            >
-              {m.label}
-            </span>
-          ) : (
-            <Link
-              key={m.key}
-              href={{ pathname: PATH, query: { who: m.key, tab: tab.key } }}
-              className={cls}
-            >
-              {m.label}
-            </Link>
-          );
-        })}
+        {MODES.map((m) => (
+          <Link
+            key={m.key}
+            href={{ pathname: PATH, query: { who: m.key, tab: tab.key } }}
+            className={`rounded-full px-3.5 py-1.5 text-sm transition-colors ${
+              m.key === mode
+                ? "bg-navy text-cream"
+                : "bg-ink/6 text-ink/70 hover:bg-ink/12"
+            }`}
+          >
+            {m.label}
+          </Link>
+        ))}
       </nav>
-      <PipelineTabs
-        active={tab.key}
-        mode={mode}
-        counts={me === null ? null : myCounts(rows, me)}
-      />
+      <PipelineTabs active={tab.key} mode={mode} counts={myCounts(rows, me)} />
     </div>
   );
 
@@ -238,26 +173,17 @@ export default async function SpeakerCommitteePage(
       loadSchedule(),
       loadRsvpCounts(),
     ]);
-    const byId = new Map(submissions.map((s) => [s.id, s]));
+    const byId = new Map(rfpSessions.map((s) => [s.sessionId, s]));
     const queue: QueueRow[] = visible.map((r) => {
-      const fields = byId.get(r.id)?.fields ?? {};
+      const row = byId.get(r.id)?.row;
       return {
         ...r,
         minutes:
-          durationMinutes(fields.Duration) ??
+          durationMinutes(row?.requestedDuration) ??
           DEFAULT_DRAFT_MINUTES - END_GAP_MINUTES,
-        category: categoryHint(fields.Category),
+        category: row?.category ?? null,
       };
     });
-    const mine = (s: (typeof schedule.sessions)[number]) => {
-      const row = s.airtableRfpRecordId
-        ? byId.get(s.airtableRfpRecordId)
-        : undefined;
-      return (
-        (row !== undefined && row.shepherd === me) ||
-        (s.shepherd !== null && s.shepherd.userId === account.user.id)
-      );
-    };
     return (
       <div className="space-y-6">
         {header}
@@ -271,11 +197,13 @@ export default async function SpeakerCommitteePage(
           proposals={Object.fromEntries(rows.map((r) => [r.id, r]))}
           mutedIds={
             mineOnly
-              ? schedule.sessions.filter((s) => !mine(s)).map((s) => s.id)
+              ? schedule.sessions
+                  .filter((s) => s.shepherd?.userId !== me)
+                  .map((s) => s.id)
               : []
           }
           showInQueue={rows
-            .filter((r) => !mineOnly || r.shepherd === me)
+            .filter((r) => !mineOnly || r.shepherdId === me)
             .map((r) => r.id)}
           title="Needs to be scheduled"
           state={state}

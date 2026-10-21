@@ -50,7 +50,10 @@ import {
 export type QueueRow = Row & { minutes: number; category: Category | null };
 
 /** Queue rows ride the grid as stand-in sessions under this id. */
-const queueId = (recordId: string) => `rfp:${recordId}`;
+const queueId = (sessionId: string) => `rfp:${sessionId}`;
+/** The session behind a grid session or a queue stand-in. */
+const sessionIdOf = (s: ScheduleSession) =>
+  s.id.startsWith("rfp:") ? s.id.slice(4) : s.id;
 
 function asSession(row: QueueRow): ScheduleSession {
   return {
@@ -67,7 +70,7 @@ function asSession(row: QueueRow): ScheduleSession {
     ages: null,
     needs: null,
     status: "draft",
-    airtableRfpRecordId: row.id,
+    airtableRfpRecordId: null,
     hosts: row.host ? [{ userId: "", name: row.host, email: "" }] : [],
     shepherd: null,
   };
@@ -101,11 +104,11 @@ export default function ScheduleBoard({
   queue: QueueRow[];
   locations: ScheduleLocation[];
   going: Record<string, number>;
-  /** Every proposal by record id, for the details of what's on the grid. */
+  /** Every proposal by session id, for the details of what's on the grid. */
   proposals: Record<string, Row>;
   /** Sessions shown greyed: someone else's, in "assigned to me". */
   mutedIds: string[];
-  /** Record ids an unscheduled session would show under in this view. */
+  /** Session ids an unscheduled session would show under in this view. */
   showInQueue: string[];
   title: string;
   state: SortState;
@@ -121,7 +124,7 @@ export default function ScheduleBoard({
   const [board, apply] = useOptimistic<Board, Change>(
     { sessions: savedSessions, queue: savedQueue },
     (b, change) => {
-      const recordId = change.session.airtableRfpRecordId;
+      const sessionId = sessionIdOf(change.session);
       if (change.kind === "place") {
         const { startsAt, endsAt, locationId } = change;
         const placed = { ...change.session, startsAt, endsAt, locationId };
@@ -130,10 +133,10 @@ export default function ScheduleBoard({
           sessions: known
             ? b.sessions.map((s) => (s.id === placed.id ? placed : s))
             : [...b.sessions, placed],
-          queue: b.queue.filter((r) => r.id !== recordId),
+          queue: b.queue.filter((r) => r.id !== sessionId),
         };
       }
-      const row = recordId ? proposals[recordId] : undefined;
+      const row = proposals[sessionId];
       const s = change.session;
       return {
         sessions: b.sessions.map((x) =>
@@ -173,7 +176,7 @@ export default function ScheduleBoard({
     : undefined;
   // Only proposals go back to the list; hand-made sessions stay in /admin/schedule.
   const canUnschedule =
-    carrying !== null && !carriedRow && carrying.airtableRfpRecordId !== null;
+    carrying !== null && !carriedRow && carrying.id in proposals;
 
   useEffect(() => {
     if (!heldId) return;
@@ -223,9 +226,7 @@ export default function ScheduleBoard({
   };
 
   const open = openId ? board.sessions.find((s) => s.id === openId) : null;
-  const openRow = open?.airtableRfpRecordId
-    ? proposals[open.airtableRfpRecordId]
-    : undefined;
+  const openRow = open ? proposals[open.id] : undefined;
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? "No room";
 
@@ -354,6 +355,7 @@ export default function ScheduleBoard({
               </dl>
             )}
             <RfpPanel
+              sessionId={open.id}
               recordId={open.airtableRfpRecordId}
               shepherd={open.shepherd}
             />
@@ -362,7 +364,7 @@ export default function ScheduleBoard({
               <Link href="/admin/schedule" className={smallButtonClass}>
                 Edit in /admin/schedule
               </Link>
-              {open.airtableRfpRecordId && isPlaced(open) && (
+              {openRow && isPlaced(open) && (
                 <button
                   type="button"
                   onClick={() => takeOff(open)}

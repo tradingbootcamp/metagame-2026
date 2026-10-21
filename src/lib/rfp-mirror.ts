@@ -145,6 +145,7 @@ const TEXT_FIELDS: Record<SessionTextKey, string> = {
 export function sessionFields(
   text: SessionText,
   speakerTier?: SpeakerTier | null,
+  marketingConsent?: boolean | null,
 ): Fields {
   const out: Fields = {};
   for (const [key, value] of Object.entries(text)) {
@@ -152,6 +153,9 @@ export function sessionFields(
   }
   if (speakerTier !== undefined) {
     out["Speaker tier"] = label(SPEAKER_TIER_LABELS, speakerTier);
+  }
+  if (marketingConsent !== undefined) {
+    out["Session marketing consent"] = marketingConsent ?? false;
   }
   return out;
 }

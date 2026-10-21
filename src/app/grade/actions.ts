@@ -1,39 +1,39 @@
 "use server";
 
-import { revalidatePath, updateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
+import {
+  formToBody,
+  GRADE_FORM_SESSION_KEYS,
+  parseGrade,
+} from "@/lib/grade-input";
 import {
   checkPassword,
   endAccess,
   gradeAccess,
+  graderUserId,
   readSession,
   startSession,
 } from "@/lib/grader-auth";
 import { SOMEONE_ELSE } from "@/lib/grader-identity";
+import { fromLabel, NEXT_STEPS_PHASE, VERDICT_LABELS } from "@/lib/rfp-labels";
 import {
-  assignNewShepherd,
-  DECISION_FIELDS,
-  GRADER_FIELD,
-  listSubmissions,
-  NEXT_STEPS_FIELD,
-  resolveEditableFields,
-  resolveGraderNames,
-  sanitizeGrades,
-  saveGrades,
-  SCHEMA_TAG,
-  submissionTag,
-  SHEPHERD_FIELD,
-  VERDICT_FIELD,
-} from "@/lib/rfp-rubric";
+  COMMITTEE_NAMES,
+  PIPELINE_FIELDS,
+  type PipelineField,
+} from "@/lib/rfp-pipeline";
+import { loadedKey, MARKETING_CONSENT_FIELD } from "@/lib/rfp-rubric";
+import {
+  assignGrader,
+  committeeUserId,
+  getRfpSession,
+  saveGrade,
+  spaceOptionLocations,
+  unassignGrader,
+  updateRfpSession,
+} from "@/lib/rfp-sessions";
+import { explainDbError } from "@/lib/schedule-store";
 
 export type FormState = { error?: string };
-
-/** The only columns the overview's row dropdowns may write. */
-const INLINE_FIELDS: string[] = [
-  GRADER_FIELD,
-  VERDICT_FIELD,
-  NEXT_STEPS_FIELD,
-  SHEPHERD_FIELD,
-];
 
 export async function unlock(
   _prev: FormState,
@@ -58,8 +58,7 @@ export async function identify(
     await startSession({ kind: "anon" });
   } else {
     // Resolve against the roster so the cookie can't carry an arbitrary identity.
-    const roster = await resolveGraderNames(await listSubmissions());
-    if (!roster.includes(name)) {
+    if (!COMMITTEE_NAMES.includes(name)) {
       return { error: "Pick your name from the list." };
     }
     await startSession({ kind: "grader", name });
@@ -79,102 +78,143 @@ export async function signOut(): Promise<void> {
   revalidatePath("/grade");
 }
 
+/** The account behind a committee name, or the error to show. */
+async function committeeAccount(
+  name: string,
+): Promise<{ userId: string } | { error: string }> {
+  const userId = await committeeUserId(name);
+  return userId
+    ? { userId }
+    : { error: `${name} has no account yet, so they can't be assigned.` };
+}
+
 /**
- * One-field save from the overview. Allow-listed to the pipeline columns, so
- * this can't be used to write anything else from a list row.
+ * One-column save from the overview's row dropdowns. The value is the option
+ * label as the column shows it; blank clears.
  */
-export async function setOverviewField(
-  recordId: string,
-  field: string,
+export async function setPipelineField(
+  sessionId: string,
+  field: PipelineField,
   value: string,
 ): Promise<{ error?: string }> {
   if (!(await gradeAccess())?.identity)
     return { error: "Your session expired." };
-  if (!INLINE_FIELDS.includes(field)) {
+  if (!PIPELINE_FIELDS.includes(field)) {
     return { error: "That field isn't editable here." };
   }
 
-  const fields = await sanitizeGrades({ [field]: value });
-  if (!(field in fields)) return { error: "Unrecognised value." };
-
   try {
-    await saveGrades(recordId, fields);
+    switch (field) {
+      case "verdict": {
+        const verdict = value ? fromLabel(VERDICT_LABELS, value) : null;
+        if (value && !verdict) return { error: "Unrecognised value." };
+        await updateRfpSession(sessionId, { verdict });
+        break;
+      }
+      case "nextSteps": {
+        const phase = value ? NEXT_STEPS_PHASE[value] : null;
+        if (value && !phase) return { error: "Unrecognised value." };
+        await updateRfpSession(sessionId, { phase: phase ?? null });
+        break;
+      }
+      case "shepherd": {
+        if (!value) {
+          await updateRfpSession(sessionId, { shepherdUserId: null });
+          break;
+        }
+        const account = await committeeAccount(value);
+        if ("error" in account) return account;
+        await updateRfpSession(sessionId, { shepherdUserId: account.userId });
+        break;
+      }
+      case "grader": {
+        // The column shows the attributed grader; changing it reassigns,
+        // except a submitted grade is never thrown away.
+        const current = (await getRfpSession(sessionId))?.grader ?? null;
+        if (!value) {
+          if (!current) break;
+          if (
+            (await unassignGrader(sessionId, current.userId)) === "submitted"
+          ) {
+            return { error: `${current.name} has already graded this.` };
+          }
+          break;
+        }
+        const account = await committeeAccount(value);
+        if ("error" in account) return account;
+        await assignGrader(sessionId, account.userId);
+        if (current && current.userId !== account.userId) {
+          await unassignGrader(sessionId, current.userId);
+        }
+        break;
+      }
+    }
   } catch (err) {
     console.error("[grade] inline save failed:", err);
-    return { error: "Airtable rejected the change." };
+    return explainDbError(err);
   }
 
-  updateTag(submissionTag(recordId));
   // Deliberately not revalidating /grade: re-sorting the list under the cursor
   // mid-edit is worse than it being one refresh stale.
-  revalidatePath(`/grade/${recordId}`);
+  revalidatePath(`/grade/${sessionId}`);
   return {};
-}
-
-/**
- * Assign a shepherd by name from the overview, adding them to the Shepherd
- * options if they aren't there yet. Returns the name as Airtable now spells it.
- */
-export async function addShepherd(
-  recordId: string,
-  rawName: string,
-): Promise<{ name?: string; error?: string }> {
-  if (!(await gradeAccess())?.identity)
-    return { error: "Your session expired." };
-
-  const name = rawName.replace(/\s+/g, " ").trim();
-  if (!name || name.length > 60) return { error: "Enter a name." };
-
-  const [shepherd] = await resolveEditableFields(
-    DECISION_FIELDS.filter((f) => f.field === SHEPHERD_FIELD),
-  );
-  // Reuse an existing option rather than minting a near-duplicate.
-  const existing = shepherd?.options.find(
-    (o) => o.toLowerCase() === name.toLowerCase(),
-  );
-
-  try {
-    if (existing) await saveGrades(recordId, { [SHEPHERD_FIELD]: existing });
-    else await assignNewShepherd(recordId, name);
-  } catch (err) {
-    console.error("[grade] adding shepherd failed:", err);
-    return { error: "Airtable rejected the new shepherd." };
-  }
-
-  updateTag(SCHEMA_TAG);
-  updateTag(submissionTag(recordId));
-  revalidatePath(`/grade/${recordId}`);
-  return { name: existing ?? name };
 }
 
 export type SaveState = { savedAt?: number; error?: string };
 
+/** Saves the viewer's own grade, and the shepherd notes the form edits too. */
 export async function submitGrades(
-  recordId: string,
+  sessionId: string,
   _prev: SaveState,
   formData: FormData,
 ): Promise<SaveState> {
-  if (!(await gradeAccess())?.identity)
-    return { error: "Your session expired." };
-
-  // Multi-selects arrive as repeated entries (with a leading empty one, so an
-  // all-unchecked group still clears the cell); everything else is single.
-  const raw: Record<string, unknown> = {};
-  for (const key of new Set(formData.keys())) {
-    const values = formData.getAll(key).map(String);
-    if (key.endsWith("[]")) raw[key.slice(0, -2)] = values.filter(Boolean);
-    else raw[key] = values[0] ?? null;
+  const access = await gradeAccess();
+  if (!access?.identity) return { error: "Your session expired." };
+  const userId = await graderUserId(access);
+  if (!userId) {
+    return {
+      error:
+        access.identity.kind === "grader"
+          ? `${access.identity.name} has no account yet. Sign in with your account to grade.`
+          : "Sign in with your account to grade; a grade has to be someone's.",
+    };
   }
+
+  const body = formToBody(formData);
+  // A session column, not part of the grade. The box posts "true" alongside a
+  // hidden "false", so ticked means any "true".
+  const consent = formData.has(MARKETING_CONSENT_FIELD)
+    ? formData.getAll(MARKETING_CONSENT_FIELD).includes("true")
+    : undefined;
+  delete body[MARKETING_CONSENT_FIELD];
+  // The notes are shared by everyone grading the session, so only the ones
+  // this form changed are sent; a stale form must not overwrite newer notes.
+  for (const key of GRADE_FORM_SESSION_KEYS) {
+    const loaded = body[loadedKey(key)];
+    delete body[loadedKey(key)];
+    if (key in body && String(body[key] ?? "").trim() === String(loaded ?? ""))
+      delete body[key];
+  }
+  const spaces = await spaceOptionLocations();
+  const grade = parseGrade(
+    body,
+    spaces.map((s) => s.id),
+  );
+  if (!grade.ok) return { error: grade.error };
 
   try {
-    await saveGrades(recordId, await sanitizeGrades(raw));
+    await saveGrade(sessionId, userId, grade.value);
+    if (consent !== undefined) {
+      await updateRfpSession(sessionId, {
+        marketingConsent: consent,
+      });
+    }
   } catch (err) {
     console.error("[grade] failed to save:", err);
-    return { error: "Airtable rejected the save. Try again." };
+    return { error: explainDbError(err).error };
   }
 
-  updateTag(submissionTag(recordId));
   revalidatePath("/grade");
-  revalidatePath(`/grade/${recordId}`);
+  revalidatePath(`/grade/${sessionId}`);
   return { savedAt: Date.now() };
 }
