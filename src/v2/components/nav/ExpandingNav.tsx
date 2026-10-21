@@ -9,9 +9,10 @@ import {
 } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HOME_SECTIONS, NAV_LINKS } from "./links";
+import { ADMIN_LINK, HOME_SECTIONS, NAV_LINKS } from "./links";
 import { NavLogo, Pips, TopIcon } from "./LogoDice";
 import { useHomeSection } from "./useHomeSection";
+import { useIsAdmin } from "./useIsAdmin";
 import { useMediaQuery } from "./useMediaQuery";
 
 // Collapsed, this is just the single MG die in the corner. Desktop: clicking it
@@ -132,7 +133,7 @@ export default function ExpandingNav() {
   const section = useHomeSection();
   const active = useActiveLink(section);
   const onHome = usePathname() === "/";
-  const links = NAV_LINKS;
+  const links = useIsAdmin() ? [...NAV_LINKS, ADMIN_LINK] : NAV_LINKS;
   // The die's top face: on "/" the section under the viewport centre, else
   // the current page's icon, or home's pips off-nav.
   const topIcon = section ?? active ?? "home";

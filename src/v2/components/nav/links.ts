@@ -8,6 +8,7 @@ import {
   MapPin,
   MessageCircleQuestion,
   Puzzle,
+  ShieldCheck,
   Ticket,
   UserRound,
   Users,
@@ -47,6 +48,14 @@ export const NAV_LINKS: readonly NavLink[] = [
   { id: "childcare", label: "Childcare", href: "/childcare", icon: RubberDuck },
   { id: "team", label: "Team", href: "/team", icon: Users },
 ] as const;
+
+// Appended for signed-in admins only.
+export const ADMIN_LINK: NavLink = {
+  id: "admin",
+  label: "Admin",
+  href: "/admin",
+  icon: ShieldCheck,
+};
 
 // The one-pager's sections, in page order, keyed by their `id`. On "/" the
 // die's top face follows scroll-spy through these; the ones that are also nav
