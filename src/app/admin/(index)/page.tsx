@@ -5,7 +5,11 @@ import { NameForm } from "../SignInForms";
 import { Card } from "../ui";
 import { teamAccess } from "@/lib/access";
 import { toolAccess } from "@/lib/admin-auth";
-import { ADMIN_PASSWORD_PERMISSIONS, type Permission } from "@/lib/permissions";
+import {
+  ADMIN_PASSWORD_PERMISSIONS,
+  expand,
+  type Permission,
+} from "@/lib/permissions";
 
 const TOOLS: { href: string; name: string; blurb: string; perm: Permission }[] =
   [
@@ -71,7 +75,7 @@ export default async function AdminIndexPage() {
   const held =
     access.via === "account"
       ? ((await teamAccess())?.permissions ?? new Set<Permission>())
-      : new Set(ADMIN_PASSWORD_PERMISSIONS);
+      : expand(ADMIN_PASSWORD_PERMISSIONS);
   const tools = TOOLS.filter((t) => held.has(t.perm));
 
   return (

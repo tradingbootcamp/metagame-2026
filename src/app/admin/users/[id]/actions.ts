@@ -41,5 +41,7 @@ export async function setOverride(
   effect: "grant" | "deny" | null,
 ): Promise<Result> {
   if (!isPermission(permission)) return { error: "Unknown permission." };
+  if (effect !== "grant" && effect !== "deny" && effect !== null)
+    return { error: "Unknown override." };
   return run(userId, () => setUserOverride(userId, permission, effect));
 }

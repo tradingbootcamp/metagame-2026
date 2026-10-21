@@ -52,7 +52,7 @@ export type Permission = keyof typeof PERMISSIONS;
 export const PERMISSION_KEYS = Object.keys(PERMISSIONS) as Permission[];
 
 export const isPermission = (value: unknown): value is Permission =>
-  typeof value === "string" && value in PERMISSIONS;
+  typeof value === "string" && Object.hasOwn(PERMISSIONS, value);
 
 /** What a shared-password session may do: the tools the password reached before accounts. */
 export const ADMIN_PASSWORD_PERMISSIONS: readonly Permission[] = [

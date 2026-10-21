@@ -1,6 +1,10 @@
 import { can, teamAccess } from "./access";
 import { accountLabel, signOutAccount } from "./auth";
-import { ADMIN_PASSWORD_PERMISSIONS, type Permission } from "./permissions";
+import {
+  ADMIN_PASSWORD_PERMISSIONS,
+  expand,
+  type Permission,
+} from "./permissions";
 import { createSessionAuth, type Session as BaseSession } from "./session-auth";
 
 // Team-only tools under /admin. Access is a signed-in account holding the
@@ -50,7 +54,7 @@ export async function toolAccess(
     const name = accountLabel(account.user);
     return { via: "account", name, userId: account.user.id };
   }
-  if (permission && !ADMIN_PASSWORD_PERMISSIONS.includes(permission)) {
+  if (permission && !expand(ADMIN_PASSWORD_PERMISSIONS).has(permission)) {
     return null;
   }
   const legacy = await readSession();

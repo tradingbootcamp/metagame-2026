@@ -48,6 +48,7 @@ export default function UsersTable({
   total,
   query,
   truncated,
+  viewerIsAdmin,
 }: {
   rows: UserRow[];
   total: number;
