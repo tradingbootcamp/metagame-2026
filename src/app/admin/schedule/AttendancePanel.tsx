@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { StarIcon, XIcon } from "lucide-react";
 import AccountAdder from "./AccountAdder";
@@ -24,6 +25,7 @@ export default function AttendancePanel({
   attendance?: Attendance[string];
   viewer: (ViewerPlans & { userId: string }) | null;
 }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const run = (action: () => Promise<FormState>) =>
@@ -84,6 +86,7 @@ export default function AttendancePanel({
           status={viewer.rsvps[session.id] ?? null}
           bookmarked={viewer.bookmarks.includes(session.id)}
           full={cap !== null && going.length >= cap}
+          onSettled={() => router.refresh()}
         />
       ) : (
         <p className="text-xs text-ink/50">

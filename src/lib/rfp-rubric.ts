@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { env } from "@/env";
 import { airtableConfig } from "@/lib/airtable-config";
 
@@ -118,6 +119,8 @@ const PANEL_OPTIONS = [
 // `description` is the column's Airtable description, shown behind the ⓘ next to
 // each label. Kept verbatim so the tooltip says what the Airtable field says.
 
+export const SCHEDULER_NOTES_FIELD = "Grader Notes for Scheduler";
+
 /** The non-rubric fields the grading form writes, in the order they're shown. */
 export const META_FIELDS = [
   {
@@ -158,7 +161,7 @@ export const META_FIELDS = [
       "Select all the spaces that would be a good fit for this session.",
   },
   {
-    field: "Grader Notes for Scheduler",
+    field: SCHEDULER_NOTES_FIELD,
     label: "Notes for the scheduler",
     kind: "text",
     description:
@@ -545,6 +548,37 @@ export async function getSubmission(id: string): Promise<Submission | null> {
     return toSubmission((await airtable(tableUrl(id))) as AirtableRecord);
   } catch (err) {
     if (err instanceof Error && err.message.includes("404")) return null;
+    throw err;
+  }
+}
+
+/** The grader's note to whoever schedules this session, if any. */
+export function schedulerNotes(submission: Submission): string | null {
+  const notes = submission.fields[SCHEDULER_NOTES_FIELD];
+  return typeof notes === "string" && notes.trim() ? notes.trim() : null;
+}
+
+export const submissionTag = (id: string) => `rfp-submission:${id}`;
+
+class NoSubmission extends Error {}
+
+/**
+ * getSubmission, served from a 5-minute stale-while-revalidate cache. For
+ * read-only views; /grade reads live. Misses aren't cached.
+ */
+export async function cachedSubmission(id: string): Promise<Submission | null> {
+  try {
+    return await unstable_cache(
+      async () => {
+        const submission = await getSubmission(id);
+        if (!submission) throw new NoSubmission();
+        return submission;
+      },
+      ["rfp-submission", id],
+      { revalidate: 300, tags: [submissionTag(id)] },
+    )();
+  } catch (err) {
+    if (err instanceof NoSubmission) return null;
     throw err;
   }
 }

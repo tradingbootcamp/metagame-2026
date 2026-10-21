@@ -1,5 +1,5 @@
 {
-  "id": "2b41efa3-99ec-48c3-bcd5-95b707b4d728",
+  "id": "799503ca-5411-446c-b45e-dc8287800827",
   "prevId": "2b0a5ed0-c7c0-4401-b169-7657c202bb65",
   "version": "7",
   "dialect": "postgresql",
@@ -725,12 +725,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "coupon_code": {
-          "name": "coupon_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "purchaser_email": {
           "name": "purchaser_email",
           "type": "text",
@@ -1291,6 +1285,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "shepherd_user_id": {
+          "name": "shepherd_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1336,6 +1336,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "sessions_shepherd_user_id_idx": {
+          "name": "sessions_shepherd_user_id_idx",
+          "columns": [
+            {
+              "expression": "shepherd_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -1344,6 +1359,15 @@
           "tableFrom": "sessions",
           "tableTo": "locations",
           "columnsFrom": ["location_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "sessions_shepherd_user_id_user_id_fk": {
+          "name": "sessions_shepherd_user_id_user_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "user",
+          "columnsFrom": ["shepherd_user_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"

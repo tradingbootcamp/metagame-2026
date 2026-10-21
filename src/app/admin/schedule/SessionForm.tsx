@@ -5,6 +5,8 @@ import { XIcon } from "lucide-react";
 import { deleteSession, saveSession, type FormState } from "./actions";
 import AttendancePanel from "./AttendancePanel";
 import HostPicker from "./HostPicker";
+import RfpPanel from "./RfpPanel";
+import ShepherdPicker from "./ShepherdPicker";
 import {
   buttonClass,
   fieldClass,
@@ -212,6 +214,18 @@ export default function SessionForm({
               autoFocus
             />
           </Field>
+
+          {session && (
+            <RfpPanel
+              recordId={session.airtableRfpRecordId}
+              shepherd={session.shepherd}
+            />
+          )}
+
+          <ShepherdPicker
+            initial={session?.shepherd ?? null}
+            error={state.field === "shepherd" ? state.error : null}
+          />
 
           <Field label="Slug" name="slug" state={state}>
             <input

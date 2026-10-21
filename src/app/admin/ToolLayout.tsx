@@ -17,7 +17,7 @@ export default function ToolLayout({
 }) {
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
-      <header className="sticky top-0 z-10 border-b border-line bg-cream/95 backdrop-blur">
+      <header className="sticky top-0 z-50 border-b border-line bg-cream/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <nav className="flex items-center gap-4">
             {href !== "/admin" && <BackToTools />}

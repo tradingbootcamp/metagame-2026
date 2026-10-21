@@ -199,7 +199,7 @@ export default function ScheduleTool({
         {carrying && (
           <div
             role="status"
-            className="sticky top-2 z-40 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-navy/30 bg-navy px-3 py-2 text-sm text-white shadow-md"
+            className="sticky top-16 z-40 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-navy/30 bg-navy px-3 py-2 text-sm text-white shadow-md"
           >
             <span>
               Moving <span className="font-semibold">{carrying.title}</span>
