@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, lte, or } from "drizzle-orm";
+import { and, count, desc, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { env } from "@/env";
 import {
@@ -99,12 +99,18 @@ export async function recordTicket(purchase: PurchaseRecord): Promise<void> {
  */
 export async function currentTicketCode(paymentId: string): Promise<string> {
   if (env.DATABASE_URL) {
-    const [row] = await getDb()
-      .select({ code: tickets.ticketCode })
-      .from(tickets)
-      .where(eq(tickets.paymentId, paymentId))
-      .limit(1);
-    if (row) return row.code;
+    try {
+      const [row] = await getDb()
+        .select({ code: tickets.ticketCode })
+        .from(tickets)
+        .where(eq(tickets.paymentId, paymentId))
+        .limit(1);
+      if (row) return row.code;
+    } catch (err) {
+      // The purchase must still reach Airtable; the derived code is right
+      // unless the ticket was unclaimed, which a DB outage can't tell us.
+      console.error("[tickets] current code lookup failed", paymentId, err);
+    }
   }
   return ticketCode(paymentId);
 }
@@ -143,7 +149,14 @@ export type ClaimResult =
   | { ok: true; ticket: TicketRow }
   | {
       ok: false;
-      reason: "unknown" | "yours" | "taken" | "unpaid" | "void" | "limited";
+      reason:
+        | "unknown"
+        | "yours"
+        | "already"
+        | "taken"
+        | "unpaid"
+        | "void"
+        | "limited";
     };
 
 // Codes are short enough to guess by script, so failed claims are capped per
@@ -173,7 +186,7 @@ export async function claimTicket(
   if (failures >= CLAIM_FAILURE_LIMIT) return { ok: false, reason: "limited" };
 
   const result = await attemptClaim(userId, code);
-  if (!result.ok && result.reason !== "yours") {
+  if (!result.ok && result.reason !== "yours" && result.reason !== "already") {
     await db.insert(verification).values({
       id: crypto.randomUUID(),
       identifier,
@@ -216,6 +229,9 @@ async function attemptClaim(
         eq(tickets.ticketCode, code),
         isNull(tickets.ownerUserId),
         eq(tickets.status, "paid"),
+        // One admission per person, checked in the same statement so two
+        // claims at once can't both win.
+        sql`not exists (select 1 from "tickets" mine where mine."owner_user_id" = ${userId} and mine."status" = 'paid')`,
       ),
     )
     .returning();
@@ -228,6 +244,12 @@ async function attemptClaim(
     .limit(1);
   if (!existing) return { ok: false, reason: "unknown" };
   if (existing.ownerUserId === userId) return { ok: false, reason: "yours" };
+  const [held] = await db
+    .select({ id: tickets.paymentId })
+    .from(tickets)
+    .where(and(eq(tickets.ownerUserId, userId), eq(tickets.status, "paid")))
+    .limit(1);
+  if (held) return { ok: false, reason: "already" };
   if (existing.ownerUserId) return { ok: false, reason: "taken" };
   return {
     ok: false,

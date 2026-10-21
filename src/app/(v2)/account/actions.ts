@@ -214,6 +214,8 @@ export type ClaimState = { error?: string; claimed?: string };
 const CLAIM_ERRORS = {
   unknown: "We don't have a ticket with that code. Check it against the email.",
   yours: "That ticket is already yours.",
+  already:
+    "You already have a ticket. Unclaim it first if you want to use a different one.",
   taken: "Someone else has already claimed that ticket.",
   unpaid: "That ticket's payment hasn't settled yet. Try again later.",
   void: "That ticket's payment didn't go through, so it can't be claimed.",

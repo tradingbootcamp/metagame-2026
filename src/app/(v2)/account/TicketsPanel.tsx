@@ -118,14 +118,19 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                   </span>
                 )}
                 {t.mine && t.status === "paid" && confirmingId !== t.id && (
-                  <button
-                    type="button"
-                    disabled={unclaiming}
-                    onClick={() => setConfirmingId(t.id)}
-                    className="ml-auto rounded border border-line px-3 py-1 text-sm font-semibold text-navy hover:border-navy disabled:opacity-60"
-                  >
-                    Unclaim
-                  </button>
+                  <span className="ml-auto flex items-center gap-3">
+                    <span className="text-sm text-ink/60">
+                      Release this ticket to share with someone else.
+                    </span>
+                    <button
+                      type="button"
+                      disabled={unclaiming}
+                      onClick={() => setConfirmingId(t.id)}
+                      className="rounded border border-line px-3 py-1 text-sm font-semibold text-navy hover:border-navy disabled:opacity-60"
+                    >
+                      Unclaim
+                    </button>
+                  </span>
                 )}
                 {t.mine && confirmingId === t.id && (
                   <span className="flex basis-full flex-wrap items-center gap-3 pt-1">
@@ -185,39 +190,45 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
           )}
         </p>
       )}
-      <form action={action} className="flex flex-col gap-2">
-        <label
-          id="code-label"
-          className="text-sm font-semibold text-navy"
-          htmlFor="code"
-        >
-          Have a ticket code? Claim it here.
-        </label>
-        <div className="flex flex-wrap items-center gap-3">
-          <div role="group" aria-labelledby="code-label">
-            <PinInput
-              name="code"
-              id="code"
-              length={TICKET_CODE_LENGTH}
-              dashAfter={3}
-              alphanumeric
-              normalize={normalizeTicketCode}
-              autoFocus={false}
-              disabled={pending}
-            />
-          </div>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Claiming…" : "Claim"}
-          </Button>
-        </div>
-        <p aria-live="polite" className="min-h-5 text-sm">
-          {state.error ? (
-            <span className="text-meeple">{state.error}</span>
-          ) : state.claimed ? (
-            <span className="text-ink/70">{state.claimed} is now yours.</span>
-          ) : null}
+      {holdsOne ? (
+        <p className="text-sm text-ink/70">
+          You&apos;re all set: you have a ticket.
         </p>
-      </form>
+      ) : (
+        <form action={action} className="flex flex-col gap-2">
+          <label
+            id="code-label"
+            className="text-sm font-semibold text-navy"
+            htmlFor="code"
+          >
+            Have a ticket code? Claim it here.
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <div role="group" aria-labelledby="code-label">
+              <PinInput
+                name="code"
+                id="code"
+                length={TICKET_CODE_LENGTH}
+                dashAfter={3}
+                alphanumeric
+                normalize={normalizeTicketCode}
+                autoFocus={false}
+                disabled={pending}
+              />
+            </div>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Claiming…" : "Claim"}
+            </Button>
+          </div>
+          <p aria-live="polite" className="min-h-5 text-sm">
+            {state.error ? (
+              <span className="text-meeple">{state.error}</span>
+            ) : state.claimed ? (
+              <span className="text-ink/70">{state.claimed} is now yours.</span>
+            ) : null}
+          </p>
+        </form>
+      )}
     </section>
   );
 }
