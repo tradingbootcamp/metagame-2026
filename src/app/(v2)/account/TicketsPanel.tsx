@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { claim, claimMine, type ClaimState } from "./actions";
+import { CheckIcon, CopyIcon } from "lucide-react";
 import { Button } from "@/v2/components/ui/button";
 import PinInput from "@/v2/components/auth/PinInput";
 import {
@@ -23,6 +24,10 @@ export type TicketView = {
   code: string | null;
 };
 
+/** Bought by the viewer, paid, and nobody's claimed it yet. */
+const shareable = (t: TicketView) =>
+  t.code !== null && !t.claimed && t.status === "paid";
+
 function badge(t: TicketView): { text: string; tone: string } {
   if (t.status !== "paid")
     return { text: t.status, tone: "bg-tan/30 text-ink" };
@@ -34,20 +39,21 @@ function badge(t: TicketView): { text: string; tone: string } {
 /** The buyer's code, to copy and pass on to whoever's attending. */
 function ShareCode({ code }: { code: string }) {
   const { status, copy } = useCopy();
+  const Icon = status === "copied" ? CheckIcon : CopyIcon;
   return (
-    <span className="flex items-center gap-2 text-sm text-ink/70">
+    <span className="flex items-center gap-1.5 text-sm text-ink/70">
       Share code to transfer:
       <span className="font-mono text-ink">{code}</span>
       <button
         type="button"
         onClick={() => copy(code)}
-        className="rounded border border-line px-2 py-0.5 text-xs font-semibold text-navy hover:border-navy"
+        aria-label={status === "copied" ? "Copied" : "Copy code"}
+        title={status === "failed" ? "Couldn't copy" : "Copy code"}
+        className="rounded p-1 text-navy/70 hover:bg-navy/10 hover:text-navy"
       >
-        {status === "copied"
-          ? "Copied"
-          : status === "failed"
-            ? "Couldn't copy"
-            : "Copy"}
+        <Icon
+          className={`size-4 ${status === "failed" ? "text-meeple" : ""}`}
+        />
       </button>
     </span>
   );
@@ -88,22 +94,23 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                 >
                   {b.text}
                 </span>
-                {t.code && !t.claimed && t.status === "paid" && (
-                  <span className="ml-auto flex flex-wrap items-center gap-3">
-                    <ShareCode code={t.code} />
-                    {!holdsOne && (
-                      <Button
-                        size="sm"
-                        disabled={claiming}
-                        onClick={() =>
-                          startClaim(async () =>
-                            setMineState(await claimMine(t.id)),
-                          )
-                        }
-                      >
-                        {claiming ? "Claiming…" : "Claim for myself"}
-                      </Button>
-                    )}
+                {shareable(t) && !holdsOne && (
+                  <Button
+                    size="sm"
+                    disabled={claiming}
+                    onClick={() =>
+                      startClaim(async () =>
+                        setMineState(await claimMine(t.id)),
+                      )
+                    }
+                    className="bg-moss px-3 py-1 hover:bg-moss/85"
+                  >
+                    {claiming ? "Claiming…" : "Claim"}
+                  </Button>
+                )}
+                {shareable(t) && (
+                  <span className="ml-auto">
+                    <ShareCode code={t.code!} />
                   </span>
                 )}
               </li>
