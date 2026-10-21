@@ -131,3 +131,75 @@ export function fromLabel<V extends string>(
   );
   return hit ? hit[0] : null;
 }
+
+/**
+ * The "Next steps" option for a phase. Two phases span two options each, told
+ * apart by whether anyone is grading it yet and whether it has a shepherd.
+ */
+export function nextStepsFor(
+  phase: (typeof sessionPhase)["enumValues"][number] | null,
+  { graded, shepherded }: { graded: boolean; shepherded: boolean },
+): string | null {
+  switch (phase) {
+    case null:
+      return null;
+    case "grading":
+      return graded ? "1. Grade" : "0. Assign grader";
+    case "deciding":
+      return "2. Committee decision";
+    case "notifying":
+      return "3. Email speaker with verdict";
+    case "shepherding":
+      return shepherded ? "5. Shepherd meeting" : "4. Assign shepherd";
+    case "scheduling":
+      return "6. Add to schedule";
+    case "ready":
+      // The trailing space is part of the Airtable option.
+      return "7. None! We're good :) ";
+    case "declined":
+      return "N/A";
+  }
+}
+
+/**
+ * Committee members as the Grader and Shepherd selects name them, and the
+ * account email each maps to. The Grader select lacks Jisk and Julian Wise.
+ */
+export const COMMITTEE_EMAILS: Record<string, string> = {
+  "John Bromels": "jbromels@gmail.com",
+  "Brian Smiley": "brian@metagame.games",
+  "Ben Karcher": "ben@metagame.games",
+  "Brendan Hurst": "brendan@metagame.games",
+  "Tommy Honton": "tommy@tommyhonton.com",
+  "Sparr Risher": "sparr0@gmail.com",
+  "Michael Sheely": "michael.sheely2@gmail.com",
+  "Ricki Heicklen": "ricki@metagame.games",
+  Jisk: "ja.kopczynski@gmail.com",
+  "Scott Gillies": "scottdgillies@gmail.com",
+  "Julian Wise": "julian.w.wise@gmail.com",
+};
+
+/** The committee option name for an account email, if it has one. */
+export function committeeName(email: string): string | null {
+  const lower = email.toLowerCase();
+  const hit = Object.entries(COMMITTEE_EMAILS).find(([, e]) => e === lower);
+  return hit ? hit[0] : null;
+}
+
+/** "Lighthaven Space Options" label → locations.name. */
+export const SPACE_OPTION_LOCATIONS: Record<string, string> = {
+  "Rat Park (Outdoors, Max 300)": "Rat Park",
+  "The Gardens (Outdoors, Max 80)": "The Gardens",
+  "Central Courtyard (Outdoors, Max 200)": "Central Courtyard",
+  "Glass Hall (A, first floor side, Max 35)": "Glass Hall",
+  "2A4 Thingspace i.e. secret attic room (A, second floor, Max 20)":
+    "Thingspace",
+  "Bayes Ground (B, 1st floor, Max 40)": "Bayes Ground",
+  "2B1 New Caprica (B, 2nd floor, Max 30)": "New Caprica",
+  "Bayes Attic (B, 3rd floor, Max 35)": "Bayes Attic",
+  "Cantor's Diagonal (C, Max 60)": "Cantor's Diagonal",
+  "1D1 (D, 1st floor, Max 6)": "1D1",
+  "Eigen Hall (E, 1st floor, Max 40)": "Eigen Hall",
+  "2E1 Gyroscope (E, 2nd floor, Max 30)": "Gyroscope",
+  Other: "Other",
+};

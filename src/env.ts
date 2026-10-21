@@ -73,6 +73,12 @@ const ENV_SPEC: EnvSpec[] = [
       "Random string used to sign the /grade session cookie. Rotating it signs everyone out.",
   },
   {
+    name: "RFP_AIRTABLE_MIRROR",
+    required: false,
+    description:
+      "Set to 1 to copy /grade's database writes onto the Airtable RFP rows outside production. Production always copies; local dev and previews skip, since they'd write the real base.",
+  },
+  {
     name: "ADMIN_PASSWORD",
     required: false,
     description:
