@@ -7,9 +7,9 @@ import { fieldClass, selectStyle, smallButtonClass } from "../ui";
 import {
   pageOf,
   PAGE_SIZES,
-  peopleMatch,
   personLabel,
   sortTicketRows,
+  ticketMatch,
   type SortDir,
   type TicketPeople,
   type TicketSort,
@@ -27,6 +27,7 @@ export type AdminTicket = {
     code: string;
     source: string;
     amountCents: number | null;
+    couponCode: string | null;
   };
   people: TicketPeople;
 };
@@ -70,7 +71,7 @@ export default function TicketsTable({
   const matching = useMemo(
     () =>
       sortTicketRows(
-        tickets.filter((r) => peopleMatch(r.people, q)),
+        tickets.filter((r) => ticketMatch(r, q)),
         sort,
         dir,
       ),
@@ -106,7 +107,7 @@ export default function TicketsTable({
           type="search"
           value={q}
           onChange={(e) => update({ q: e.target.value })}
-          placeholder="Search by name or email"
+          placeholder="Search by name, email or coupon code"
           className={`${fieldClass} max-w-sm`}
         />
         <span className="text-sm text-ink/60">
@@ -160,10 +161,17 @@ export default function TicketsTable({
                     </span>
                   </div>
                 </td>
-                <td className="px-4 py-2 whitespace-nowrap tabular-nums">
-                  {t.amountCents === null
-                    ? "—"
-                    : usd.format(t.amountCents / 100)}
+                <td className="px-4 py-2 tabular-nums">
+                  <div className="whitespace-nowrap">
+                    {t.amountCents === null
+                      ? "—"
+                      : usd.format(t.amountCents / 100)}
+                  </div>
+                  {t.couponCode && (
+                    <div className="mt-1 font-mono text-xs break-all text-ink/60">
+                      {t.couponCode}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-2 break-words">
                   <PersonLink person={people.buyer} />
