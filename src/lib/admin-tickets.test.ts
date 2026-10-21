@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  pageOf,
   peopleMatch,
   personLabel,
+  sortTicketRows,
   ticketBadge,
   ticketPeople,
   ticketRoles,
@@ -103,5 +105,65 @@ describe("ticketBadge", () => {
     expect(ticketBadge(0)).toEqual({ has: false, label: null });
     expect(ticketBadge(1)).toEqual({ has: true, label: null });
     expect(ticketBadge(3)).toEqual({ has: true, label: "×3" });
+  });
+});
+
+describe("sortTicketRows / pageOf", () => {
+  const person = (name: string) => ({ userId: null, name, email: null });
+  const row = (
+    id: string,
+    at: string,
+    buyer: string | null,
+    claimer: string | null,
+  ) => ({
+    id,
+    t: { createdAt: new Date(at) },
+    people: {
+      buyer: buyer ? person(buyer) : null,
+      holder: null,
+      holderIsBuyer: true,
+      claimer: claimer ? person(claimer) : null,
+    },
+  });
+  const rows = [
+    row("a", "2026-07-01", "Zed", null),
+    row("b", "2026-09-01", "amy", "Bo"),
+    row("c", "2026-08-01", null, "al"),
+  ];
+  const ids = (r: { id: string }[]) => r.map((x) => x.id).join("");
+  it("sorts by purchase date", () => {
+    expect(ids(sortTicketRows(rows, "purchased", "desc"))).toBe("bca");
+    expect(ids(sortTicketRows(rows, "purchased", "asc"))).toBe("acb");
+  });
+  it("sorts people case-insensitively with blanks last", () => {
+    expect(ids(sortTicketRows(rows, "buyer", "asc"))).toBe("bac");
+    expect(ids(sortTicketRows(rows, "buyer", "desc"))).toBe("abc");
+    expect(ids(sortTicketRows(rows, "claimer", "asc"))).toBe("cba");
+  });
+  it("pages and clamps", () => {
+    const many = Array.from({ length: 120 }, (_, i) => i);
+    expect(pageOf(many, 2, 50)).toMatchObject({ page: 2, pages: 3 });
+    expect(pageOf(many, 2, 50).rows[0]).toBe(50);
+    expect(pageOf(many, 99, 50).page).toBe(3);
+    expect(pageOf([], 1)).toMatchObject({ page: 1, pages: 1, rows: [] });
+  });
+});
+
+describe("sortTicketRows by pay", () => {
+  const row = (id: string, cents: number | null) => ({
+    id,
+    t: { createdAt: new Date("2026-10-01"), amountCents: cents },
+    people: { buyer: null, holder: null, holderIsBuyer: true, claimer: null },
+  });
+  const ids = (r: { id: string }[]) => r.map((x) => x.id).join("");
+  it("orders by price with unknown prices last", () => {
+    const rows = [
+      row("a", 50000),
+      row("b", null),
+      row("c", 0),
+      row("d", 65000),
+    ];
+    expect(ids(sortTicketRows(rows, "pay", "desc"))).toBe("dacb");
+    expect(ids(sortTicketRows(rows, "pay", "asc"))).toBe("cadb");
   });
 });

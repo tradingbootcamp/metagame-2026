@@ -1,33 +1,26 @@
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { connection } from "next/server";
-import {
-  PersonLink,
-  profileHref,
-  shortDate,
-  StatusTag,
-  TestTag,
-} from "./parts";
-import { fieldClass, smallButtonClass } from "../ui";
+import { profileHref } from "./parts";
+import TicketsTable, {
+  type AdminTicket,
+  type TableState,
+} from "./TicketsTable";
 import ToolSignIn from "@/components/ToolSignIn";
 import { getDb, schema } from "@/db";
-import { peopleMatch, ticketPeople } from "@/lib/admin-tickets";
+import {
+  PAGE_SIZES,
+  ticketPeople,
+  TICKET_SORTS,
+  type TicketSort,
+} from "@/lib/admin-tickets";
 import { ticketAccounts } from "@/lib/admin-store";
 import { adminSession } from "@/lib/auth";
 import { formatTicketCode } from "@/lib/ticket-code-format";
 import { allTickets, ticketLabel, ticketsForUser } from "@/lib/ticket-store";
 
-const COLUMNS = [
-  "Tier",
-  "Status",
-  "Code",
-  "Buyer",
-  "Holder",
-  "Claimer",
-  "Claimed",
-  "Source",
-  "Created",
-];
+const one = (v: string | string[] | undefined) =>
+  String(Array.isArray(v) ? v[0] : (v ?? "")).trim();
 
 // Account-only, like /admin/users: it lists every buyer's email.
 export default async function AdminTicketsPage(
@@ -39,8 +32,29 @@ export default async function AdminTicketsPage(
   if (!session) return <ToolSignIn title="Tickets" next="/admin/tickets" />;
 
   const params = await props.searchParams;
-  const q = String(params.q ?? "").trim();
-  const userId = String(params.user ?? "").trim();
+  const userId = one(params.user);
+  const sortParam = one(params.sort);
+  const sort: TicketSort = (TICKET_SORTS as readonly string[]).includes(
+    sortParam,
+  )
+    ? (sortParam as TicketSort)
+    : "purchased";
+  const dirParam = one(params.dir);
+  const size = Number(one(params.size));
+  const initial: TableState = {
+    q: one(params.q),
+    sort,
+    dir:
+      dirParam === "asc" || dirParam === "desc"
+        ? dirParam
+        : sort === "purchased" || sort === "pay"
+          ? "desc"
+          : "asc",
+    size: (PAGE_SIZES as readonly number[]).includes(size)
+      ? size
+      : PAGE_SIZES[0],
+    page: Number(one(params.page)) || 1,
+  };
 
   const [forUser] = userId
     ? await getDb()
@@ -59,111 +73,46 @@ export default async function AdminTicketsPage(
       : []
     : await allTickets();
   const { accounts, byEmail } = await ticketAccounts(rows);
-  const shown = rows
-    .map((t) => ({ t, people: ticketPeople(t, accounts, byEmail) }))
-    .filter(({ people }) => peopleMatch(people, q));
+  const tickets: AdminTicket[] = rows.map((t) => ({
+    t: {
+      id: t.paymentId,
+      createdAt: t.createdAt,
+      claimedAt: t.claimedAt,
+      tier: ticketLabel(t.tier),
+      status: t.status,
+      test: t.test,
+      code: formatTicketCode(t.ticketCode),
+      source: t.source,
+      amountCents: t.amountCents,
+    },
+    people: ticketPeople(t, accounts, byEmail),
+  }));
 
   return (
     <div className="space-y-4">
-      <form method="get" className="flex max-w-md gap-2">
-        {userId && <input type="hidden" name="user" value={userId} />}
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="Search by name or email"
-          className={fieldClass}
-        />
-        <button type="submit" className={smallButtonClass}>
-          Search
-        </button>
-      </form>
-      <p className="text-sm text-ink/60">
-        {shown.length} {shown.length === 1 ? "ticket" : "tickets"}
-        {userId && (
-          <>
-            {" "}
-            bought, held or claimed by{" "}
-            {forUser ? (
-              <Link
-                href={profileHref(forUser.id)}
-                className="text-navy hover:text-meeple hover:underline"
-              >
-                {forUser.name.trim() || forUser.email}
-              </Link>
-            ) : (
-              "an unknown account"
-            )}{" "}
-            ·{" "}
+      {userId && (
+        <p className="text-sm text-ink/60">
+          Tickets bought, held or claimed by{" "}
+          {forUser ? (
             <Link
-              href="/admin/tickets"
+              href={profileHref(forUser.id)}
               className="text-navy hover:text-meeple hover:underline"
             >
-              all tickets
+              {forUser.name.trim() || forUser.email}
             </Link>
-          </>
-        )}
-        {q && ` matching “${q}”`}
-      </p>
-      <div className="overflow-x-auto rounded-xl border border-line bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="text-xs tracking-wide text-ink/50 uppercase">
-            <tr>
-              {COLUMNS.map((c) => (
-                <th key={c} className="px-4 py-2 font-medium whitespace-nowrap">
-                  {c}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line align-top">
-            {shown.map(({ t, people }) => (
-              <tr key={t.paymentId}>
-                <td className="px-4 py-2">{ticketLabel(t.tier)}</td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  <span className="inline-flex gap-1">
-                    <StatusTag status={t.status} />
-                    {t.test && <TestTag />}
-                  </span>
-                </td>
-                <td className="px-4 py-2 font-mono text-xs whitespace-nowrap">
-                  {formatTicketCode(t.ticketCode)}
-                </td>
-                <td className="px-4 py-2">
-                  <PersonLink person={people.buyer} />
-                </td>
-                <td className="px-4 py-2">
-                  {people.holderIsBuyer ? (
-                    <span className="text-ink/50">Buyer</span>
-                  ) : (
-                    <PersonLink person={people.holder} />
-                  )}
-                </td>
-                <td className="px-4 py-2">
-                  <PersonLink person={people.claimer} />
-                </td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  {t.claimedAt ? shortDate.format(t.claimedAt) : "—"}
-                </td>
-                <td className="px-4 py-2">{t.source}</td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  {shortDate.format(t.createdAt)}
-                </td>
-              </tr>
-            ))}
-            {shown.length === 0 && (
-              <tr>
-                <td
-                  colSpan={COLUMNS.length}
-                  className="px-4 py-6 text-center text-ink/50"
-                >
-                  No tickets{q && " match"}.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+          ) : (
+            "an unknown account"
+          )}{" "}
+          ·{" "}
+          <Link
+            href="/admin/tickets"
+            className="text-navy hover:text-meeple hover:underline"
+          >
+            all tickets
+          </Link>
+        </p>
+      )}
+      <TicketsTable tickets={tickets} initial={initial} />
     </div>
   );
 }

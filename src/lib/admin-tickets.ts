@@ -104,3 +104,51 @@ export function ticketBadge(count: number): {
 } {
   return { has: count > 0, label: count > 1 ? `×${count}` : null };
 }
+
+export const TICKET_SORTS = ["purchased", "buyer", "claimer", "pay"] as const;
+export type TicketSort = (typeof TICKET_SORTS)[number];
+export type SortDir = "asc" | "desc";
+
+/** Sorts by purchase time or a person's label; people-less rows sort last either way. */
+export function sortTicketRows<
+  R extends {
+    t: { createdAt: Date; amountCents?: number | null };
+    people: TicketPeople;
+  },
+>(rows: R[], sort: TicketSort, dir: SortDir): R[] {
+  const sign = dir === "asc" ? 1 : -1;
+  const label = (r: R) => {
+    const p = sort === "buyer" ? r.people.buyer : r.people.claimer;
+    return p ? personLabel(p).toLowerCase() : null;
+  };
+  return [...rows].sort((a, b) => {
+    if (sort === "purchased")
+      return sign * (a.t.createdAt.getTime() - b.t.createdAt.getTime());
+    if (sort === "pay") {
+      const [x, y] = [a.t.amountCents ?? null, b.t.amountCents ?? null];
+      if (x === y) return b.t.createdAt.getTime() - a.t.createdAt.getTime();
+      if (x === null) return 1;
+      if (y === null) return -1;
+      return sign * (x - y);
+    }
+    const [x, y] = [label(a), label(b)];
+    if (x === y) return b.t.createdAt.getTime() - a.t.createdAt.getTime();
+    if (x === null) return 1;
+    if (y === null) return -1;
+    return sign * x.localeCompare(y);
+  });
+}
+
+export const PAGE_SIZES = [25, 50, 100, 200] as const;
+export const TICKETS_PAGE_SIZE = PAGE_SIZES[0];
+
+/** One page of `rows`, with `page` clamped to what exists (1-based). */
+export function pageOf<R>(
+  rows: R[],
+  page: number,
+  size: number = TICKETS_PAGE_SIZE,
+) {
+  const pages = Math.max(1, Math.ceil(rows.length / size));
+  const at = Math.min(Math.max(1, Math.floor(page) || 1), pages);
+  return { rows: rows.slice((at - 1) * size, at * size), page: at, pages };
+}
