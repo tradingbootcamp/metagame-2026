@@ -13,13 +13,15 @@ import HatToast from "@/v2/hat-trick/HatToast";
 // <Stage> with `sprites={<ScrollDie />}` — see the README's Stage section.
 export default function SiteLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+  modal,
+}: Readonly<{ children: React.ReactNode; modal: React.ReactNode }>) {
   return (
     <div className="flex min-h-dvh flex-col bg-background font-[family-name:var(--font-inter)] leading-[1.55] text-ink">
       <ContactProvider>
         <SiteShell>{children}</SiteShell>
         <SiteFooter />
       </ContactProvider>
+      {modal}
       <HatToast />
       <FirstSigninFlow />
     </div>
