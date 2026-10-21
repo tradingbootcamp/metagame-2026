@@ -3,6 +3,7 @@ import { getDb, schema } from "@/db";
 import { accountsConfigured, currentSession } from "@/lib/auth";
 import {
   firstSigninNeeded,
+  prefillName,
   ticketStep,
   type FirstSigninStatus,
 } from "@/lib/first-signin";
@@ -39,7 +40,12 @@ async function firstSigninStatus(): Promise<FirstSigninStatus> {
     needed: true,
     tickets: ticketStep(rows, user.id, email),
     prefill: {
-      preferredName: profile?.preferredName || user.name,
+      preferredName: prefillName(
+        profile?.preferredName,
+        user.name,
+        rows,
+        email,
+      ),
       discordHandle: profile?.discordHandle ?? "",
       shareWithRecruiters: profile?.shareWithRecruiters ?? false,
     },

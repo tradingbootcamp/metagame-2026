@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { getDb, schema } from "@/db";
-import { currentSession } from "@/lib/auth";
+import { currentSession, getAuth } from "@/lib/auth";
 
 export type FirstSigninState = { error?: string; saved?: boolean };
 
@@ -19,16 +20,16 @@ export async function saveFirstSignin(
   if (!session) return { error: "You've been signed out. Sign in again." };
   const isAdult = yesNo(formData, "isAdult");
   const bringingChildren = yesNo(formData, "bringingChildren");
-  if (isAdult === null || bringingChildren === null)
-    return { error: "Answer both required questions." };
+  const preferredName = String(formData.get("preferredName") ?? "")
+    .trim()
+    .slice(0, 80);
+  if (isAdult === null || bringingChildren === null || !preferredName)
+    return { error: "Fill in the required fields." };
 
   const values = {
     isAdult,
     bringingChildren,
-    preferredName:
-      String(formData.get("preferredName") ?? "")
-        .trim()
-        .slice(0, 80) || null,
+    preferredName,
     // People often type "@name"; Discord usernames can't contain "@".
     discordHandle:
       String(formData.get("discordHandle") ?? "")
@@ -43,6 +44,13 @@ export async function saveFirstSignin(
     .insert(profiles)
     .values({ userId: session.user.id, ...values })
     .onConflictDoUpdate({ target: profiles.userId, set: values });
+  // One name for people; the account name mirrors it for admin lists and emails.
+  if (preferredName !== session.user.name) {
+    await getAuth().api.updateUser({
+      body: { name: preferredName },
+      headers: await headers(),
+    });
+  }
   revalidatePath("/account");
   return { saved: true };
 }

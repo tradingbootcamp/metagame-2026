@@ -105,9 +105,11 @@ export default function PinInput({
             )}
           />
           {dashAfter === i + 1 && (
-            <span aria-hidden className="font-space-mono text-2xl text-ink/40">
-              –
-            </span>
+            // A drawn bar, not a glyph: the font's dash sits below centre.
+            <span
+              aria-hidden
+              className="h-0.5 w-3 rounded-full bg-current opacity-40"
+            />
           )}
         </Fragment>
       ))}

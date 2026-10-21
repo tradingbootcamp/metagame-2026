@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   firstSigninHidden,
   firstSigninNeeded,
+  prefillName,
   ticketStep,
 } from "./first-signin";
 
@@ -97,5 +98,39 @@ describe("firstSigninNeeded", () => {
     expect(firstSigninNeeded({ isAdult: false, bringingChildren: false })).toBe(
       false,
     );
+  });
+});
+
+describe("prefillName", () => {
+  const t = (
+    purchaserEmail: string,
+    purchaserName: string | null,
+    at: string,
+  ) => ({
+    purchaserEmail,
+    purchaserName,
+    createdAt: new Date(at),
+  });
+  it("prefers the profile, then the account name", () => {
+    expect(prefillName("Bri", "Brian S", [], "b@x.com")).toBe("Bri");
+    expect(prefillName(null, "Brian S", [], "b@x.com")).toBe("Brian S");
+  });
+  it("falls back to the newest ticket bought under this email", () => {
+    const rows = [
+      t("b@x.com", "Old Name", "2026-09-01T00:00:00Z"),
+      t("b@x.com", "New Name", "2026-10-01T00:00:00Z"),
+      t("other@x.com", "Someone", "2026-10-05T00:00:00Z"),
+    ];
+    expect(prefillName("", " ", rows, "b@x.com")).toBe("New Name");
+  });
+  it("is blank when nothing has a name", () => {
+    expect(
+      prefillName(
+        null,
+        "",
+        [t("b@x.com", null, "2026-10-01T00:00:00Z")],
+        "b@x.com",
+      ),
+    ).toBe("");
   });
 });

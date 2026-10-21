@@ -152,47 +152,51 @@ function InfoForm({
         </div>
       </div>
 
-      <span className={cn(SECTION, "mt-2")}>Optional</span>
-      {/* Bottom-aligned so the two inputs line up despite different label heights. */}
-      <div className="grid gap-5 sm:grid-cols-2 sm:items-end">
-        <label className="flex flex-col gap-1.5">
-          <span className="flex flex-col gap-0.5">
-            <span className={LABEL}>Display name</span>
-            <span className="text-sm text-cream/65">
-              On RSVPs, hosting, badge, etc.
+      <label className="flex flex-col gap-1.5">
+        <span className="flex flex-col gap-0.5">
+          <span className={LABEL}>
+            Name
+            <span aria-hidden className="ml-0.5 text-red-400">
+              *
             </span>
           </span>
-          <Input
-            name="preferredName"
-            defaultValue={prefill.preferredName}
-            maxLength={80}
-          />
-        </label>
-        <div className="flex flex-col gap-1.5">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-            <label htmlFor="first-signin-discord" className={LABEL}>
-              Discord handle
-            </label>
-            <a
-              href={SOCIAL_LINKS.DISCORD}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                NEWSLETTER_LINK,
-                "inline-flex items-center gap-1.5 text-sm",
-              )}
-            >
-              Join our Discord
-              <ExternalLink className="size-3.5" aria-hidden />
-            </a>
-          </div>
-          <Input
-            id="first-signin-discord"
-            name="discordHandle"
-            defaultValue={prefill.discordHandle}
-            maxLength={40}
-          />
+          <span className="text-sm text-cream/65">
+            On RSVPs, hosting, badge, etc.
+          </span>
+        </span>
+        <Input
+          name="preferredName"
+          defaultValue={prefill.preferredName}
+          maxLength={80}
+          required
+        />
+      </label>
+
+      <span className={cn(SECTION, "mt-2")}>Optional</span>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+          <label htmlFor="first-signin-discord" className={LABEL}>
+            Discord handle
+          </label>
+          <a
+            href={SOCIAL_LINKS.DISCORD}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              NEWSLETTER_LINK,
+              "inline-flex items-center gap-1.5 text-sm",
+            )}
+          >
+            Join our Discord
+            <ExternalLink className="size-3.5" aria-hidden />
+          </a>
         </div>
+        <Input
+          id="first-signin-discord"
+          name="discordHandle"
+          defaultValue={prefill.discordHandle}
+          maxLength={40}
+        />
       </div>
       <label className={cn("flex items-center gap-2.5", LABEL)}>
         <input
@@ -296,11 +300,11 @@ function TicketSection({ tickets }: { tickets: TicketStep }) {
       )}
       {tickets.kind === "code" && (
         <p className="text-sm text-cream/70">
-          No ticket yet? That&apos;s fine, you can{" "}
+          No ticket? Go{" "}
           <Link href={TICKETS_HREF} target="_blank" className={NEWSLETTER_LINK}>
-            buy one
-          </Link>{" "}
-          any time.
+            get one
+          </Link>
+          !
         </p>
       )}
     </>
@@ -385,7 +389,7 @@ function ClaimByCode({ onClaimed }: { onClaimed: (tier: string) => void }) {
   return (
     <form action={action} className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-3">
-        <div role="group" aria-label="Ticket code">
+        <div role="group" aria-label="Ticket code" className="text-cream">
           <PinInput
             name="code"
             length={TICKET_CODE_LENGTH}
