@@ -552,6 +552,12 @@ export async function getSubmission(id: string): Promise<Submission | null> {
   }
 }
 
+/** The grader's note to whoever schedules this session, if any. */
+export function schedulerNotes(submission: Submission): string | null {
+  const notes = submission.fields[SCHEDULER_NOTES_FIELD];
+  return typeof notes === "string" && notes.trim() ? notes.trim() : null;
+}
+
 export const submissionTag = (id: string) => `rfp-submission:${id}`;
 
 class NoSubmission extends Error {}

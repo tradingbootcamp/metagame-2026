@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { EXPIRED, requireAdmin } from "@/lib/admin-auth";
 import { deleteImage } from "@/lib/blob";
+import { cachedSubmission, schedulerNotes } from "@/lib/rfp-rubric";
 import { ImageUploadError, replaceRoomImages } from "@/lib/room-images";
 import { type ScheduleAccount } from "@/lib/schedule";
 import {
@@ -44,6 +45,21 @@ const optional = (formData: FormData, key: string) =>
 
 /** The form's text fields; repeated names (hostId) collapse to one, so read those separately. */
 const fields = (formData: FormData): Raw => Object.fromEntries(formData);
+
+export type SchedulerNotes = { notes: string | null } | { error: string };
+
+export async function loadSchedulerNotes(
+  recordId: string,
+): Promise<SchedulerNotes> {
+  if (!(await requireAdmin())) return { error: EXPIRED };
+  try {
+    const submission = await cachedSubmission(recordId);
+    if (submission) return { notes: schedulerNotes(submission) };
+  } catch (err) {
+    console.error("Airtable RFP fetch failed", recordId, err);
+  }
+  return { error: "Couldn’t load Airtable record" };
+}
 
 export async function saveSession(
   _prev: FormState,

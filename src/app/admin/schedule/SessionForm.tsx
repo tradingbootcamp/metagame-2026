@@ -5,6 +5,7 @@ import { XIcon } from "lucide-react";
 import { deleteSession, saveSession, type FormState } from "./actions";
 import AttendancePanel from "./AttendancePanel";
 import HostPicker from "./HostPicker";
+import RfpPanel from "./RfpPanel";
 import {
   buttonClass,
   fieldClass,
@@ -212,6 +213,8 @@ export default function SessionForm({
               autoFocus
             />
           </Field>
+
+          {session && <RfpPanel recordId={session.airtableRfpRecordId} />}
 
           <Field label="Slug" name="slug" state={state}>
             <input

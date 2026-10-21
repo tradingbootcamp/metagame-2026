@@ -9,9 +9,9 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import { adminAccess } from "@/lib/admin-auth";
-import { airtableConfig } from "@/lib/airtable-config";
 import { currentSession } from "@/lib/auth";
-import { cachedSubmission, SCHEDULER_NOTES_FIELD } from "@/lib/rfp-rubric";
+import { rfpLinks } from "@/lib/rfp-links";
+import { cachedSubmission, schedulerNotes } from "@/lib/rfp-rubric";
 import {
   formatPacificDay,
   formatPacificTime,
@@ -68,9 +68,9 @@ async function GraderNotes({ recordId }: { recordId: string }) {
   if (!submission) {
     return <p className={MUTED}>Couldn&rsquo;t load Airtable record</p>;
   }
-  const notes = submission.fields[SCHEDULER_NOTES_FIELD];
-  if (typeof notes !== "string" || !notes.trim()) return null;
-  return <AdminNote title="Grader notes for scheduler" text={notes.trim()} />;
+  const notes = schedulerNotes(submission);
+  if (!notes) return null;
+  return <AdminNote title="Grader notes for scheduler" text={notes} />;
 }
 
 function AdminNote({ title, text }: { title: string; text: string }) {
@@ -100,11 +100,15 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
       </h2>
       {recordId ? (
         <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-          <Link href={`/grade/${recordId}`} target="_blank" className={link}>
+          <Link
+            href={rfpLinks(recordId).grade}
+            target="_blank"
+            className={link}
+          >
             Grading page
           </Link>
           <a
-            href={`https://airtable.com/${airtableConfig.baseId}/${airtableConfig.rfpSubmissionsTableId}/${recordId}`}
+            href={rfpLinks(recordId).airtable}
             target="_blank"
             rel="noopener noreferrer"
             className={link}
