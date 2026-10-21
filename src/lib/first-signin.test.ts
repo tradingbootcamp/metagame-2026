@@ -69,7 +69,12 @@ describe("ticketStep", () => {
         "u1",
         "ada@example.com",
       ),
-    ).toEqual({ kind: "claimable", tickets: [{ id: "b", tier: "Standard" }] });
+    ).toEqual({
+      kind: "claimable",
+      tickets: [
+        { id: "b", tier: "Standard", purchasedAt: "2026-10-03T17:00:00.000Z" },
+      ],
+    });
   });
 
   it("skips ahead once the user holds a ticket", () => {
