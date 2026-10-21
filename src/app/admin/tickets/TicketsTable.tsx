@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
 import { PersonLink, StatusTag, TestTag } from "./parts";
-import { fieldClass, smallButtonClass } from "../ui";
+import { fieldClass, selectStyle, smallButtonClass } from "../ui";
 import {
   pageOf,
   PAGE_SIZES,
@@ -219,7 +219,8 @@ export default function TicketsTable({
           <select
             value={size}
             onChange={(e) => update({ size: Number(e.target.value) })}
-            className="rounded-md border border-line bg-white px-2 py-1 text-ink"
+            className="appearance-none rounded-md border border-line bg-white bg-no-repeat py-1 pr-8 pl-2 text-ink"
+            style={selectStyle}
           >
             {PAGE_SIZES.map((n) => (
               <option key={n} value={n}>
