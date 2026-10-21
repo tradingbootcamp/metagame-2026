@@ -17,6 +17,7 @@ import { getAuth } from "./auth";
 import {
   fromPacificWall,
   movedTimes,
+  outsideHours,
   type Attendance,
   type RsvpStatus,
   type ScheduleAccount,
@@ -171,6 +172,8 @@ export async function moveSessionTo(
     },
     start,
   );
+  const outside = outsideHours(startsAt, endsAt);
+  if (outside) throw new Error(outside.error);
   if (locationId) {
     const [clash] = await db
       .select({ title: sessions.title })

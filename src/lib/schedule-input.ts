@@ -7,6 +7,7 @@ import {
   CATEGORIES,
   STATUSES,
   fromPacificWall,
+  outsideHours,
   slugify,
   type Ages,
   type Category,
@@ -91,6 +92,9 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
   if (startsAt && endsAt && endsAt <= startsAt) {
     return { ok: false, field: "endsAt", error: "End must be after start." };
   }
+
+  const outside = startsAt && endsAt ? outsideHours(startsAt, endsAt) : null;
+  if (outside) return { ok: false, ...outside };
 
   const maxCapacity = int(raw, "maxCapacity");
   const minCapacity = int(raw, "minCapacity");

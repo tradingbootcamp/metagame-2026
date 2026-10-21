@@ -17,8 +17,9 @@ import {
   CATEGORIES,
   CONFERENCE_DAYS,
   END_GAP_MINUTES,
-  END_TIMES,
-  START_TIMES,
+  endTimes,
+  opensAt,
+  startTimes,
   STATUSES,
   formatPacificDay,
   minutesToHHMM,
@@ -135,9 +136,12 @@ export default function SessionForm({
 
   const pickDay = (key: string) => {
     setDay(key);
-    if (key && start === null) {
-      setStart(DEFAULT_START);
-      setEnd(shortest(DEFAULT_START));
+    if (!key) return;
+    // A day that opens later pushes an earlier start up to its opening.
+    const first = Math.max(DEFAULT_START, opensAt(key));
+    if (start === null || start < opensAt(key)) {
+      setStart(first);
+      setEnd(shortest(first));
     }
   };
 
@@ -149,7 +153,9 @@ export default function SessionForm({
         : null;
     setStart(next);
     setEnd(
-      moved !== null && moved <= END_TIMES.at(-1)! ? moved : shortest(next),
+      moved !== null && day && moved <= endTimes(day).at(-1)!
+        ? moved
+        : shortest(next),
     );
   };
 
@@ -256,7 +262,7 @@ export default function SessionForm({
                 style={selectStyle}
               >
                 {day ? (
-                  withCurrent(START_TIMES, start).map((m) => (
+                  withCurrent(startTimes(day), start).map((m) => (
                     <option key={m} value={m}>
                       {slotLabel(m)}
                     </option>
@@ -276,7 +282,7 @@ export default function SessionForm({
               >
                 {day ? (
                   withCurrent(
-                    END_TIMES.filter((m) => start === null || m > start),
+                    endTimes(day).filter((m) => start === null || m > start),
                     end,
                   ).map((m) => (
                     <option key={m} value={m}>

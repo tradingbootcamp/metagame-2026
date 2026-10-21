@@ -188,9 +188,45 @@ export function minutesToHHMM(min: number): string {
 // Sessions start on the hour or half hour and end five minutes before the
 // next half hour, leaving a passing period.
 export const END_GAP_MINUTES = 5;
-export const START_TIMES: number[] = [];
-for (let m = 0; m < 24 * 60; m += 30) START_TIMES.push(m);
-export const END_TIMES = START_TIMES.map((m) => m + 30 - END_GAP_MINUTES);
+
+// Schedule hours: from 10am (Friday 2pm) to midnight. Nothing runs outside them.
+const OPENS_AT = 10 * 60;
+const DAY_OPENS_AT: Record<string, number> = { "2026-11-06": 14 * 60 };
+const CLOSES_AT = 24 * 60;
+
+export function opensAt(dayKey: string): number {
+  return DAY_OPENS_AT[dayKey] ?? OPENS_AT;
+}
+
+export function startTimes(dayKey: string): number[] {
+  const out: number[] = [];
+  for (let m = opensAt(dayKey); m < CLOSES_AT; m += 30) out.push(m);
+  return out;
+}
+
+export function endTimes(dayKey: string): number[] {
+  return startTimes(dayKey).map((m) => m + 30 - END_GAP_MINUTES);
+}
+
+/** Why a session at these times falls outside schedule hours, or null. */
+export function outsideHours(
+  startsAt: Date,
+  endsAt: Date,
+): { field: "startsAt" | "endsAt"; error: string } | null {
+  const iso = startsAt.toISOString();
+  const day = pacificDayKey(iso);
+  const start = pacificMinutes(iso);
+  if (start < opensAt(day)) {
+    return {
+      field: "startsAt",
+      error: `Sessions that day start at ${slotLabel(opensAt(day))} or later.`,
+    };
+  }
+  const end = start + (endsAt.getTime() - startsAt.getTime()) / 60_000;
+  if (end > CLOSES_AT)
+    return { field: "endsAt", error: "Sessions end by midnight." };
+  return null;
+}
 
 // Grid geometry, matching the 2025 schedule component.
 const PX_PER_MIN = 2;
@@ -264,17 +300,21 @@ export type Day = {
   name: string;
   dateLabel: string;
   sessions: PlacedSession[];
-  /** 30-minute slot starts (minutes since Pacific midnight), all day. */
+  /** 30-minute slot starts (minutes since Pacific midnight), open to midnight. */
   slots: number[];
-  /** Where the grid opens scrolled to; earlier hours are a scroll up. */
-  opensAt: number;
 };
 
-// Friday opens in the evening.
-const OPENS_AT = 9 * 60;
-const DAY_OPENS_AT: Record<string, number> = { "2026-11-06": 17 * 60 };
-const SLOTS: number[] = [];
-for (let m = 0; m < 24 * 60; m += SLOT_MINUTES) SLOTS.push(m);
+/** The day's slots; reaches earlier only to show a session saved before opening. */
+function daySlots(dayKey: string, sessions: PlacedSession[]): number[] {
+  const earliest = Math.min(
+    opensAt(dayKey),
+    ...sessions.map((s) => pacificMinutes(s.startsAt)),
+  );
+  const first = earliest - (earliest % SLOT_MINUTES);
+  const out: number[] = [];
+  for (let m = first; m < CLOSES_AT; m += SLOT_MINUTES) out.push(m);
+  return out;
+}
 
 /**
  * Buckets placed sessions by Pacific day. The three conference days always
@@ -292,9 +332,7 @@ export function buildDays(sessions: ScheduleSession[]): Day[] {
     byKey.set(key, [...(byKey.get(key) ?? []), s]);
   }
 
-  const days: Omit<Day, "sessions" | "slots" | "opensAt">[] = [
-    ...CONFERENCE_DAYS,
-  ];
+  const days: Omit<Day, "sessions" | "slots">[] = [...CONFERENCE_DAYS];
   for (const key of [...byKey.keys()].sort()) {
     if (days.some((d) => d.key === key)) continue;
     const iso = byKey.get(key)![0].startsAt;
@@ -312,12 +350,10 @@ export function buildDays(sessions: ScheduleSession[]): Day[] {
     });
   }
 
-  return days.map((day) => ({
-    ...day,
-    sessions: byKey.get(day.key) ?? [],
-    slots: SLOTS,
-    opensAt: DAY_OPENS_AT[day.key] ?? OPENS_AT,
-  }));
+  return days.map((day) => {
+    const sessions = byKey.get(day.key) ?? [];
+    return { ...day, sessions, slots: daySlots(day.key, sessions) };
+  });
 }
 
 /** "my-session-title" from "My Session Title!", capped so slugs stay short. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { GripVerticalIcon } from "lucide-react";
 import { FaListUl, FaThLarge } from "react-icons/fa";
 import {
@@ -12,6 +12,7 @@ import {
   minutesToHHMM,
   movedTimes,
   offsetPx,
+  outsideHours,
   slotLabel,
   startsInSlot,
   SLOT_MINUTES,
@@ -141,29 +142,27 @@ function SessionBlock({
   );
 }
 
-/** Where the carried session would land, red when it would overlap. */
+/** Where the carried session would land, red with the reason when it can't. */
 function DropPreview({
   session,
   heightPx,
-  clash,
+  blocked,
 }: {
   session: ScheduleSession;
   heightPx: number;
-  clash: ScheduleSession | null;
+  blocked: string | null;
 }) {
   return (
     <div
       aria-hidden
-      style={{ height: heightPx, ...(clash ? {} : blockStyle(session)) }}
+      style={{ height: heightPx, ...(blocked ? {} : blockStyle(session)) }}
       className={`pointer-events-none absolute inset-x-0.5 top-0 z-20 overflow-hidden rounded-md border-2 border-dashed p-1.5 text-[13px] leading-tight font-semibold shadow-[0_2px_10px_rgba(27,21,48,0.25)] ${
-        clash
+        blocked
           ? "border-red-600 bg-red-100/90 text-red-800"
           : "text-[#1b1530] opacity-85"
       }`}
     >
-      <span className="line-clamp-3">
-        {clash ? `Overlaps ${clash.title}` : session.title}
-      </span>
+      <span className="line-clamp-3">{blocked ?? session.title}</span>
     </div>
   );
 }
@@ -208,22 +207,23 @@ function GridDay({
     if (!start) return null;
     const locationId = colId === NO_ROOM ? null : colId;
     const times = movedTimes(carrying, start);
+    const clashFor = (
+      t: { startsAt: Date; endsAt: Date },
+      locationId: string | null,
+    ) => {
+      const clash = findClash(sessions, { id: carrying.id, locationId, ...t });
+      if (clash) return `Overlaps ${clash.title}`;
+      return outsideHours(t.startsAt, t.endsAt)?.error ?? null;
+    };
     return {
       ...times,
       locationId,
-      clash: findClash(sessions, { id: carrying.id, locationId, ...times }),
+      blocked: clashFor(times, locationId),
     };
   };
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
-  const scroller = useRef<HTMLDivElement>(null);
-  // Open on the day's usual start; the small hours stay a scroll up.
-  useLayoutEffect(() => {
-    if (scroller.current)
-      scroller.current.scrollTop = day.slots.indexOf(day.opensAt) * SLOT_PX;
-  }, [day.key, day.opensAt, day.slots]);
   return (
     <div
-      ref={scroller}
       onMouseLeave={() => setHover(null)}
       className="max-h-[75vh] overflow-auto rounded-xl border border-line bg-white [--col-w:104px] [--time-w:44px] sm:[--col-w:120px] sm:[--time-w:56px]"
     >
@@ -300,12 +300,12 @@ function GridDay({
                           return;
                         }
                         const t = target(slotStart, col.id);
-                        if (t && !t.clash) onDrop(t.startsAt, t.locationId);
+                        if (t && !t.blocked) onDrop(t.startsAt, t.locationId);
                       }}
                       className={`absolute inset-0 transition-colors hover:bg-navy/[0.06] ${
                         !carrying
                           ? "cursor-cell"
-                          : hovered?.clash
+                          : hovered?.blocked
                             ? "cursor-not-allowed"
                             : "cursor-copy"
                       }`}
@@ -324,7 +324,7 @@ function GridDay({
                     {carrying && hovered && (
                       <DropPreview
                         session={carrying}
-                        clash={hovered.clash}
+                        blocked={hovered.blocked}
                         heightPx={Math.max(
                           SLOT_PX,
                           ((hovered.endsAt.getTime() -
