@@ -30,10 +30,13 @@ CREATE TABLE "session_grades" (
 	"topic_areas" "topic_area"[] DEFAULT '{}' NOT NULL,
 	"potential_panels" "potential_panel"[] DEFAULT '{}' NOT NULL,
 	"megagame_integration" text,
+	"expected_crowd_size" integer,
+	"allow_dropins" "session_dropins",
 	"submitted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "session_grades_session_grader_unique" UNIQUE("session_id","grader_user_id")
+	CONSTRAINT "session_grades_session_grader_unique" UNIQUE("session_id","grader_user_id"),
+	CONSTRAINT "session_grades_expected_crowd_size_nonnegative" CHECK ("session_grades"."expected_crowd_size" >= 0)
 );
 --> statement-breakpoint
 ALTER TABLE "profiles" ADD COLUMN "website" text;--> statement-breakpoint
@@ -41,6 +44,8 @@ ALTER TABLE "sessions" ADD COLUMN "phase" "session_phase";--> statement-breakpoi
 ALTER TABLE "sessions" ADD COLUMN "verdict" "session_verdict";--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "speaker_tier" "speaker_tier";--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "context" text;--> statement-breakpoint
+ALTER TABLE "sessions" ADD COLUMN "requested_duration" text;--> statement-breakpoint
+ALTER TABLE "sessions" ADD COLUMN "cohosts" text;--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "timing_constraints" text;--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "other_constraints" text;--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "age_elaboration" text;--> statement-breakpoint
@@ -49,8 +54,6 @@ ALTER TABLE "sessions" ADD COLUMN "bespoke_needs" text;--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "anything_else" text;--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "megagame_interest" "megagame_interest";--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "marketing_consent" boolean;--> statement-breakpoint
-ALTER TABLE "sessions" ADD COLUMN "expected_crowd_size" integer;--> statement-breakpoint
-ALTER TABLE "sessions" ADD COLUMN "allow_dropins" "session_dropins";--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "discord_status" "discord_status";--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "megagame_notes" text;--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "ticket_state" text;--> statement-breakpoint
@@ -60,6 +63,6 @@ ALTER TABLE "sessions" ADD COLUMN "ricki_notes" text;--> statement-breakpoint
 ALTER TABLE "session_grade_space_options" ADD CONSTRAINT "session_grade_space_options_grade_id_session_grades_id_fk" FOREIGN KEY ("grade_id") REFERENCES "public"."session_grades"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session_grade_space_options" ADD CONSTRAINT "session_grade_space_options_location_id_locations_id_fk" FOREIGN KEY ("location_id") REFERENCES "public"."locations"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session_grades" ADD CONSTRAINT "session_grades_session_id_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "session_grades" ADD CONSTRAINT "session_grades_grader_user_id_user_id_fk" FOREIGN KEY ("grader_user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "session_grades" ADD CONSTRAINT "session_grades_grader_user_id_user_id_fk" FOREIGN KEY ("grader_user_id") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "session_grade_space_options_location_id_idx" ON "session_grade_space_options" USING btree ("location_id");--> statement-breakpoint
 CREATE INDEX "session_grades_grader_user_id_idx" ON "session_grades" USING btree ("grader_user_id");

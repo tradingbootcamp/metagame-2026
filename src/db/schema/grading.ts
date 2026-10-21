@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import {
+  check,
   index,
+  integer,
   pgEnum,
   pgTable,
   primaryKey,
@@ -10,7 +12,12 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps, user } from "./auth";
-import { locations, sessions, sessionVerdict } from "./schedule";
+import {
+  locations,
+  sessionDropins,
+  sessions,
+  sessionVerdict,
+} from "./schedule";
 
 export const rubricGrade = pgEnum("rubric_grade", [
   "best",
@@ -55,7 +62,7 @@ export const sessionGrades = pgTable(
       .references(() => sessions.id, { onDelete: "cascade" }),
     graderUserId: text()
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => user.id, { onDelete: "restrict" }),
     operationalEase: rubricGrade(),
     hostCompetence: rubricGrade(),
     hostNameRecognition: rubricGrade(),
@@ -74,6 +81,8 @@ export const sessionGrades = pgTable(
       .notNull()
       .default(sql`'{}'`),
     megagameIntegration: text(),
+    expectedCrowdSize: integer(),
+    allowDropins: sessionDropins(),
     // Null while the grade is only an assignment.
     submittedAt: timestamp({ withTimezone: true }),
     ...timestamps,
@@ -84,6 +93,10 @@ export const sessionGrades = pgTable(
       t.graderUserId,
     ),
     index("session_grades_grader_user_id_idx").on(t.graderUserId),
+    check(
+      "session_grades_expected_crowd_size_nonnegative",
+      sql`${t.expectedCrowdSize} >= 0`,
+    ),
   ],
 );
 

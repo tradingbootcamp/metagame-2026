@@ -1,5 +1,5 @@
 {
-  "id": "89bc1131-2e15-4fd0-aa6d-53f4ac4d2379",
+  "id": "e440fa45-f2a6-4d29-9dd6-f2b847c13974",
   "prevId": "f8369970-8f30-4270-a4f5-b09a829d6773",
   "version": "7",
   "dialect": "postgresql",
@@ -1330,6 +1330,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "requested_duration": {
+          "name": "requested_duration",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cohosts": {
+          "name": "cohosts",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "timing_constraints": {
           "name": "timing_constraints",
           "type": "text",
@@ -1376,19 +1388,6 @@
         "marketing_consent": {
           "name": "marketing_consent",
           "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "expected_crowd_size": {
-          "name": "expected_crowd_size",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "allow_dropins": {
-          "name": "allow_dropins",
-          "type": "session_dropins",
-          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
@@ -1716,6 +1715,19 @@
           "primaryKey": false,
           "notNull": false
         },
+        "expected_crowd_size": {
+          "name": "expected_crowd_size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "allow_dropins": {
+          "name": "allow_dropins",
+          "type": "session_dropins",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "submitted_at": {
           "name": "submitted_at",
           "type": "timestamp with time zone",
@@ -1770,7 +1782,7 @@
           "tableTo": "user",
           "columnsFrom": ["grader_user_id"],
           "columnsTo": ["id"],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
@@ -1783,7 +1795,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "session_grades_expected_crowd_size_nonnegative": {
+          "name": "session_grades_expected_crowd_size_nonnegative",
+          "value": "\"session_grades\".\"expected_crowd_size\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     }
   },

@@ -122,6 +122,8 @@ export const sessions = pgTable(
     speakerTier: speakerTier(),
     // The host's RFP answers.
     context: text(),
+    requestedDuration: text(),
+    cohosts: text(),
     timingConstraints: text(),
     otherConstraints: text(),
     ageElaboration: text(),
@@ -131,8 +133,6 @@ export const sessions = pgTable(
     megagameInterest: megagameInterest(),
     marketingConsent: boolean(),
     // Committee notes and logistics.
-    expectedCrowdSize: integer(),
-    allowDropins: sessionDropins(),
     discordStatus: discordStatus(),
     megagameNotes: text(),
     ticketState: text(),

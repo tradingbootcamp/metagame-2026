@@ -19,16 +19,6 @@ type Labels<E extends { enumValues: readonly string[] }> = Record<
   string
 >;
 
-export const PHASE_LABELS: Labels<typeof sessionPhase> = {
-  grading: "Grading",
-  deciding: "Committee decision",
-  notifying: "Email speaker with verdict",
-  shepherding: "Shepherding",
-  scheduling: "Add to schedule",
-  ready: "Ready",
-  declined: "Declined",
-};
-
 /** Airtable "Next steps" options, each mapped to the phase that replaces it. */
 export const NEXT_STEPS_PHASE: Record<
   string,

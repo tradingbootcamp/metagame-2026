@@ -82,7 +82,7 @@ const TABLE_NOTES: Record<string, string> = {
     "Going or waitlisted, one row per user per session. The rsvps_capacity trigger refuses a going row once the session's max_capacity is reached (null = unlimited).",
   bookmarks: "Sessions a user starred. One row per pair.",
   session_grades:
-    "One committee member's grade of a proposal, one row per session and grader; re-grading overwrites it. A row with submitted_at null is an assignment not yet graded. topic_areas and potential_panels are multi-selects as enum arrays.",
+    "One committee member's grade of a proposal, one row per session and grader; re-grading overwrites it. A row with submitted_at null is an assignment not yet graded. topic_areas and potential_panels are multi-selects as enum arrays. Deleting a grader's account is refused while they have grades, since these are the only copy.",
   session_grade_space_options:
     "The rooms a grader thinks would suit the session, one row per grade and location.",
 };

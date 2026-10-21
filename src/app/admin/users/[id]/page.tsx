@@ -123,6 +123,7 @@ export default async function AdminUserProfilePage(
     schedule.locations,
     plans,
     counts,
+    true,
   );
   const displayName = profile?.preferredName?.trim() || user.name.trim();
 
