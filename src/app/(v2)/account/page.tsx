@@ -2,9 +2,18 @@ import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { PasswordForm, ProfileForm, SignOutButton } from "./AccountForms";
+import AccountTabs from "./AccountTabs";
+import SessionsPanel from "./SessionsPanel";
 import TicketsPanel, { type TicketView } from "./TicketsPanel";
+import { parseAccountTab } from "./tabs";
 import { getDb, schema } from "@/db";
+import { accountSessions } from "@/lib/account-sessions";
 import { currentSession, hasPassword } from "@/lib/auth";
+import {
+  loadRsvpCounts,
+  loadSchedule,
+  loadViewerPlans,
+} from "@/lib/schedule-store";
 import { formatTicketCode } from "@/lib/ticket-code";
 import { emailKey, ticketLabel, ticketsForUser } from "@/lib/ticket-store";
 
@@ -16,23 +25,31 @@ export const metadata: Metadata = {
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; tab?: string }>;
 }) {
-  const { notice } = await searchParams;
+  const { notice, tab } = await searchParams;
+  const initialTab = parseAccountTab(tab);
   const session = await currentSession();
-  if (!session) redirect("/login?next=/account");
+  if (!session)
+    redirect(
+      `/login?next=${encodeURIComponent(initialTab === "profile" ? "/account" : `/account?tab=${initialTab}`)}`,
+    );
   const { user } = session;
 
   const email = emailKey(user.email);
-  const [[profile], passwordSet, rows] = await Promise.all([
-    getDb()
-      .select()
-      .from(schema.profiles)
-      .where(eq(schema.profiles.userId, user.id))
-      .limit(1),
-    hasPassword(user.id),
-    ticketsForUser(user.id, email),
-  ]);
+  const [[profile], passwordSet, rows, schedule, plans, counts] =
+    await Promise.all([
+      getDb()
+        .select()
+        .from(schema.profiles)
+        .where(eq(schema.profiles.userId, user.id))
+        .limit(1),
+      hasPassword(user.id),
+      ticketsForUser(user.id, email),
+      loadSchedule(),
+      loadViewerPlans(user.id),
+      loadRsvpCounts(),
+    ]);
   const tickets: TicketView[] = rows.map((t) => ({
     id: t.paymentId,
     tier: ticketLabel(t.tier),
@@ -52,24 +69,47 @@ export default async function AccountPage({
           Looks like you already had an account, so we signed you in.
         </p>
       )}
-      <div className="grid max-w-[960px] gap-12 md:grid-cols-2">
-        <ProfileForm
-          email={user.email}
-          initialValues={{
-            name: user.name,
-            preferredName: profile?.preferredName ?? "",
-            pronouns: profile?.pronouns ?? "",
-            discordHandle: profile?.discordHandle ?? "",
-            bio: profile?.bio ?? "",
-            isPublic: profile?.isPublic ?? false,
-          }}
-        />
-        <div className="flex flex-col gap-10">
-          <PasswordForm hasPassword={passwordSet} email={user.email} />
-          <SignOutButton />
-        </div>
-      </div>
-      <TicketsPanel tickets={tickets} />
+      <AccountTabs
+        initial={initialTab}
+        panels={{
+          profile: (
+            <div className="grid max-w-[960px] gap-12 md:grid-cols-2">
+              <ProfileForm
+                email={user.email}
+                initialValues={{
+                  name: user.name,
+                  preferredName: profile?.preferredName ?? "",
+                  pronouns: profile?.pronouns ?? "",
+                  discordHandle: profile?.discordHandle ?? "",
+                  bio: profile?.bio ?? "",
+                  isPublic: profile?.isPublic ?? false,
+                }}
+              />
+              <div className="flex flex-col gap-10">
+                <PasswordForm hasPassword={passwordSet} email={user.email} />
+                <SignOutButton />
+              </div>
+            </div>
+          ),
+          // TicketsPanel carries its own top margin from when it sat below the profile.
+          tickets: (
+            <div className="[&>section]:mt-0">
+              <TicketsPanel tickets={tickets} />
+            </div>
+          ),
+          sessions: (
+            <SessionsPanel
+              sessions={accountSessions(
+                user.id,
+                schedule.sessions,
+                schedule.locations,
+                plans,
+                counts,
+              )}
+            />
+          ),
+        }}
+      />
     </div>
   );
 }

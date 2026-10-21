@@ -10,7 +10,7 @@ import { cancelRsvp, rsvp, setBookmark } from "@/lib/schedule-store";
 export type PlanResult = { error?: string; status?: RsvpStatus | null };
 
 // Pages that show RSVPs or bookmarks.
-const PATHS = ["/admin/schedule"];
+const PATHS = ["/admin/schedule", "/account"];
 
 /** The signed-in user, if they may act on this session. */
 async function attendee(sessionId: string): Promise<string | PlanResult> {
