@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
-import { TICKET_CODE_LENGTH } from "@/lib/ticket-code-format";
+// Relative with the extension: scripts/backfill-tickets.mjs loads this file
+// under plain node, which doesn't know the @/ alias.
+import { TICKET_CODE_LENGTH } from "./ticket-code-format.ts";
 
-export { formatTicketCode } from "@/lib/ticket-code-format";
+export { formatTicketCode } from "./ticket-code-format.ts";
 
 // Crockford-style: no I/L/O/U, so codes survive being read aloud or retyped.
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
