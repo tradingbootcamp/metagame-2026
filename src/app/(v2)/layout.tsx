@@ -1,6 +1,7 @@
 import ContactProvider from "@/v2/components/contact/ContactProvider";
 import SiteFooter from "@/v2/components/SiteFooter";
 import SiteShell from "@/v2/components/SiteShell";
+import FirstSigninFlow from "@/v2/components/first-signin/FirstSigninFlow";
 import HatToast from "@/v2/hat-trick/HatToast";
 
 // The rewritten site. Everything it renders lives under src/v2/ — see
@@ -20,6 +21,7 @@ export default function SiteLayout({
         <SiteFooter />
       </ContactProvider>
       <HatToast />
+      <FirstSigninFlow />
     </div>
   );
 }
