@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { PasswordForm, ProfileForm, SignOutButton } from "./AccountForms";
 import AccountTabs from "./AccountTabs";
+import AvatarForm from "./AvatarForm";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel, { type TicketView } from "./TicketsPanel";
 import { parseAccountTab } from "./tabs";
@@ -73,21 +74,27 @@ export default async function AccountPage({
         initial={initialTab}
         panels={{
           profile: (
-            <div className="grid max-w-[960px] gap-12 md:grid-cols-2">
-              <ProfileForm
-                email={user.email}
-                initialValues={{
-                  name: user.name,
-                  preferredName: profile?.preferredName ?? "",
-                  pronouns: profile?.pronouns ?? "",
-                  discordHandle: profile?.discordHandle ?? "",
-                  bio: profile?.bio ?? "",
-                  isPublic: profile?.isPublic ?? false,
-                }}
+            <div className="flex max-w-[960px] flex-col gap-10">
+              <AvatarForm
+                imageUrl={profile?.imageUrl ?? null}
+                name={profile?.preferredName || user.name}
               />
-              <div className="flex flex-col gap-10">
-                <PasswordForm hasPassword={passwordSet} email={user.email} />
-                <SignOutButton />
+              <div className="grid gap-12 md:grid-cols-2">
+                <ProfileForm
+                  email={user.email}
+                  initialValues={{
+                    name: user.name,
+                    preferredName: profile?.preferredName ?? "",
+                    pronouns: profile?.pronouns ?? "",
+                    discordHandle: profile?.discordHandle ?? "",
+                    bio: profile?.bio ?? "",
+                    isPublic: profile?.isPublic ?? false,
+                  }}
+                />
+                <div className="flex flex-col gap-10">
+                  <PasswordForm hasPassword={passwordSet} email={user.email} />
+                  <SignOutButton />
+                </div>
               </div>
             </div>
           ),

@@ -1,11 +1,13 @@
 "use server";
 
 import { APIError } from "better-auth/api";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb, schema } from "@/db";
 import { currentSession, getAuth, hasPassword } from "@/lib/auth";
+import { deleteImage, uploadImage } from "@/lib/blob";
 import {
   claimOwnTicket,
   claimTicket,
@@ -59,6 +61,56 @@ export async function updateProfile(
 
   revalidatePath("/account");
   return { saved: true };
+}
+
+export type AvatarResult = { error?: string };
+
+// Upload first, write the row, then delete what was replaced, so a failed
+// save never leaves the profile pointing at a deleted file.
+async function setAvatar(file: File | null): Promise<AvatarResult> {
+  const session = await requireSession();
+  const userId = session.user.id;
+  const { profiles } = schema;
+  const db = getDb();
+  const [current] = await db
+    .select({ imageUrl: profiles.imageUrl })
+    .from(profiles)
+    .where(eq(profiles.userId, userId))
+    .limit(1);
+
+  let imageUrl: string | null = null;
+  if (file) {
+    try {
+      imageUrl = await uploadImage("profiles", file);
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : "Upload failed." };
+    }
+  }
+  try {
+    await db
+      .insert(profiles)
+      .values({ userId, imageUrl })
+      .onConflictDoUpdate({ target: profiles.userId, set: { imageUrl } });
+  } catch (err) {
+    await deleteImage(imageUrl);
+    throw err;
+  }
+  if (current?.imageUrl !== imageUrl)
+    await deleteImage(current?.imageUrl ?? null);
+
+  revalidatePath("/account");
+  return {};
+}
+
+export async function saveAvatar(formData: FormData): Promise<AvatarResult> {
+  const file = formData.get("image");
+  if (!(file instanceof File) || file.size === 0)
+    return { error: "Choose an image." };
+  return setAvatar(file);
+}
+
+export async function removeAvatar(): Promise<AvatarResult> {
+  return setAvatar(null);
 }
 
 export type PasswordState = {

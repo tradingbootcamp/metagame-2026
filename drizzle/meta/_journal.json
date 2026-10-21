@@ -50,6 +50,13 @@
       "when": 1792539856692,
       "tag": "0006_room_large_images",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792542172471,
+      "tag": "0007_profile_image",
+      "breakpoints": true
     }
   ]
 }

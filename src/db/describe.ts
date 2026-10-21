@@ -68,7 +68,7 @@ const TABLE_NOTES: Record<string, string> = {
   apikey:
     "API keys (Better Auth api-key plugin), minted on /admin/api-keys. A request carrying one in x-api-key acts as the owning user (reference_id), so the admin gate applies as it does to pages. Only the hash is stored; start shows the first characters for telling keys apart.",
   profiles:
-    "Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field.",
+    "Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field. image_url is the profile picture, a 512px Vercel Blob URL.",
   tickets:
     "One row per purchase, keyed by the payment id the webhooks upsert on. Airtable keeps the finance detail; this holds what admission needs. owner_user_id is set only by claiming the ticket code, never by email match.",
   locations:
