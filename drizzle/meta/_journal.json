@@ -71,6 +71,13 @@
       "when": 1792551677487,
       "tag": "0009_profile_onboarding",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792552808891,
+      "tag": "0010_ticket_holder",
+      "breakpoints": true
     }
   ]
 }
