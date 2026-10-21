@@ -21,8 +21,11 @@ function Row({
     <li className="flex flex-col gap-2 px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-base font-semibold text-ink">
-          {linkable ? (
-            <Link href={`/schedule/${s.slug}`} className="hover:underline">
+          {linkable && s.listed ? (
+            <Link
+              href={`/schedule/${s.slug}`}
+              className="underline-offset-2 hover:underline"
+            >
               {s.title}
             </Link>
           ) : (
