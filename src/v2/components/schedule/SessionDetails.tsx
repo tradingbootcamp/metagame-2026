@@ -11,7 +11,7 @@ import {
 import { adminAccess } from "@/lib/admin-auth";
 import { airtableConfig } from "@/lib/airtable-config";
 import { currentSession } from "@/lib/auth";
-import { getSubmission, SCHEDULER_NOTES_FIELD } from "@/lib/rfp-rubric";
+import { cachedSubmission, SCHEDULER_NOTES_FIELD } from "@/lib/rfp-rubric";
 import {
   formatPacificDay,
   formatPacificTime,
@@ -56,19 +56,21 @@ export async function sessionMetadata(slug: string): Promise<Metadata> {
   };
 }
 
-async function schedulerNotes(recordId: string) {
+const MUTED = "text-sm text-[#1b1530]/60";
+
+async function GraderNotes({ recordId }: { recordId: string }) {
+  let submission = null;
   try {
-    const submission = await getSubmission(recordId);
-    if (!submission) return { ok: false as const };
-    const notes = submission.fields[SCHEDULER_NOTES_FIELD];
-    return {
-      ok: true as const,
-      notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
-    };
+    submission = await cachedSubmission(recordId);
   } catch (err) {
     console.error("Airtable RFP fetch failed", recordId, err);
-    return { ok: false as const };
   }
+  if (!submission) {
+    return <p className={MUTED}>Couldn&rsquo;t load Airtable record</p>;
+  }
+  const notes = submission.fields[SCHEDULER_NOTES_FIELD];
+  if (typeof notes !== "string" || !notes.trim()) return null;
+  return <AdminNote title="Grader notes for scheduler" text={notes.trim()} />;
 }
 
 function AdminNote({ title, text }: { title: string; text: string }) {
@@ -89,7 +91,6 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
   const raw = sessions.find((s) => s.id === sessionId);
   const recordId = raw?.airtableRfpRecordId ?? null;
   const needs = raw?.needs?.trim() || null;
-  const airtable = recordId ? await schedulerNotes(recordId) : null;
   const link = "font-semibold text-navy underline";
 
   return (
@@ -112,15 +113,12 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
           </a>
         </div>
       ) : (
-        <p className="text-sm text-[#1b1530]/60">No RFP linked</p>
+        <p className={MUTED}>No RFP linked</p>
       )}
-      {airtable && !airtable.ok && (
-        <p className="text-sm text-[#1b1530]/60">
-          Couldn&rsquo;t load Airtable record
-        </p>
-      )}
-      {airtable?.ok && airtable.notes && (
-        <AdminNote title="Grader notes for scheduler" text={airtable.notes} />
+      {recordId && (
+        <Suspense fallback={<p className={MUTED}>Loading grader notes…</p>}>
+          <GraderNotes recordId={recordId} />
+        </Suspense>
       )}
       {needs && <AdminNote title="Needs" text={needs} />}
     </section>
@@ -261,11 +259,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
         )}
       </section>
 
-      {admin && (
-        <Suspense>
-          <AdminDetails sessionId={session.id} />
-        </Suspense>
-      )}
+      {admin && <AdminDetails sessionId={session.id} />}
     </>
   );
 }

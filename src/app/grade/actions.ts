@@ -20,6 +20,7 @@ import {
   sanitizeGrades,
   saveGrades,
   SCHEMA_TAG,
+  submissionTag,
   SHEPHERD_FIELD,
   VERDICT_FIELD,
 } from "@/lib/rfp-rubric";
@@ -103,6 +104,7 @@ export async function setOverviewField(
     return { error: "Airtable rejected the change." };
   }
 
+  updateTag(submissionTag(recordId));
   // Deliberately not revalidating /grade: re-sorting the list under the cursor
   // mid-edit is worse than it being one refresh stale.
   revalidatePath(`/grade/${recordId}`);
@@ -140,6 +142,7 @@ export async function addShepherd(
   }
 
   updateTag(SCHEMA_TAG);
+  updateTag(submissionTag(recordId));
   revalidatePath(`/grade/${recordId}`);
   return { name: existing ?? name };
 }
@@ -170,6 +173,7 @@ export async function submitGrades(
     return { error: "Airtable rejected the save. Try again." };
   }
 
+  updateTag(submissionTag(recordId));
   revalidatePath("/grade");
   revalidatePath(`/grade/${recordId}`);
   return { savedAt: Date.now() };

@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { env } from "@/env";
 import { airtableConfig } from "@/lib/airtable-config";
 
@@ -547,6 +548,31 @@ export async function getSubmission(id: string): Promise<Submission | null> {
     return toSubmission((await airtable(tableUrl(id))) as AirtableRecord);
   } catch (err) {
     if (err instanceof Error && err.message.includes("404")) return null;
+    throw err;
+  }
+}
+
+export const submissionTag = (id: string) => `rfp-submission:${id}`;
+
+class NoSubmission extends Error {}
+
+/**
+ * getSubmission, served from a 5-minute stale-while-revalidate cache. For
+ * read-only views; /grade reads live. Misses aren't cached.
+ */
+export async function cachedSubmission(id: string): Promise<Submission | null> {
+  try {
+    return await unstable_cache(
+      async () => {
+        const submission = await getSubmission(id);
+        if (!submission) throw new NoSubmission();
+        return submission;
+      },
+      ["rfp-submission", id],
+      { revalidate: 300, tags: [submissionTag(id)] },
+    )();
+  } catch (err) {
+    if (err instanceof NoSubmission) return null;
     throw err;
   }
 }
