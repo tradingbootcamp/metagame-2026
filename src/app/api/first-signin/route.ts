@@ -1,7 +1,12 @@
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { accountsConfigured, currentSession } from "@/lib/auth";
-import { ticketStep, type FirstSigninStatus } from "@/lib/first-signin";
+import {
+  discordPrefill,
+  firstSigninNeeded,
+  ticketStep,
+  type FirstSigninStatus,
+} from "@/lib/first-signin";
 import { emailKey, ticketLabel, ticketsForUser } from "@/lib/ticket-store";
 
 export const dynamic = "force-dynamic";
@@ -20,17 +25,25 @@ async function firstSigninStatus(): Promise<FirstSigninStatus> {
   const session = await currentSession();
   if (!session) return { needed: false };
   const { user } = session;
-  const { profiles } = schema;
   const [profile] = await getDb()
-    .select({ isAdult: profiles.isAdult })
-    .from(profiles)
-    .where(eq(profiles.userId, user.id))
+    .select()
+    .from(schema.profiles)
+    .where(eq(schema.profiles.userId, user.id))
     .limit(1);
-  if (profile && profile.isAdult !== null) return { needed: false };
+  if (!firstSigninNeeded(profile)) return { needed: false };
   const email = emailKey(user.email);
   const rows = (await ticketsForUser(user.id, email)).map((t) => ({
     ...t,
     tier: ticketLabel(t.tier),
   }));
-  return { needed: true, tickets: ticketStep(rows, user.id, email) };
+  return {
+    needed: true,
+    tickets: ticketStep(rows, user.id, email),
+    prefill: {
+      preferredName: profile?.preferredName || user.name,
+      discordHandle: discordPrefill(profile?.discordHandle, rows, email),
+      isPublic: profile?.isPublic ?? false,
+      shareWithRecruiters: profile?.shareWithRecruiters ?? false,
+    },
+  };
 }

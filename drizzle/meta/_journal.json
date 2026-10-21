@@ -64,6 +64,13 @@
       "when": 1792549601491,
       "tag": "0008_profile_is_adult",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792551444120,
+      "tag": "0009_profile_onboarding",
+      "breakpoints": true
     }
   ]
 }

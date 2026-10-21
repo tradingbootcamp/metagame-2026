@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
+import { Popover } from "radix-ui";
+import { ExternalLink, Info } from "lucide-react";
 import { claim, claimMine, type ClaimState } from "@/app/(v2)/account/actions";
 import {
   firstSigninHidden,
+  type FirstSigninPrefill,
   type FirstSigninStatus,
   type TicketStep,
 } from "@/lib/first-signin";
@@ -21,148 +24,257 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/v2/components/ui/dialog";
+import { Input } from "@/v2/components/ui/input";
+import { CHILD_REGISTRATION_FORM_URL } from "@/v2/lib/links";
+import { cn } from "@/v2/lib/utils";
 import { HEADING, NEWSLETTER_LINK } from "../styles";
-import { saveIsAdult } from "./actions";
+import { saveFirstSignin, type FirstSigninState } from "./actions";
 
 const TICKETS_HREF = "/#tickets";
+const FORM_ID = "first-signin";
+const LABEL = "text-sm font-semibold text-cream";
+const SECTION =
+  "font-space-mono text-xs tracking-[0.12em] text-cream/60 uppercase";
+const RECRUITERS_INFO =
+  "Some of our sponsors are hiring! This opts you in to having your name and email address shared in a list they receive. Totally optional";
+
+type Open = Extract<FirstSigninStatus, { needed: true }>;
 
 // Asked from the client so the layout stays static. Re-asked on leaving
 // /login, since signing in navigates client-side and the layout never remounts.
 export default function FirstSigninFlow() {
   const pathname = usePathname();
   const hidden = firstSigninHidden(pathname);
-  const [tickets, setTickets] = useState<TicketStep | null>(null);
+  const [status, setStatus] = useState<Open | null>(null);
   const [done, setDone] = useState(false);
+  const [state, action, pending] = useActionState<FirstSigninState, FormData>(
+    async (prev, formData) => {
+      const result = await saveFirstSignin(prev, formData).catch(() => ({
+        error: "We couldn't save that. Try again.",
+      }));
+      if ("saved" in result && result.saved) setDone(true);
+      return result;
+    },
+    {},
+  );
 
   useEffect(() => {
-    if (hidden || tickets || done) return;
+    if (hidden || status || done) return;
     let live = true;
     fetch("/api/first-signin")
       .then((res) => (res.ok ? res.json() : { needed: false }))
       .then((body: FirstSigninStatus) => {
-        if (live && body.needed) setTickets(body.tickets);
+        if (live && body.needed) setStatus(body);
       })
       .catch(() => {});
     return () => {
       live = false;
     };
-  }, [hidden, tickets, done]);
+  }, [hidden, status, done]);
 
-  if (!tickets || done || hidden) return null;
-  return <FirstSigninModal tickets={tickets} onFinish={() => setDone(true)} />;
-}
-
-function FirstSigninModal({
-  tickets,
-  onFinish,
-}: {
-  tickets: TicketStep;
-  onFinish: () => void;
-}) {
-  const [step, setStep] = useState<"adult" | "tickets">("adult");
+  if (!status || done || hidden) return null;
   return (
     <Dialog open>
       <DialogContent
         showCloseButton={false}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
-        className="flex max-w-[520px] flex-col gap-5 px-6 py-7 sm:px-9 sm:py-8"
+        className="flex max-h-[calc(100dvh-2rem)] max-w-[560px] flex-col gap-6 overflow-y-auto px-6 py-7 sm:px-9 sm:py-8"
       >
-        {step === "adult" ? (
-          <AdultStep onAnswered={() => setStep("tickets")} />
-        ) : (
-          <TicketsStep tickets={tickets} onFinish={onFinish} />
-        )}
+        <div>
+          <DialogTitle className={`${HEADING} text-[28px] text-cream`}>
+            One-time required info
+          </DialogTitle>
+          <DialogDescription className="mt-2 text-[15px] text-cream/80">
+            Two quick questions, then a few optional extras.
+          </DialogDescription>
+        </div>
+        <InfoForm prefill={status.prefill} action={action} state={state} />
+        <div className="flex flex-col gap-3">
+          <span className={LABEL}>Your ticket</span>
+          <TicketSection tickets={status.tickets} />
+        </div>
+        <Button
+          type="submit"
+          form={FORM_ID}
+          disabled={pending}
+          className="self-start"
+        >
+          {pending ? "Saving…" : "Save"}
+        </Button>
       </DialogContent>
     </Dialog>
   );
 }
 
-function AdultStep({ onAnswered }: { onAnswered: () => void }) {
-  const [pending, start] = useTransition();
-  const [error, setError] = useState<string>();
-  const answer = (isAdult: boolean) =>
-    start(async () => {
-      const result = await saveIsAdult(isAdult).catch(() => ({
-        error: "We couldn't save that. Try again.",
-      }));
-      if (result.error) setError(result.error);
-      else onAnswered();
-    });
+function InfoForm({
+  prefill,
+  action,
+  state,
+}: {
+  prefill: FirstSigninPrefill;
+  action: (formData: FormData) => void;
+  state: FirstSigninState;
+}) {
+  const [bringingChildren, setBringingChildren] = useState<boolean | null>(
+    null,
+  );
 
   return (
-    <>
-      <div>
-        <DialogTitle className={`${HEADING} text-[28px] text-cream`}>
-          Welcome to Metagame
-        </DialogTitle>
-        <DialogDescription className="mt-2 text-[15px] text-cream/80">
-          One quick question before you start: are you 18 or older?
-        </DialogDescription>
+    <form id={FORM_ID} action={action} className="flex flex-col gap-5">
+      <span className={SECTION}>Required</span>
+      <YesNo name="isAdult" label="Are you 18 or older?" />
+      <div className="flex flex-col gap-2">
+        <YesNo
+          name="bringingChildren"
+          label="Are you bringing any children?"
+          onChange={setBringingChildren}
+        />
+        {bringingChildren && (
+          <a
+            href={CHILD_REGISTRATION_FORM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              NEWSLETTER_LINK,
+              "inline-flex items-center gap-1.5 text-sm",
+            )}
+          >
+            Please register your children
+            <ExternalLink className="size-3.5" aria-hidden />
+          </a>
+        )}
       </div>
-      <div className="flex flex-wrap gap-3">
-        <Button disabled={pending} onClick={() => answer(true)}>
-          Yes, I&apos;m 18 or older
-        </Button>
-        <Button
-          variant="ghost"
-          disabled={pending}
-          onClick={() => answer(false)}
-        >
-          No, I&apos;m under 18
-        </Button>
+
+      <span className={cn(SECTION, "mt-2")}>Optional</span>
+      <label className="flex flex-col gap-1.5">
+        <span className={LABEL}>Display name</span>
+        <Input
+          name="preferredName"
+          defaultValue={prefill.preferredName}
+          maxLength={80}
+        />
+      </label>
+      <label className="flex flex-col gap-1.5">
+        <span className={LABEL}>Discord handle</span>
+        <Input
+          name="discordHandle"
+          defaultValue={prefill.discordHandle}
+          maxLength={40}
+        />
+      </label>
+      <label className="flex items-center gap-2.5 text-base text-cream">
+        <input
+          type="checkbox"
+          name="isPublic"
+          defaultChecked={prefill.isPublic}
+          className="size-4 accent-meeple"
+        />
+        Show my profile publicly?
+      </label>
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2.5 text-base text-cream">
+          <input
+            type="checkbox"
+            name="shareWithRecruiters"
+            defaultChecked={prefill.shareWithRecruiters}
+            className="size-4 accent-meeple"
+          />
+          Share my info with recruiters
+        </label>
+        <InfoTip text={RECRUITERS_INFO} />
       </div>
-      {error && (
+      {state.error && (
         <p aria-live="polite" className="text-sm text-salmon">
-          {error}
+          {state.error}
         </p>
       )}
-    </>
+    </form>
   );
 }
 
-function TicketsStep({
-  tickets,
-  onFinish,
+function YesNo({
+  name,
+  label,
+  onChange,
 }: {
-  tickets: TicketStep;
-  onFinish: () => void;
+  name: string;
+  label: string;
+  onChange?: (value: boolean) => void;
 }) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className={cn(LABEL, "mb-2")}>{label}</legend>
+      <div className="flex gap-2">
+        {(["yes", "no"] as const).map((v) => (
+          <label
+            key={v}
+            className="cursor-pointer rounded-lg border-[1.5px] border-cream/30 px-5 py-2 text-[15px] font-semibold text-cream transition-colors hover:border-cream has-checked:border-meeple has-checked:bg-meeple has-focus-visible:ring-2 has-focus-visible:ring-ring/60"
+          >
+            <input
+              type="radio"
+              name={name}
+              value={v}
+              required
+              className="sr-only"
+              onChange={() => onChange?.(v === "yes")}
+            />
+            {v === "yes" ? "Yes" : "No"}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+// Opens on hover and on tap, so it works on touch screens too.
+function InfoTip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger
+        type="button"
+        aria-label="What's this?"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className="flex size-7 items-center justify-center rounded-full text-cream/60 outline-none hover:text-cream focus-visible:ring-2 focus-visible:ring-ring/60"
+      >
+        <Info className="size-4" />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          side="top"
+          sideOffset={6}
+          collisionPadding={16}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="z-[60] max-w-[280px] rounded-lg bg-cream px-3 py-2 text-sm text-ink shadow-xl"
+        >
+          {text}
+          <Popover.Arrow className="fill-cream" />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+function TicketSection({ tickets }: { tickets: TicketStep }) {
   const [claimed, setClaimed] = useState<string>();
 
   if (tickets.kind === "held" || claimed) {
     return (
-      <>
-        <div>
-          <DialogTitle className={`${HEADING} text-[28px] text-cream`}>
-            You&apos;re all set
-          </DialogTitle>
-          <DialogDescription className="mt-2 text-[15px] text-cream/80">
-            {claimed
-              ? `${claimed} is now yours.`
-              : "You already have a ticket."}{" "}
-            See you at Metagame.
-          </DialogDescription>
-        </div>
-        <div>
-          <Button onClick={onFinish}>Done</Button>
-        </div>
-      </>
+      <p className="text-[15px] text-cream/80">
+        {claimed ? `${claimed} is now yours.` : "You already have a ticket."}
+      </p>
     );
   }
 
   return (
     <>
-      <div>
-        <DialogTitle className={`${HEADING} text-[28px] text-cream`}>
-          Claim your ticket
-        </DialogTitle>
-        <DialogDescription className="mt-2 text-[15px] text-cream/80">
-          {tickets.kind === "claimable"
-            ? "You bought these. Claim one to attend on it, or pass its code on from your account page."
-            : "Got a ticket code? Enter it to claim the ticket for your account."}
-        </DialogDescription>
-      </div>
+      <p className="text-[15px] text-cream/80">
+        {tickets.kind === "claimable"
+          ? "You bought these. Claim one to attend on it, or pass its code on from your account page."
+          : "Got a ticket code? Enter it to claim the ticket for your account."}
+      </p>
       {tickets.kind === "claimable" ? (
         <ClaimMine tickets={tickets.tickets} onClaimed={setClaimed} />
       ) : (
@@ -170,20 +282,11 @@ function TicketsStep({
       )}
       <p className="text-sm text-cream/70">
         No ticket yet? That&apos;s fine, you can{" "}
-        <Link
-          href={TICKETS_HREF}
-          onClick={onFinish}
-          className={NEWSLETTER_LINK}
-        >
+        <Link href={TICKETS_HREF} target="_blank" className={NEWSLETTER_LINK}>
           buy one
         </Link>{" "}
         any time.
       </p>
-      <div>
-        <Button variant="ghost" size="sm" onClick={onFinish}>
-          I&apos;ll do this later
-        </Button>
-      </div>
     </>
   );
 }
@@ -207,6 +310,7 @@ function ClaimMine({
           >
             <span className="font-semibold text-cream">{t.tier}</span>
             <Button
+              type="button"
               size="sm"
               disabled={pending}
               onClick={() =>
@@ -254,7 +358,7 @@ function ClaimByCode({ onClaimed }: { onClaimed: (tier: string) => void }) {
             disabled={pending}
           />
         </div>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" variant="ghost" disabled={pending}>
           {pending ? "Claiming…" : "Claim"}
         </Button>
       </div>

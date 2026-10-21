@@ -1,5 +1,6 @@
 import { env } from "@/env";
 import { airtableConfig } from "@/lib/airtable-config";
+import { cleanDiscordHandle } from "@/lib/discord-handle";
 import { EMAIL_LIST_VALUE, type InterestValue } from "@/lib/interests";
 import type { Utm } from "@/lib/utm";
 import type { EggEvent } from "@/v2/components/dividers/track";
@@ -335,8 +336,7 @@ export async function recordPurchase(
     fields["BTC Amount Discounted"] = purchase.btcAmountDiscounted;
   if (purchase.receiptUrl) fields["Receipt URL"] = purchase.receiptUrl;
   if (purchase.notes) fields["Notes"] = purchase.notes;
-  // Buyers often type "@name"; Discord usernames can't contain "@".
-  const discordHandle = purchase.discordHandle?.trim().replace(/^@+\s*/, "");
+  const discordHandle = cleanDiscordHandle(purchase.discordHandle);
   if (discordHandle) fields["Discord Handle"] = discordHandle;
   if (purchase.openNodeOrderId)
     fields["OpenNode Order ID"] = purchase.openNodeOrderId;

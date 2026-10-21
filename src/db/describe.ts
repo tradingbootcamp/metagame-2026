@@ -68,9 +68,9 @@ const TABLE_NOTES: Record<string, string> = {
   apikey:
     "API keys (Better Auth api-key plugin), minted on /admin/api-keys. A request carrying one in x-api-key acts as the owning user (reference_id), so the admin gate applies as it does to pages. Only the hash is stored; start shows the first characters for telling keys apart.",
   profiles:
-    'Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field. image_url is the profile picture, a 512px Vercel Blob URL. is_adult answers the first sign-in modal\'s "18 or older?"; null until answered, and the modal keeps opening while it is.',
+    'Attendee-editable profile fields, kept apart from user so nothing security-relevant sits next to a form field. image_url is the profile picture, a 512px Vercel Blob URL. is_adult ("18 or older?") and bringing_children are the first sign-in modal\'s required answers; it keeps opening while either is null. share_with_recruiters opts in to the name-and-email list sponsors who are hiring receive.',
   tickets:
-    "One row per purchase, keyed by the payment id the webhooks upsert on. Airtable keeps the finance detail; this holds what admission needs. owner_user_id is set only by claiming the ticket code, never by email match.",
+    "One row per purchase, keyed by the payment id the webhooks upsert on. Airtable keeps the finance detail; this holds what admission needs. owner_user_id is set only by claiming the ticket code, never by email match. purchaser_discord is the handle typed at checkout, cleaned of a leading @; it prefills the profile's Discord.",
   locations:
     "Rooms and spaces sessions happen in. display_order and show_in_schedule drive the schedule columns; airtable_record_id ties a room to its Lighthaven Spaces row. thumbnail_url (what the schedule shows) and image_url (a large copy for detail views) are Vercel Blob URLs.",
   sessions:

@@ -26,6 +26,7 @@ describe("ticketFromPurchase", () => {
       amountCents: 32500,
       purchaserEmail: "ada@example.com",
       purchaserName: "Ada Lovelace",
+      purchaserDiscord: null,
     });
   });
 
@@ -36,6 +37,10 @@ describe("ticketFromPurchase", () => {
       preferredName: "Ada",
     });
     expect(row.purchaserName).toBe("Ada");
+    expect(
+      ticketFromPurchase({ ...stripe, discordHandle: " @ada_l" })
+        .purchaserDiscord,
+    ).toBe("ada_l");
     expect(row.ticketCode).toBe(ticketCode("pi_123"));
   });
 

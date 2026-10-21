@@ -6,9 +6,42 @@ export type TicketStep =
   | { kind: "claimable"; tickets: { id: string; tier: string }[] }
   | { kind: "code" };
 
+export type FirstSigninPrefill = {
+  preferredName: string;
+  discordHandle: string;
+  isPublic: boolean;
+  shareWithRecruiters: boolean;
+};
+
 export type FirstSigninStatus =
   | { needed: false }
-  | { needed: true; tickets: TicketStep };
+  | { needed: true; tickets: TicketStep; prefill: FirstSigninPrefill };
+
+/** Open until every required answer is stored; a missing profile counts as unanswered. */
+export function firstSigninNeeded(
+  profile:
+    | { isAdult: boolean | null; bringingChildren: boolean | null }
+    | undefined,
+): boolean {
+  return profile?.isAdult == null || profile.bringingChildren == null;
+}
+
+/**
+ * The profile's own handle, else one typed at checkout. Prefers tickets bought
+ * under the user's email, since a ticket someone else bought for them carries
+ * the buyer's handle.
+ */
+export function discordPrefill(
+  profileHandle: string | null | undefined,
+  rows: Pick<TicketRow, "purchaserEmail" | "purchaserDiscord">[],
+  email: string,
+): string {
+  if (profileHandle?.trim()) return profileHandle;
+  const own = rows.find(
+    (t) => t.purchaserEmail === email && t.purchaserDiscord,
+  );
+  return own?.purchaserDiscord ?? "";
+}
 
 const HIDDEN_PREFIXES = ["/login", "/admin", "/grade"];
 

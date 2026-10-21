@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { firstSigninHidden, ticketStep } from "./first-signin";
+import {
+  discordPrefill,
+  firstSigninHidden,
+  firstSigninNeeded,
+  ticketStep,
+} from "./first-signin";
 
 const row = (
   over: Partial<Parameters<typeof ticketStep>[0][number]>,
@@ -74,5 +79,62 @@ describe("firstSigninHidden", () => {
   it("shows everywhere else", () => {
     for (const p of ["/", "/account", "/schedule", "/administer", "/logins"])
       expect(firstSigninHidden(p)).toBe(false);
+  });
+});
+
+describe("firstSigninNeeded", () => {
+  it("is needed until both required answers are stored", () => {
+    expect(firstSigninNeeded(undefined)).toBe(true);
+    expect(firstSigninNeeded({ isAdult: null, bringingChildren: null })).toBe(
+      true,
+    );
+    expect(firstSigninNeeded({ isAdult: true, bringingChildren: null })).toBe(
+      true,
+    );
+    expect(firstSigninNeeded({ isAdult: null, bringingChildren: false })).toBe(
+      true,
+    );
+    expect(firstSigninNeeded({ isAdult: false, bringingChildren: false })).toBe(
+      false,
+    );
+  });
+});
+
+describe("discordPrefill", () => {
+  const email = "ada@example.com";
+  it("keeps the profile's handle", () => {
+    expect(
+      discordPrefill(
+        "ada_p",
+        [{ purchaserEmail: email, purchaserDiscord: "ada_t" }],
+        email,
+      ),
+    ).toBe("ada_p");
+  });
+
+  it("falls back to the first handle from a ticket they bought", () => {
+    expect(
+      discordPrefill(
+        " ",
+        [
+          { purchaserEmail: "bob@example.com", purchaserDiscord: "bob" },
+          { purchaserEmail: email, purchaserDiscord: null },
+          { purchaserEmail: email, purchaserDiscord: "ada_new" },
+          { purchaserEmail: email, purchaserDiscord: "ada_old" },
+        ],
+        email,
+      ),
+    ).toBe("ada_new");
+  });
+
+  it("is empty with nothing to go on", () => {
+    expect(discordPrefill(null, [], email)).toBe("");
+    expect(
+      discordPrefill(
+        null,
+        [{ purchaserEmail: "bob@example.com", purchaserDiscord: "bob" }],
+        email,
+      ),
+    ).toBe("");
   });
 });
