@@ -7,6 +7,7 @@ import AvatarForm from "./AvatarForm";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel from "./TicketsPanel";
 import { parseAccountTab } from "./tabs";
+import { canSeeSchedule } from "../schedule/data";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
 import { currentSession, hasPassword } from "@/lib/auth";
@@ -39,7 +40,7 @@ export default async function AccountPage({
   const { user } = session;
 
   const email = emailKey(user.email);
-  const [[profile], passwordSet, rows, schedule, plans, counts] =
+  const [[profile], passwordSet, rows, schedule, plans, counts, linkable] =
     await Promise.all([
       getDb()
         .select()
@@ -51,6 +52,7 @@ export default async function AccountPage({
       loadSchedule(),
       loadViewerPlans(user.id),
       loadRsvpCounts(),
+      canSeeSchedule(),
     ]);
   const tickets = rows.map((t) => ticketView(t, user.id, email));
 
@@ -101,6 +103,7 @@ export default async function AccountPage({
           ),
           sessions: (
             <SessionsPanel
+              linkable={linkable}
               sessions={accountSessions(
                 user.id,
                 schedule.sessions,

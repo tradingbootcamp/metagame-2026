@@ -36,6 +36,8 @@ export type SessionFields = {
   status: Status;
   /** Undefined when the input doesn't mention it, so it's left as stored. */
   airtableRfpRecordId?: string | null;
+  /** Undefined when the input doesn't mention it, so it's left as stored. */
+  shepherdUserId?: string | null;
 };
 
 export type LocationFields = Omit<
@@ -154,6 +156,19 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
     }
   }
 
+  let shepherdUserId: string | null | undefined;
+  if ("shepherdUserId" in raw) {
+    const v = raw.shepherdUserId;
+    if (v !== null && v !== undefined && typeof v !== "string") {
+      return {
+        ok: false,
+        field: "shepherd",
+        error: "shepherdUserId must be a user id or null.",
+      };
+    }
+    shepherdUserId = optional(raw, "shepherdUserId");
+  }
+
   return {
     ok: true,
     value: {
@@ -170,6 +185,7 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
       needs: optional(raw, "needs"),
       status: status ?? "draft",
       airtableRfpRecordId,
+      shepherdUserId,
     },
   };
 }

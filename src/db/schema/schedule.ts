@@ -71,11 +71,14 @@ export const sessions = pgTable(
     status: sessionStatus().notNull().default("draft"),
     // The accepted RFP this came from, for the Airtable sync.
     airtableRfpRecordId: text().unique(),
+    // The committee member who shepherds it through review.
+    shepherdUserId: text().references(() => user.id, { onDelete: "set null" }),
     ...timestamps,
   },
   (t) => [
     index("sessions_starts_at_idx").on(t.startsAt),
     index("sessions_location_id_idx").on(t.locationId),
+    index("sessions_shepherd_user_id_idx").on(t.shepherdUserId),
     check("sessions_ends_after_start", sql`${t.endsAt} > ${t.startsAt}`),
     check(
       "sessions_published_timed",

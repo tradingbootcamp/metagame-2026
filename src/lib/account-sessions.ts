@@ -1,6 +1,7 @@
 import {
   formatPacificDay,
   formatPacificTime,
+  isPlaced,
   type RsvpStatus,
   type ScheduleLocation,
   type ScheduleSession,
@@ -10,6 +11,9 @@ import {
 
 export type AccountSessionRow = {
   id: string;
+  slug: string;
+  /** Has a public /schedule page: published and placed. */
+  listed: boolean;
   title: string;
   status: Status;
   /** "Sat, Nov 7 · 10:00 AM – 10:55 AM", or null while unscheduled. */
@@ -60,6 +64,8 @@ export function accountSessions(
   const marked = new Set(plans.bookmarks);
   const row = (s: ScheduleSession): AccountSessionRow => ({
     id: s.id,
+    slug: s.slug,
+    listed: s.status === "published" && isPlaced(s),
     title: s.title,
     status: s.status,
     when: sessionWhen(s),

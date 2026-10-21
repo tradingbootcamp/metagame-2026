@@ -51,7 +51,7 @@ export type Schedule = {
 
 export async function loadSchedule(): Promise<Schedule> {
   const db = getDb();
-  const [locs, sess, hosts] = await Promise.all([
+  const [locs, sess, hosts, shepherds] = await Promise.all([
     db
       .select()
       .from(locations)
@@ -65,7 +65,15 @@ export async function loadSchedule(): Promise<Schedule> {
       .from(sessionHosts)
       .innerJoin(user, eq(user.id, sessionHosts.userId))
       .orderBy(asc(sessionHosts.sessionId), asc(sessionHosts.position)),
+    db
+      .select({ sessionId: sessions.id, ...accountColumns })
+      .from(sessions)
+      .innerJoin(user, eq(user.id, sessions.shepherdUserId))
+      .leftJoin(profiles, eq(profiles.userId, user.id)),
   ]);
+  const shepherdBySession = new Map(
+    shepherds.map(({ sessionId, ...account }) => [sessionId, account]),
+  );
   const hostsBySession = new Map<string, ScheduleAccount[]>();
   for (const { sessionId, ...host } of hosts) {
     hostsBySession.set(sessionId, [
@@ -101,17 +109,20 @@ export async function loadSchedule(): Promise<Schedule> {
       status: s.status,
       airtableRfpRecordId: s.airtableRfpRecordId,
       hosts: hostsBySession.get(s.id) ?? [],
+      shepherd: shepherdBySession.get(s.id) ?? null,
     })),
   };
 }
 
 export type SessionInput = Omit<
   ScheduleSession,
-  "id" | "startsAt" | "endsAt" | "hosts" | "airtableRfpRecordId"
+  "id" | "startsAt" | "endsAt" | "hosts" | "shepherd" | "airtableRfpRecordId"
 > & {
   id?: string;
   /** Left as stored when undefined. */
   airtableRfpRecordId?: string | null;
+  /** Left as stored when undefined. */
+  shepherdUserId?: string | null;
   startsAt: Date | null;
   endsAt: Date | null;
   /** User ids, lead first. */
@@ -549,6 +560,10 @@ const CONSTRAINT_MESSAGES: Record<string, { field?: string; error: string }> = {
   sessions_airtableRfpRecordId_unique: {
     field: "airtableRfpRecordId",
     error: "Another session already links that Airtable row.",
+  },
+  sessions_shepherd_user_id_user_id_fk: {
+    field: "shepherd",
+    error: "No account with that shepherd user id.",
   },
   sessions_slug_unique: {
     field: "slug",

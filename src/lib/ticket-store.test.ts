@@ -24,6 +24,7 @@ describe("ticketFromPurchase", () => {
       test: false,
       tier: "Standard",
       amountCents: 32500,
+      couponCode: null,
       purchaserEmail: "ada@example.com",
       purchaserName: "Ada Lovelace",
       purchaserDiscord: null,
@@ -32,6 +33,9 @@ describe("ticketFromPurchase", () => {
       ticketFromPurchase({ ...stripe, discordHandle: " @ada_l" })
         .purchaserDiscord,
     ).toBe("ada_l");
+    expect(
+      ticketFromPurchase({ ...stripe, couponCode: " earlyBird " }).couponCode,
+    ).toBe("EARLYBIRD");
   });
 
   it("prefers the preferred name and derives a missing code", () => {

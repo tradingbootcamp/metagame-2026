@@ -81,6 +81,18 @@ export function peopleMatch(people: TicketPeople, query: string): boolean {
   );
 }
 
+/** peopleMatch, or a match on the coupon code the buyer used. */
+export function ticketMatch(
+  r: { t: { couponCode: string | null }; people: TicketPeople },
+  query: string,
+): boolean {
+  const q = query.trim().toLowerCase();
+  return (
+    peopleMatch(r.people, q) ||
+    (r.t.couponCode?.toLowerCase().includes(q) ?? false)
+  );
+}
+
 export type TicketRole = "bought" | "holds" | "claimed";
 
 /** How one account relates to a ticket, for their profile. */

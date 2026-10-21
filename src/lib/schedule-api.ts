@@ -6,7 +6,11 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { requireAdmin, type NamedAccess } from "./admin-auth";
 import { API_KEY_HEADER, getAuth } from "./auth";
-import { toPacificWall, type ScheduleSession } from "./schedule";
+import {
+  toPacificWall,
+  type ScheduleAccount,
+  type ScheduleSession,
+} from "./schedule";
 import { type Invalid, type Raw } from "./schedule-input";
 import {
   ensureAccount,
@@ -82,19 +86,48 @@ export async function resolveHosts(
     }
     if (seen.has(email)) continue;
     seen.add(email);
-    let account = await findAccount(email);
-    if (!account) {
-      if (!name) {
-        return {
-          field: "hosts",
-          error: `No account for ${email}; give a name to create one.`,
-        };
-      }
-      account = await ensureAccount(name, email);
-    }
+    const account = await accountFor(email, name, "hosts");
+    if ("error" in account) return account;
     ids.push(account.userId);
   }
   return { ids };
+}
+
+/**
+ * The shepherd's user id: `byId` (the parsed `shepherdUserId`) when given,
+ * else from `{email, name?}` resolved like a host; null clears it.
+ */
+export async function resolveShepherd(
+  input: unknown,
+  byId: string | null | undefined,
+): Promise<{ id: string | null } | Invalid> {
+  if (byId !== undefined) return { id: byId };
+  if (input === null || input === undefined) return { id: null };
+  const { email, name } = parseHost(input);
+  if (!email || !EMAIL.test(email)) {
+    return {
+      field: "shepherd",
+      error: "shepherd must be {email, name} with a valid email, or null.",
+    };
+  }
+  const account = await accountFor(email, name, "shepherd");
+  return "error" in account ? account : { id: account.userId };
+}
+
+async function accountFor(
+  email: string,
+  name: string,
+  field: string,
+): Promise<ScheduleAccount | Invalid> {
+  const account = await findAccount(email);
+  if (account) return account;
+  if (!name) {
+    return {
+      field,
+      error: `No account for ${email}; give a name to create one.`,
+    };
+  }
+  return ensureAccount(name, email);
 }
 
 function parseHost(entry: unknown): { email: string; name: string } {
@@ -115,11 +148,12 @@ export async function sessionBySlug(
 
 /** A stored session as the API takes it, so a PATCH can merge over it. */
 export function sessionToRaw(session: ScheduleSession): Raw {
-  const { hosts, startsAt, endsAt, ...rest } = session;
+  const { hosts, shepherd, startsAt, endsAt, ...rest } = session;
   return {
     ...rest,
     startsAt: startsAt && toPacificWall(startsAt),
     endsAt: endsAt && toPacificWall(endsAt),
     hosts: hosts.map(({ email, name }) => ({ email, name })),
+    shepherd: shepherd && { email: shepherd.email, name: shepherd.name },
   };
 }

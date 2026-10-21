@@ -5,6 +5,7 @@ import {
   personLabel,
   sortTicketRows,
   ticketBadge,
+  ticketMatch,
   ticketPeople,
   ticketRoles,
   type AdminAccount,
@@ -83,6 +84,19 @@ describe("peopleMatch", () => {
     expect(peopleMatch(p, "ada l")).toBe(true);
     expect(peopleMatch(p, "carol")).toBe(false);
     expect(peopleMatch(p, "  ")).toBe(true);
+  });
+});
+
+describe("ticketMatch", () => {
+  const people = ticketPeople(base, accounts, byEmail);
+  it("also matches the coupon code", () => {
+    const r = { t: { couponCode: "EARLYBIRD" }, people };
+    expect(ticketMatch(r, " early")).toBe(true);
+    expect(ticketMatch(r, "ada")).toBe(true);
+    expect(ticketMatch(r, "comp")).toBe(false);
+    expect(ticketMatch({ t: { couponCode: null }, people }, "early")).toBe(
+      false,
+    );
   });
 });
 

@@ -72,6 +72,7 @@ export function ticketFromPurchase(purchase: PurchaseRecord): Ticket {
     tier: purchase.ticketType ?? null,
     amountCents:
       purchase.amount != null ? Math.round(purchase.amount * 100) : null,
+    couponCode: purchase.couponCode?.trim().toUpperCase() || null,
     purchaserEmail: emailKey(purchase.customerEmail ?? "") || null,
     purchaserName: purchase.preferredName ?? purchase.customerName ?? null,
     purchaserDiscord: cleanDiscordHandle(purchase.discordHandle) ?? null,
@@ -92,6 +93,7 @@ export async function recordTicket(purchase: PurchaseRecord): Promise<void> {
     test,
     tier,
     amountCents,
+    couponCode,
     purchaserEmail,
     purchaserName,
     purchaserDiscord,
@@ -102,6 +104,7 @@ export async function recordTicket(purchase: PurchaseRecord): Promise<void> {
       test,
       tier,
       amountCents,
+      couponCode,
       purchaserEmail,
       purchaserName,
       purchaserDiscord,

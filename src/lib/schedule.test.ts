@@ -24,6 +24,7 @@ const session = (over: Partial<ScheduleSession>): ScheduleSession => ({
   status: "draft",
   airtableRfpRecordId: null,
   hosts: [],
+  shepherd: null,
   ...over,
 });
 

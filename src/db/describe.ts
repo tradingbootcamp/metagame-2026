@@ -74,7 +74,7 @@ const TABLE_NOTES: Record<string, string> = {
   locations:
     "Rooms and spaces sessions happen in. display_order and show_in_schedule drive the schedule columns; airtable_record_id ties a room to its Lighthaven Spaces row. thumbnail_url (what the schedule shows) and image_url (a large copy for detail views) are Vercel Blob URLs.",
   sessions:
-    "One row per schedule slot. Drafts can be unplaced (null times, no location); only published rows show. airtable_rfp_record_id ties a session to the accepted RFP it was synced from.",
+    "One row per schedule slot. Drafts can be unplaced (null times, no location); only published rows show. airtable_rfp_record_id ties a session to the accepted RFP it was synced from. shepherd_user_id is the committee member shepherding it (null if none; the name shown is read from the account).",
   session_hosts:
     "Who runs a session, one row per host in billing order (position 0 is the lead), replacing 2025's host_1/2/3 columns. Every host is an account; the schedule shows the account name.",
   rsvps:

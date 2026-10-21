@@ -44,6 +44,8 @@ export type ScheduleSession = {
   airtableRfpRecordId: string | null;
   /** Billing order, lead first. */
   hosts: ScheduleAccount[];
+  /** Committee member shepherding it; admin-only. */
+  shepherd: ScheduleAccount | null;
 };
 
 export type ScheduleAccount = {

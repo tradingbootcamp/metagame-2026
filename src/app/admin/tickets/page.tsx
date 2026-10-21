@@ -84,6 +84,7 @@ export default async function AdminTicketsPage(
       code: formatTicketCode(t.ticketCode),
       source: t.source,
       amountCents: t.amountCents,
+      couponCode: t.couponCode,
     },
     people: ticketPeople(t, accounts, byEmail),
   }));

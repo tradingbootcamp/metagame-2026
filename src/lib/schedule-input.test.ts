@@ -144,3 +144,23 @@ describe("airtableRfpRecordId", () => {
     expect(!r.ok && r.field).toBe("airtableRfpRecordId");
   });
 });
+
+describe("shepherdUserId", () => {
+  const base = { title: "Chess" };
+  it("is left as stored when not mentioned", () => {
+    const r = parseSessionFields(base);
+    expect(r.ok && r.value.shepherdUserId).toBeUndefined();
+  });
+  it("takes a user id, with blank or null clearing it", () => {
+    const r = parseSessionFields({ ...base, shepherdUserId: " u_123 " });
+    expect(r.ok && r.value.shepherdUserId).toBe("u_123");
+    for (const shepherdUserId of [null, ""]) {
+      const cleared = parseSessionFields({ ...base, shepherdUserId });
+      expect(cleared.ok && cleared.value.shepherdUserId).toBeNull();
+    }
+  });
+  it("rejects a non-string", () => {
+    const r = parseSessionFields({ ...base, shepherdUserId: { id: 1 } });
+    expect(!r.ok && r.field).toBe("shepherd");
+  });
+});

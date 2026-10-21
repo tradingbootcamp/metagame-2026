@@ -20,6 +20,7 @@ const session = (over: Partial<ScheduleSession>): ScheduleSession => ({
   status: "published",
   airtableRfpRecordId: null,
   hosts: [],
+  shepherd: null,
   ...over,
 });
 
@@ -68,13 +69,25 @@ describe("accountSessions", () => {
       ["late", false, "published"],
       ["tba", true, "published"],
     ]);
+    expect(out.running.map((r) => [r.id, r.listed])).toEqual([
+      ["draft", false],
+      ["late", false],
+      ["tba", false],
+    ]);
   });
 
   it("keeps RSVPs and bookmarks to published sessions, bookmarks apart", () => {
     const out = accountSessions(
       "me",
       [
-        session({ id: "going", locationId: "r1", maxCapacity: 2 }),
+        session({
+          id: "going",
+          slug: "going",
+          startsAt: "2026-11-07T17:00:00.000Z",
+          endsAt: "2026-11-07T17:55:00.000Z",
+          locationId: "r1",
+          maxCapacity: 2,
+        }),
         session({ id: "wait", title: "W" }),
         session({ id: "hidden", status: "draft" }),
         session({ id: "starred", title: "Z" }),
@@ -91,6 +104,8 @@ describe("accountSessions", () => {
       ["wait", "waitlist"],
     ]);
     expect(out.plans[0]).toMatchObject({
+      slug: "going",
+      listed: true,
       room: "Bayes",
       bookmarked: true,
       full: true,

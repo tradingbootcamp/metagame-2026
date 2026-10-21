@@ -40,6 +40,7 @@ export const tickets = pgTable(
     test: boolean().notNull().default(false),
     tier: text(),
     amountCents: integer(),
+    couponCode: text(),
     purchaserEmail: text(),
     purchaserName: text(),
     purchaserDiscord: text(),
