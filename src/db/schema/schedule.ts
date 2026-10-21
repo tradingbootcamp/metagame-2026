@@ -23,6 +23,50 @@ export const sessionCategory = pgEnum("session_category", [
 export const sessionAges = pgEnum("session_ages", ["all", "kids", "adults"]);
 export const sessionStatus = pgEnum("session_status", ["draft", "published"]);
 export const rsvpStatus = pgEnum("rsvp_status", ["going", "waitlist"]);
+// Where an RFP proposal is in the committee's pipeline; separate from status.
+export const sessionPhase = pgEnum("session_phase", [
+  "grading",
+  "deciding",
+  "notifying",
+  "shepherding",
+  "scheduling",
+  "ready",
+  "declined",
+]);
+export const sessionVerdict = pgEnum("session_verdict", [
+  "confirmed",
+  "probably",
+  "needs_follow_up",
+  "unconference_schedule",
+  "unlikely",
+  "rejected",
+  "na",
+]);
+export const speakerTier = pgEnum("speaker_tier", [
+  "free_ticket_flights_housing",
+  "free_ticket_flights",
+  "free_ticket",
+  "no_comp",
+]);
+export const megagameInterest = pgEnum("megagame_interest", [
+  "not_a_fit",
+  "neutral",
+  "willing",
+  "excited",
+  "full_proposal",
+]);
+export const sessionDropins = pgEnum("session_dropins", [
+  "welcome",
+  "full_block",
+  "spectate",
+  "other",
+]);
+export const discordStatus = pgEnum("discord_status", [
+  "not_yet",
+  "needs_role",
+  "session_host",
+  "refused",
+]);
 
 export const locations = pgTable(
   "locations",
@@ -73,6 +117,28 @@ export const sessions = pgTable(
     airtableRfpRecordId: text().unique(),
     // The committee member who shepherds it through review.
     shepherdUserId: text().references(() => user.id, { onDelete: "set null" }),
+    phase: sessionPhase(),
+    verdict: sessionVerdict(),
+    speakerTier: speakerTier(),
+    // The host's RFP answers.
+    context: text(),
+    timingConstraints: text(),
+    otherConstraints: text(),
+    ageElaboration: text(),
+    applicationRequired: text(),
+    bespokeNeeds: text(),
+    anythingElse: text(),
+    megagameInterest: megagameInterest(),
+    marketingConsent: boolean(),
+    // Committee notes and logistics.
+    expectedCrowdSize: integer(),
+    allowDropins: sessionDropins(),
+    discordStatus: discordStatus(),
+    megagameNotes: text(),
+    ticketState: text(),
+    housingStatus: text(),
+    communicationNotes: text(),
+    rickiNotes: text(),
     ...timestamps,
   },
   (t) => [

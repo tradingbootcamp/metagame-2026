@@ -19,6 +19,7 @@ export const profiles = pgTable(
     isAdult: boolean(),
     bringingChildren: boolean(),
     shareWithRecruiters: boolean(),
+    website: text(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true })
       .notNull()
