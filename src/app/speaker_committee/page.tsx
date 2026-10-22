@@ -20,7 +20,7 @@ import {
   type TableMeta,
 } from "./SubmissionTable";
 import ToolSignIn from "@/components/ToolSignIn";
-import { adminSession } from "@/lib/auth";
+import { can } from "@/lib/access";
 import { durationMinutes } from "@/lib/rfp-fields";
 import { pipelineOptions, toRow } from "@/lib/rfp-pipeline";
 import { committeeAccounts, listRfpSessions } from "@/lib/rfp-sessions";
@@ -100,7 +100,7 @@ export default async function SpeakerCommitteePage(
   await connection();
 
   // Accounts only: the /grade password cookie is scoped to /grade.
-  const account = await adminSession();
+  const account = await can("schedule.manage");
   if (!account) {
     return <ToolSignIn title="Speaker committee" next={PATH} />;
   }

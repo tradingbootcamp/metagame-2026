@@ -51,7 +51,7 @@ export type SchedulerNotes = GradingSummary | { error: string };
 export async function loadSchedulerNotes(
   sessionId: string,
 ): Promise<SchedulerNotes> {
-  if (!(await requireAdmin())) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
   try {
     const summary = await gradingSummary(sessionId);
     if (summary) return summary;

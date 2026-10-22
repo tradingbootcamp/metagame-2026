@@ -10,7 +10,8 @@ import { parseAccountTab } from "./tabs";
 import { canSeeSchedule } from "../schedule/data";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
-import { adminSession, currentSession, hasPassword } from "@/lib/auth";
+import { can } from "@/lib/access";
+import { currentSession, hasPassword } from "@/lib/auth";
 import { prefillDiscord } from "@/lib/discord-handle";
 import {
   loadRsvpCounts,
@@ -61,7 +62,7 @@ export default async function AccountPage({
     loadViewerPlans(user.id),
     loadRsvpCounts(),
     canSeeSchedule(),
-    adminSession(),
+    can("schedule.manage"),
   ]);
   const tickets = rows.map((t) => ticketView(t, user.id, email));
 

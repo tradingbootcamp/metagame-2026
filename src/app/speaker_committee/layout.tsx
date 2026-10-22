@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { signOut } from "./actions";
-import { accountLabel, adminSession } from "@/lib/auth";
+import { can } from "@/lib/access";
+import { accountLabel } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Speaker Committee — Metagame",
@@ -13,7 +14,7 @@ export default async function SpeakerCommitteeLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const account = await adminSession();
+  const account = await can("schedule.manage");
   const label = account ? accountLabel(account.user) : null;
 
   return (

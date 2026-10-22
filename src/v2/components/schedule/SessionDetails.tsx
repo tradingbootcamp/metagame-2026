@@ -8,7 +8,7 @@ import {
   FaUserFriends,
   FaUsers,
 } from "react-icons/fa";
-import { adminAccess } from "@/lib/admin-auth";
+import { toolAccess } from "@/lib/admin-auth";
 import { currentSession } from "@/lib/auth";
 import { airtableRfpLink, gradeLink } from "@/lib/rfp-links";
 import { gradingSummary } from "@/lib/rfp-sessions";
@@ -146,7 +146,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
   const [{ session, room }, account, admin] = await Promise.all([
     findSession(slug),
     currentSession(),
-    adminAccess(),
+    toolAccess("schedule.manage"),
   ]);
   const viewerId = account?.user.id ?? null;
   const [rsvps, plans] = await Promise.all([
