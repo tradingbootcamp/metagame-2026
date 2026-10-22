@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { adminSession, signOutAccount } from "@/lib/auth";
+import { can } from "@/lib/access";
+import { signOutAccount } from "@/lib/auth";
 import { durationMinutes } from "@/lib/rfp-fields";
 import {
   getRfpSession,
@@ -30,7 +31,7 @@ export async function scheduleProposal(
   startsAt: string,
   locationId: string | null,
 ): Promise<Result> {
-  if (!(await adminSession())) return { error: EXPIRED };
+  if (!(await can("schedule.manage"))) return { error: EXPIRED };
   const start = new Date(startsAt);
   if (Number.isNaN(start.getTime())) return { error: "That time is invalid." };
 
@@ -60,7 +61,7 @@ export async function moveScheduled(
   startsAt: string,
   locationId: string | null,
 ): Promise<Result> {
-  if (!(await adminSession())) return { error: EXPIRED };
+  if (!(await can("schedule.manage"))) return { error: EXPIRED };
   const start = new Date(startsAt);
   if (Number.isNaN(start.getTime())) return { error: "That time is invalid." };
   try {
@@ -74,7 +75,7 @@ export async function moveScheduled(
 
 /** Takes a session off the grid; a ready proposal goes back to "Add to schedule". */
 export async function unschedule(sessionId: string): Promise<Result> {
-  if (!(await adminSession())) return { error: EXPIRED };
+  if (!(await can("schedule.manage"))) return { error: EXPIRED };
   try {
     await unplaceRfpSession(sessionId);
   } catch (err) {

@@ -113,6 +113,13 @@
       "when": 1792615353899,
       "tag": "0015_drop_preferred_name",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792635952346,
+      "tag": "0016_permissions",
+      "breakpoints": true
     }
   ]
 }
