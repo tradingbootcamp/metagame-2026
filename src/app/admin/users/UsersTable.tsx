@@ -49,13 +49,16 @@ export default function UsersTable({
   query,
   truncated,
   viewerIsAdmin,
+  viewerCanDelete,
 }: {
   rows: UserRow[];
   total: number;
   query: string;
   truncated: boolean;
-  /** Only `user.role = 'admin'` accounts may change roles, bans and delete. */
+  /** Only `user.role = 'admin'` accounts may change the admin role and bans. */
   viewerIsAdmin: boolean;
+  /** `users.delete`; deleting an admin account still needs an admin. */
+  viewerCanDelete: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -144,34 +147,44 @@ export default function UsersTable({
                   )}
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
-                  {!u.self && viewerIsAdmin && (
+                  {!u.self && (viewerIsAdmin || viewerCanDelete) && (
                     <span className="inline-flex gap-2">
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() =>
-                          run(() => setRole(u.id, u.admin ? "user" : "admin"))
-                        }
-                        className={smallButtonClass}
-                      >
-                        {u.admin ? "Remove admin" : "Make admin"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => run(() => setBanned(u.id, !u.banned))}
-                        className={smallButtonClass}
-                      >
-                        {u.banned ? "Unban" : "Ban"}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => setDeleting(u)}
-                        className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
-                      >
-                        Delete
-                      </button>
+                      {viewerIsAdmin && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() =>
+                              run(() =>
+                                setRole(u.id, u.admin ? "user" : "admin"),
+                              )
+                            }
+                            className={smallButtonClass}
+                          >
+                            {u.admin ? "Remove admin" : "Make admin"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() =>
+                              run(() => setBanned(u.id, !u.banned))
+                            }
+                            className={smallButtonClass}
+                          >
+                            {u.banned ? "Unban" : "Ban"}
+                          </button>
+                        </>
+                      )}
+                      {viewerCanDelete && (viewerIsAdmin || !u.admin) && (
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => setDeleting(u)}
+                          className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
+                        >
+                          Delete
+                        </button>
+                      )}
                     </span>
                   )}
                 </td>

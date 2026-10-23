@@ -12,7 +12,7 @@ import {
 } from "../../tickets/parts";
 import ToolSignIn from "@/components/ToolSignIn";
 import { getDb, schema } from "@/db";
-import { can } from "@/lib/access";
+import { teamAccess } from "@/lib/access";
 import {
   accountSessions,
   type AccountSessionRow,
@@ -101,8 +101,10 @@ export default async function AdminUserProfilePage(
   await connection();
   const { id } = await props.params;
 
-  const session = await can("users.manage");
-  if (!session) return <ToolSignIn title="Users" next={`/admin/users/${id}`} />;
+  const viewer = await teamAccess();
+  if (!viewer?.permissions.has("users.view"))
+    return <ToolSignIn title="Users" next={`/admin/users/${id}`} />;
+  const { session } = viewer;
 
   const db = getDb();
   const [row] = await db
@@ -127,6 +129,8 @@ export default async function AdminUserProfilePage(
     userId: user.id,
     admin,
     self: user.id === session.user.id,
+    editable:
+      viewer.permissions.has("users.edit") && user.id !== session.user.id,
     roles: roles.map((r) => ({
       id: r.id,
       name: r.name,

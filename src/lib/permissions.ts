@@ -1,13 +1,28 @@
 // The permission catalog and the pure resolution over it. One entry per gate
 // the code enforces; the roles and per-user grants that hold them live in
 // Postgres (src/db/schema/permissions.ts) and are read by src/lib/access.ts.
-// Adding a gate means adding its key here, nothing else.
+// Adding a gate means adding its key here, nothing else. Keys with no gate
+// yet wait for their page: checkin.manage lands with the check-in page.
 
 export const PERMISSIONS = {
-  "users.manage": {
+  "users.view": {
     label: "Users",
+    description: "Browse accounts and see each one's roles and permissions.",
+  },
+  "users.edit": {
+    label: "Users: edit access",
+    description: "Assign roles and per-user permissions to other accounts.",
+    implies: ["users.view"],
+  },
+  "users.delete": {
+    label: "Users: delete",
     description:
-      "Browse accounts, assign roles and per-user permissions, edit roles.",
+      "Permanently delete non-admin accounts. Admin, ban and admin deletion stay admin-only.",
+    implies: ["users.view"],
+  },
+  "roles.manage": {
+    label: "Roles",
+    description: "Create roles and change which permissions each carries.",
   },
   "tickets.view": {
     label: "Tickets",
@@ -34,9 +49,14 @@ export const PERMISSIONS = {
     label: "API keys",
     description: "Mint and revoke API keys for any account.",
   },
+  // Not enforced yet: the /account flow is META-4540.
+  "api_keys.self": {
+    label: "Own API keys",
+    description: "Mint and revoke API keys for your own account.",
+  },
   "schema.view": {
     label: "Database schema",
-    description: "The ER diagram and column reference.",
+    description: "See the database schema.",
   },
   "submissions.grade": {
     label: "Session grading",

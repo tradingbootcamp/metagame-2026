@@ -48,8 +48,7 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
         </button>
       </form>
       <p className="text-sm text-ink/60">
-        Tick what each role may do; assign roles to people from their page under
-        Users. Admin accounts hold everything regardless.
+        Admin accounts hold everything regardless.
         {error && <span className="ml-3 text-meeple">{error}</span>}
       </p>
       <div className="overflow-x-auto rounded-xl border border-line bg-white shadow-sm">

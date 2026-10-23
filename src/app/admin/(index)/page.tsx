@@ -28,14 +28,14 @@ const TOOLS: { href: string; name: string; blurb: string; perm: Permission }[] =
     {
       href: "/admin/users",
       name: "Users",
-      blurb: "Accounts: assign roles and permissions, ban, delete.",
-      perm: "users.manage",
+      blurb: "Accounts, their roles and permissions.",
+      perm: "users.view",
     },
     {
       href: "/admin/roles",
       name: "Roles",
       blurb: "Bundles of permissions to hand out, like Volunteer.",
-      perm: "users.manage",
+      perm: "roles.manage",
     },
     {
       href: "/admin/tickets",

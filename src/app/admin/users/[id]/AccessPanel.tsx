@@ -16,6 +16,8 @@ export type AccessView = {
   admin: boolean;
   /** The viewer's own page: shown, not editable. */
   self: boolean;
+  /** The viewer holds users.edit and this isn't their own page. */
+  editable: boolean;
   roles: { id: string; name: string; assigned: boolean }[];
   grants: Permission[];
   explanation: Record<Permission, Explanation>;
@@ -24,7 +26,7 @@ export type AccessView = {
 export default function AccessPanel({ access }: { access: AccessView }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const locked = pending || access.self;
+  const locked = pending || !access.editable;
 
   const run = (action: () => Promise<Result>) =>
     startTransition(async () => {
@@ -39,8 +41,15 @@ export default function AccessPanel({ access }: { access: AccessView }) {
           kept but don’t apply until the admin role is removed.
         </p>
       )}
-      {access.self && (
+      {access.self ? (
         <p className="text-ink/60">Your own access is read-only here.</p>
+      ) : (
+        !access.editable && (
+          <p className="text-ink/60">
+            Read-only: changing roles and grants needs the “Users: edit access”
+            permission.
+          </p>
+        )
       )}
       {error && <p className="text-meeple">{error}</p>}
 

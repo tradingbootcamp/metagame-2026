@@ -21,12 +21,12 @@ export default async function AdminUsersPage(props: PageProps<"/admin/users">) {
   await connection();
 
   const access = await teamAccess();
-  if (!access?.permissions.has("users.manage"))
+  if (!access?.permissions.has("users.view"))
     return <ToolSignIn title="Users" next="/admin/users" />;
 
   const q = String((await props.searchParams).q ?? "").trim();
   // Straight from the table: Better Auth's listUsers is admin-only, and
-  // users.manage holders needn't be admins.
+  // users.view holders needn't be admins.
   const { user } = schema;
   const where = q
     ? ilike(user.email, `%${q.replace(/[\\%_]/g, "\\$&")}%`)
@@ -73,6 +73,7 @@ export default async function AdminUsersPage(props: PageProps<"/admin/users">) {
       query={q}
       truncated={total > rows.length}
       viewerIsAdmin={access.admin}
+      viewerCanDelete={access.permissions.has("users.delete")}
     />
   );
 }

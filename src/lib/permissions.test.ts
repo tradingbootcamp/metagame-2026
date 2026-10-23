@@ -93,7 +93,7 @@ describe("explainPermissions", () => {
       effective: true,
       sources: [{ kind: "implied", by: "schedule.manage" }],
     });
-    expect(got["users.manage"]).toEqual({ effective: false, sources: [] });
+    expect(got["users.view"]).toEqual({ effective: false, sources: [] });
   });
 
   it("shows the admin bypass ahead of everything", () => {

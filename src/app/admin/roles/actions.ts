@@ -22,8 +22,8 @@ function cleanName(raw: string): string | Result {
 }
 
 async function run(work: () => Promise<void>): Promise<Result> {
-  if (!(await can("users.manage")))
-    return { error: "Sign in with an account that manages users." };
+  if (!(await can("roles.manage")))
+    return { error: "Sign in with an account that manages roles." };
   try {
     await work();
   } catch (err) {

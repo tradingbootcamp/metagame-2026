@@ -10,11 +10,11 @@ export type Result = { error?: string };
 const message = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
 
-// Your own access is off limits so a users.manage holder can't lock
+// Your own access is off limits so a users.edit holder can't lock
 // themselves out (an admin can always put it back).
 async function run(userId: string, work: () => Promise<void>): Promise<Result> {
-  const session = await can("users.manage");
-  if (!session) return { error: "Sign in with an account that manages users." };
+  const session = await can("users.edit");
+  if (!session) return { error: "Sign in with an account that edits users." };
   if (session.user.id === userId)
     return { error: "You can't change your own access." };
   try {
