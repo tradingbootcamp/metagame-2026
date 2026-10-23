@@ -91,6 +91,10 @@ const uuid = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const at = (day, hour, minutes = 0) =>
   new Date(Date.UTC(2026, 10, day, hour + 8, minutes)).toISOString();
 
+// Array params as a literal, so they survive any driver's serialisation.
+const pgArray = (xs) =>
+  `{${xs.map((x) => `"${x.replace(/["\\]/g, "\\$&")}"`).join(",")}}`;
+
 /** Insert rows, updating every non-key column on conflict. */
 async function upsert(table, keys, rows) {
   for (const row of rows) {
@@ -163,20 +167,70 @@ const users = {
 };
 
 const FIRST =
-  "Ada Bo Cy Dee Eli Fay Gus Hal Ivy Jo Kit Lu Max Nia Oz Pia Quin Rae Sol Tess".split(
-    " ",
-  );
+  `Ada Bashir Chiara Dmitri Esperanza Farid Greta Hiro Imani Jules Kalinda
+   Leopold Maeve Nikolai Oona Priya Quentin Rosalind Soren Tamsin Umar Vesna
+   Wendell Xiomara Yusuf Zelda Anouk Benedikt Cosima Desmond Eilidh Fergus
+   Giulia Hamza Ingrid Jericho Kenji Liesl Marisol Nadia Olamide Pilar Quinlan
+   Rafael Sunniva Tobias Ulla Viggo Wren Xavier Yara Zoltan Amara Bruno Celeste
+   Dagny Emeka Fenna Gideon Halima Isidore Jolanta Kwame Lorcan Mireille Nestor
+   Ottoline Paavo Qadir Rhiannon Sigrid Thaddeus Ulysses Valentina Wilhelm
+   Xenia Yevgenia Zachariah Aurelio Beatrix Caspian Delphine Ezra Freya Gustavo
+   Henrietta Idris Jasmine Kofi Lucinda Matthias Noor Octavia Percival Quilla
+   Ravi Saoirse Tendai Ulrike Vivienne`.split(/\s+/);
 const LAST =
-  "Ash Birch Cole Dale Eyre Frost Gale Hart Idle Jade Kerr Lane Moss Nash Oakes Penn Quill Reed Snow Tate Vale Webb Yates Zorn Finch".split(
-    " ",
-  );
-// i % 20 and 7i % 25 only coincide every 100, so the names are distinct.
-const crowd = Array.from({ length: 100 }, (_, i) => ({
-  id: `seed-att-${String(i + 1).padStart(3, "0")}`,
-  name: `${FIRST[i % FIRST.length]} ${LAST[(i * 7) % LAST.length]}`,
-  i,
-}));
-const everyone = [...Object.values(users), ...crowd];
+  `Abernathy Baptiste Castellanos Delacroix Eriksen Fairweather Galloway
+   Hashimoto Ibarra Jankowski Kowalczyk Lindqvist Marchetti Nakamura Okonkwo
+   Pemberton Quiroga Rasmussen Sandoval Thackeray Underwood Villanueva
+   Whitcombe Xiang Yamamoto Zielinski Ashworth Brannigan Cavendish Dubois
+   Ellsworth Fitzgerald Grimaldi Holloway Ishikawa Jorgensen Kavanagh Lombardi
+   Mbeki Nightingale Oyelaran Petrova Quennell Radcliffe Sorensen Takahashi
+   Ueda Vasquez Winterbourne Xu Yilmaz Zamora Achterberg Bergstrom Cordeiro
+   Dalgaard Esposito Ferreira Gutierrez Haddad Iyer Jansen Kristiansen Larsson
+   Mendoza Novak Olofsson Pascal Quintero Rivera Schreiber Tanaka Uribe Varga
+   Wakefield Xenakis Yoshida Zuniga Adeyemi Blackwood Chaudhary Dunmore
+   Engelbrecht Falk Goldschmidt Havili Ivanova Joshi Kaur Leclerc Maalouf Nwosu
+   Ortega Pinheiro Qureshi Rutherford Sato Tremblay Ulloa Vance`.split(/\s+/);
+if (FIRST.length !== 100 || LAST.length !== 100) {
+  throw new Error(`name lists: ${FIRST.length} first, ${LAST.length} last`);
+}
+
+// The crowd, in the mix the invite flow produces: most signed in and bought
+// a ticket; some signed in and never bought; some were invited (as hosts or
+// team) and never signed in; some bought under an email with no account yet.
+const KINDS = [
+  "attendee",
+  "attendee",
+  "attendee",
+  "attendee",
+  "attendee",
+  "attendee",
+  "member",
+  "member",
+  "invited",
+  "buyer",
+];
+const crowd = Array.from({ length: 100 }, (_, i) => {
+  const first = FIRST[i];
+  const last = LAST[(i * 37) % 100];
+  const kind = KINDS[i % 10];
+  return {
+    id: `seed-${first.toLowerCase()}-${last.toLowerCase()}`,
+    name: `${first} ${last}`,
+    email: `${first}.${last}@metagame.games`.toLowerCase(),
+    kind,
+    verified: kind === "attendee" || kind === "member",
+    i,
+  };
+});
+const invited = crowd.filter((u) => u.kind === "invited");
+const everyone = [
+  ...Object.values(users).map((u) => ({
+    ...u,
+    email: `${u.id.replace("seed-", "")}@metagame.games`,
+    verified: true,
+  })),
+  ...crowd,
+];
 
 const locations = {
   hall: { id: uuid(1), name: "Seed Hall", capacity: 80, display_order: 1 },
@@ -623,7 +677,8 @@ const pipeline = [
     category,
     status: "draft",
     airtable_rfp_record_id: `recSEED${String(n).padStart(8, "0")}`,
-    shepherd_user_id: n % 2 ? users.grants.id : users.admin.id,
+    shepherd_user_id: [users.admin, invited[0], users.grants, invited[1]][n % 4]
+      .id,
     phase,
     verdict,
     speaker_tier,
@@ -739,11 +794,18 @@ const sessions = [
   ...pipeline,
 ];
 
-// Crowd members host the generated sessions; every fourth gets a co-host.
+// Crowd members host the generated sessions. Every third session also has a
+// co-host who was added by the schedule tool and never signed in.
 const crowdHosts = [...program, ...pipeline].flatMap((s, k) => [
   { session_id: s.id, position: 0, user_id: crowd[(k * 13) % 100].id },
-  ...(k % 4 === 0
-    ? [{ session_id: s.id, position: 1, user_id: crowd[(k * 17 + 5) % 100].id }]
+  ...(k % 3 === 0
+    ? [
+        {
+          session_id: s.id,
+          position: 1,
+          user_id: invited[k % invited.length].id,
+        },
+      ]
     : []),
 ]);
 
@@ -818,23 +880,28 @@ const tickets = [
     test: true,
     purchaser_email: "tester@metagame.games",
   }),
-  ...crowd.map((u) =>
-    ticket(`pi_seed_${u.id}`, {
-      tier: u.i % 10 === 9 ? "Day pass" : "Standard",
-      amount_cents: u.i % 10 === 9 ? 15000 : 45000,
-      purchaser_email: `${u.id.replace("seed-", "")}@metagame.games`,
-      purchaser_name: u.name,
-      owner_user_id: u.id,
-      claimed_at: new Date(Date.UTC(2026, 8, 1, 12, u.i * 11)).toISOString(),
-    }),
-  ),
+  ...crowd
+    .filter((u) => u.kind === "attendee" || u.kind === "buyer")
+    .map((u) =>
+      ticket(`pi_seed_${u.id}`, {
+        tier: u.i % 10 === 4 ? "Day pass" : "Standard",
+        amount_cents: u.i % 10 === 4 ? 15000 : 45000,
+        purchaser_email: u.email,
+        purchaser_name: u.name,
+        owner_user_id: u.kind === "attendee" ? u.id : null,
+        claimed_at:
+          u.kind === "attendee"
+            ? new Date(Date.UTC(2026, 8, 1, 12, u.i * 11)).toISOString()
+            : null,
+      }),
+    ),
 ];
 
 // Crowd RSVPs: `going` until the session is full, then `waitlist`.
 const crowdRsvps = [];
 const fill = (n, pick, cap) => {
   let going = sessions.find((s) => s.id === uuid(n)).max_capacity - cap;
-  for (const u of crowd.filter(pick)) {
+  for (const u of crowd.filter((u) => u.verified && pick(u))) {
     crowdRsvps.push({
       session_id: uuid(n),
       user_id: u.id,
@@ -855,14 +922,42 @@ const counts = {};
 
 counts.ledger = await seedMigrationLedger();
 
+// Seed rows the script no longer produces, so a changed script converges.
+// Child rows of seed users and seed sessions are simply rebuilt.
+for (const [table, col] of [
+  ["rsvps", "user_id"],
+  ["bookmarks", "user_id"],
+  ["user_roles", "user_id"],
+  ["user_permission_grants", "user_id"],
+]) {
+  await sql.query(`delete from "${table}" where "${col}" like 'seed-%'`);
+}
+await sql.query(
+  `delete from session_hosts where session_id::text like '00000000-0000-4000-8000-%'`,
+);
+await sql.query(
+  `delete from account where provider_id = 'credential'
+   and user_id like 'seed-%' and not (user_id = any($1::text[]))`,
+  [pgArray(everyone.filter((u) => u.verified).map((u) => u.id))],
+);
+await sql.query(
+  `delete from tickets where payment_id like '%seed%'
+   and not (payment_id = any($1::text[]))`,
+  [pgArray(tickets.map((t) => t.payment_id))],
+);
+await sql.query(
+  `delete from "user" where id like 'seed-%' and not (id = any($1::text[]))`,
+  [pgArray(everyone.map((u) => u.id))],
+);
+
 counts.user = await upsert(
   "user",
   ["id"],
   everyone.map((u) => ({
     id: u.id,
     name: u.name,
-    email: `${u.id.replace("seed-", "")}@metagame.games`,
-    email_verified: true,
+    email: u.email,
+    email_verified: u.verified,
     role: u.role ?? "user",
     banned: u.banned ?? false,
     ban_reason: u.ban_reason ?? null,
@@ -871,13 +966,15 @@ counts.user = await upsert(
 counts.account = await upsert(
   "account",
   ["id"],
-  everyone.map((u) => ({
-    id: `${u.id}-credential`,
-    account_id: u.id,
-    provider_id: "credential",
-    user_id: u.id,
-    password: passwordHash,
-  })),
+  everyone
+    .filter((u) => u.verified)
+    .map((u) => ({
+      id: `${u.id}-credential`,
+      account_id: u.id,
+      provider_id: "credential",
+      user_id: u.id,
+      password: passwordHash,
+    })),
 );
 counts.profiles = await upsert(
   "profiles",
@@ -887,7 +984,7 @@ counts.profiles = await upsert(
     pronouns: u === users.host ? "they/them" : null,
     discord_handle: u === users.attendee ? "seed_attendee" : null,
     bio: u === users.host ? "Runs games. Seeded." : null,
-    is_public: u === users.host || u.i % 3 === 0,
+    is_public: u === users.host || (u.verified && u.i % 3 === 0),
     is_adult: true,
   })),
 );
@@ -897,6 +994,10 @@ const roleRows = await Promise.all(
   [
     { name: "Attendee", permissions: ["schedule.rsvps"] },
     { name: "Schedule team", permissions: ["schedule.manage", "users.view"] },
+    {
+      name: "Speaker committee",
+      permissions: ["submissions.grade", "schedule.preview"],
+    },
   ].map(async (r) => {
     const [{ id }] = await sql.query(
       `insert into roles (name) values ($1)
@@ -917,7 +1018,13 @@ counts.role_permissions = await upsert(
 counts.user_roles = await upsert(
   "user_roles",
   ["user_id", "role_id"],
-  [{ user_id: users.host.id, role_id: roleRows[1].id }],
+  [
+    { user_id: users.host.id, role_id: roleRows[1].id },
+    ...[invited[0], invited[1], crowd[2]].map((u) => ({
+      user_id: u.id,
+      role_id: roleRows[2].id,
+    })),
+  ],
 );
 counts.user_permission_grants = await upsert(
   "user_permission_grants",
@@ -965,14 +1072,14 @@ counts.bookmarks = await upsert(
     { session_id: uuid(104), user_id: users.attendee.id },
     { session_id: uuid(103), user_id: users.newcomer.id },
     ...crowd
-      .filter((u) => u.i % 6 === 1)
+      .filter((u) => u.verified && u.i % 6 === 1)
       .map((u) => ({ session_id: uuid(103), user_id: u.id })),
     ...crowd
-      .filter((u) => u.i % 9 === 2)
+      .filter((u) => u.verified && u.i % 9 === 2)
       .map((u) => ({ session_id: uuid(102), user_id: u.id })),
     ...program.flatMap((s, k) =>
       crowd
-        .filter((u) => (u.i * 5 + k) % 13 === 0)
+        .filter((u) => u.verified && (u.i * 5 + k) % 13 === 0)
         .map((u) => ({ session_id: s.id, user_id: u.id })),
     ),
   ],
