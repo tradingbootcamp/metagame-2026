@@ -1,6 +1,5 @@
-// Rail-agnostic half of the promo-code tool (/backstage/promo): the deterministic
-// code generator and the mint contract shared by the Stripe rail
-// (promo-codes-stripe.ts) and the Bitcoin/Airtable rail (promo-codes-btc.ts).
+// Shared half of the promo-code tool (/backstage/promo): the deterministic code
+// generator and the mint contract used by promo-codes-stripe.ts.
 
 export const PURPOSES = [
   "Speaker",
@@ -14,8 +13,6 @@ export const PURPOSES = [
 ] as const;
 
 export const PROMO_SOURCE = "comp-tool";
-
-export type Rail = "stripe" | "btc";
 
 export type MintInput = {
   name: string;
@@ -37,7 +34,6 @@ export type Prior = {
 };
 
 export type MintResult = {
-  rail: Rail;
   code: string;
   name: string;
   email: string;

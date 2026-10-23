@@ -1,8 +1,7 @@
 "use server";
 
 import { EXPIRED, requireAccess } from "@/lib/admin-auth";
-import { PromoError, type MintResult, type Rail } from "@/lib/promo-codes";
-import { listBtcCodes, mintBtcCode, type BtcCode } from "@/lib/promo-codes-btc";
+import { PromoError, type MintResult } from "@/lib/promo-codes";
 import {
   listStripeCodes,
   mintStripeCode,
@@ -30,7 +29,6 @@ export async function mint(
   const admin = await requireAccess("promo.manage");
   if (!admin) return { error: EXPIRED };
 
-  const rail: Rail = str(formData, "rail") === "btc" ? "btc" : "stripe";
   const name = str(formData, "name");
   if (!name) return { field: "name", error: "Required." };
   const purpose =
@@ -47,23 +45,17 @@ export async function mint(
       error: "Letters, digits, and dashes only.",
     };
 
-  const input = {
-    name,
-    email: str(formData, "email"),
-    customCode,
-    maxUses,
-    purpose,
-    notes: str(formData, "notes"),
-  };
   try {
-    const minted =
-      rail === "btc"
-        ? await mintBtcCode(input)
-        : await mintStripeCode({
-            ...input,
-            couponId: str(formData, "couponId") || undefined,
-            issuedBy: admin.name,
-          });
+    const minted = await mintStripeCode({
+      name,
+      email: str(formData, "email"),
+      customCode,
+      maxUses,
+      purpose,
+      notes: str(formData, "notes"),
+      couponId: str(formData, "couponId") || undefined,
+      issuedBy: admin.name,
+    });
     return { minted };
   } catch (err) {
     if (err instanceof PromoError && err.code === "collision")
@@ -72,29 +64,9 @@ export async function mint(
   }
 }
 
-export type CodeLists = {
-  stripe: StripeCode[];
-  btc: BtcCode[];
-  /** Per-rail read failures; the other rail's list still shows. */
-  errors: Partial<Record<Rail, string>>;
-};
-
-export async function listCodes(): Promise<CodeLists> {
+export async function listCodes(): Promise<StripeCode[]> {
   if (!(await requireAccess("promo.manage"))) throw new Error(EXPIRED);
-  const [stripe, btc] = await Promise.allSettled([
-    listStripeCodes(),
-    listBtcCodes(),
-  ]);
-  return {
-    stripe: stripe.status === "fulfilled" ? stripe.value : [],
-    btc: btc.status === "fulfilled" ? btc.value : [],
-    errors: {
-      ...(stripe.status === "rejected"
-        ? { stripe: message(stripe.reason) }
-        : {}),
-      ...(btc.status === "rejected" ? { btc: message(btc.reason) } : {}),
-    },
-  };
+  return listStripeCodes();
 }
 
 export async function setActive(

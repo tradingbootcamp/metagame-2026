@@ -17,7 +17,7 @@ import {
 } from "@/lib/promo-codes";
 import { getPromoStripe, promoMode } from "@/lib/stripe-promo";
 
-// The Stripe (card) rail: each code is a promotion code pointing at a
+// Each code is a Stripe promotion code pointing at a
 // hand-made dashboard coupon. Never set `customer` on a promotion code — a
 // customer-scoped code only redeems when checkout is pre-attached to that
 // customer, which breaks self-serve "enter your code" redemption.
@@ -49,7 +49,7 @@ function stripeOrThrow(): Stripe {
   const stripe = getPromoStripe();
   if (!stripe)
     throw new PromoError(
-      "Stripe rail isn't configured — set STRIPE_PROMO_KEY.",
+      "Stripe isn't configured — set STRIPE_PROMO_KEY.",
       "config",
     );
   return stripe;
@@ -189,7 +189,6 @@ export async function mintStripeCode(
   };
 
   const result = (r: Probe): MintResult => ({
-    rail: "stripe",
     code: r.promo.code,
     name,
     email,

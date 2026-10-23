@@ -1,13 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  listCodes,
-  mint,
-  setActive,
-  type CodeLists,
-  type MintState,
-} from "./actions";
+import { listCodes, mint, setActive, type MintState } from "./actions";
 import {
   buttonClass,
   fieldClass,
@@ -16,8 +10,7 @@ import {
   smallButtonClass,
   useCopy,
 } from "../ui";
-import { PURPOSES, type MintResult, type Rail } from "@/lib/promo-codes";
-import type { BtcCode } from "@/lib/promo-codes-btc";
+import { PURPOSES, type MintResult } from "@/lib/promo-codes";
 import type { Coupon, StripeCode } from "@/lib/promo-codes-stripe";
 import type { PromoMode } from "@/lib/stripe-promo";
 
@@ -43,11 +36,10 @@ export default function PromoTool({
 }) {
   const [state, setState] = useState<MintState>(initial);
   const [pending, startTransition] = useTransition();
-  const [rail, setRail] = useState<Rail>("stripe");
   const [purpose, setPurpose] = useState("");
   const [unlimited, setUnlimited] = useState(false);
   const [customCode, setCustomCode] = useState("");
-  const [lists, setLists] = useState<CodeLists | null>(null);
+  const [lists, setLists] = useState<StripeCode[] | null>(null);
   const [listsBusy, setListsBusy] = useState(false);
   const [listsError, setListsError] = useState<string | null>(null);
 
@@ -96,93 +88,51 @@ export default function PromoTool({
 
         <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
           <Field
-            label="Code type"
+            label="Coupon"
+            required
             className="md:col-span-2"
-            hint={
-              rail === "btc"
-                ? "Writes a discount row in the Airtable “Discount Codes” table (Bitcoin checkout). No Stripe code."
-                : "Mints a Stripe promotion code (card checkout). No Airtable row."
-            }
+            hint="The discount tier the code attaches to. Defaults to the 100%-off comp coupon."
+            error={couponError}
           >
-            <input type="hidden" name="rail" value={rail} />
-            <div
-              role="radiogroup"
-              className="flex overflow-hidden rounded-lg border border-line"
-            >
-              {(
-                [
-                  ["stripe", "Stripe (card)"],
-                  ["btc", "BTC (Airtable)"],
-                ] as const
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={rail === value}
-                  onClick={() => setRail(value)}
-                  className={`flex-1 px-3 py-2 text-sm font-semibold transition-colors ${
-                    rail === value
-                      ? "bg-navy text-cream"
-                      : "bg-white text-ink/70 hover:bg-cream"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <select
+                name="couponId"
+                defaultValue={defaultCoupon?.id ?? ""}
+                disabled={!stripeReady}
+                className={`${selectClass} flex-1`}
+                style={selectStyle}
+              >
+                {!stripeReady && <option value="">No coupons available</option>}
+                {(
+                  [
+                    ["amount", "Dollar amount off"],
+                    ["percent", "Percent off"],
+                  ] as const
+                ).map(([kind, title]) => {
+                  const group = coupons.filter((c) => c.kind === kind);
+                  return (
+                    group.length > 0 && (
+                      <optgroup key={kind} label={title}>
+                        {group.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )
+                  );
+                })}
+              </select>
+              <a
+                href={`https://dashboard.stripe.com/${STRIPE_ACCOUNT}/${mode === "live" ? "" : "test/"}coupons`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${smallButtonClass} self-start py-2 whitespace-nowrap`}
+              >
+                Create new coupon ↗
+              </a>
             </div>
           </Field>
-
-          {rail === "stripe" && (
-            <Field
-              label="Coupon"
-              required
-              className="md:col-span-2"
-              hint="The discount tier the code attaches to. Defaults to the 100%-off comp coupon."
-              error={couponError}
-            >
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <select
-                  name="couponId"
-                  defaultValue={defaultCoupon?.id ?? ""}
-                  disabled={!stripeReady}
-                  className={`${selectClass} flex-1`}
-                  style={selectStyle}
-                >
-                  {!stripeReady && (
-                    <option value="">No coupons available</option>
-                  )}
-                  {(
-                    [
-                      ["amount", "Dollar amount off"],
-                      ["percent", "Percent off"],
-                    ] as const
-                  ).map(([kind, title]) => {
-                    const group = coupons.filter((c) => c.kind === kind);
-                    return (
-                      group.length > 0 && (
-                        <optgroup key={kind} label={title}>
-                          {group.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )
-                    );
-                  })}
-                </select>
-                <a
-                  href={`https://dashboard.stripe.com/${STRIPE_ACCOUNT}/${mode === "live" ? "" : "test/"}coupons`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${smallButtonClass} self-start py-2 whitespace-nowrap`}
-                >
-                  Create new coupon ↗
-                </a>
-              </div>
-            </Field>
-          )}
 
           <Field
             label="Name"
@@ -270,8 +220,8 @@ export default function PromoTool({
             label="Uses"
             hint={
               unlimited
-                ? `Redeemable unlimited times (${rail === "btc" ? "blank Max Uses on the row" : "no max_redemptions on the promo"}).`
-                : `How many times it can be redeemed. Default 1 (single guest); enforced ${rail === "btc" ? "by the Bitcoin checkout via Max Uses" : "by Stripe via max_redemptions"}.`
+                ? "Redeemable unlimited times (no max_redemptions on the promo)."
+                : "How many times it can be redeemed. Default 1 (single guest); enforced by Stripe via max_redemptions."
             }
           >
             <div className="flex items-center gap-4">
@@ -309,7 +259,7 @@ export default function PromoTool({
           <div className="md:col-span-2">
             <button
               type="submit"
-              disabled={pending || (rail === "stripe" && !stripeReady)}
+              disabled={pending || !stripeReady}
               className={buttonClass}
             >
               {pending ? "Minting…" : "Generate code"}
@@ -322,7 +272,7 @@ export default function PromoTool({
 
         {state.minted && (
           <Result
-            key={`${state.minted.rail}:${state.minted.code}`}
+            key={state.minted.code}
             minted={state.minted}
             origin={origin}
           />
@@ -419,9 +369,7 @@ function CopyButtons({ code, url }: { code: string; url?: string }) {
 }
 
 function Result({ minted, origin }: { minted: MintResult; origin: string }) {
-  const railName = minted.rail === "btc" ? "BTC discount code" : "Stripe code";
-  const url =
-    minted.rail === "stripe" ? redeemUrl(origin, minted.code) : undefined;
+  const url = redeemUrl(origin, minted.code);
   const { prior } = minted;
   return (
     <div
@@ -432,7 +380,7 @@ function Result({ minted, origin }: { minted: MintResult; origin: string }) {
       {minted.reused ? (
         <div className="text-sm text-ink/80">
           <p className="font-semibold">
-            Not a new code — this {railName} was already issued
+            Not a new code — this one was already issued
           </p>
           <p>
             to <strong>{prior?.name || "unnamed"}</strong> (
@@ -450,16 +398,14 @@ function Result({ minted, origin }: { minted: MintResult; origin: string }) {
           </p>
         </div>
       ) : (
-        <p className="text-sm text-ink/70">New {railName}</p>
+        <p className="text-sm text-ink/70">New code</p>
       )}
       <p className="my-2 font-mono text-2xl break-all text-navy select-all">
         {minted.code}
       </p>
-      {url && (
-        <p className="mb-2 font-mono text-sm break-all text-ink/70 select-all">
-          {url}
-        </p>
-      )}
+      <p className="mb-2 font-mono text-sm break-all text-ink/70 select-all">
+        {url}
+      </p>
       <div className="flex flex-wrap gap-2">
         <CopyButtons code={minted.code} url={url} />
       </div>
@@ -471,8 +417,6 @@ function Result({ minted, origin }: { minted: MintResult; origin: string }) {
             : "Single use"}
         {" · "}
         {minted.purpose}
-        {minted.rail === "btc" &&
-          ` · Bitcoin discount row written${minted.test ? " (flagged Test)" : ""}`}
       </p>
     </div>
   );
@@ -485,7 +429,7 @@ function Existing({
   origin,
   onLoad,
 }: {
-  lists: CodeLists | null;
+  lists: StripeCode[] | null;
   busy: boolean;
   error: string | null;
   origin: string;
@@ -544,10 +488,9 @@ function Existing({
     );
   }
 
-  const stripeShown = lists.stripe.filter(matches);
-  const stripeActive = stripeShown.filter((c) => c.active);
-  const stripeArchived = stripeShown.filter((c) => !c.active);
-  const btcShown = lists.btc.filter(matches);
+  const shown = lists.filter(matches);
+  const active = shown.filter((c) => c.active);
+  const archived = shown.filter((c) => !c.active);
 
   return (
     <section className="space-y-8">
@@ -578,22 +521,14 @@ function Existing({
       )}
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold text-ink/70">
-          Stripe (card){" "}
-          <span className="font-normal text-ink/50">
-            ({lists.stripe.length})
-          </span>
-        </h3>
-        {lists.errors.stripe ? (
-          <p className="text-sm text-meeple">{lists.errors.stripe}</p>
-        ) : stripeShown.length === 0 ? (
+        {shown.length === 0 ? (
           <p className="text-sm text-ink/60">
-            {lists.stripe.length ? "No matches." : "No codes yet."}
+            {lists.length ? "No matches." : "No codes yet."}
           </p>
         ) : (
           <>
             <ul className="divide-y divide-line rounded-xl border border-line bg-white">
-              {stripeActive.map((c) => (
+              {active.map((c) => (
                 <StripeRow
                   key={c.id}
                   code={c}
@@ -603,7 +538,7 @@ function Existing({
                 />
               ))}
             </ul>
-            {stripeArchived.length > 0 && (
+            {archived.length > 0 && (
               <div className="mt-3">
                 <button
                   type="button"
@@ -611,12 +546,11 @@ function Existing({
                   aria-expanded={showArchived}
                   className="text-sm text-ink/60 underline-offset-2 hover:underline"
                 >
-                  {showArchived ? "Hide" : "Show"} archived (
-                  {stripeArchived.length})
+                  {showArchived ? "Hide" : "Show"} archived ({archived.length})
                 </button>
                 {showArchived && (
                   <ul className="mt-2 divide-y divide-line rounded-xl border border-line bg-white opacity-70">
-                    {stripeArchived.map((c) => (
+                    {archived.map((c) => (
                       <StripeRow
                         key={c.id}
                         code={c}
@@ -630,29 +564,6 @@ function Existing({
               </div>
             )}
           </>
-        )}
-      </div>
-
-      <div>
-        <h3 className="mb-1 text-sm font-semibold text-ink/70">
-          BTC (Airtable){" "}
-          <span className="font-normal text-ink/50">({lists.btc.length})</span>
-        </h3>
-        <p className="mb-2 text-xs text-ink/50">
-          Read-only — archive or disable BTC rows directly in Airtable.
-        </p>
-        {lists.errors.btc ? (
-          <p className="text-sm text-meeple">{lists.errors.btc}</p>
-        ) : btcShown.length === 0 ? (
-          <p className="text-sm text-ink/60">
-            {lists.btc.length ? "No matches." : "No codes yet."}
-          </p>
-        ) : (
-          <ul className="divide-y divide-line rounded-xl border border-line bg-white">
-            {btcShown.map((c) => (
-              <BtcRow key={c.code} code={c} />
-            ))}
-          </ul>
         )}
       </div>
     </section>
@@ -702,33 +613,6 @@ function StripeRow({
         >
           {c.active ? "Archive" : "Restore"}
         </button>
-      </div>
-    </li>
-  );
-}
-
-function BtcRow({ code: c }: { code: BtcCode }) {
-  const live = c.active && !c.archived;
-  return (
-    <li
-      className={`flex flex-wrap items-start justify-between gap-3 px-4 py-3 ${live ? "" : "opacity-60"}`}
-    >
-      <div className="min-w-0 flex-1 text-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono font-semibold">{c.code}</span>
-          {c.purpose && <Tag title={c.notes || undefined}>{c.purpose}</Tag>}
-          <Tag>{c.max == null ? "unlimited" : `max ${c.max}`}</Tag>
-          {c.test && <Tag warn>test</Tag>}
-          {!live && <Tag warn>{c.archived ? "archived" : "inactive"}</Tag>}
-        </div>
-        <p className="truncate text-xs text-ink/60">
-          {c.name ? `${c.name} · ` : ""}
-          {c.email || "—"}
-          {c.created && ` · ${new Date(c.created * 1000).toLocaleDateString()}`}
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <CopyButtons code={c.code} />
       </div>
     </li>
   );

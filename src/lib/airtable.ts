@@ -549,7 +549,6 @@ export async function recordDiscountCode(
     // Explicit null clears a stale cap when the promo is uncapped (omitting would keep it).
     "Max Uses": record.maxUses,
     Expires: record.expiresAt,
-    // Marker must NOT contain "comp-tool" — the comp tool keys its own rows off that substring.
     Notes: "Stripe promo (stripe-webhook)",
   };
   // Exactly one per-unit column is populated per code (the other stays blank).

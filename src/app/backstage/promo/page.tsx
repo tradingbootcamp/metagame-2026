@@ -16,8 +16,8 @@ export default async function AdminPromoPage() {
   if (!access) return <SignIn next="/backstage/promo" />;
   if (!access.name) return <NameForm />;
 
-  // A missing/unreadable coupon list leaves the Stripe rail disabled with a
-  // message rather than breaking the BTC rail too.
+  // A missing/unreadable coupon list disables the form with a message rather
+  // than breaking the page.
   let coupons: Coupon[] = [];
   let couponError: string | null = null;
   if (getPromoStripe()) {
@@ -27,7 +27,7 @@ export default async function AdminPromoPage() {
       couponError = err instanceof Error ? err.message : String(err);
     }
   } else {
-    couponError = "STRIPE_PROMO_KEY isn’t set, so the Stripe rail is off.";
+    couponError = "STRIPE_PROMO_KEY isn’t set, so minting is off.";
   }
 
   return (
