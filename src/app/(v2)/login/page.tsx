@@ -13,15 +13,15 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string | string[] }>;
+  searchParams: Promise<{ next?: string | string[]; by?: string | string[] }>;
 }) {
-  const { next } = await searchParams;
+  const { next, by } = await searchParams;
   const target = safeNextPath(Array.isArray(next) ? next[0] : next);
   if (await currentSession()) redirect(target);
 
   return (
     <ContentPage eyebrow="Account" title="Sign in">
-      <AuthForm mode="signin" next={target} />
+      <AuthForm mode="signin" next={target} startByCode={by === "code"} />
     </ContentPage>
   );
 }

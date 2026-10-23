@@ -33,12 +33,15 @@ function Messages({ state }: { state: AuthState }) {
 export default function AuthForm({
   mode,
   next,
+  startByCode,
 }: {
   mode: AuthMode;
   next: string;
+  /** Open on the email-code form, for people who have no password yet. */
+  startByCode?: boolean;
 }) {
   const [state, action, pending] = useActionState(authenticate, initial);
-  const [byCode, setByCode] = useState(mode === "signup");
+  const [byCode, setByCode] = useState(startByCode || mode === "signup");
   const verifyButton = useRef<HTMLButtonElement>(null);
 
   const hidden = (

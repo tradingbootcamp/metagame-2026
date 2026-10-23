@@ -380,7 +380,8 @@ export async function sendAccountInviteEmail({
     console.warn(`[email] Resend not configured — account invite for ${to}`);
     return;
   }
-  const login = `${SITE}/login`;
+  // ?by=code opens the code form; the password form is the default.
+  const login = `${SITE}/login?by=code`;
   const { error } = await resend.emails.send({
     from: FROM,
     to,
@@ -395,10 +396,10 @@ export async function sendAccountInviteEmail({
         <p>An account has been set up for you on metagame.games under this email address.</p>
         <p>To use it, go to <a href="${login}">${login}</a>, where you'll sign in with an email code and can set up a password.</p>
         <p style="font-size: 12px; color: #aaa; font-style: italic;">This is not a puzzle.</p>
-        <p style="font-size: 12px; color: #888; font-style: italic;">&copy; 2026 Metagame</p>
+        <p style="font-size: 12px; color: #888; font-style: italic;">&copy; 2026 Metagame LLC</p>
       </div>
     `,
-    text: `Hi ${name},\n\nAn account has been set up for you on metagame.games under this email address.\n\nTo use it, go to ${login}, where you'll sign in with an email code and can set up a password.\n\nThis is not a puzzle.\n© 2026 Metagame`,
+    text: `Hi ${name},\n\nAn account has been set up for you on metagame.games under this email address.\n\nTo use it, go to ${login}, where you'll sign in with an email code and can set up a password.\n\nThis is not a puzzle.\n© 2026 Metagame LLC`,
   });
   if (error) throw new Error(`Resend send failed: ${error.message}`);
 }
