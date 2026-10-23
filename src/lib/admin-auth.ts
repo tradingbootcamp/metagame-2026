@@ -7,7 +7,7 @@ import {
 } from "./permissions";
 import { createSessionAuth, type Session as BaseSession } from "./session-auth";
 
-// Team-only tools under /admin. Access is a signed-in account holding the
+// Team-only tools under /backstage. Access is a signed-in account holding the
 // tool's permission (src/lib/permissions.ts); the shared password + self-asserted
 // name is a fallback until the whole team has accounts (META-1484), then it
 // goes. A password session holds the fixed ADMIN_PASSWORD_PERMISSIONS set.
@@ -34,7 +34,7 @@ export const {
   readSession,
 } = createSessionAuth<AdminIdentity>({
   cookie: "mg_admin",
-  path: "/admin",
+  path: "/backstage",
   passwordEnv: "ADMIN_PASSWORD",
   secretEnv: "ADMIN_SESSION_SECRET",
   parseIdentity,

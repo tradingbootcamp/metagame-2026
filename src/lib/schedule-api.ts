@@ -63,7 +63,7 @@ export function failed(err: unknown): Response {
 }
 
 export function done() {
-  revalidatePath("/admin/schedule");
+  revalidatePath("/backstage/schedule");
 }
 
 export type HostInput = { email: string; name?: string };

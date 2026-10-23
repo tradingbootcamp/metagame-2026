@@ -13,7 +13,7 @@ export type TeamAccess = {
   session: Session;
   /** `user.role = 'admin'`: the superuser bypass, which holds every permission. */
   admin: boolean;
-  /** Holds a team-tool permission, so /admin has something to show. */
+  /** Holds a team-tool permission, so /backstage has something to show. */
   team: boolean;
   permissions: Set<Permission>;
 };

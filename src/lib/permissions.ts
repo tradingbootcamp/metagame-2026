@@ -8,9 +8,9 @@
 export type PermissionLevel = "view" | "edit" | "delete";
 
 /**
- * `team`: a team tool, so holding it opens /admin and the nav's admin link.
+ * `team`: a team tool, so holding it opens /backstage and the nav's admin link.
  * `attendee`: a site-facing gate ticket holders may get through the built-in
- * Attendee role; on its own it opens nothing under /admin.
+ * Attendee role; on its own it opens nothing under /backstage.
  */
 export type PermissionAudience = "team" | "attendee";
 
@@ -88,7 +88,7 @@ export const PERMISSIONS = {
     group: "Database",
     level: "view",
     label: "Schema",
-    description: "Read-only, under /admin/schema.",
+    description: "Read-only, under /backstage/schema.",
   },
   "submissions.grade": {
     audience: "team",

@@ -1,4 +1,4 @@
-// Validation shared by the /admin/schedule form actions and the JSON API, so
+// Validation shared by the /backstage/schedule form actions and the JSON API, so
 // the two can't drift. Input is a loose record (FormData entries or a JSON
 // body); output is what the store takes. No database imports.
 

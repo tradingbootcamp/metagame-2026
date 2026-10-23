@@ -8,12 +8,12 @@ import {
   useState,
   useTransition,
 } from "react";
-import RfpPanel from "@/app/admin/schedule/RfpPanel";
+import RfpPanel from "@/app/backstage/schedule/RfpPanel";
 import ScheduleGrid, {
   GrabHandle,
   type DropFn,
-} from "@/app/admin/schedule/ScheduleGrid";
-import { smallButtonClass } from "@/app/admin/ui";
+} from "@/app/backstage/schedule/ScheduleGrid";
+import { smallButtonClass } from "@/app/backstage/ui";
 import {
   buildDays,
   DEFAULT_DRAFT_MINUTES,
@@ -174,7 +174,7 @@ export default function ScheduleBoard({
   const carriedRow = heldId?.startsWith("rfp:")
     ? board.queue.find((r) => queueId(r.id) === heldId)
     : undefined;
-  // Only proposals go back to the list; hand-made sessions stay in /admin/schedule.
+  // Only proposals go back to the list; hand-made sessions stay in /backstage/schedule.
   const canUnschedule =
     carrying !== null && !carriedRow && carrying.id in proposals;
 
@@ -363,8 +363,8 @@ export default function ScheduleBoard({
             />
 
             <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
-              <Link href="/admin/schedule" className={smallButtonClass}>
-                Edit in /admin/schedule
+              <Link href="/backstage/schedule" className={smallButtonClass}>
+                Edit in /backstage/schedule
               </Link>
               {openRow && isPlaced(open) && (
                 <button

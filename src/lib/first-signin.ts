@@ -30,7 +30,7 @@ export function firstSigninNeeded(
   return profile?.isAdult == null || profile.bringingChildren == null;
 }
 
-const HIDDEN_PREFIXES = ["/login", "/admin", "/grade"];
+const HIDDEN_PREFIXES = ["/login", "/backstage", "/grade"];
 
 /** Pages the modal stays off: signing in, and the team tools. */
 export function firstSigninHidden(pathname: string): boolean {

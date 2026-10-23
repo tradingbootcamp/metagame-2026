@@ -14,7 +14,7 @@ const { roles, rolePermissions, userRoles, userPermissionGrants, user } =
 // Built-in roles attach themselves instead of being assigned: Attendee is
 // anyone with a claimed ticket. They're ordinary rows, so the roles grid sets
 // what they carry, but they can't be renamed, deleted or ticked on a person.
-// Until the row exists (first load of /admin/roles) the defaults apply.
+// Until the row exists (first load of /backstage/roles) the defaults apply.
 export const ATTENDEE_ROLE = "Attendee";
 const ATTENDEE_AUTO = "has a ticket";
 const ATTENDEE_DEFAULTS: Permission[] = ["schedule.rsvps"];

@@ -40,13 +40,13 @@ const ENV_SPEC: EnvSpec[] = [
     name: "STRIPE_PROMO_KEY",
     required: false,
     description:
-      "Restricted Stripe key (Promotion codes: Write, Coupons: Read) for the promo-code tool at /admin/promo. Separate from STRIPE_SECRET_KEY on purpose; without it the Stripe rail is unavailable.",
+      "Restricted Stripe key (Promotion codes: Write, Coupons: Read) for the promo-code tool at /backstage/promo. Separate from STRIPE_SECRET_KEY on purpose; without it the Stripe rail is unavailable.",
   },
   {
     name: "COMP_COUPON_ID",
     required: false,
     description:
-      "Id of the hand-made 100%-off Stripe coupon: the default selection in /admin/promo's coupon dropdown.",
+      "Id of the hand-made 100%-off Stripe coupon: the default selection in /backstage/promo's coupon dropdown.",
   },
   {
     name: "RESEND_API_KEY",
@@ -82,13 +82,13 @@ const ENV_SPEC: EnvSpec[] = [
     name: "ADMIN_PASSWORD",
     required: false,
     description:
-      "Shared password for the team tools under /admin. Fallback while the team gets accounts; admin accounts sign in without it. Remove once they do.",
+      "Shared password for the team tools under /backstage. Fallback while the team gets accounts; admin accounts sign in without it. Remove once they do.",
   },
   {
     name: "ADMIN_SESSION_SECRET",
     required: false,
     description:
-      "Random string used to sign the /admin session cookie. Rotating it signs everyone out.",
+      "Random string used to sign the /backstage session cookie. Rotating it signs everyone out.",
   },
   {
     name: "OPENNODE_ENV",

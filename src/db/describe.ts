@@ -9,7 +9,7 @@ import {
 import * as schema from "./schema";
 
 // Plain-data description of the Drizzle schema, derived from the same table
-// objects the app queries with, so /admin/schema can never drift from the code.
+// objects the app queries with, so /backstage/schema can never drift from the code.
 
 export type ColumnInfo = {
   name: string;
@@ -68,9 +68,9 @@ const TABLE_NOTES: Record<string, string> = {
   verification:
     "Short-lived email codes and similar one-time secrets, keyed by identifier (the email).",
   apikey:
-    "API keys (Better Auth api-key plugin), minted on /admin/api-keys. A request carrying one in x-api-key acts as the owning user (reference_id), so the permission gates apply as they do to pages. Only the hash is stored; start shows the first characters for telling keys apart.",
+    "API keys (Better Auth api-key plugin), minted on /backstage/api-keys. A request carrying one in x-api-key acts as the owning user (reference_id), so the permission gates apply as they do to pages. Only the hash is stored; start shows the first characters for telling keys apart.",
   roles:
-    "Bundles of permissions handed out on /admin/roles (e.g. Volunteer). Which permissions exist is the catalog in src/lib/permissions.ts, not a table.",
+    "Bundles of permissions handed out on /backstage/roles (e.g. Volunteer). Which permissions exist is the catalog in src/lib/permissions.ts, not a table.",
   role_permissions:
     "The permission keys a role grants, one row each. Text, not an enum, so adding a permission to the catalog needs no migration.",
   user_roles: "Which roles each account holds. One row per pair.",

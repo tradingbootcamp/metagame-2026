@@ -1,4 +1,4 @@
-// Rail-agnostic half of the promo-code tool (/admin/promo): the deterministic
+// Rail-agnostic half of the promo-code tool (/backstage/promo): the deterministic
 // code generator and the mint contract shared by the Stripe rail
 // (promo-codes-stripe.ts) and the Bitcoin/Airtable rail (promo-codes-btc.ts).
 

@@ -63,7 +63,7 @@ function createAuth() {
       admin(),
       // A request with `x-api-key: <key>` reads as a session for the key's
       // owner, so can() gates the JSON API the same way it gates the pages.
-      // Keys are minted on /admin/api-keys.
+      // Keys are minted on /backstage/api-keys.
       apiKey({
         apiKeyHeaders: API_KEY_HEADER,
         defaultPrefix: "mg_",

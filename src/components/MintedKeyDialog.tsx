@@ -10,7 +10,7 @@ import {
 } from "@/v2/components/ui/dialog";
 import { useCopy } from "@/v2/lib/use-copy";
 
-/** Shows a freshly minted API key once, for /account and /admin/api-keys alike. */
+/** Shows a freshly minted API key once, for /account and /backstage/api-keys alike. */
 export function MintedKeyDialog({
   value,
   onClose,

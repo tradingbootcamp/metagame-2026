@@ -92,8 +92,8 @@ describe("firstSigninHidden", () => {
   it("hides on sign-in and the team tools", () => {
     for (const p of [
       "/login",
-      "/admin",
-      "/admin/users",
+      "/backstage",
+      "/backstage/users",
       "/grade",
       "/grade/rec1",
     ])

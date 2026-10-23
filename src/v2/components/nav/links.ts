@@ -52,8 +52,8 @@ export const NAV_LINKS: readonly NavLink[] = [
 // Appended for signed-in admins only.
 export const ADMIN_LINK: NavLink = {
   id: "admin",
-  label: "Admin",
-  href: "/admin",
+  label: "Backstage",
+  href: "/backstage",
   icon: ShieldCheck,
 };
 
