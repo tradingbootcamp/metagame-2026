@@ -419,7 +419,7 @@ function Result({ url, link }: { url: string; link: TrackingLink }) {
           {link.placement && ` / ${link.placement}`}
         </p>
       </div>
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-1 max-sm:w-full">
         <QrPreview url={url} style={qr.style} px={132} />
         <span className="text-[11px] text-ink/55">Scans to the /go/ link</span>
       </div>
@@ -556,7 +556,7 @@ function Row({
           {new Date(link.createdAt).toLocaleDateString()}
         </p>
       </div>
-      <div className="flex gap-2">
+      <div className="flex basis-full flex-wrap gap-2 sm:basis-auto">
         <button
           type="button"
           onClick={() => copy(url)}
