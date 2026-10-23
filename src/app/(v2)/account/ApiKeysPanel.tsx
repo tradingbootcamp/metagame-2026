@@ -47,7 +47,7 @@ export default function ApiKeysPanel({ rows }: { rows: KeyRow[] }) {
       >
         <Input
           name="label"
-          aria-label="Key name"
+          aria-label="Label"
           required
           maxLength={80}
           placeholder="metagame-claude-code"
