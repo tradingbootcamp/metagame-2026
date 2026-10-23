@@ -394,10 +394,11 @@ export async function sendAccountInviteEmail({
         <p>Hi ${name},</p>
         <p>An account has been set up for you on metagame.games under this email address.</p>
         <p>To use it, go to <a href="${login}">${login}</a>, where you'll sign in with an email code and can set up a password.</p>
-        <p style="font-size: 12px; color: #888;">&copy; 2026 Arbor</p>
+        <p style="font-size: 12px; color: #aaa; font-style: italic;">This is not a puzzle.</p>
+        <p style="font-size: 12px; color: #888; font-style: italic;">&copy; 2026 Metagame</p>
       </div>
     `,
-    text: `Hi ${name},\n\nAn account has been set up for you on metagame.games under this email address.\n\nTo use it, go to ${login}, where you'll sign in with an email code and can set up a password.`,
+    text: `Hi ${name},\n\nAn account has been set up for you on metagame.games under this email address.\n\nTo use it, go to ${login}, where you'll sign in with an email code and can set up a password.\n\nThis is not a puzzle.\n© 2026 Metagame`,
   });
   if (error) throw new Error(`Resend send failed: ${error.message}`);
 }
