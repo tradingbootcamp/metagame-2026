@@ -1,11 +1,16 @@
 "use client";
 
-import { ChevronDownIcon, ShieldCheckIcon, TicketIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ShieldCheckIcon,
+  TicketIcon,
+} from "lucide-react";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { removeUser, setBanned, setRole, type Result } from "./actions";
 import { assignRole } from "./[id]/actions";
-import { fieldClass, smallButtonClass } from "../ui";
+import { fieldClass, selectClass, selectStyle, smallButtonClass } from "../ui";
 import { ticketBadge } from "@/lib/admin-tickets";
 import { Button } from "@/v2/components/ui/button";
 import {
@@ -26,10 +31,46 @@ export type UserRow = {
   roles: RoleOption[];
   banned: boolean;
   joined: string;
+  /** Full date and time, for hover. */
+  joinedExact: string;
+  /** Epoch ms, for sorting. */
+  joinedAt: number;
   /** The viewer's own row has no buttons. */
   self: boolean;
   /** Tickets they've claimed. */
   tickets: number;
+};
+
+type SortKey = "name" | "email" | "tickets" | "joined" | "roles";
+type Sort = { key: SortKey; dir: "asc" | "desc" };
+
+const COLUMNS: { key: SortKey; label: string }[] = [
+  { key: "name", label: "Name" },
+  { key: "email", label: "Email" },
+  { key: "tickets", label: "Ticket" },
+  { key: "joined", label: "Joined" },
+  { key: "roles", label: "Roles" },
+];
+
+/** Role names with Admin first, the text shown in the picker and searched. */
+const roleText = (u: UserRow) =>
+  [u.admin ? "Admin" : null, ...u.roles.map((r) => r.name)]
+    .filter(Boolean)
+    .join(", ");
+
+const compare = (a: UserRow, b: UserRow, key: SortKey): number => {
+  switch (key) {
+    case "name":
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    case "email":
+      return a.email.localeCompare(b.email);
+    case "tickets":
+      return a.tickets - b.tickets;
+    case "joined":
+      return a.joinedAt - b.joinedAt;
+    case "roles":
+      return roleText(a).localeCompare(roleText(b));
+  }
 };
 
 function TicketCell({ id, count }: { id: string; count: number }) {
@@ -56,18 +97,14 @@ function AdminShield() {
 
 export default function UsersTable({
   rows,
-  total,
-  query,
-  truncated,
+  initialQuery,
   allRoles,
   viewerIsAdmin,
   viewerCanEdit,
   viewerCanDelete,
 }: {
   rows: UserRow[];
-  total: number;
-  query: string;
-  truncated: boolean;
+  initialQuery: string;
   /** Assignable roles; built-in ones attach themselves and aren't listed. */
   allRoles: RoleOption[];
   /** Only `user.role = 'admin'` accounts may change the admin role and bans. */
@@ -85,6 +122,53 @@ export default function UsersTable({
   const [promoting, setPromoting] = useState<UserRow | null>(null);
   const [openRoles, setOpenRoles] = useState<string | null>(null);
 
+  const [query, setQuery] = useState(initialQuery);
+  /** "" = everyone, "admin", "none", or a role id. */
+  const [roleFilter, setRoleFilter] = useState("");
+  const [sort, setSort] = useState<Sort>({ key: "joined", dir: "desc" });
+
+  const shown = useMemo(() => {
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    const matches = (u: UserRow) => {
+      if (roleFilter === "admin" && !u.admin) return false;
+      if (roleFilter === "none" && (u.admin || u.roles.length > 0))
+        return false;
+      if (
+        roleFilter &&
+        roleFilter !== "admin" &&
+        roleFilter !== "none" &&
+        !u.roles.some((r) => r.id === roleFilter)
+      )
+        return false;
+      if (terms.length === 0) return true;
+      const hay = [
+        u.name,
+        u.email,
+        roleText(u),
+        u.joined,
+        u.banned ? "banned" : "",
+        u.emailVerified ? "" : "unverified",
+        u.tickets > 0 ? "ticket" : "no ticket",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return terms.every((t) => hay.includes(t));
+    };
+    const out = rows.filter(matches);
+    out.sort((a, b) => {
+      const c = compare(a, b, sort.key);
+      return sort.dir === "asc" ? c : -c;
+    });
+    return out;
+  }, [rows, query, roleFilter, sort]);
+
+  const toggleSort = (key: SortKey) =>
+    setSort((s) =>
+      s.key === key
+        ? { key, dir: s.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: key === "joined" || key === "tickets" ? "desc" : "asc" },
+    );
+
   const run = (userId: string, action: () => Promise<Result>) => {
     setBusy((b) => new Set(b).add(userId));
     startTransition(async () => {
@@ -98,47 +182,79 @@ export default function UsersTable({
   };
 
   const canPickRoles = viewerCanEdit || viewerIsAdmin;
+  const filtered = query.trim() !== "" || roleFilter !== "";
 
   return (
     <div className="space-y-4">
-      <form method="get" className="flex max-w-md gap-2">
+      <div className="flex max-w-2xl flex-wrap gap-2">
         <input
           type="search"
-          name="q"
-          defaultValue={query}
-          placeholder="Search by email"
-          className={fieldClass}
+          value={query}
+          onChange={(e) => setQuery(e.currentTarget.value)}
+          placeholder="Search name, email, role…"
+          aria-label="Search accounts"
+          className={`${fieldClass} min-w-56 flex-1`}
         />
-        <button type="submit" className={smallButtonClass}>
-          Search
-        </button>
-      </form>
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.currentTarget.value)}
+          aria-label="Filter by role"
+          className={selectClass}
+          style={selectStyle}
+        >
+          <option value="">All roles</option>
+          <option value="admin">Admin</option>
+          {allRoles.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+          <option value="none">No roles</option>
+        </select>
+      </div>
       <p className="text-sm text-ink/60">
-        {total} {total === 1 ? "account" : "accounts"}
-        {query && ` matching “${query}”`}
-        {truncated && `, showing the newest ${rows.length}`}
+        {filtered
+          ? `${shown.length} of ${rows.length} accounts`
+          : `${rows.length} ${rows.length === 1 ? "account" : "accounts"}`}
         {error && <span className="ml-3 text-meeple">{error}</span>}
       </p>
       <div className="overflow-x-auto rounded-xl border border-line bg-white shadow-sm">
         <table className="w-full text-left text-sm">
           <thead className="text-xs tracking-wide text-ink/50 uppercase">
             <tr>
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Email</th>
-              <th className="px-4 py-2 font-medium">Ticket</th>
-              <th className="px-4 py-2 font-medium">Joined</th>
-              <th className="px-4 py-2 font-medium">Roles</th>
+              {COLUMNS.map((c) => {
+                const active = sort.key === c.key;
+                const Arrow =
+                  sort.dir === "asc" ? ChevronUpIcon : ChevronDownIcon;
+                return (
+                  <th
+                    key={c.key}
+                    className="px-4 py-2 font-medium"
+                    aria-sort={
+                      active
+                        ? sort.dir === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : undefined
+                    }
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleSort(c.key)}
+                      className={`inline-flex items-center gap-1 uppercase hover:text-navy ${active ? "text-navy" : ""}`}
+                    >
+                      {c.label}
+                      {active && <Arrow className="size-3.5" />}
+                    </button>
+                  </th>
+                );
+              })}
               <th className="px-4 py-2 font-medium" />
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {rows.map((u) => {
-              const names = [
-                u.admin ? "Admin" : null,
-                ...u.roles.map((r) => r.name),
-              ]
-                .filter(Boolean)
-                .join(", ");
+            {shown.map((u) => {
+              const names = roleText(u);
               const pickable = canPickRoles && !u.self;
               const pending = busy.has(u.id);
               return (
@@ -165,7 +281,12 @@ export default function UsersTable({
                   <td className="px-4 py-2">
                     <TicketCell id={u.id} count={u.tickets} />
                   </td>
-                  <td className="px-4 py-2 whitespace-nowrap">{u.joined}</td>
+                  <td
+                    className="px-4 py-2 whitespace-nowrap"
+                    title={u.joinedExact}
+                  >
+                    {u.joined}
+                  </td>
                   <td className="px-4 py-2 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1.5">
                       {pickable ? (
@@ -298,10 +419,10 @@ export default function UsersTable({
                 </tr>
               );
             })}
-            {rows.length === 0 && (
+            {shown.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-ink/50">
-                  No accounts{query && " match"}.
+                  No accounts{filtered && " match"}.
                 </td>
               </tr>
             )}

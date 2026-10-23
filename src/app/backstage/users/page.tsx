@@ -1,4 +1,4 @@
-import { count, desc, ilike } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { connection } from "next/server";
 import UsersTable, { type UserRow } from "./UsersTable";
 import ToolSignIn from "@/components/ToolSignIn";
@@ -7,13 +7,20 @@ import { teamAccess } from "@/lib/access";
 import { listRoles, rolesFor } from "@/lib/permission-store";
 import { claimedCounts } from "@/lib/ticket-store";
 
-const PAGE_SIZE = 100;
+// Every account comes down and the table sorts, filters and searches in the
+// browser; revisit once the list is in the thousands.
+const CAP = 2000;
 
 const joined = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
   year: "numeric",
-  timeZone: "UTC",
+  timeZone: "America/Los_Angeles",
+});
+const joinedExact = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "full",
+  timeStyle: "long",
+  timeZone: "America/Los_Angeles",
 });
 
 // Account-only, no password fallback: it lists every email.
@@ -30,51 +37,47 @@ export default async function AdminUsersPage(
   // Straight from the table: Better Auth's listUsers is admin-only, and
   // users.view holders needn't be admins.
   const { user } = schema;
-  const where = q
-    ? ilike(user.email, `%${q.replace(/[\\%_]/g, "\\$&")}%`)
-    : undefined;
-  const [users, [{ total }]] = await Promise.all([
-    getDb()
-      .select({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        emailVerified: user.emailVerified,
-        role: user.role,
-        banned: user.banned,
-        createdAt: user.createdAt,
-      })
-      .from(user)
-      .where(where)
-      .orderBy(desc(user.createdAt))
-      .limit(PAGE_SIZE),
-    getDb().select({ total: count() }).from(user).where(where),
-  ]);
+  const users = await getDb()
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      emailVerified: user.emailVerified,
+      role: user.role,
+      banned: user.banned,
+      createdAt: user.createdAt,
+    })
+    .from(user)
+    .orderBy(desc(user.createdAt))
+    .limit(CAP);
   const ids = users.map((u) => u.id);
   const [claimed, held, allRoles] = await Promise.all([
     claimedCounts(ids),
     rolesFor(ids),
     listRoles(),
   ]);
-  const rows: UserRow[] = users.map((u) => ({
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    emailVerified: u.emailVerified,
-    admin: u.role === "admin",
-    roles: held.get(u.id) ?? [],
-    banned: Boolean(u.banned),
-    joined: joined.format(new Date(u.createdAt)),
-    self: u.id === access.session.user.id,
-    tickets: claimed.get(u.id) ?? 0,
-  }));
+  const rows: UserRow[] = users.map((u) => {
+    const at = new Date(u.createdAt);
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      emailVerified: u.emailVerified,
+      admin: u.role === "admin",
+      roles: held.get(u.id) ?? [],
+      banned: Boolean(u.banned),
+      joined: joined.format(at),
+      joinedExact: joinedExact.format(at),
+      joinedAt: at.getTime(),
+      self: u.id === access.session.user.id,
+      tickets: claimed.get(u.id) ?? 0,
+    };
+  });
 
   return (
     <UsersTable
       rows={rows}
-      total={total}
-      query={q}
-      truncated={total > rows.length}
+      initialQuery={q}
       allRoles={allRoles
         .filter((r) => !r.auto)
         .map((r) => ({ id: r.id, name: r.name }))}
