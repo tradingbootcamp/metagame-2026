@@ -215,10 +215,10 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
           </thead>
           <tbody className="divide-y divide-line">
             {permissionGroups().flatMap(({ group, keys }) => [
-              <tr key={group} className="bg-cream/60">
+              <tr key={group}>
                 <td
                   colSpan={roles.length + 1}
-                  className={`${STICKY} bg-[#fffbf9] px-4 py-1.5 text-xs font-semibold tracking-wide text-navy uppercase`}
+                  className="sticky left-0 z-10 bg-peach/40 px-4 py-1.5 text-xs font-bold tracking-wide text-navy uppercase"
                 >
                   {group}
                   {GROUP_NOTES[group] && (
@@ -232,15 +232,12 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
                 const { label, description, level } = PERMISSIONS[key];
                 return (
                   <tr key={key}>
-                    <td className={`${STICKY} ${RULE} px-4 py-2`}>
-                      <span className="font-semibold">{label}</span>
+                    <td
+                      className={`${STICKY} ${RULE} px-4 py-2 whitespace-nowrap`}
+                      title={`${key} — ${description}`}
+                    >
+                      {label}
                       <LevelBadge level={level} className="ml-2" />
-                      <span className="ml-2 font-mono text-xs text-ink/40">
-                        {key}
-                      </span>
-                      <span className="block text-xs text-ink/60">
-                        {description}
-                      </span>
                     </td>
                     {roles.map((r) => (
                       <td key={r.id} className="px-3 py-2 align-top">
