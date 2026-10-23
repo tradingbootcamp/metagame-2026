@@ -15,13 +15,13 @@
 // only when the checkout's migrations match what the parent branch has applied
 // (run it from origin/main).
 //
-// Every seeded account signs in with the password "metagame-dev":
-//   admin@example.com      role admin (superuser bypass)
-//   grants@example.com     per-user grants: tickets.view, links.manage
-//   host@example.com       "Schedule team" role; hosts three sessions
-//   attendee@example.com   claimed ticket, RSVPs, bookmarks
-//   newcomer@example.com   unclaimed purchase under their email
-//   banned@example.com     banned
+// Every seeded account signs in with the password "metagame":
+//   admin@metagame.games      role admin (superuser bypass)
+//   grants@metagame.games     per-user grants: tickets.view, links.manage
+//   host@metagame.games       "Schedule team" role; hosts three sessions
+//   attendee@metagame.games   claimed ticket, RSVPs, bookmarks
+//   newcomer@metagame.games   unclaimed purchase under their email
+//   banned@metagame.games     banned
 //
 // Not seeded: promo codes and tracking links live in Stripe and Airtable,
 // not Postgres; api keys and sessions are minted by signing in.
@@ -65,7 +65,7 @@ const sql = neon(url);
 
 // Matches better-auth's scrypt settings (src/lib/auth.ts leaves the default
 // hasher). Fixed salt keeps the hash, and so the upsert, deterministic.
-const PASSWORD = "metagame-dev";
+const PASSWORD = "metagame";
 const SALT = "5eed5eed5eed5eed5eed5eed5eed5eed";
 const passwordHash =
   SALT +
@@ -269,40 +269,40 @@ const ticket = (payment_id, rest) => ({
 
 const tickets = [
   ticket("pi_seed_paid_claimed", {
-    purchaser_email: "attendee@example.com",
+    purchaser_email: "attendee@metagame.games",
     purchaser_name: "Seed Attendee",
     owner_user_id: users.attendee.id,
     claimed_at: "2026-10-01T12:00:00Z",
   }),
   ticket("pi_seed_paid_unclaimed", {
-    purchaser_email: "newcomer@example.com",
+    purchaser_email: "newcomer@metagame.games",
     purchaser_name: "Seed Newcomer",
   }),
   ticket("pi_seed_pending", {
     status: "pending",
     tier: "Day pass",
     amount_cents: 15000,
-    purchaser_email: "pending@example.com",
+    purchaser_email: "pending@metagame.games",
   }),
   ticket("pi_seed_failed", {
     status: "failed",
-    purchaser_email: "failed@example.com",
+    purchaser_email: "failed@metagame.games",
   }),
   ticket("on_seed_underpaid", {
     source: "opennode",
     status: "underpaid",
     amount_cents: 44000,
-    purchaser_email: "underpaid@example.com",
+    purchaser_email: "underpaid@metagame.games",
   }),
   ticket("on_seed_paid", {
     source: "opennode",
-    purchaser_email: "bitcoiner@example.com",
+    purchaser_email: "bitcoiner@metagame.games",
   }),
   ...[1, 2, 3].map((n) =>
     ticket(`pi_seed_pack:ticket:${n}`, {
       tier: "Family & Friends Pack",
       amount_cents: 40000,
-      purchaser_email: "host@example.com",
+      purchaser_email: "host@metagame.games",
       purchaser_name: "Seed Host",
       owner_user_id: n === 1 ? users.host.id : null,
       claimed_at: n === 1 ? "2026-10-02T12:00:00Z" : null,
@@ -313,13 +313,13 @@ const tickets = [
     source: "admin",
     amount_cents: 0,
     coupon_code: "SEEDCOMP",
-    purchaser_email: "grants@example.com",
+    purchaser_email: "grants@metagame.games",
     owner_user_id: users.grants.id,
     claimed_at: "2026-10-03T12:00:00Z",
   }),
   ticket("pi_seed_test", {
     test: true,
-    purchaser_email: "tester@example.com",
+    purchaser_email: "tester@metagame.games",
   }),
 ];
 
@@ -333,7 +333,7 @@ counts.user = await upsert(
   Object.values(users).map((u) => ({
     id: u.id,
     name: u.name,
-    email: `${u.id.replace("seed-", "")}@example.com`,
+    email: `${u.id.replace("seed-", "")}@metagame.games`,
     email_verified: true,
     role: u.role ?? "user",
     banned: u.banned ?? false,
