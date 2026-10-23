@@ -88,8 +88,8 @@ function ticketCode(paymentId) {
 
 const uuid = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 // Pacific time on the event weekend.
-const at = (day, hour) =>
-  new Date(Date.UTC(2026, 10, day, hour + 8)).toISOString();
+const at = (day, hour, minutes = 0) =>
+  new Date(Date.UTC(2026, 10, day, hour + 8, minutes)).toISOString();
 
 /** Insert rows, updating every non-key column on conflict. */
 async function upsert(table, keys, rows) {
@@ -104,6 +104,27 @@ async function upsert(table, keys, rows) {
        on conflict (${keys.map((k) => `"${k}"`).join(", ")})
        ${update.length ? `do update set ${update.join(", ")}` : "do nothing"}`,
       Object.values(row),
+    );
+  }
+  return rows.length;
+}
+
+// rsvps has a BEFORE INSERT capacity trigger that fires ahead of conflict
+// resolution, so a plain upsert fails on a full session once rows exist.
+async function upsertRsvps(rows) {
+  for (const { session_id, user_id, status } of rows) {
+    await sql.query(
+      `insert into rsvps (session_id, user_id, status)
+       select $1::uuid, $2::text, $3::rsvp_status
+       where not exists (
+         select 1 from rsvps where session_id = $1 and user_id = $2
+       )`,
+      [session_id, user_id, status],
+    );
+    await sql.query(
+      `update rsvps set status = $3
+       where session_id = $1 and user_id = $2 and status <> $3`,
+      [session_id, user_id, status],
     );
   }
   return rows.length;
@@ -161,7 +182,457 @@ const locations = {
   hall: { id: uuid(1), name: "Seed Hall", capacity: 80, display_order: 1 },
   lounge: { id: uuid(2), name: "Seed Lounge", capacity: 20, display_order: 2 },
   garden: { id: uuid(3), name: "Seed Garden", capacity: 40, display_order: 3 },
+  study: { id: uuid(4), name: "Seed Study", capacity: 12, display_order: 4 },
+  dome: { id: uuid(5), name: "Seed Dome", capacity: 60, display_order: 5 },
+  rooftop: {
+    id: uuid(6),
+    name: "Seed Rooftop",
+    capacity: 25,
+    display_order: 6,
+  },
 };
+
+// The published weekend (Fri Nov 6 – Sun Nov 8), on top of the hand-made
+// sessions below: [id, day, hour, minutes, room, category, title, blurb, ages, cap, extra].
+const program = [
+  [
+    107,
+    6,
+    9,
+    60,
+    "dome",
+    "other",
+    "Registration & Breakfast Games",
+    "Badges, pastries, and a 500-piece jigsaw race.",
+    "all",
+    60,
+  ],
+  [
+    108,
+    6,
+    11,
+    90,
+    "lounge",
+    "workshop",
+    "Build a Prediction Market in an Hour",
+    "Spreadsheets, bad priors, worse calibration.",
+    "adults",
+    20,
+  ],
+  [
+    109,
+    6,
+    11,
+    120,
+    "garden",
+    "game",
+    "Capture the Flag: Bayesian Edition",
+    "Two teams, one flag, priors updated on the fly.",
+    "all",
+    40,
+    { megagame_integration_level: "low_context_rewards" },
+  ],
+  [
+    110,
+    6,
+    13,
+    60,
+    "hall",
+    "talk",
+    "The History of Cheating at Cards",
+    "From marked decks to shuffle tracking.",
+    "all",
+    80,
+  ],
+  [
+    111,
+    6,
+    14,
+    120,
+    "study",
+    "workshop",
+    "Cryptic Crosswords for the Terrified",
+    "Twelve clues, zero judgement.",
+    "all",
+    12,
+    { min_capacity: 3 },
+  ],
+  [
+    112,
+    6,
+    15,
+    120,
+    "dome",
+    "game",
+    "Diplomacy Speed Round",
+    "Seven players, fifteen-minute turns, no friendships.",
+    "adults",
+    42,
+  ],
+  [
+    113,
+    6,
+    16,
+    60,
+    "rooftop",
+    "other",
+    "Sunset Tea & Unconference Pitches",
+    "Pitch a Sunday session in sixty seconds.",
+    "all",
+    25,
+  ],
+  [
+    114,
+    6,
+    19,
+    180,
+    "hall",
+    "game",
+    "Megagame Briefing: The Orchard Accords",
+    "Faction leads, read your sealed envelopes.",
+    "all",
+    80,
+    { megagame_integration_level: "deep" },
+  ],
+  [
+    115,
+    6,
+    21,
+    120,
+    "lounge",
+    "game",
+    "Werewolf After Dark",
+    "The classic, with a moderator who holds grudges.",
+    "adults",
+    20,
+  ],
+  [
+    116,
+    7,
+    8,
+    60,
+    "garden",
+    "other",
+    "Morning Run: Fog of War",
+    "A 5k where the route is revealed one checkpoint at a time.",
+    "all",
+    30,
+  ],
+  [
+    117,
+    7,
+    10,
+    90,
+    "hall",
+    "talk",
+    "Why Your Board Game Prototype Is Boring",
+    "A design critique panel, by request only.",
+    "all",
+    80,
+  ],
+  [
+    118,
+    7,
+    10,
+    120,
+    "dome",
+    "game",
+    "Escape Room: The Librarian's Lament",
+    "Two rooms, one key, forty minutes per team.",
+    "all",
+    16,
+    { min_capacity: 4, needs: "Padlocks, a red herring" },
+  ],
+  [
+    119,
+    7,
+    10,
+    60,
+    "study",
+    "workshop",
+    "Teaching Kids Go",
+    "Nine-by-nine boards, no stones thrown.",
+    "kids",
+    12,
+  ],
+  [
+    120,
+    7,
+    12,
+    60,
+    "rooftop",
+    "other",
+    "Lunch: Blind Taste Test Tournament",
+    "Rank the hot sauces. Then rank your rankings.",
+    "all",
+    25,
+  ],
+  [
+    121,
+    7,
+    13,
+    120,
+    "lounge",
+    "talk",
+    "Mechanism Design for Potlucks",
+    "How to get people to bring the dish you want.",
+    "all",
+    20,
+  ],
+  [
+    122,
+    7,
+    13,
+    180,
+    "hall",
+    "game",
+    "Megagame: The Orchard Accords, Turns 1–3",
+    "Trade, scheme, and watch the orchard map change.",
+    "all",
+    80,
+    { megagame_integration_level: "deep" },
+  ],
+  [
+    123,
+    7,
+    16,
+    60,
+    "dome",
+    "talk",
+    "Lightning Talks: Things I Was Wrong About",
+    "Five minutes each, no slides allowed.",
+    "all",
+    60,
+  ],
+  [
+    124,
+    7,
+    17,
+    60,
+    "study",
+    "workshop",
+    "Shuffle Tracking Lab",
+    "Hands-on follow-up to the cheating talk; bring a deck.",
+    "adults",
+    12,
+  ],
+  [
+    125,
+    7,
+    20,
+    120,
+    "dome",
+    "game",
+    "Pub Quiz: Metagame Edition",
+    "Rounds on game theory, campus trivia, and each other.",
+    "adults",
+    60,
+  ],
+  [
+    126,
+    7,
+    20,
+    120,
+    "garden",
+    "game",
+    "Night Puzzle Hunt",
+    "Headlamps provided; answers are not.",
+    "all",
+    40,
+    { megagame_integration_level: "puzzle_and_rewards" },
+  ],
+  [
+    127,
+    8,
+    9,
+    60,
+    "rooftop",
+    "other",
+    "Puzzle Hunt Debrief",
+    "What the setters meant, what you did instead.",
+    "all",
+    25,
+  ],
+  [
+    128,
+    8,
+    10,
+    120,
+    "hall",
+    "game",
+    "Megagame: The Orchard Accords, Finale",
+    "The envelopes are opened. Someone owns the orchard.",
+    "all",
+    80,
+    { megagame_integration_level: "deep" },
+  ],
+  [
+    129,
+    8,
+    11,
+    60,
+    "study",
+    "workshop",
+    "Origami Dice",
+    "Fold a d6; a d20 for the brave.",
+    "kids",
+    12,
+  ],
+  [
+    130,
+    8,
+    12,
+    60,
+    "lounge",
+    "talk",
+    "Calibration Game Results",
+    "Who guessed best all weekend, and by how much.",
+    "all",
+    20,
+  ],
+  [
+    131,
+    8,
+    13,
+    120,
+    "dome",
+    "game",
+    "Unconference Block",
+    "Whatever got pitched on Friday.",
+    "all",
+    60,
+    { verdict: "unconference_schedule" },
+  ],
+  [
+    132,
+    8,
+    14,
+    60,
+    "garden",
+    "game",
+    "Kids vs Grownups Relay",
+    "A relay. The kids usually win.",
+    "all",
+    40,
+  ],
+  [
+    133,
+    8,
+    15,
+    60,
+    "hall",
+    "talk",
+    "Closing Ceremony & Awards",
+    "Prizes, confessions, and the last hot sauce.",
+    "all",
+    80,
+  ],
+  [
+    134,
+    8,
+    16,
+    120,
+    "garden",
+    "other",
+    "Teardown & Pickup Soccer",
+    "Fold a chair, kick a ball.",
+    "all",
+    40,
+  ],
+].map(
+  ([
+    n,
+    day,
+    hour,
+    minutes,
+    room,
+    category,
+    title,
+    description,
+    ages,
+    cap,
+    extra,
+  ]) => ({
+    id: uuid(n),
+    slug: `seed-${title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")}`,
+    title,
+    description,
+    category,
+    starts_at: at(day, hour),
+    ends_at: at(day, hour, minutes),
+    location_id: locations[room].id,
+    max_capacity: cap,
+    ages,
+    status: "published",
+    phase: "ready",
+    verdict: "confirmed",
+    ...extra,
+  }),
+);
+
+// Proposals still in the pipeline, each at a different phase.
+const pipeline = [
+  [
+    135,
+    "Hexcrawl Design Clinic",
+    "workshop",
+    "deciding",
+    "probably",
+    "free_ticket",
+    "willing",
+  ],
+  [
+    136,
+    "Timeshare Pitch (Interactive)",
+    "other",
+    "declined",
+    "rejected",
+    "no_comp",
+    "not_a_fit",
+  ],
+  [
+    137,
+    "Sealed-Bid Auction Night",
+    "game",
+    "notifying",
+    "confirmed",
+    "free_ticket_flights",
+    "excited",
+  ],
+  [
+    138,
+    "Mahjong for Beginners",
+    "game",
+    "shepherding",
+    "probably",
+    "no_comp",
+    "neutral",
+  ],
+].map(
+  ([n, title, category, phase, verdict, speaker_tier, megagame_interest]) => ({
+    id: uuid(n),
+    slug: `seed-${title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")}`,
+    title,
+    description: `Proposal #${n}; ${phase}.`,
+    category,
+    status: "draft",
+    airtable_rfp_record_id: `recSEED${String(n).padStart(8, "0")}`,
+    shepherd_user_id: n % 2 ? users.grants.id : users.admin.id,
+    phase,
+    verdict,
+    speaker_tier,
+    megagame_interest,
+    requested_duration: "90 minutes",
+    marketing_consent: true,
+    discord_status: "needs_role",
+  }),
+);
 
 const sessions = [
   {
@@ -264,7 +735,17 @@ const sessions = [
     speaker_tier: "no_comp",
     megagame_interest: "excited",
   },
+  ...program,
+  ...pipeline,
 ];
+
+// Crowd members host the generated sessions; every fourth gets a co-host.
+const crowdHosts = [...program, ...pipeline].flatMap((s, k) => [
+  { session_id: s.id, position: 0, user_id: crowd[(k * 13) % 100].id },
+  ...(k % 4 === 0
+    ? [{ session_id: s.id, position: 1, user_id: crowd[(k * 17 + 5) % 100].id }]
+    : []),
+]);
 
 const ticket = (payment_id, rest) => ({
   payment_id,
@@ -365,6 +846,10 @@ fill(101, (u) => u.i % 5 !== 0, 2);
 fill(102, (u) => u.i % 7 === 0, 1);
 fill(103, (u) => u.i % 3 === 0, 1);
 fill(104, (u) => u.i % 10 === 0, 0);
+// Interest varies by session: between a tenth and half of the crowd.
+program.forEach((s, k) =>
+  fill(Number(s.id.slice(-3)), (u) => (u.i * 7 + k) % 11 < 1 + (k % 5), 0),
+);
 
 const counts = {};
 
@@ -462,20 +947,17 @@ counts.session_hosts = await upsert(
     { session_id: uuid(104), position: 0, user_id: users.attendee.id },
     { session_id: uuid(105), position: 0, user_id: users.newcomer.id },
     { session_id: uuid(106), position: 0, user_id: users.grants.id },
+    ...crowdHosts,
   ],
 );
-counts.rsvps = await upsert(
-  "rsvps",
-  ["session_id", "user_id"],
-  [
-    { session_id: uuid(101), user_id: users.attendee.id, status: "going" },
-    { session_id: uuid(101), user_id: users.newcomer.id, status: "going" },
-    { session_id: uuid(102), user_id: users.attendee.id, status: "waitlist" },
-    { session_id: uuid(102), user_id: users.grants.id, status: "going" },
-    { session_id: uuid(103), user_id: users.attendee.id, status: "going" },
-    ...crowdRsvps,
-  ],
-);
+counts.rsvps = await upsertRsvps([
+  { session_id: uuid(101), user_id: users.attendee.id, status: "going" },
+  { session_id: uuid(101), user_id: users.newcomer.id, status: "going" },
+  { session_id: uuid(102), user_id: users.attendee.id, status: "waitlist" },
+  { session_id: uuid(102), user_id: users.grants.id, status: "going" },
+  { session_id: uuid(103), user_id: users.attendee.id, status: "going" },
+  ...crowdRsvps,
+]);
 counts.bookmarks = await upsert(
   "bookmarks",
   ["session_id", "user_id"],
@@ -488,6 +970,11 @@ counts.bookmarks = await upsert(
     ...crowd
       .filter((u) => u.i % 9 === 2)
       .map((u) => ({ session_id: uuid(102), user_id: u.id })),
+    ...program.flatMap((s, k) =>
+      crowd
+        .filter((u) => (u.i * 5 + k) % 13 === 0)
+        .map((u) => ({ session_id: s.id, user_id: u.id })),
+    ),
   ],
 );
 
