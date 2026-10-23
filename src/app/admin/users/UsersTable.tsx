@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDownIcon, TicketIcon } from "lucide-react";
+import { ChevronDownIcon, ShieldCheckIcon, TicketIcon } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { removeUser, setBanned, setRole, type Result } from "./actions";
@@ -109,7 +109,7 @@ export default function UsersTable({
               <th className="px-4 py-2 font-medium">Email</th>
               <th className="px-4 py-2 font-medium">Ticket</th>
               <th className="px-4 py-2 font-medium">Joined</th>
-              <th className="px-4 py-2 font-medium">Access</th>
+              <th className="px-4 py-2 font-medium">Roles</th>
               <th className="px-4 py-2 font-medium" />
             </tr>
           </thead>
@@ -135,28 +135,32 @@ export default function UsersTable({
                 </td>
                 <td className="px-4 py-2 whitespace-nowrap">{u.joined}</td>
                 <td className="px-4 py-2 whitespace-nowrap">
-                  {u.banned ? (
-                    <span className="rounded bg-meeple/10 px-1.5 py-0.5 text-xs font-semibold text-meeple">
-                      Banned
-                    </span>
-                  ) : u.admin ? (
-                    <span className="rounded bg-navy/10 px-1.5 py-0.5 text-xs font-semibold text-navy">
-                      Admin
-                    </span>
-                  ) : u.roles.length > 0 ? (
-                    <span className="flex flex-wrap gap-1">
-                      {u.roles.map((r) => (
-                        <span
-                          key={r.id}
-                          className="rounded bg-sky px-1.5 py-0.5 text-xs font-semibold text-navy"
-                        >
-                          {r.name}
-                        </span>
-                      ))}
-                    </span>
-                  ) : (
-                    <span className="text-ink/50">—</span>
-                  )}
+                  <span className="flex flex-wrap items-center gap-1">
+                    {u.admin && (
+                      <span title="Admin" className="inline-flex">
+                        <ShieldCheckIcon
+                          className="size-4 text-navy"
+                          aria-label="Admin"
+                        />
+                      </span>
+                    )}
+                    {u.roles.map((r) => (
+                      <span
+                        key={r.id}
+                        className="rounded bg-sky px-1.5 py-0.5 text-xs font-semibold text-navy"
+                      >
+                        {r.name}
+                      </span>
+                    ))}
+                    {u.banned && (
+                      <span className="rounded bg-meeple/10 px-1.5 py-0.5 text-xs font-semibold text-meeple">
+                        Banned
+                      </span>
+                    )}
+                    {!u.admin && !u.banned && u.roles.length === 0 && (
+                      <span className="text-ink/50">—</span>
+                    )}
+                  </span>
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
                   {!u.self && (canPickRoles || viewerCanDelete) && (
