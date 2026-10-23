@@ -11,7 +11,7 @@ import {
   useCopy,
 } from "../ui";
 import Combobox from "./Combobox";
-import QrDownload, { QrControls, QrPreview, useQr } from "./QrDownload";
+import QrDownload from "./QrDownload";
 import {
   defaultCampaign,
   GO_PREFIX,
@@ -377,7 +377,6 @@ function Field({
 
 function Result({ url, link }: { url: string; link: TrackingLink }) {
   const { status, copy } = useCopy();
-  const qr = useQr(url, link.slug);
   const attempted = useRef(false);
   useEffect(() => {
     if (attempted.current) return;
@@ -412,17 +411,13 @@ function Result({ url, link }: { url: string; link: TrackingLink }) {
           >
             Open
           </a>
-          <QrControls qr={qr} label="Download QR" />
         </div>
         <p className="mt-3 text-xs text-ink/60">
           → {link.destination} · {link.source} / {link.medium} / {link.campaign}
           {link.placement && ` / ${link.placement}`}
         </p>
       </div>
-      <div className="flex flex-col items-center gap-1 max-sm:w-full">
-        <QrPreview url={url} style={qr.style} px={132} />
-        <span className="text-[11px] text-ink/55">Scans to the /go/ link</span>
-      </div>
+      <QrDownload url={url} slug={link.slug} />
     </div>
   );
 }
@@ -586,7 +581,7 @@ function Row({
       </div>
       {showQr && (
         <div className="basis-full">
-          <QrDownload url={url} slug={link.slug} />
+          <QrDownload url={url} slug={link.slug} compact />
         </div>
       )}
     </li>

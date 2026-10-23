@@ -79,10 +79,67 @@ const qrOptions = (url: string, style: Style, size: number): Options => {
 
 const loadLib = () => import("qr-code-styling").then((m) => m.default);
 
-export function useQr(url: string, slug: string) {
-  const [size, setSize] = useState<number>(1024);
-  const [style, setStyle] = useState<Style>("square");
+// Size and style are shared by every QR on the page and survive reloads.
+const PREFS_KEY = "backstage-links-qr";
+type Prefs = { size: number; style: Style };
+const defaultPrefs: Prefs = { size: 1024, style: "square" };
+
+const readPrefs = (): Prefs => {
+  if (typeof window === "undefined") return defaultPrefs;
+  try {
+    const raw = JSON.parse(window.localStorage.getItem(PREFS_KEY) ?? "{}");
+    return {
+      size: SIZES.some((s) => s.px === raw.size) ? raw.size : defaultPrefs.size,
+      style: raw.style in STYLES ? raw.style : defaultPrefs.style,
+    };
+  } catch {
+    return defaultPrefs;
+  }
+};
+
+const usePrefs = () => {
+  const [prefs, setPrefs] = useState(readPrefs);
+  const update = (patch: Partial<Prefs>) =>
+    setPrefs((prev) => {
+      const next = { ...prev, ...patch };
+      try {
+        window.localStorage.setItem(PREFS_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  return [prefs, update] as const;
+};
+
+const solidSmallButtonClass =
+  "rounded-md bg-meeple px-2.5 py-1 text-sm font-semibold text-white transition-colors hover:bg-meeple-dark disabled:opacity-60";
+const smallSelectClass = cn(selectClass, "rounded-md py-1 text-sm");
+
+export default function QrDownload({
+  url,
+  slug,
+  compact,
+}: {
+  url: string;
+  slug: string;
+  compact?: boolean;
+}) {
+  const [{ size, style }, update] = usePrefs();
   const [busy, setBusy] = useState(false);
+  const px = compact ? 96 : 132;
+
+  const preview = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void loadLib().then((QRCodeStyling) => {
+      const el = preview.current;
+      if (cancelled || !el) return;
+      el.replaceChildren();
+      new QRCodeStyling(qrOptions(url, style, px * 2)).append(el);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [url, style, px]);
 
   const download = async () => {
     setBusy(true);
@@ -97,107 +154,50 @@ export function useQr(url: string, slug: string) {
     }
   };
 
-  return { url, size, setSize, style, setStyle, busy, download };
-}
-type Qr = ReturnType<typeof useQr>;
-
-export function QrPreview({
-  url,
-  style,
-  px,
-  className,
-}: {
-  url: string;
-  style: Style;
-  px: number;
-  className?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    let cancelled = false;
-    void loadLib().then((QRCodeStyling) => {
-      const el = ref.current;
-      if (cancelled || !el) return;
-      el.replaceChildren();
-      new QRCodeStyling(qrOptions(url, style, px * 2)).append(el);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [url, style, px]);
-
   return (
-    <div
-      ref={ref}
-      role="img"
-      aria-label={`QR code for ${url}`}
-      style={{ width: px, height: px }}
-      className={cn(
-        "shrink-0 rounded-lg border border-line bg-white p-1.5 [&>canvas]:h-full [&>canvas]:w-full",
-        className,
-      )}
-    />
-  );
-}
-
-export const solidSmallButtonClass =
-  "rounded-md bg-meeple px-2.5 py-1 text-sm font-semibold text-white transition-colors hover:bg-meeple-dark disabled:opacity-60";
-const smallSelectClass = cn(selectClass, "rounded-md py-1 text-sm");
-
-export function QrControls({ qr, label }: { qr: Qr; label: string }) {
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => void qr.download()}
-        disabled={qr.busy}
-        className={solidSmallButtonClass}
-      >
-        {qr.busy ? "Rendering…" : label}
-      </button>
-      <select
-        aria-label="QR size"
-        value={qr.size}
-        onChange={(e) => qr.setSize(Number(e.target.value))}
-        className={smallSelectClass}
-        style={selectStyle}
-      >
-        {SIZES.map((s) => (
-          <option key={s.px} value={s.px}>
-            {s.label}
-          </option>
-        ))}
-      </select>
-      <select
-        aria-label="QR style"
-        value={qr.style}
-        onChange={(e) => qr.setStyle(e.target.value as Style)}
-        className={smallSelectClass}
-        style={selectStyle}
-      >
-        {(Object.keys(STYLES) as Style[]).map((k) => (
-          <option key={k} value={k}>
-            {STYLES[k].label}
-          </option>
-        ))}
-      </select>
-    </>
-  );
-}
-
-export default function QrDownload({
-  url,
-  slug,
-}: {
-  url: string;
-  slug: string;
-}) {
-  const qr = useQr(url, slug);
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <QrPreview url={url} style={qr.style} px={96} />
-      <div className="flex flex-wrap items-center gap-2">
-        <QrControls qr={qr} label="Download PNG" />
+    <div className="flex items-start gap-3">
+      <div
+        ref={preview}
+        role="img"
+        aria-label={`QR code for ${url}`}
+        style={{ width: px, height: px }}
+        className="shrink-0 rounded-lg border border-line bg-white p-1.5 [&>canvas]:h-full [&>canvas]:w-full"
+      />
+      <div className="flex flex-col items-start gap-2">
+        <select
+          aria-label="QR style"
+          value={style}
+          onChange={(e) => update({ style: e.target.value as Style })}
+          className={smallSelectClass}
+          style={selectStyle}
+        >
+          {(Object.keys(STYLES) as Style[]).map((k) => (
+            <option key={k} value={k}>
+              {STYLES[k].label}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="QR size"
+          value={size}
+          onChange={(e) => update({ size: Number(e.target.value) })}
+          className={smallSelectClass}
+          style={selectStyle}
+        >
+          {SIZES.map((s) => (
+            <option key={s.px} value={s.px}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => void download()}
+          disabled={busy}
+          className={solidSmallButtonClass}
+        >
+          {busy ? "Rendering…" : compact ? "Download PNG" : "Download QR"}
+        </button>
       </div>
     </div>
   );
