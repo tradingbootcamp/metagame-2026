@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { assignRole, setGrant, type Result } from "./actions";
+import { LevelBadge } from "../../PermissionLevel";
 import {
   describeSource,
-  PERMISSION_KEYS,
+  permissionGroups,
   PERMISSIONS,
   type Explanation,
   type Permission,
@@ -100,40 +101,54 @@ export default function AccessPanel({ access }: { access: AccessView }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {PERMISSION_KEYS.map((key) => {
-              const { effective, sources } = access.explanation[key];
-              return (
-                <tr key={key} className={effective ? "" : "text-ink/50"}>
-                  <td className="px-3 py-2">
-                    <span className="font-semibold">
-                      {PERMISSIONS[key].label}
-                    </span>
-                    <span className="ml-2 font-mono text-xs text-ink/40">
-                      {key}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">{effective ? "Yes" : "No"}</td>
-                  <td className="px-3 py-2 text-xs">
-                    {sources.length === 0
-                      ? "—"
-                      : sources.map(describeSource).join(", ")}
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      aria-label={`Grant ${PERMISSIONS[key].label}`}
-                      checked={access.grants.includes(key)}
-                      disabled={locked}
-                      onChange={(e) => {
-                        const on = e.currentTarget.checked;
-                        run(() => setGrant(access.userId, key, on));
-                      }}
-                      className="size-4 accent-meeple"
-                    />
-                  </td>
-                </tr>
-              );
-            })}
+            {permissionGroups().flatMap(({ group, keys }) => [
+              <tr key={group} className="bg-cream/60">
+                <td
+                  colSpan={4}
+                  className="px-3 py-1.5 text-xs font-semibold tracking-wide text-navy uppercase"
+                >
+                  {group}
+                </td>
+              </tr>,
+              ...keys.map((key) => {
+                const { effective, sources } = access.explanation[key];
+                return (
+                  <tr key={key} className={effective ? "" : "text-ink/50"}>
+                    <td className="px-3 py-2">
+                      <span className="font-semibold">
+                        {PERMISSIONS[key].label}
+                      </span>
+                      <LevelBadge
+                        level={PERMISSIONS[key].level}
+                        className="ml-2"
+                      />
+                      <span className="ml-2 font-mono text-xs text-ink/40">
+                        {key}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">{effective ? "Yes" : "No"}</td>
+                    <td className="px-3 py-2 text-xs">
+                      {sources.length === 0
+                        ? "—"
+                        : sources.map(describeSource).join(", ")}
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        aria-label={`Grant ${PERMISSIONS[key].label}`}
+                        checked={access.grants.includes(key)}
+                        disabled={locked}
+                        onChange={(e) => {
+                          const on = e.currentTarget.checked;
+                          run(() => setGrant(access.userId, key, on));
+                        }}
+                        className="size-4 accent-meeple"
+                      />
+                    </td>
+                  </tr>
+                );
+              }),
+            ])}
           </tbody>
         </table>
       </div>

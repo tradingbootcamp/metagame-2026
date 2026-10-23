@@ -4,7 +4,7 @@ import UsersTable, { type UserRow } from "./UsersTable";
 import ToolSignIn from "@/components/ToolSignIn";
 import { getDb, schema } from "@/db";
 import { teamAccess } from "@/lib/access";
-import { roleNamesFor } from "@/lib/permission-store";
+import { listRoles, rolesFor } from "@/lib/permission-store";
 import { claimedCounts } from "@/lib/ticket-store";
 
 const PAGE_SIZE = 100;
@@ -49,9 +49,10 @@ export default async function AdminUsersPage(props: PageProps<"/admin/users">) {
     getDb().select({ total: count() }).from(user).where(where),
   ]);
   const ids = users.map((u) => u.id);
-  const [claimed, roleNames] = await Promise.all([
+  const [claimed, held, allRoles] = await Promise.all([
     claimedCounts(ids),
-    roleNamesFor(ids),
+    rolesFor(ids),
+    listRoles(),
   ]);
   const rows: UserRow[] = users.map((u) => ({
     id: u.id,
@@ -59,7 +60,7 @@ export default async function AdminUsersPage(props: PageProps<"/admin/users">) {
     email: u.email,
     emailVerified: u.emailVerified,
     admin: u.role === "admin",
-    roles: roleNames.get(u.id) ?? [],
+    roles: held.get(u.id) ?? [],
     banned: Boolean(u.banned),
     joined: joined.format(new Date(u.createdAt)),
     self: u.id === access.session.user.id,
@@ -72,7 +73,9 @@ export default async function AdminUsersPage(props: PageProps<"/admin/users">) {
       total={total}
       query={q}
       truncated={total > rows.length}
+      allRoles={allRoles.map((r) => ({ id: r.id, name: r.name }))}
       viewerIsAdmin={access.admin}
+      viewerCanEdit={access.permissions.has("users.edit")}
       viewerCanDelete={access.permissions.has("users.delete")}
     />
   );

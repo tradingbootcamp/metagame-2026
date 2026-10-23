@@ -4,6 +4,7 @@ import {
   effectivePermissions,
   expand,
   explainPermissions,
+  permissionGroups,
   PERMISSION_KEYS,
   PERMISSIONS,
   type AccessInput,
@@ -100,5 +101,17 @@ describe("explainPermissions", () => {
     const got = explainPermissions(input({ admin: true, roles: [volunteer] }));
     expect(got["schedule.manage"].sources[0]).toEqual({ kind: "admin" });
     expect(got["schedule.manage"].effective).toBe(true);
+  });
+});
+
+describe("catalog order", () => {
+  it("keeps each area together, running view, edit, delete", () => {
+    const rank = { view: 0, edit: 1, delete: 2 } as const;
+    const groups = permissionGroups();
+    expect(new Set(groups.map((g) => g.group)).size).toBe(groups.length);
+    for (const { keys } of groups) {
+      const levels = keys.map((k) => rank[PERMISSIONS[k].level]);
+      expect(levels).toEqual([...levels].sort((a, b) => a - b));
+    }
   });
 });

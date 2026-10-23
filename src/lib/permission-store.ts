@@ -105,20 +105,23 @@ export async function userAccess(
   };
 }
 
-/** Role names per user, for the users table. */
-export async function roleNamesFor(
+/** Roles per user, for the users table. */
+export async function rolesFor(
   userIds: string[],
-): Promise<Map<string, string[]>> {
-  const out = new Map<string, string[]>();
+): Promise<Map<string, { id: string; name: string }[]>> {
+  const out = new Map<string, { id: string; name: string }[]>();
   if (userIds.length === 0) return out;
   const rows = await getDb()
-    .select({ userId: userRoles.userId, name: roles.name })
+    .select({ userId: userRoles.userId, id: roles.id, name: roles.name })
     .from(userRoles)
     .innerJoin(roles, eq(roles.id, userRoles.roleId))
     .where(inArray(userRoles.userId, userIds))
     .orderBy(asc(roles.name));
   for (const r of rows)
-    out.set(r.userId, [...(out.get(r.userId) ?? []), r.name]);
+    out.set(r.userId, [
+      ...(out.get(r.userId) ?? []),
+      { id: r.id, name: r.name },
+    ]);
   return out;
 }
 

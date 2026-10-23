@@ -10,7 +10,8 @@ import {
 } from "./actions";
 import { fieldClass, smallButtonClass } from "../ui";
 import type { Role } from "@/lib/permission-store";
-import { PERMISSION_KEYS, PERMISSIONS } from "@/lib/permissions";
+import { LevelBadge } from "../PermissionLevel";
+import { permissionGroups, PERMISSIONS } from "@/lib/permissions";
 
 export default function RolesTool({ roles }: { roles: Role[] }) {
   const [error, setError] = useState<string | null>(null);
@@ -105,37 +106,48 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {PERMISSION_KEYS.map((key) => {
-              const { label, description } = PERMISSIONS[key];
-              return (
-                <tr key={key}>
-                  <td className="px-4 py-2">
-                    <span className="font-semibold">{label}</span>
-                    <span className="ml-2 font-mono text-xs text-ink/40">
-                      {key}
-                    </span>
-                    <span className="block text-xs text-ink/60">
-                      {description}
-                    </span>
-                  </td>
-                  {roles.map((r) => (
-                    <td key={r.id} className="px-4 py-2 align-top">
-                      <input
-                        type="checkbox"
-                        aria-label={`${r.name}: ${label}`}
-                        checked={r.permissions.includes(key)}
-                        disabled={pending}
-                        onChange={(e) => {
-                          const on = e.currentTarget.checked;
-                          run(() => setRolePermission(r.id, key, on));
-                        }}
-                        className="size-4 accent-meeple"
-                      />
+            {permissionGroups().flatMap(({ group, keys }) => [
+              <tr key={group} className="bg-cream/60">
+                <td
+                  colSpan={roles.length + 1}
+                  className="px-4 py-1.5 text-xs font-semibold tracking-wide text-navy uppercase"
+                >
+                  {group}
+                </td>
+              </tr>,
+              ...keys.map((key) => {
+                const { label, description, level } = PERMISSIONS[key];
+                return (
+                  <tr key={key}>
+                    <td className="px-4 py-2">
+                      <span className="font-semibold">{label}</span>
+                      <LevelBadge level={level} className="ml-2" />
+                      <span className="ml-2 font-mono text-xs text-ink/40">
+                        {key}
+                      </span>
+                      <span className="block text-xs text-ink/60">
+                        {description}
+                      </span>
                     </td>
-                  ))}
-                </tr>
-              );
-            })}
+                    {roles.map((r) => (
+                      <td key={r.id} className="px-4 py-2 align-top">
+                        <input
+                          type="checkbox"
+                          aria-label={`${r.name}: ${label}`}
+                          checked={r.permissions.includes(key)}
+                          disabled={pending}
+                          onChange={(e) => {
+                            const on = e.currentTarget.checked;
+                            run(() => setRolePermission(r.id, key, on));
+                          }}
+                          className="size-4 accent-meeple"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              }),
+            ])}
           </tbody>
         </table>
         {roles.length === 0 && (

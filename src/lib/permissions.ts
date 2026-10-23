@@ -4,72 +4,123 @@
 // Adding a gate means adding its key here, nothing else. Keys with no gate
 // yet wait for their page: checkin.manage lands with the check-in page.
 
+/** Display only: how much a permission lets its holder change. */
+export type PermissionLevel = "view" | "edit" | "delete";
+
+// Grouped by area, and within an area in the order view, edit, delete; the
+// roles grid renders a heading per group, so labels name the action.
 export const PERMISSIONS = {
   "users.view": {
-    label: "Users",
-    description: "Browse accounts and see each one's roles and permissions.",
+    group: "Users",
+    level: "view",
+    label: "Browse accounts",
+    description:
+      "The account list and each one's roles, permissions and tickets.",
   },
   "users.edit": {
-    label: "Users: edit access",
-    description: "Assign roles and per-user permissions to other accounts.",
+    group: "Users",
+    level: "edit",
+    label: "Assign roles and grants",
+    description: "Change other accounts' roles and per-user permissions.",
     implies: ["users.view"],
   },
   "users.delete": {
-    label: "Users: delete",
+    group: "Users",
+    level: "delete",
+    label: "Delete accounts",
     description:
-      "Permanently delete non-admin accounts. Admin, ban and admin deletion stay admin-only.",
+      "Permanently delete non-admin accounts. Admin, bans and deleting an admin stay admin-only.",
     implies: ["users.view"],
   },
   "roles.manage": {
-    label: "Roles",
-    description: "Create roles and change which permissions each carries.",
+    group: "Roles",
+    level: "edit",
+    label: "Create and edit roles",
+    description: "Make roles and change which permissions each carries.",
   },
   "tickets.view": {
-    label: "Tickets",
-    description: "See every ticket with its buyer, holder and attendee.",
-  },
-  "schedule.manage": {
-    label: "Schedule",
-    description: "Edit rooms and sessions, on the admin grid and over the API.",
-    implies: ["schedule.preview"],
+    group: "Tickets",
+    level: "view",
+    label: "See every ticket",
+    description: "Each ticket with its buyer, holder and attendee.",
   },
   "schedule.preview": {
-    label: "Schedule preview",
-    description: "See the public schedule before launch.",
+    group: "Schedule",
+    level: "view",
+    label: "Preview before launch",
+    description: "See the public schedule before it opens.",
+  },
+  "schedule.manage": {
+    group: "Schedule",
+    level: "edit",
+    label: "Edit rooms and sessions",
+    description: "On the admin grid and over the API.",
+    implies: ["schedule.preview"],
   },
   "promo.manage": {
-    label: "Promo codes",
-    description: "Mint and disable comp and discount codes.",
+    group: "Promo codes",
+    level: "edit",
+    label: "Mint and disable codes",
+    description: "Comp and discount codes on Stripe or BTC.",
   },
   "links.manage": {
-    label: "Tracking links",
-    description: "Make short /go/ links.",
-  },
-  "api_keys.manage": {
-    label: "API keys",
-    description: "Mint and revoke API keys for any account.",
+    group: "Tracking links",
+    level: "edit",
+    label: "Make short links",
+    description: "Short /go/ links with UTM attribution.",
   },
   // Not enforced yet: the /account flow is META-4540.
   "api_keys.self": {
-    label: "Own API keys",
-    description: "Mint and revoke API keys for your own account.",
+    group: "API keys",
+    level: "edit",
+    label: "Keys for your own account",
+    description: "Mint and revoke your own API keys.",
+  },
+  "api_keys.manage": {
+    group: "API keys",
+    level: "edit",
+    label: "Keys for any account",
+    description:
+      "Mint and revoke anyone's API keys; keys for admins stay admin-only.",
   },
   "schema.view": {
-    label: "Database schema",
-    description: "See the database schema.",
+    group: "Database",
+    level: "view",
+    label: "See the database schema",
+    description: "Read-only, under /admin/schema.",
   },
   "submissions.grade": {
-    label: "Session grading",
+    group: "Grading",
+    level: "edit",
+    label: "Grade session submissions",
     description: "The speaker committee's rubric at /grade.",
   },
 } as const satisfies Record<
   string,
-  { label: string; description: string; implies?: readonly string[] }
+  {
+    group: string;
+    level: PermissionLevel;
+    label: string;
+    description: string;
+    implies?: readonly string[];
+  }
 >;
 
 export type Permission = keyof typeof PERMISSIONS;
 
 export const PERMISSION_KEYS = Object.keys(PERMISSIONS) as Permission[];
+
+/** The catalog in display order, one entry per area. */
+export function permissionGroups(): { group: string; keys: Permission[] }[] {
+  const out: { group: string; keys: Permission[] }[] = [];
+  for (const key of PERMISSION_KEYS) {
+    const { group } = PERMISSIONS[key];
+    const last = out.at(-1);
+    if (last?.group === group) last.keys.push(key);
+    else out.push({ group, keys: [key] });
+  }
+  return out;
+}
 
 export const isPermission = (value: unknown): value is Permission =>
   typeof value === "string" && Object.hasOwn(PERMISSIONS, value);
@@ -161,6 +212,6 @@ export function describeSource(source: Source): string {
     case "role":
       return `Role: ${source.role}`;
     case "implied":
-      return `Implied by ${PERMISSIONS[source.by].label}`;
+      return `Implied by ${PERMISSIONS[source.by].group}: ${PERMISSIONS[source.by].label}`;
   }
 }

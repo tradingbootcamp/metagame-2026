@@ -1,9 +1,10 @@
 "use client";
 
-import { TicketIcon } from "lucide-react";
+import { ChevronDownIcon, TicketIcon } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { removeUser, setBanned, setRole, type Result } from "./actions";
+import { assignRole } from "./[id]/actions";
 import { fieldClass, smallButtonClass } from "../ui";
 import { ticketBadge } from "@/lib/admin-tickets";
 import { Button } from "@/v2/components/ui/button";
@@ -14,13 +15,15 @@ import {
   DialogTitle,
 } from "@/v2/components/ui/dialog";
 
+export type RoleOption = { id: string; name: string };
+
 export type UserRow = {
   id: string;
   name: string;
   email: string;
   emailVerified: boolean;
   admin: boolean;
-  roles: string[];
+  roles: RoleOption[];
   banned: boolean;
   joined: string;
   /** The viewer's own row has no buttons. */
@@ -48,26 +51,35 @@ export default function UsersTable({
   total,
   query,
   truncated,
+  allRoles,
   viewerIsAdmin,
+  viewerCanEdit,
   viewerCanDelete,
 }: {
   rows: UserRow[];
   total: number;
   query: string;
   truncated: boolean;
+  allRoles: RoleOption[];
   /** Only `user.role = 'admin'` accounts may change the admin role and bans. */
   viewerIsAdmin: boolean;
+  /** `users.edit`: assign and remove roles. */
+  viewerCanEdit: boolean;
   /** `users.delete`; deleting an admin account still needs an admin. */
   viewerCanDelete: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [deleting, setDeleting] = useState<UserRow | null>(null);
+  const [promoting, setPromoting] = useState<UserRow | null>(null);
+  const [openRoles, setOpenRoles] = useState<string | null>(null);
 
   const run = (action: () => Promise<Result>) =>
     startTransition(async () => {
       setError((await action()).error ?? null);
     });
+
+  const canPickRoles = viewerCanEdit || viewerIsAdmin;
 
   return (
     <div className="space-y-4">
@@ -135,10 +147,10 @@ export default function UsersTable({
                     <span className="flex flex-wrap gap-1">
                       {u.roles.map((r) => (
                         <span
-                          key={r}
+                          key={r.id}
                           className="rounded bg-sky px-1.5 py-0.5 text-xs font-semibold text-navy"
                         >
-                          {r}
+                          {r.name}
                         </span>
                       ))}
                     </span>
@@ -147,33 +159,105 @@ export default function UsersTable({
                   )}
                 </td>
                 <td className="px-4 py-2 text-right whitespace-nowrap">
-                  {!u.self && (viewerIsAdmin || viewerCanDelete) && (
+                  {!u.self && (canPickRoles || viewerCanDelete) && (
                     <span className="inline-flex gap-2">
+                      {canPickRoles && (
+                        <span className="relative">
+                          <button
+                            type="button"
+                            disabled={pending}
+                            aria-haspopup="menu"
+                            aria-expanded={openRoles === u.id}
+                            onClick={() =>
+                              setOpenRoles(openRoles === u.id ? null : u.id)
+                            }
+                            className={`${smallButtonClass} inline-flex items-center gap-1`}
+                          >
+                            Roles
+                            <ChevronDownIcon className="size-3.5" />
+                          </button>
+                          {openRoles === u.id && (
+                            <>
+                              <button
+                                type="button"
+                                aria-label="Close"
+                                onClick={() => setOpenRoles(null)}
+                                className="fixed inset-0 z-10 cursor-default"
+                              />
+                              <div
+                                role="menu"
+                                className="absolute right-0 z-20 mt-1 min-w-48 rounded-lg border border-line bg-white p-2 text-left shadow-lg"
+                              >
+                                {viewerIsAdmin && (
+                                  <label className="flex items-center gap-2 rounded px-2 py-1 hover:bg-cream">
+                                    <input
+                                      type="checkbox"
+                                      checked={u.admin}
+                                      disabled={pending}
+                                      onChange={(e) => {
+                                        if (e.currentTarget.checked) {
+                                          setOpenRoles(null);
+                                          setPromoting(u);
+                                        } else {
+                                          run(() => setRole(u.id, "user"));
+                                        }
+                                      }}
+                                      className="size-4 accent-meeple"
+                                    />
+                                    <span className="font-semibold text-navy">
+                                      Admin
+                                    </span>
+                                    <span className="text-xs text-ink/50">
+                                      everything
+                                    </span>
+                                  </label>
+                                )}
+                                {allRoles.map((r) => (
+                                  <label
+                                    key={r.id}
+                                    className="flex items-center gap-2 rounded px-2 py-1 hover:bg-cream"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={u.roles.some(
+                                        (h) => h.id === r.id,
+                                      )}
+                                      disabled={pending || !viewerCanEdit}
+                                      onChange={(e) => {
+                                        const on = e.currentTarget.checked;
+                                        run(() => assignRole(u.id, r.id, on));
+                                      }}
+                                      className="size-4 accent-meeple"
+                                    />
+                                    {r.name}
+                                  </label>
+                                ))}
+                                {allRoles.length === 0 && (
+                                  <p className="px-2 py-1 text-xs text-ink/50">
+                                    No roles yet.{" "}
+                                    <Link
+                                      href="/admin/roles"
+                                      className="text-navy hover:underline"
+                                    >
+                                      Create one
+                                    </Link>
+                                    .
+                                  </p>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </span>
+                      )}
                       {viewerIsAdmin && (
-                        <>
-                          <button
-                            type="button"
-                            disabled={pending}
-                            onClick={() =>
-                              run(() =>
-                                setRole(u.id, u.admin ? "user" : "admin"),
-                              )
-                            }
-                            className={smallButtonClass}
-                          >
-                            {u.admin ? "Remove admin" : "Make admin"}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={pending}
-                            onClick={() =>
-                              run(() => setBanned(u.id, !u.banned))
-                            }
-                            className={smallButtonClass}
-                          >
-                            {u.banned ? "Unban" : "Ban"}
-                          </button>
-                        </>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => run(() => setBanned(u.id, !u.banned))}
+                          className={smallButtonClass}
+                        >
+                          {u.banned ? "Unban" : "Ban"}
+                        </button>
                       )}
                       {viewerCanDelete && (viewerIsAdmin || !u.admin) && (
                         <button
@@ -200,6 +284,45 @@ export default function UsersTable({
           </tbody>
         </table>
       </div>
+      <Dialog
+        open={promoting !== null}
+        onOpenChange={(o) => !o && setPromoting(null)}
+      >
+        <DialogContent className="flex max-w-[480px] flex-col gap-5 px-8 py-7">
+          <DialogTitle className="font-bebas text-2xl tracking-wide text-cream">
+            Make this person an admin?
+          </DialogTitle>
+          <DialogDescription className="text-base text-cream/80">
+            <span className="font-semibold text-cream">{promoting?.email}</span>{" "}
+            would hold every permission: grant and revoke admin, ban and delete
+            accounts, and everything the roles cover. For anything less than all
+            of it, give them a role instead.
+          </DialogDescription>
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setPromoting(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending}
+              onClick={() => {
+                if (!promoting) return;
+                const { id } = promoting;
+                setPromoting(null);
+                run(() => setRole(id, "admin"));
+              }}
+            >
+              Make admin
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={deleting !== null}
         onOpenChange={(o) => !o && setDeleting(null)}
