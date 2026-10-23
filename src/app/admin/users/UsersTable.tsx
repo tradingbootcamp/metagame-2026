@@ -78,15 +78,20 @@ export default function UsersTable({
   viewerCanDelete: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+  /** The row whose action is in flight; only that row's controls lock. */
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<UserRow | null>(null);
   const [promoting, setPromoting] = useState<UserRow | null>(null);
   const [openRoles, setOpenRoles] = useState<string | null>(null);
 
-  const run = (action: () => Promise<Result>) =>
+  const run = (userId: string, action: () => Promise<Result>) => {
+    setBusyId(userId);
     startTransition(async () => {
       setError((await action()).error ?? null);
+      setBusyId(null);
     });
+  };
 
   const canPickRoles = viewerCanEdit || viewerIsAdmin;
 
@@ -124,8 +129,14 @@ export default function UsersTable({
           </thead>
           <tbody className="divide-y divide-line">
             {rows.map((u) => {
-              const names = u.roles.map((r) => r.name).join(", ");
+              const names = [
+                u.admin ? "Admin" : null,
+                ...u.roles.map((r) => r.name),
+              ]
+                .filter(Boolean)
+                .join(", ");
               const pickable = canPickRoles && !u.self;
+              const pending = busyId === u.id;
               return (
                 <tr key={u.id} className={u.banned ? "text-ink/50" : ""}>
                   <td className="px-4 py-2">
@@ -153,7 +164,6 @@ export default function UsersTable({
                   <td className="px-4 py-2 whitespace-nowrap">{u.joined}</td>
                   <td className="px-4 py-2 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1.5">
-                      {u.admin && <AdminShield />}
                       {pickable ? (
                         <span className="relative">
                           <button
@@ -192,7 +202,9 @@ export default function UsersTable({
                                           setOpenRoles(null);
                                           setPromoting(u);
                                         } else {
-                                          run(() => setRole(u.id, "user"));
+                                          run(u.id, () =>
+                                            setRole(u.id, "user"),
+                                          );
                                         }
                                       }}
                                       className="size-4 accent-meeple"
@@ -218,7 +230,9 @@ export default function UsersTable({
                                       disabled={pending || !viewerCanEdit}
                                       onChange={(e) => {
                                         const on = e.currentTarget.checked;
-                                        run(() => assignRole(u.id, r.id, on));
+                                        run(u.id, () =>
+                                          assignRole(u.id, r.id, on),
+                                        );
                                       }}
                                       className="size-4 accent-meeple"
                                     />
@@ -246,6 +260,7 @@ export default function UsersTable({
                           {names || "—"}
                         </span>
                       )}
+                      {u.admin && <AdminShield />}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right whitespace-nowrap">
@@ -256,7 +271,7 @@ export default function UsersTable({
                             type="button"
                             disabled={pending}
                             onClick={() =>
-                              run(() => setBanned(u.id, !u.banned))
+                              run(u.id, () => setBanned(u.id, !u.banned))
                             }
                             className={smallButtonClass}
                           >
@@ -315,12 +330,12 @@ export default function UsersTable({
             <Button
               type="button"
               size="sm"
-              disabled={pending}
+              disabled={busyId === promoting?.id}
               onClick={() => {
                 if (!promoting) return;
                 const { id } = promoting;
                 setPromoting(null);
-                run(() => setRole(id, "admin"));
+                run(id, () => setRole(id, "admin"));
               }}
             >
               Make admin
@@ -358,12 +373,12 @@ export default function UsersTable({
             <Button
               type="button"
               size="sm"
-              disabled={pending}
+              disabled={busyId === deleting?.id}
               onClick={() => {
                 if (!deleting) return;
                 const { id } = deleting;
                 setDeleting(null);
-                run(() => removeUser(id));
+                run(id, () => removeUser(id));
               }}
             >
               Delete account
