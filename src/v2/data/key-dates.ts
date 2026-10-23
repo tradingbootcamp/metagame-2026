@@ -1,4 +1,5 @@
 import { EARLY_BIRD_ENDS_AT } from "@/lib/early-bird";
+import { NIGHT_NAME } from "@/v2/data/chapters";
 import {
   CHILD_REGISTRATION_FORM_URL,
   FINANCIAL_AID_FORM_URL,
@@ -19,6 +20,8 @@ export type KeyDate = {
   milestone?: boolean;
   /** A joke, not a deadline: set quieter. */
   aside?: boolean;
+  /** One line under the title (the home page's turn order). */
+  body?: string;
 };
 
 // Date.now() stays behind these helpers (like isEarlyBirdActive) so components
@@ -107,3 +110,41 @@ export const KEY_DATES: KeyDate[] = [
     aside: true,
   },
 ];
+
+// The con itself, beat by beat, standing in for the single Nov 6–8 milestone
+// in the home page's turn order. Times match the FAQ and the night event copy.
+const CON_WEEKEND: KeyDate[] = [
+  {
+    label: "Fri Nov 6 · 2 pm",
+    title: "The game begins",
+    body: "Gates open, and the Megagame starts the moment you step through.",
+    endsAt: endOfDay(11, 8),
+    milestone: true,
+  },
+  {
+    label: "Fri Nov 6 · 7–10 pm",
+    title: `Expansion: ${NIGHT_NAME}`,
+    body: "Booths of things to play, experience and savor. Open to the public. See §6.",
+    endsAt: endOfDay(11, 6),
+  },
+  {
+    label: "Sat Nov 7",
+    title: "Talks, workshops and games all day",
+    endsAt: endOfDay(11, 7),
+  },
+  {
+    label: "Sun Nov 8 · 9 pm",
+    title: "Final round",
+    body: "The game ends.",
+    endsAt: endOfDay(11, 8),
+  },
+];
+
+/** Upcoming deadlines, then the con weekend beat by beat, then the nap. */
+export function upcomingTurns(now = Date.now()): KeyDate[] {
+  return [
+    ...KEY_DATES.filter((d) => !d.milestone && !d.aside),
+    ...CON_WEEKEND,
+    ...KEY_DATES.filter((d) => d.aside),
+  ].filter((d) => now < d.endsAt);
+}

@@ -24,6 +24,8 @@ const buttonVariants = cva(
         // shadow grows and the face slides up-left on hover.
         raised:
           "border-2 border-cream/30 bg-navy text-cream shadow-[0_0_0_0_#fa8072] hover:-translate-x-[5px] hover:-translate-y-[5px] hover:border-cream/60 hover:shadow-[8px_8px_0_0_#fa8072] hover:after:-right-[7px] hover:after:-bottom-[7px]",
+        // Rulebook ticket tile: a cream card on the navy join panel.
+        tile: "rounded-xl border-2 border-transparent bg-background text-navy hover:-translate-y-0.5 hover:border-tan hover:after:-bottom-[2.5px]",
       },
       size: {
         sm: "px-4 py-[9px] text-sm",

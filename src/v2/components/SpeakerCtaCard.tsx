@@ -3,19 +3,82 @@
 import HatPile from "@/v2/hat-trick/HatPile";
 import { FACTION_HATS, HAT_TRICK_CODE, HATS } from "@/v2/hat-trick/hats";
 import { useHatTrick } from "@/v2/hat-trick/store";
-import { HEADING } from "./styles";
+import { DISPLAY, HEADING, PLAYER_PHOTO } from "./styles";
 
 // The empty seat at the end of the speaker lineup: a silhouette in the same
 // footprint as a PersonCard, inviting the reader to propose a session. It's
 // also where Hat Trick's hats land: each one grabbed from a photo stacks on
 // the silhouette's head, and the three faction hats earn the coupon code.
-export default function SpeakerCtaCard({ href }: { href: string }) {
+export default function SpeakerCtaCard({
+  href,
+  compact = false,
+}: {
+  href: string;
+  /** The rulebook's §5 player-card size: silhouette square beside the text. */
+  compact?: boolean;
+}) {
   const { collected, reset } = useHatTrick();
   const worn = collected.map((id) => HATS[id]);
   const done = FACTION_HATS.every((id) => collected.includes(id));
   // The factions and the Crown are listed by name; the rest just counted.
   const named = worn.filter((h) => FACTION_HATS.includes(h.id) || h.requires);
   const others = worn.length - named.length;
+
+  if (compact)
+    return (
+      <div className="group relative flex h-full gap-3 rounded-xl border-2 border-dashed border-navy/50 bg-sky/40 p-3 transition-colors hover:border-navy">
+        <div
+          aria-hidden
+          className={`${PLAYER_PHOTO} relative flex items-end justify-center bg-navy/[0.06]`}
+        >
+          <Silhouette />
+        </div>
+        {/* Over the silhouette square (p-3 plus the 2px border), outside its
+            clipped frame so a tall stack rises above the card. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-[14px] left-[14px] z-10 size-[72px]"
+        >
+          <HatPile hats={worn} />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1">
+          {/* The link covers the card; the score's button sits above it. */}
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col gap-1 after:absolute after:inset-0"
+          >
+            <h3
+              className={`${DISPLAY} text-2xl leading-none tracking-[0.02em] text-navy`}
+            >
+              You?
+            </h3>
+            <span className="font-space-mono text-[11px] tracking-[0.08em] text-ink/60 uppercase underline underline-offset-2 transition-colors group-hover:text-navy">
+              Submit a proposal&nbsp;&rarr;
+            </span>
+          </a>
+          {worn.length > 0 && (
+            <p className="text-sm text-navy">
+              Hat count: {worn.length}
+              {done && (
+                <>
+                  {" "}
+                  · code{" "}
+                  <span className="font-space-mono font-bold text-meeple">
+                    {HAT_TRICK_CODE}
+                  </span>{" "}
+                  for $33 off
+                </>
+              )}
+            </p>
+          )}
+          {worn.length > 0 && (
+            <GiveBack onClick={reset} className="relative z-20 w-fit" />
+          )}
+        </div>
+      </div>
+    );
 
   // The margin version has room to list the hats; the on-card one doesn't.
   const score = (list: boolean) =>
@@ -71,13 +134,7 @@ export default function SpeakerCtaCard({ href }: { href: string }) {
           aria-hidden
           className="relative flex aspect-square w-full items-end justify-center overflow-hidden bg-navy/[0.06]"
         >
-          <svg
-            viewBox="0 0 100 100"
-            className="h-[86%] w-[86%] fill-navy/15 transition-[fill] group-hover:fill-navy/25"
-          >
-            {/* one cutout: a bob of hair around the head, flowing into the neck, on sloped shoulders */}
-            <path d="M50 8c-16 0-23 11-23 24 0 11-1 22-5 30 3 4 12 4 18-1v4c-8 1-20 4-26 11-5 5-7 14-7 24h86c0-10-2-19-7-24-6-7-18-10-26-11v-4c6 5 15 5 18 1-4-8-5-19-5-30 0-13-7-24-23-24z" />
-          </svg>
+          <Silhouette />
           {/* Score on the chest, below the head, when the page margin beside
               the card is too narrow for it (see the sibling below). */}
           {score(false) && (
@@ -118,6 +175,19 @@ export default function SpeakerCtaCard({ href }: { href: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+// 86% of its square and bottom-aligned: HatPile's coordinates assume this.
+function Silhouette() {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      className="h-[86%] w-[86%] fill-navy/15 transition-[fill] group-hover:fill-navy/25"
+    >
+      {/* one cutout: a bob of hair around the head, flowing into the neck, on sloped shoulders */}
+      <path d="M50 8c-16 0-23 11-23 24 0 11-1 22-5 30 3 4 12 4 18-1v4c-8 1-20 4-26 11-5 5-7 14-7 24h86c0-10-2-19-7-24-6-7-18-10-26-11v-4c6 5 15 5 18 1-4-8-5-19-5-30 0-13-7-24-23-24z" />
+    </svg>
   );
 }
 

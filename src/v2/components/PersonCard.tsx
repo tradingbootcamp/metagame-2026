@@ -1,5 +1,6 @@
 import { Mail } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { contactEmail } from "@/lib/contact-recipients";
 import type { Person } from "@/v2/data/team";
 import HatImage from "@/v2/hat-trick/HatImage";
@@ -23,6 +24,7 @@ export default function PersonCard({
   photo,
   contactKey,
   hats,
+  session,
   compact = false,
 }: Person & { compact?: boolean }) {
   return (
@@ -78,6 +80,20 @@ export default function PersonCard({
             title
           )}
         </p>
+        {session && (
+          <p className="mt-1 text-[10px] leading-snug text-ink/80 italic sm:mt-1.5 sm:text-sm">
+            {session.slug ? (
+              <Link
+                href={`/schedule/${session.slug}`}
+                className="underline-offset-2 hover:text-navy hover:underline"
+              >
+                {session.title}
+              </Link>
+            ) : (
+              session.title
+            )}
+          </p>
+        )}
         {contactKey && contactEmail(contactKey) && !compact && (
           <ContactLink
             to={contactKey}

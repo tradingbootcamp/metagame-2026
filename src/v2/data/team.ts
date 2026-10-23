@@ -31,6 +31,9 @@ export type Person = {
   contactKey?: string;
   // Hat Trick: hats hidden in this photo (see src/v2/hat-trick).
   hats?: Hat[];
+  // Speakers: what they're running. Give a slug only once /schedule is public,
+  // since the link 404s behind the pre-launch gate.
+  session?: { title: string; slug?: string };
 };
 
 export const TEAM: Person[] = [

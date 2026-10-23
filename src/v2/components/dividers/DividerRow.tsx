@@ -27,6 +27,14 @@ export function NoPuzzle({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Wrap a row in this to draw it as the home page rulebook's chapter rule: the
+// hairlines become navy rules across the column. Same DOM, so the rows'
+// minigames (which measure the hairlines) and the puzzle work unchanged.
+const RuleContext = createContext(false);
+export function ChapterRule({ children }: { children: React.ReactNode }) {
+  return <RuleContext.Provider value={true}>{children}</RuleContext.Provider>;
+}
+
 // Layout shell every section divider shares: two hairlines flanking the icons.
 // With `game` set the row is a puzzle target (src/v2/puzzle/store.ts): once the
 // game is found the whole row flies up off the screen, back to the library,
@@ -54,6 +62,7 @@ export default function DividerRow({
   const [shaking, setShaking] = useState(false);
   const [hovered, setHovered] = useState(false);
   const off = useContext(NoPuzzleContext);
+  const rule = useContext(RuleContext);
   const found = Boolean(game && !off && state.stars[game]);
   const flyer = useRef<HTMLDivElement>(null);
 
@@ -78,17 +87,25 @@ export default function DividerRow({
   }, [hovered, off, game]);
 
   // The mark is the line's sibling, not its child: the clip would take it too.
+  // A rule runs the full column, so its mark keeps to the hairline's 160px
+  // next to the icons (the middle of a shorter line on phones).
   const line = (side: "left" | "right", mark?: React.ReactNode) => (
-    <span className="pointer-events-none relative h-px max-w-40 flex-1">
+    <span
+      className={`pointer-events-none relative flex-1 ${rule ? "h-[2px]" : "h-px max-w-40"}`}
+    >
       <span
-        className="absolute inset-0 bg-line transition-[clip-path] duration-500"
+        className={`absolute inset-0 transition-[clip-path] duration-500 ${rule ? "bg-navy" : "bg-line"}`}
         style={{
           clipPath: `inset(0 ${side === "left" ? (overhang ?? 0) : 0}px 0 ${side === "right" ? (overhang ?? 0) : 0}px)`,
         }}
       />
       {mark && (
-        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-          {mark}
+        <span
+          className={`absolute inset-y-0 w-full max-w-40 ${side === "left" ? "right-0" : "left-0"}`}
+        >
+          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            {mark}
+          </span>
         </span>
       )}
     </span>
@@ -100,10 +117,18 @@ export default function DividerRow({
   // unseen and only the opacity eases in.
   return (
     <div
-      className="scroll-mt-16 py-6 md:scroll-mt-24 md:py-10"
+      className={`relative scroll-mt-16 md:scroll-mt-24 ${rule ? "py-5 md:py-6" : "py-6 md:py-10"}`}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
     >
+      {/* A found rule leaves a faint one behind, so the chapter keeps its
+          edge while its game is back in the library. */}
+      {rule && (
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute inset-x-0 top-1/2 h-px bg-navy/25 transition-opacity delay-500 duration-500 ${found ? "opacity-100" : "opacity-0"}`}
+        />
+      )}
       <div
         ref={flyer}
         inert={found}

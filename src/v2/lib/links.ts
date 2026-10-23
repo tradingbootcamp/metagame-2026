@@ -49,6 +49,9 @@ export const PODCAST_EPISODE_URL =
   "https://www.complexsystemspodcast.com/episodes/narrative-mastery-character-bleed-in-games-with-ricki-heicklen/";
 export const TEAM_EMAIL = "team@metagame.games";
 
+// The Friday-night public event's free Partiful RSVP.
+export const NIGHT_PARTIFUL_URL = "https://partiful.com/e/TirHoKkdE8DUiWHCt59v";
+
 // Night Market expo booth application Airtable form.
 export const NIGHT_MARKET_FORM_URL =
   "https://airtable.com/appROpPV6XUP4CSqX/pagWzXdF8eA6PfDXs/form";
