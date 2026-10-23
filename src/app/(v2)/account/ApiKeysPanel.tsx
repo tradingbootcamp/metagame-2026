@@ -1,18 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckIcon, CopyIcon } from "lucide-react";
 import { createOwnKey, revokeOwnKey } from "./api-keys-actions";
 import { Button } from "@/v2/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/v2/components/ui/dialog";
 import { Input } from "@/v2/components/ui/input";
 import { FIELD_LIGHT } from "@/v2/components/styles";
-import { useCopy } from "@/v2/lib/use-copy";
+import { MintedKeyDialog } from "@/components/MintedKeyDialog";
 
 export type KeyRow = {
   id: string;
@@ -22,45 +15,6 @@ export type KeyRow = {
   created: string;
   lastUsed: string | null;
 };
-
-function MintedKeyDialog({
-  value,
-  onClose,
-}: {
-  value: string | null;
-  onClose: () => void;
-}) {
-  const { status, copy } = useCopy();
-  const Icon = status === "copied" ? CheckIcon : CopyIcon;
-  return (
-    <Dialog open={value !== null} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="flex max-w-[520px] flex-col gap-5 px-8 py-7">
-        <DialogTitle className="font-bebas text-2xl tracking-wide text-cream">
-          Your new API key
-        </DialogTitle>
-        <DialogDescription className="text-base text-cream/80">
-          Save this. You won’t be able to view it again.
-        </DialogDescription>
-        <code className="block rounded-lg bg-cream p-3 font-mono text-xs break-all text-ink">
-          {value}
-        </code>
-        <div className="flex justify-end gap-3">
-          <Button type="button" size="sm" onClick={() => value && copy(value)}>
-            <Icon className="size-4" />
-            {status === "copied"
-              ? "Copied"
-              : status === "failed"
-                ? "Couldn’t copy"
-                : "Copy"}
-          </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 export default function ApiKeysPanel({ rows }: { rows: KeyRow[] }) {
   const [error, setError] = useState<string | null>(null);
