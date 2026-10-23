@@ -55,14 +55,14 @@ async function act(
 export async function rsvpTo(sessionId: string): Promise<PlanResult> {
   return act(sessionId, async (userId) => {
     const status = await rsvp(sessionId, userId);
-    return { status, rsvps: await loadSessionRsvps(sessionId, userId) };
+    return { status, rsvps: await loadSessionRsvps(sessionId) };
   });
 }
 
 export async function unRsvp(sessionId: string): Promise<PlanResult> {
   return act(sessionId, async (userId) => {
     await cancelRsvp(sessionId, userId);
-    return { status: null, rsvps: await loadSessionRsvps(sessionId, userId) };
+    return { status: null, rsvps: await loadSessionRsvps(sessionId) };
   });
 }
 

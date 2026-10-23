@@ -150,7 +150,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
   ]);
   const viewerId = account?.user.id ?? null;
   const [rsvps, plans] = await Promise.all([
-    loadSessionRsvps(session.id, viewerId),
+    loadSessionRsvps(session.id),
     viewerId ? loadViewerPlans(viewerId) : null,
   ]);
 

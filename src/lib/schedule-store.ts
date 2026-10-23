@@ -463,10 +463,9 @@ export async function loadSessionPlans(sessionId: string) {
  */
 export async function loadSessionRsvps(
   sessionId: string,
-  viewerId: string | null,
 ): Promise<SessionRsvps> {
   const [showNames, rows] = await Promise.all([
-    viewerId ? can("schedule.rsvps").then(Boolean) : false,
+    can("schedule.rsvps").then(Boolean),
     getDb()
       .select({ status: rsvps.status, name: publicName })
       .from(rsvps)

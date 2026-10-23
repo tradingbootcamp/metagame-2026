@@ -79,17 +79,21 @@ export default function UsersTable({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
-  /** The row whose action is in flight; only that row's controls lock. */
-  const [busyId, setBusyId] = useState<string | null>(null);
+  /** Rows with an action in flight; only those rows' controls lock. */
+  const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const [deleting, setDeleting] = useState<UserRow | null>(null);
   const [promoting, setPromoting] = useState<UserRow | null>(null);
   const [openRoles, setOpenRoles] = useState<string | null>(null);
 
   const run = (userId: string, action: () => Promise<Result>) => {
-    setBusyId(userId);
+    setBusy((b) => new Set(b).add(userId));
     startTransition(async () => {
       setError((await action()).error ?? null);
-      setBusyId(null);
+      setBusy((b) => {
+        const next = new Set(b);
+        next.delete(userId);
+        return next;
+      });
     });
   };
 
@@ -136,7 +140,7 @@ export default function UsersTable({
                 .filter(Boolean)
                 .join(", ");
               const pickable = canPickRoles && !u.self;
-              const pending = busyId === u.id;
+              const pending = busy.has(u.id);
               return (
                 <tr key={u.id} className={u.banned ? "text-ink/50" : ""}>
                   <td className="px-4 py-2">
@@ -330,7 +334,7 @@ export default function UsersTable({
             <Button
               type="button"
               size="sm"
-              disabled={busyId === promoting?.id}
+              disabled={promoting !== null && busy.has(promoting.id)}
               onClick={() => {
                 if (!promoting) return;
                 const { id } = promoting;
@@ -373,7 +377,7 @@ export default function UsersTable({
             <Button
               type="button"
               size="sm"
-              disabled={busyId === deleting?.id}
+              disabled={deleting !== null && busy.has(deleting.id)}
               onClick={() => {
                 if (!deleting) return;
                 const { id } = deleting;

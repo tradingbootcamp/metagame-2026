@@ -33,22 +33,6 @@ export const PERMISSIONS = {
     description: "Change other accounts' roles and per-user permissions.",
     implies: ["users.view"],
   },
-  "users.delete": {
-    audience: "team",
-    group: "Users",
-    level: "delete",
-    label: "Delete accounts",
-    description:
-      "Permanently delete non-admin accounts. Admin, bans and deleting an admin stay admin-only.",
-    implies: ["users.view"],
-  },
-  "roles.manage": {
-    audience: "team",
-    group: "Roles",
-    level: "edit",
-    label: "Create and edit roles",
-    description: "Make roles and change which permissions each carries.",
-  },
   "tickets.view": {
     audience: "team",
     group: "Tickets",
@@ -100,14 +84,6 @@ export const PERMISSIONS = {
     label: "Keys for your own account",
     description: "Mint and revoke your own API keys.",
   },
-  "api_keys.manage": {
-    audience: "team",
-    group: "API keys",
-    level: "edit",
-    label: "Keys for any account",
-    description:
-      "Mint and revoke anyone's API keys; keys for admins stay admin-only.",
-  },
   "schema.view": {
     audience: "team",
     group: "Database",
@@ -121,6 +97,30 @@ export const PERMISSIONS = {
     level: "edit",
     label: "Grade session submissions",
     description: "The speaker committee's rubric at /grade.",
+  },
+  "roles.manage": {
+    audience: "team",
+    group: "Sensitive",
+    level: "edit",
+    label: "Create and edit roles",
+    description: "Make roles and change which permissions each carries.",
+  },
+  "api_keys.manage": {
+    audience: "team",
+    group: "Sensitive",
+    level: "edit",
+    label: "API keys for any account",
+    description:
+      "Mint and revoke anyone's API keys; keys for admins stay admin-only.",
+  },
+  "users.delete": {
+    audience: "team",
+    group: "Sensitive",
+    level: "delete",
+    label: "Delete accounts",
+    description:
+      "Permanently delete non-admin accounts. Admin, bans and deleting an admin stay admin-only.",
+    implies: ["users.view"],
   },
 } as const satisfies Record<
   string,
@@ -137,6 +137,11 @@ export const PERMISSIONS = {
 export type Permission = keyof typeof PERMISSIONS;
 
 export const PERMISSION_KEYS = Object.keys(PERMISSIONS) as Permission[];
+
+/** A caption under an area heading on the roles grid. */
+export const GROUP_NOTES: Record<string, string> = {
+  Sensitive: "Normally admin-only; grant in a pinch.",
+};
 
 /** The catalog in display order, one entry per area. */
 export function permissionGroups(): { group: string; keys: Permission[] }[] {
@@ -236,9 +241,12 @@ export function explainPermissions(
             : { kind: "role", role: r.name },
         );
     }
-    for (const q of PERMISSION_KEYS) {
-      if (q !== p && expand([q]).has(p) && effective.has(q)) {
-        sources.push({ kind: "implied", by: q });
+    // Admins hold everything outright, so implications are only noise.
+    if (!input.admin) {
+      for (const q of PERMISSION_KEYS) {
+        if (q !== p && expand([q]).has(p) && effective.has(q)) {
+          sources.push({ kind: "implied", by: q });
+        }
       }
     }
     out[p] = { effective: effective.has(p), sources };

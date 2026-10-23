@@ -1,6 +1,11 @@
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/db";
-import { isPermission, type AccessInput, type Permission } from "./permissions";
+import {
+  isPermission,
+  PERMISSIONS,
+  type AccessInput,
+  type Permission,
+} from "./permissions";
 import { hasClaimedTicket } from "./ticket-store";
 
 const { roles, rolePermissions, userRoles, userPermissionGrants } = schema;
@@ -27,6 +32,12 @@ export type Role = {
 
 async function ensureBuiltinRoles(): Promise<void> {
   const db = getDb();
+  const [exists] = await db
+    .select({ id: roles.id })
+    .from(roles)
+    .where(eq(roles.name, ATTENDEE_ROLE))
+    .limit(1);
+  if (exists) return;
   const [made] = await db
     .insert(roles)
     .values({ name: ATTENDEE_ROLE })
@@ -103,6 +114,15 @@ export async function setRolePermission(
   granted: boolean,
 ): Promise<void> {
   const db = getDb();
+  if (granted && PERMISSIONS[permission].audience !== "attendee") {
+    const [row] = await db
+      .select({ name: roles.name })
+      .from(roles)
+      .where(eq(roles.id, roleId))
+      .limit(1);
+    if (row && isBuiltinRole(row.name))
+      throw new Error(`${row.name} can only carry attendee permissions.`);
+  }
   if (granted) {
     await db
       .insert(rolePermissions)
@@ -126,7 +146,7 @@ export async function userAccess(
   admin: boolean,
 ): Promise<AccessInput & { roleIds: string[] }> {
   const db = getDb();
-  const [held, grants, ticketed] = await Promise.all([
+  const [held, grants, ticketed, attendee] = await Promise.all([
     db
       .select({
         id: roles.id,
@@ -143,6 +163,7 @@ export async function userAccess(
       .from(userPermissionGrants)
       .where(eq(userPermissionGrants.userId, userId)),
     hasClaimedTicket(userId),
+    attendeeRole(),
   ]);
   const byRole = new Map<string, { name: string; permissions: string[] }>();
   for (const row of held) {
@@ -150,7 +171,7 @@ export async function userAccess(
     if (row.permission) role.permissions.push(row.permission);
     byRole.set(row.id, role);
   }
-  const auto = ticketed ? [await attendeeRole()] : [];
+  const auto = ticketed ? [attendee] : [];
   return {
     admin,
     roles: [...byRole.values(), ...auto],

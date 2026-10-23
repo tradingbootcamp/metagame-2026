@@ -93,6 +93,12 @@ export async function removeUser(userId: string): Promise<Result> {
       return { error: "Only an admin can delete an admin account." };
     await getDb().delete(user).where(eq(user.id, userId));
   } catch (err) {
+    // session_grades keeps its grader (ON DELETE RESTRICT).
+    if (/session_grades|foreign key/i.test(message(err)))
+      return {
+        error:
+          "This account has graded submissions, which keep their grader. Ban it instead, or reassign the grades first.",
+      };
     return { error: message(err) };
   }
   revalidatePath("/admin/users");

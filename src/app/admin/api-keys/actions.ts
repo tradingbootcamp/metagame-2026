@@ -61,11 +61,23 @@ export async function createKey(
   }
 }
 
-/** Deletes the row; the plugin's own delete only reaches the caller's keys. */
+/**
+ * Deletes the row; the plugin's own delete only reaches the caller's keys.
+ * As with minting, an admin's key is admin-only.
+ */
 export async function revokeKey(id: string): Promise<Result> {
-  if (!(await can("api_keys.manage")))
+  const viewer = await teamAccess();
+  if (!viewer?.permissions.has("api_keys.manage"))
     return { error: "Sign in with an account that manages API keys." };
   try {
+    const [owner] = await getDb()
+      .select({ role: user.role })
+      .from(apikey)
+      .innerJoin(user, eq(user.id, apikey.referenceId))
+      .where(eq(apikey.id, id))
+      .limit(1);
+    if (owner?.role === "admin" && !viewer.admin)
+      return { error: "Only an admin can revoke an admin's key." };
     await getDb().delete(apikey).where(eq(apikey.id, id));
   } catch (err) {
     return { error: message(err) };

@@ -11,7 +11,7 @@ import {
 import { fieldClass, smallButtonClass } from "../ui";
 import type { Role } from "@/lib/permission-store";
 import { LevelBadge } from "../PermissionLevel";
-import { permissionGroups, PERMISSIONS } from "@/lib/permissions";
+import { GROUP_NOTES, permissionGroups, PERMISSIONS } from "@/lib/permissions";
 
 export default function RolesTool({ roles }: { roles: Role[] }) {
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +126,11 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
                   className="px-4 py-1.5 text-xs font-semibold tracking-wide text-navy uppercase"
                 >
                   {group}
+                  {GROUP_NOTES[group] && (
+                    <span className="ml-2 font-normal tracking-normal text-ink/50 normal-case">
+                      {GROUP_NOTES[group]}
+                    </span>
+                  )}
                 </td>
               </tr>,
               ...keys.map((key) => {

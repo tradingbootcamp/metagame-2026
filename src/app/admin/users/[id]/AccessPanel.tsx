@@ -49,8 +49,8 @@ export default function AccessPanel({ access }: { access: AccessView }) {
       ) : (
         !access.editable && (
           <p className="text-ink/60">
-            Read-only: changing roles and grants needs the “Users: edit access”
-            permission.
+            Read-only: changing roles and grants needs the “
+            {PERMISSIONS["users.edit"].label}” permission.
           </p>
         )
       )}
