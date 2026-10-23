@@ -14,7 +14,6 @@ import {
 describe("poster PDF", () => {
   for (const design of ["d20", "chess"] as PosterDesign[]) {
     for (const size of ["letter", "13x19"] as PosterSize[]) {
-      if (design === "chess" && size === "13x19") continue;
       it(`preserves artwork on an exact ${design} ${size} page`, async () => {
         const bytes = await createPosterPdf(design, size, "berkeley");
         const document = await PDFDocument.load(bytes);
@@ -73,9 +72,4 @@ describe("poster PDF", () => {
       }, 30_000);
     }
   }
-  it("refuses a large chess PDF even when called directly", async () => {
-    await expect(createPosterPdf("chess", "13x19", "berkeley")).rejects.toThrow(
-      "Letter only",
-    );
-  });
 });

@@ -1,6 +1,13 @@
 "use client";
 
-import { useId, useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 import { ChevronDown } from "lucide-react";
 import type { PosterOption, PosterTracking } from "@/lib/poster-options";
 
@@ -82,17 +89,19 @@ export default function PosterForm({
         )}
       </div>
       <div className="space-y-6">
-        <LocationCombobox options={options} value={area} onChange={setArea} />
+        <LocationCombobox
+          options={options}
+          value={area}
+          fallback={initialArea}
+          onChange={setArea}
+        />
         <label className="block font-semibold">
           Design
           <select
             aria-label="Design"
             className={inputClass}
             value={design}
-            onChange={(event) => {
-              setDesign(event.target.value);
-              if (event.target.value === "chess") setSize("letter");
-            }}
+            onChange={(event) => setDesign(event.target.value)}
           >
             <option value="d20">Portrait · Dice puzzle</option>
             <option value="chess">Landscape · Chess</option>
@@ -107,9 +116,7 @@ export default function PosterForm({
             onChange={(event) => setSize(event.target.value)}
           >
             <option value="letter">US Letter · 8.5 × 11 in</option>
-            {design === "d20" && (
-              <option value="13x19">Super B / A3+ (13 × 19 in)</option>
-            )}
+            <option value="13x19">Super B / A3+ (13 × 19 in)</option>
           </select>
           {size === "13x19" && (
             <p className="mt-2 text-xs font-normal text-[#19345b]/60">
@@ -126,7 +133,7 @@ export default function PosterForm({
           disabled={!selected?.available || busy}
           className="w-full rounded-lg bg-[#19345b] px-6 py-4 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {busy ? "Preparing your PDF…" : "Download print-ready PDF"}
+          {busy ? "Preparing your PDF…" : "Download PDF"}
         </button>
         <p className="text-sm" aria-live="polite">
           {selected?.available
@@ -141,10 +148,13 @@ export default function PosterForm({
 function LocationCombobox({
   options,
   value,
+  fallback,
   onChange,
 }: {
   options: PosterOption[];
   value: string;
+  /** Selected while the typed text matches nothing, so a poster always shows. */
+  fallback: string;
   onChange: (value: string) => void;
 }) {
   const id = useId();
@@ -152,12 +162,22 @@ function LocationCombobox({
   const [text, setText] = useState(selected?.label ?? "");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const needle = text.trim().toLowerCase();
+  // Focusing selects the whole label so typing replaces it. The mouseup that
+  // follows a click would collapse that selection, so swallow it once.
+  const selectOnMouseUp = useRef(false);
   // Show the full list while the field still reads the current selection.
-  const filtered =
-    needle && text !== selected?.label
-      ? options.filter((option) => option.label.toLowerCase().includes(needle))
-      : options;
+  // Generic is always offered, last when it isn't itself a match.
+  function matches(typed: string): PosterOption[] {
+    const needle = typed.trim().toLowerCase();
+    if (!needle || typed === selected?.label) return options;
+    const hits = options.filter((option) =>
+      option.label.toLowerCase().includes(needle),
+    );
+    const generic = options.find((option) => option.value === fallback);
+    if (generic && !hits.includes(generic)) hits.push(generic);
+    return hits;
+  }
+  const filtered = matches(text);
   function choose(option: PosterOption) {
     onChange(option.value);
     setText(option.label);
@@ -167,8 +187,11 @@ function LocationCombobox({
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       setOpen(true);
+      if (filtered.length === 0) return;
       const step = event.key === "ArrowDown" ? 1 : -1;
-      setActive((i) => (i + step + filtered.length) % filtered.length);
+      const next = (active + step + filtered.length) % filtered.length;
+      setActive(next);
+      onChange(filtered[next].value);
     } else if (event.key === "Enter" && open && filtered[active]) {
       event.preventDefault();
       choose(filtered[active]);
@@ -192,18 +215,28 @@ function LocationCombobox({
           className={`${inputClass} pr-10`}
           placeholder="Type to filter locations"
           value={text}
-          onFocus={() => setOpen(true)}
+          onFocus={(event) => {
+            setOpen(true);
+            event.currentTarget.select();
+            selectOnMouseUp.current = true;
+          }}
+          onMouseUp={(event: MouseEvent<HTMLInputElement>) => {
+            if (selectOnMouseUp.current) event.preventDefault();
+            selectOnMouseUp.current = false;
+          }}
           onClick={() => setOpen(true)}
           onChange={(event) => {
-            setText(event.target.value);
+            const typed = event.target.value;
+            setText(typed);
             setActive(0);
             setOpen(true);
-            const exact = options.find(
+            // The preview mirrors the top match as the user types.
+            const candidates = matches(typed);
+            const exact = candidates.find(
               (option) =>
-                option.label.toLowerCase() ===
-                event.target.value.trim().toLowerCase(),
+                option.label.toLowerCase() === typed.trim().toLowerCase(),
             );
-            onChange(exact?.value ?? "");
+            onChange(exact?.value ?? candidates[0]?.value ?? "");
           }}
           onBlur={() => {
             setOpen(false);

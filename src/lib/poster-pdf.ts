@@ -10,28 +10,38 @@ import { shortUrl, validateSlug } from "@/lib/tracking-links";
 export type PosterDesign = "d20" | "chess";
 export type PosterSize = "letter" | "13x19";
 export const PRINT_MARGIN = 18;
+// Modules of white kept inside the QR box. The box is the artwork's own white
+// tile, so the tile edge adds to this; together they exceed the 4-module spec.
+const QUIET_MODULES = 2;
 
 const templates = {
   "d20-letter": {
     file: "poster_d20_lettersize.pdf",
-    sha256: "34b3d3abd1fbb11856036d001dc59c4821c7f165f70906fdc6058a3a2ae3fb2d",
+    sha256: "5329faed604084bc1d3fec0f4b5bce1e12ccb95169a92fa7ede2c204a7d16e63",
     width: 612,
     height: 792,
-    qr: { x: 95, top: 584, size: 83 },
+    qr: { x: 91, top: 578, size: 89.5 },
   },
   "d20-13x19": {
     file: "poster_d20_13x19.pdf",
-    sha256: "b7c9da63b75c6c11ab31bb96a208d986ce8cf2c19a9b8f518bf061f06d184e4d",
+    sha256: "57bd16d9ac4b689f2fccdb29bc9b9396377f23dab82c7697d0c19fc8d803ef80",
     width: 936,
     height: 1368,
-    qr: { x: 146, top: 969, size: 124 },
+    qr: { x: 138.5, top: 961, size: 138.5 },
   },
-  chess: {
-    file: "poster_next_move_find_people_v2.pdf",
-    sha256: "b81ee4c2d3422f665552c9aad1e7150747e72dd330f630d09fa219ee2fd88192",
+  "chess-letter": {
+    file: "poster_chess_letter.pdf",
+    sha256: "ff9e0318d372638f36e24c9eb4e9c923835d3076c4be220747cd15caa5e984c0",
     width: 792,
-    height: 445.7368,
-    qr: { x: 499, top: 21, size: 97 },
+    height: 612,
+    qr: { x: 38.5, top: 364, size: 107.5 },
+  },
+  "chess-13x19": {
+    file: "poster_chess_13x19.pdf",
+    sha256: "aac6402162b42c1c10cae949d5c161adc493339d047e8e27ec06a2b9b0a196b7",
+    width: 1368,
+    height: 936,
+    qr: { x: 58, top: 556, size: 166 },
   },
 };
 
@@ -40,13 +50,8 @@ export async function createPosterPdf(
   size: PosterSize,
   slug: string,
 ): Promise<Uint8Array> {
-  if (design === "chess" && size !== "letter") {
-    throw new Error("Chess posters are available in Letter only");
-  }
   if (validateSlug(slug)) throw new Error("Invalid poster link");
-  const templateKey: keyof typeof templates =
-    design === "chess" ? "chess" : `d20-${size}`;
-  const template = templates[templateKey];
+  const template = templates[`${design}-${size}`];
   const bytes = await readFile(
     path.join(process.cwd(), "assets/posters", template.file),
   );
@@ -74,13 +79,13 @@ export async function createPosterPdf(
   const matrix = QRCode.create(shortUrl(POSTER_ORIGIN, slug), {
     errorCorrectionLevel: "M",
   }).modules;
-  const moduleSize = qr.size / (matrix.size + 8);
+  const moduleSize = qr.size / (matrix.size + 2 * QUIET_MODULES);
   for (let row = 0; row < matrix.size; row++) {
     for (let col = 0; col < matrix.size; col++) {
       if (matrix.get(row, col))
         page.drawRectangle({
-          x: qr.x + (col + 4) * moduleSize,
-          y: y + (matrix.size + 3 - row) * moduleSize,
+          x: qr.x + (col + QUIET_MODULES) * moduleSize,
+          y: y + (matrix.size - 1 + QUIET_MODULES - row) * moduleSize,
           width: moduleSize,
           height: moduleSize,
           color: rgb(0, 0, 0),

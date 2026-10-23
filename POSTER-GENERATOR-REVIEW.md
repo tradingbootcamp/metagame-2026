@@ -2,7 +2,7 @@
 
 Direct route: `/posters`. Public, no login, no homepage navigation link, noindex metadata. `GET /api/posters` accepts only an area selection, design, and size. It does not accept a destination URL or arbitrary tracking slug and performs no writes. Existing admin link creation and `/go` attribution behavior are unchanged.
 
-Supported formats: D20 in portrait Letter and 13×19; chess in landscape Letter only. Selecting chess resets a previous 13×19 selection to Letter. The endpoint rejects chess 13×19 before reading Airtable, and the PDF composer independently refuses it.
+Supported formats: D20 in portrait Letter and 13×19; chess in landscape Letter and 13×19. Every design and size pair maps to its own pinned source file in `assets/posters`.
 
 ## Existing admin link setup
 
