@@ -127,6 +127,13 @@
       "when": 1792705008232,
       "tag": "0017_megagame_puzzle_options",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792716765410,
+      "tag": "0018_permissions",
+      "breakpoints": true
     }
   ]
 }
