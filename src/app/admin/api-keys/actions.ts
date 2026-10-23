@@ -61,6 +61,19 @@ export async function createKey(
   }
 }
 
+/** Whether an account exists for this email, and its name, for the form. */
+export async function lookupAccount(
+  email: string,
+): Promise<{ exists: boolean; name?: string }> {
+  if (!(await can("api_keys.manage"))) return { exists: false };
+  const [existing] = await getDb()
+    .select({ name: user.name })
+    .from(user)
+    .where(eq(user.email, email.trim().toLowerCase()))
+    .limit(1);
+  return existing ? { exists: true, name: existing.name } : { exists: false };
+}
+
 /**
  * Deletes the row; the plugin's own delete only reaches the caller's keys.
  * As with minting, an admin's key is admin-only.

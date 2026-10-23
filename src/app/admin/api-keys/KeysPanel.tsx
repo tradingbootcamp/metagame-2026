@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createKey, revokeKey } from "./actions";
-import { buttonClass, fieldClass, smallButtonClass, useCopy } from "../ui";
+import { createKey, lookupAccount, revokeKey } from "./actions";
+import { buttonClass, fieldClass, smallButtonClass } from "../ui";
+import { MintedKeyDialog } from "@/components/MintedKeyDialog";
 
 export type KeyRow = {
   id: string;
@@ -19,7 +20,10 @@ export default function KeysPanel({ rows }: { rows: KeyRow[] }) {
   const [error, setError] = useState<string | null>(null);
   const [minted, setMinted] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const { status, copy } = useCopy();
+  /** The account the typed email resolves to, once looked up. */
+  const [found, setFound] = useState<{ email: string; name: string } | null>(
+    null,
+  );
 
   return (
     <div className="space-y-6">
@@ -39,15 +43,15 @@ export default function KeysPanel({ rows }: { rows: KeyRow[] }) {
             if (result.key) {
               setMinted(result.key);
               form.reset();
+              setFound(null);
             }
           });
         }}
       >
         <h2 className="font-bebas text-xl tracking-wide text-navy">New key</h2>
         <p className="text-sm text-ink/60">
-          Requests carrying the key act as this account, which is made if it
-          doesn’t exist. The schedule API admits accounts that can manage the
-          schedule; give it a role or a grant on Users.
+          Make an API key for an account. If there is no account with the
+          provided email, a provisional one will be created.
         </p>
         <label className="block text-sm">
           Account email
@@ -57,57 +61,49 @@ export default function KeysPanel({ rows }: { rows: KeyRow[] }) {
             required
             placeholder="claude@…"
             className={fieldClass}
+            onBlur={(e) => {
+              const email = e.currentTarget.value.trim().toLowerCase();
+              if (!email) return setFound(null);
+              if (found?.email === email) return;
+              startTransition(async () => {
+                const r = await lookupAccount(email);
+                setFound(r.exists ? { email, name: r.name ?? "" } : null);
+              });
+            }}
           />
         </label>
         <label className="block text-sm">
-          Account name (for a new account)
-          <input name="name" placeholder="Claude" className={fieldClass} />
+          Account name
+          <input
+            key={found?.email ?? "new"}
+            name="name"
+            placeholder="Claude"
+            defaultValue={found?.name ?? ""}
+            disabled={found !== null}
+            className={`${fieldClass} disabled:bg-ink/5 disabled:text-ink/60`}
+          />
+          {found && (
+            <span className="mt-1 block text-xs text-ink/50">
+              Existing account.
+            </span>
+          )}
         </label>
         <label className="block text-sm">
-          Key label
+          Key name
           <input
             name="label"
             required
-            placeholder="Claude Code on Brian’s Mac"
+            placeholder="metagame-claude-code"
             className={fieldClass}
           />
         </label>
         <button type="submit" disabled={pending} className={buttonClass}>
-          Create key
+          Create
         </button>
         {error && <p className="text-sm text-meeple">{error}</p>}
       </form>
 
-      {minted && (
-        <div className="max-w-xl space-y-2 rounded-xl border border-navy bg-navy/5 p-5">
-          <p className="text-sm font-semibold text-navy">
-            Copy this now; it isn’t shown again.
-          </p>
-          <code className="block rounded-lg bg-white p-3 font-mono text-xs break-all">
-            {minted}
-          </code>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => copy(minted)}
-              className={smallButtonClass}
-            >
-              {status === "copied"
-                ? "Copied"
-                : status === "failed"
-                  ? "Copy failed"
-                  : "Copy"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMinted(null)}
-              className={smallButtonClass}
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      )}
+      <MintedKeyDialog value={minted} onClose={() => setMinted(null)} />
 
       <div className="overflow-x-auto rounded-xl border border-line bg-white shadow-sm">
         <table className="w-full text-left text-sm">
