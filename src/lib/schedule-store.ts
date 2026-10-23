@@ -13,8 +13,8 @@ import {
   sql,
 } from "drizzle-orm";
 import { getDb, schema } from "@/db";
+import { can } from "./access";
 import { getAuth } from "./auth";
-import { hasClaimedTicket } from "./ticket-store";
 import {
   fromPacificWall,
   movedTimes,
@@ -457,15 +457,16 @@ export async function loadSessionPlans(sessionId: string) {
 }
 
 /**
- * One session's RSVPs for the public page. Names only for a viewer who has
- * claimed a paid ticket; everyone else gets counts.
+ * One session's RSVPs for the public page. Names only for a viewer holding
+ * schedule.rsvps (the Attendee role carries it by default, so a claimed
+ * ticket is enough); everyone else gets counts.
  */
 export async function loadSessionRsvps(
   sessionId: string,
   viewerId: string | null,
 ): Promise<SessionRsvps> {
   const [showNames, rows] = await Promise.all([
-    viewerId ? hasClaimedTicket(viewerId) : false,
+    viewerId ? can("schedule.rsvps").then(Boolean) : false,
     getDb()
       .select({ status: rsvps.status, name: publicName })
       .from(rsvps)

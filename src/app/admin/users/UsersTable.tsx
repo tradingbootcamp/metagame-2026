@@ -46,6 +46,14 @@ function TicketCell({ id, count }: { id: string; count: number }) {
   );
 }
 
+function AdminShield() {
+  return (
+    <span title="Admin" className="inline-flex">
+      <ShieldCheckIcon className="size-4 text-navy" aria-label="Admin" />
+    </span>
+  );
+}
+
 export default function UsersTable({
   rows,
   total,
@@ -60,6 +68,7 @@ export default function UsersTable({
   total: number;
   query: string;
   truncated: boolean;
+  /** Assignable roles; built-in ones attach themselves and aren't listed. */
   allRoles: RoleOption[];
   /** Only `user.role = 'admin'` accounts may change the admin role and bans. */
   viewerIsAdmin: boolean;
@@ -114,58 +123,38 @@ export default function UsersTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {rows.map((u) => (
-              <tr key={u.id} className={u.banned ? "text-ink/50" : ""}>
-                <td className="px-4 py-2">
-                  <Link
-                    href={`/admin/users/${u.id}`}
-                    className="text-navy underline-offset-2 hover:text-meeple hover:underline"
-                  >
-                    {u.name.trim() || "Unnamed"}
-                  </Link>
-                </td>
-                <td className="px-4 py-2 font-mono text-xs">
-                  {u.email}
-                  {!u.emailVerified && (
-                    <span className="ml-2 text-ink/40">unverified</span>
-                  )}
-                </td>
-                <td className="px-4 py-2">
-                  <TicketCell id={u.id} count={u.tickets} />
-                </td>
-                <td className="px-4 py-2 whitespace-nowrap">{u.joined}</td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  <span className="flex flex-wrap items-center gap-1">
-                    {u.admin && (
-                      <span title="Admin" className="inline-flex">
-                        <ShieldCheckIcon
-                          className="size-4 text-navy"
-                          aria-label="Admin"
-                        />
-                      </span>
-                    )}
-                    {u.roles.map((r) => (
-                      <span
-                        key={r.id}
-                        className="rounded bg-sky px-1.5 py-0.5 text-xs font-semibold text-navy"
-                      >
-                        {r.name}
-                      </span>
-                    ))}
+            {rows.map((u) => {
+              const names = u.roles.map((r) => r.name).join(", ");
+              const pickable = canPickRoles && !u.self;
+              return (
+                <tr key={u.id} className={u.banned ? "text-ink/50" : ""}>
+                  <td className="px-4 py-2">
+                    <Link
+                      href={`/admin/users/${u.id}`}
+                      className="text-navy underline-offset-2 hover:text-meeple hover:underline"
+                    >
+                      {u.name.trim() || "Unnamed"}
+                    </Link>
                     {u.banned && (
-                      <span className="rounded bg-meeple/10 px-1.5 py-0.5 text-xs font-semibold text-meeple">
+                      <span className="ml-2 rounded bg-meeple/10 px-1.5 py-0.5 text-xs font-semibold text-meeple">
                         Banned
                       </span>
                     )}
-                    {!u.admin && !u.banned && u.roles.length === 0 && (
-                      <span className="text-ink/50">—</span>
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs">
+                    {u.email}
+                    {!u.emailVerified && (
+                      <span className="ml-2 text-ink/40">unverified</span>
                     )}
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-right whitespace-nowrap">
-                  {!u.self && (canPickRoles || viewerCanDelete) && (
-                    <span className="inline-flex gap-2">
-                      {canPickRoles && (
+                  </td>
+                  <td className="px-4 py-2">
+                    <TicketCell id={u.id} count={u.tickets} />
+                  </td>
+                  <td className="px-4 py-2 whitespace-nowrap">{u.joined}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5">
+                      {u.admin && <AdminShield />}
+                      {pickable ? (
                         <span className="relative">
                           <button
                             type="button"
@@ -175,9 +164,9 @@ export default function UsersTable({
                             onClick={() =>
                               setOpenRoles(openRoles === u.id ? null : u.id)
                             }
-                            className={`${smallButtonClass} inline-flex items-center gap-1`}
+                            className={`${smallButtonClass} inline-flex items-center gap-1 ${names ? "" : "text-ink/50"}`}
                           >
-                            Roles
+                            {names || "No roles"}
                             <ChevronDownIcon className="size-3.5" />
                           </button>
                           {openRoles === u.id && (
@@ -190,7 +179,7 @@ export default function UsersTable({
                               />
                               <div
                                 role="menu"
-                                className="absolute right-0 z-20 mt-1 min-w-48 rounded-lg border border-line bg-white p-2 text-left shadow-lg"
+                                className="absolute left-0 z-20 mt-1 min-w-48 rounded-lg border border-line bg-white p-2 text-left shadow-lg"
                               >
                                 {viewerIsAdmin && (
                                   <label className="flex items-center gap-2 rounded px-2 py-1 hover:bg-cream">
@@ -252,32 +241,44 @@ export default function UsersTable({
                             </>
                           )}
                         </span>
-                      )}
-                      {viewerIsAdmin && (
-                        <button
-                          type="button"
-                          disabled={pending}
-                          onClick={() => run(() => setBanned(u.id, !u.banned))}
-                          className={smallButtonClass}
-                        >
-                          {u.banned ? "Unban" : "Ban"}
-                        </button>
-                      )}
-                      {viewerCanDelete && (viewerIsAdmin || !u.admin) && (
-                        <button
-                          type="button"
-                          disabled={pending}
-                          onClick={() => setDeleting(u)}
-                          className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
-                        >
-                          Delete
-                        </button>
+                      ) : (
+                        <span className={names ? "" : "text-ink/50"}>
+                          {names || "—"}
+                        </span>
                       )}
                     </span>
-                  )}
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-4 py-2 text-right whitespace-nowrap">
+                    {!u.self && (viewerIsAdmin || viewerCanDelete) && (
+                      <span className="inline-flex gap-2">
+                        {viewerIsAdmin && (
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() =>
+                              run(() => setBanned(u.id, !u.banned))
+                            }
+                            className={smallButtonClass}
+                          >
+                            {u.banned ? "Unban" : "Ban"}
+                          </button>
+                        )}
+                        {viewerCanDelete && (viewerIsAdmin || !u.admin) && (
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() => setDeleting(u)}
+                            className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
             {rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-ink/50">

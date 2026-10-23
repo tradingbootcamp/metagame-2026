@@ -42,14 +42,15 @@ export const {
 
 /**
  * Who may use the tool this permission gates on this request, or null. With
- * no permission: anyone with any team access, for the index and header.
+ * no permission: anyone holding a team-tool permission, for the index and
+ * header; attendee-only permissions don't count.
  */
 export async function toolAccess(
   permission?: Permission,
 ): Promise<Access | null> {
   const account = permission
     ? await can(permission)
-    : (await teamAccess())?.session;
+    : await teamAccess().then((a) => (a?.team ? a.session : null));
   if (account) {
     const name = accountLabel(account.user);
     return { via: "account", name, userId: account.user.id };

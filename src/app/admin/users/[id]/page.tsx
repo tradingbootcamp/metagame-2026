@@ -131,11 +131,14 @@ export default async function AdminUserProfilePage(
     self: user.id === session.user.id,
     editable:
       viewer.permissions.has("users.edit") && user.id !== session.user.id,
-    roles: roles.map((r) => ({
-      id: r.id,
-      name: r.name,
-      assigned: held.roleIds.includes(r.id),
-    })),
+    roles: roles
+      .filter((r) => !r.auto)
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        assigned: held.roleIds.includes(r.id),
+      })),
+    auto: held.roles.filter((r) => r.auto).map((r) => `${r.name} (${r.auto})`),
     grants: held.grants.filter(isPermission),
     explanation: explainPermissions(held),
   };

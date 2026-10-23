@@ -4,6 +4,7 @@ import { accountsConfigured, getAuth, type Session } from "./auth";
 import { userAccess } from "./permission-store";
 import {
   effectivePermissions,
+  hasTeamPermission,
   PERMISSION_KEYS,
   type Permission,
 } from "./permissions";
@@ -12,6 +13,8 @@ export type TeamAccess = {
   session: Session;
   /** `user.role = 'admin'`: the superuser bypass, which holds every permission. */
   admin: boolean;
+  /** Holds a team-tool permission, so /admin has something to show. */
+  team: boolean;
   permissions: Set<Permission>;
 };
 
@@ -35,7 +38,12 @@ export const teamAccess = cache(async (): Promise<TeamAccess | null> => {
       ? new Set(PERMISSION_KEYS)
       : effectivePermissions(await userAccess(user.id, false));
     if (permissions.size === 0) return null;
-    return { session, admin, permissions };
+    return {
+      session,
+      admin,
+      team: hasTeamPermission(permissions),
+      permissions,
+    };
   } catch (e) {
     console.error("[auth] access read failed", e);
     return null;

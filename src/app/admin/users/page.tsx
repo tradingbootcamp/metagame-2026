@@ -73,7 +73,9 @@ export default async function AdminUsersPage(props: PageProps<"/admin/users">) {
       total={total}
       query={q}
       truncated={total > rows.length}
-      allRoles={allRoles.map((r) => ({ id: r.id, name: r.name }))}
+      allRoles={allRoles
+        .filter((r) => !r.auto)
+        .map((r) => ({ id: r.id, name: r.name }))}
       viewerIsAdmin={access.admin}
       viewerCanEdit={access.permissions.has("users.edit")}
       viewerCanDelete={access.permissions.has("users.delete")}

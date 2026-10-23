@@ -20,6 +20,8 @@ export type AccessView = {
   /** The viewer holds users.edit and this isn't their own page. */
   editable: boolean;
   roles: { id: string; name: string; assigned: boolean }[];
+  /** Built-in roles this account holds automatically, e.g. "Attendee (has a ticket)". */
+  auto: string[];
   grants: Permission[];
   explanation: Record<Permission, Explanation>;
 };
@@ -56,6 +58,11 @@ export default function AccessPanel({ access }: { access: AccessView }) {
 
       <div>
         <h3 className="mb-1 font-semibold">Roles</h3>
+        {access.auto.length > 0 && (
+          <p className="mb-2 text-ink/60">
+            Automatic: {access.auto.join(", ")}
+          </p>
+        )}
         {access.roles.length === 0 ? (
           <p className="text-ink/50">
             No roles exist yet.{" "}

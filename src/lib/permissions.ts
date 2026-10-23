@@ -7,10 +7,18 @@
 /** Display only: how much a permission lets its holder change. */
 export type PermissionLevel = "view" | "edit" | "delete";
 
+/**
+ * `team`: a team tool, so holding it opens /admin and the nav's admin link.
+ * `attendee`: a site-facing gate ticket holders may get through the built-in
+ * Attendee role; on its own it opens nothing under /admin.
+ */
+export type PermissionAudience = "team" | "attendee";
+
 // Grouped by area, and within an area in the order view, edit, delete; the
 // roles grid renders a heading per group, so labels name the action.
 export const PERMISSIONS = {
   "users.view": {
+    audience: "team",
     group: "Users",
     level: "view",
     label: "Browse accounts",
@@ -18,6 +26,7 @@ export const PERMISSIONS = {
       "The account list and each one's roles, permissions and tickets.",
   },
   "users.edit": {
+    audience: "team",
     group: "Users",
     level: "edit",
     label: "Assign roles and grants",
@@ -25,6 +34,7 @@ export const PERMISSIONS = {
     implies: ["users.view"],
   },
   "users.delete": {
+    audience: "team",
     group: "Users",
     level: "delete",
     label: "Delete accounts",
@@ -33,24 +43,35 @@ export const PERMISSIONS = {
     implies: ["users.view"],
   },
   "roles.manage": {
+    audience: "team",
     group: "Roles",
     level: "edit",
     label: "Create and edit roles",
     description: "Make roles and change which permissions each carries.",
   },
   "tickets.view": {
+    audience: "team",
     group: "Tickets",
     level: "view",
     label: "See every ticket",
     description: "Each ticket with its buyer, holder and attendee.",
   },
   "schedule.preview": {
+    audience: "attendee",
     group: "Schedule",
     level: "view",
     label: "Preview before launch",
     description: "See the public schedule before it opens.",
   },
+  "schedule.rsvps": {
+    audience: "attendee",
+    group: "Schedule",
+    level: "view",
+    label: "See who's going",
+    description: "RSVP names on a session page, not just the counts.",
+  },
   "schedule.manage": {
+    audience: "team",
     group: "Schedule",
     level: "edit",
     label: "Edit rooms and sessions",
@@ -58,12 +79,14 @@ export const PERMISSIONS = {
     implies: ["schedule.preview"],
   },
   "promo.manage": {
+    audience: "team",
     group: "Promo codes",
     level: "edit",
     label: "Mint and disable codes",
     description: "Comp and discount codes on Stripe or BTC.",
   },
   "links.manage": {
+    audience: "team",
     group: "Tracking links",
     level: "edit",
     label: "Make short links",
@@ -71,12 +94,14 @@ export const PERMISSIONS = {
   },
   // Not enforced yet: the /account flow is META-4540.
   "api_keys.self": {
+    audience: "team",
     group: "API keys",
     level: "edit",
     label: "Keys for your own account",
     description: "Mint and revoke your own API keys.",
   },
   "api_keys.manage": {
+    audience: "team",
     group: "API keys",
     level: "edit",
     label: "Keys for any account",
@@ -84,12 +109,14 @@ export const PERMISSIONS = {
       "Mint and revoke anyone's API keys; keys for admins stay admin-only.",
   },
   "schema.view": {
+    audience: "team",
     group: "Database",
     level: "view",
     label: "See the database schema",
     description: "Read-only, under /admin/schema.",
   },
   "submissions.grade": {
+    audience: "team",
     group: "Grading",
     level: "edit",
     label: "Grade session submissions",
@@ -98,6 +125,7 @@ export const PERMISSIONS = {
 } as const satisfies Record<
   string,
   {
+    audience: PermissionAudience;
     group: string;
     level: PermissionLevel;
     label: string;
@@ -125,6 +153,12 @@ export function permissionGroups(): { group: string; keys: Permission[] }[] {
 export const isPermission = (value: unknown): value is Permission =>
   typeof value === "string" && Object.hasOwn(PERMISSIONS, value);
 
+/** Whether holding any of these counts as team access (see PermissionAudience). */
+export const hasTeamPermission = (held: Iterable<Permission>): boolean => {
+  for (const p of held) if (PERMISSIONS[p].audience === "team") return true;
+  return false;
+};
+
 /** What a shared-password session may do: the tools the password reached before accounts. */
 export const ADMIN_PASSWORD_PERMISSIONS: readonly Permission[] = [
   "schedule.manage",
@@ -136,7 +170,12 @@ export const ADMIN_PASSWORD_PERMISSIONS: readonly Permission[] = [
 export type AccessInput = {
   /** Better Auth `user.role = 'admin'`: holds everything. */
   admin: boolean;
-  roles: readonly { name: string; permissions: readonly string[] }[];
+  roles: readonly {
+    name: string;
+    permissions: readonly string[];
+    /** Set on a built-in role that attaches itself, e.g. "has a ticket". */
+    auto?: string;
+  }[];
   /** Per-user grants on top of the roles. */
   grants: readonly string[];
 };
@@ -145,7 +184,7 @@ export type AccessInput = {
 export type Source =
   | { kind: "admin" }
   | { kind: "grant" }
-  | { kind: "role"; role: string }
+  | { kind: "role"; role: string; auto?: string }
   | { kind: "implied"; by: Permission };
 
 export type Explanation = {
@@ -191,7 +230,11 @@ export function explainPermissions(
     if (input.grants.includes(p)) sources.push({ kind: "grant" });
     for (const r of input.roles) {
       if (r.permissions.includes(p))
-        sources.push({ kind: "role", role: r.name });
+        sources.push(
+          r.auto
+            ? { kind: "role", role: r.name, auto: r.auto }
+            : { kind: "role", role: r.name },
+        );
     }
     for (const q of PERMISSION_KEYS) {
       if (q !== p && expand([q]).has(p) && effective.has(q)) {
@@ -210,7 +253,9 @@ export function describeSource(source: Source): string {
     case "grant":
       return "Granted";
     case "role":
-      return `Role: ${source.role}`;
+      return source.auto
+        ? `Role: ${source.role} (${source.auto})`
+        : `Role: ${source.role}`;
     case "implied":
       return `Implied by ${PERMISSIONS[source.by].group}: ${PERMISSIONS[source.by].label}`;
   }
