@@ -6,7 +6,7 @@ import { getDb, schema } from "@/db";
 import { can } from "@/lib/access";
 import { getAuth } from "@/lib/auth";
 
-const PATH = "/account";
+const PATH = "/backstage/api-keys";
 const { apikey } = schema;
 const REFUSED = "Your account can't manage API keys.";
 

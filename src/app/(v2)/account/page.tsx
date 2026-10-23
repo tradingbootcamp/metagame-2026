@@ -1,18 +1,18 @@
 import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { GiTheaterCurtains } from "react-icons/gi";
 import { PasswordForm, ProfileForm, SignOutButton } from "./AccountForms";
 import AccountTabs from "./AccountTabs";
-import ApiKeysPanel, { type KeyRow } from "./ApiKeysPanel";
-import { listOwnKeys } from "./api-keys-actions";
 import AvatarForm from "./AvatarForm";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel from "./TicketsPanel";
-import { ACCOUNT_TABS, parseAccountTab } from "./tabs";
+import { parseAccountTab } from "./tabs";
 import { canSeeSchedule } from "../schedule/data";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
-import { can } from "@/lib/access";
+import { can, teamAccess } from "@/lib/access";
 import { currentSession, hasPassword } from "@/lib/auth";
 import { prefillDiscord } from "@/lib/discord-handle";
 import {
@@ -22,13 +22,7 @@ import {
 } from "@/lib/schedule-store";
 import { emailKey, ticketsForUser } from "@/lib/ticket-store";
 import { ticketView } from "@/lib/ticket-view";
-
-const when = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-  timeZone: "America/Los_Angeles",
-});
+import { Button } from "@/v2/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Account — Metagame 2026",
@@ -59,7 +53,7 @@ export default async function AccountPage({
     counts,
     linkable,
     admin,
-    ownKeys,
+    backstage,
   ] = await Promise.all([
     getDb()
       .select()
@@ -73,19 +67,9 @@ export default async function AccountPage({
     loadRsvpCounts(),
     canSeeSchedule(),
     can("schedule.manage"),
-    can("api_keys.self").then((s) => (s ? listOwnKeys() : null)),
+    teamAccess().then((a) => a?.team ?? false),
   ]);
   const tickets = rows.map((t) => ticketView(t, user.id, email));
-  // null hides the section: the account doesn't hold api_keys.self.
-  const keyRows: KeyRow[] | null =
-    ownKeys?.map((k) => ({
-      id: k.id,
-      label: k.label,
-      start: k.start,
-      enabled: k.enabled,
-      created: when.format(k.createdAt),
-      lastUsed: k.lastRequest ? when.format(k.lastRequest) : null,
-    })) ?? null;
 
   return (
     // Same measure and top clearance as ContentPage, without its title block.
@@ -96,12 +80,18 @@ export default async function AccountPage({
         </p>
       )}
       <AccountTabs
-        initial={initialTab === "advanced" && !keyRows ? "profile" : initialTab}
-        tabs={
-          keyRows ? ACCOUNT_TABS : ACCOUNT_TABS.filter((t) => t !== "advanced")
+        initial={initialTab}
+        trailing={
+          backstage && (
+            <Button asChild variant="navy" size="sm">
+              <Link href="/backstage">
+                <GiTheaterCurtains aria-hidden />
+                Backstage
+              </Link>
+            </Button>
+          )
         }
         panels={{
-          advanced: keyRows ? <ApiKeysPanel rows={keyRows} /> : null,
           profile: (
             <div className="flex max-w-[960px] flex-col gap-10">
               <AvatarForm

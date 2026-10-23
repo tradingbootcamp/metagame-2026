@@ -1,13 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createOwnKey, revokeOwnKey } from "./api-keys-actions";
-import { Button } from "@/v2/components/ui/button";
-import { Input } from "@/v2/components/ui/input";
-import { FIELD_LIGHT } from "@/v2/components/styles";
+import { createOwnKey, revokeOwnKey } from "./own-actions";
+import { buttonClass, fieldClass, smallButtonClass } from "../ui";
 import { MintedKeyDialog } from "@/components/MintedKeyDialog";
 
-export type KeyRow = {
+export type OwnKeyRow = {
   id: string;
   label: string;
   start: string;
@@ -16,16 +14,17 @@ export type KeyRow = {
   lastUsed: string | null;
 };
 
-export default function ApiKeysPanel({ rows }: { rows: KeyRow[] }) {
+/** The viewer's own keys: anyone holding api_keys.self, managers included. */
+export default function OwnKeysPanel({ rows }: { rows: OwnKeyRow[] }) {
   const [error, setError] = useState<string | null>(null);
   const [minted, setMinted] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
   return (
-    <section className="flex max-w-[640px] flex-col gap-4">
-      <h2 className="font-grotesk text-2xl font-bold text-navy">API keys</h2>
-      <p className="text-sm text-ink/70">
+    <section className="max-w-xl space-y-3 rounded-xl border border-line bg-white p-5 shadow-sm">
+      <h2 className="font-bebas text-xl tracking-wide text-navy">Your keys</h2>
+      <p className="text-sm text-ink/60">
         A key acts as your account: anything you can do here, a request carrying
         the key can do too.
       </p>
@@ -45,17 +44,21 @@ export default function ApiKeysPanel({ rows }: { rows: KeyRow[] }) {
           });
         }}
       >
-        <Input
+        <input
           name="label"
           aria-label="Label"
           required
           maxLength={80}
           placeholder="metagame-claude-code"
-          className={`${FIELD_LIGHT} flex-1`}
+          className={fieldClass}
         />
-        <Button type="submit" disabled={pending}>
+        <button
+          type="submit"
+          disabled={pending}
+          className={`${buttonClass} w-auto whitespace-nowrap`}
+        >
           {pending && !revokingId ? "Creating…" : "Create"}
-        </Button>
+        </button>
       </form>
       {error && (
         <p aria-live="polite" className="text-sm text-meeple">
@@ -63,7 +66,7 @@ export default function ApiKeysPanel({ rows }: { rows: KeyRow[] }) {
         </p>
       )}
       {rows.length === 0 ? (
-        <p className="text-sm text-ink/60">You don’t have any keys yet.</p>
+        <p className="text-sm text-ink/50">You don’t have any keys yet.</p>
       ) : (
         <ul className="divide-y divide-line text-sm">
           {rows.map((k) => (
@@ -80,7 +83,7 @@ export default function ApiKeysPanel({ rows }: { rows: KeyRow[] }) {
               <button
                 type="button"
                 disabled={pending}
-                className="text-xs text-ink/60 hover:text-meeple hover:underline disabled:opacity-60"
+                className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
                 onClick={() => {
                   setRevokingId(k.id);
                   startTransition(async () => {

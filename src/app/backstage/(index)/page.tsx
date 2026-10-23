@@ -11,59 +11,63 @@ import {
   type Permission,
 } from "@/lib/permissions";
 
-const TOOLS: { href: string; name: string; blurb: string; perm: Permission }[] =
-  [
-    {
-      href: "/backstage/links",
-      name: "Tracking links",
-      blurb: "Short /go/ links with UTM attribution.",
-      perm: "links.manage",
-    },
-    {
-      href: "/backstage/promo",
-      name: "Promo codes",
-      blurb: "Mint comp and discount codes on Stripe or BTC.",
-      perm: "promo.manage",
-    },
-    {
-      href: "/backstage/users",
-      name: "Users",
-      blurb: "Accounts, their roles and permissions.",
-      perm: "users.view",
-    },
-    {
-      href: "/backstage/roles",
-      name: "Roles",
-      blurb: "Bundles of permissions to hand out, like Volunteer.",
-      perm: "roles.manage",
-    },
-    {
-      href: "/backstage/tickets",
-      name: "Tickets",
-      blurb: "Every ticket with its buyer, holder and attendee.",
-      perm: "tickets.view",
-    },
-    {
-      href: "/backstage/schedule",
-      name: "Schedule",
-      blurb: "Rooms and sessions for the 2026 program, on a day-by-room grid.",
-      perm: "schedule.manage",
-    },
-    {
-      href: "/backstage/api-keys",
-      name: "API keys",
-      blurb:
-        "Keys for scripts and Claude sessions to edit the schedule over HTTP.",
-      perm: "api_keys.manage",
-    },
-    {
-      href: "/backstage/schema",
-      name: "Database schema",
-      blurb:
-        "ER diagram and column-by-column reference for the Postgres schema.",
-      perm: "schema.view",
-    },
-  ];
+// `perm`: holding any one of them lists the tool.
+const TOOLS: {
+  href: string;
+  name: string;
+  blurb: string;
+  perm: Permission | Permission[];
+}[] = [
+  {
+    href: "/backstage/links",
+    name: "Tracking links",
+    blurb: "Short /go/ links with UTM attribution.",
+    perm: "links.manage",
+  },
+  {
+    href: "/backstage/promo",
+    name: "Promo codes",
+    blurb: "Mint comp and discount codes on Stripe or BTC.",
+    perm: "promo.manage",
+  },
+  {
+    href: "/backstage/users",
+    name: "Users",
+    blurb: "Accounts, their roles and permissions.",
+    perm: "users.view",
+  },
+  {
+    href: "/backstage/roles",
+    name: "Roles",
+    blurb: "Bundles of permissions to hand out, like Volunteer.",
+    perm: "roles.manage",
+  },
+  {
+    href: "/backstage/tickets",
+    name: "Tickets",
+    blurb: "Every ticket with its buyer, holder and attendee.",
+    perm: "tickets.view",
+  },
+  {
+    href: "/backstage/schedule",
+    name: "Schedule",
+    blurb: "Rooms and sessions for the 2026 program, on a day-by-room grid.",
+    perm: "schedule.manage",
+  },
+  {
+    href: "/backstage/api-keys",
+    name: "API keys",
+    blurb:
+      "Keys for scripts and Claude sessions to act as an account over HTTP.",
+    perm: ["api_keys.self", "api_keys.manage"],
+  },
+  {
+    href: "/backstage/schema",
+    name: "Database schema",
+    blurb: "ER diagram and column-by-column reference for the Postgres schema.",
+    perm: "schema.view",
+  },
+];
 
 export default async function AdminIndexPage() {
   await connection();
@@ -76,7 +80,7 @@ export default async function AdminIndexPage() {
     access.via === "account"
       ? ((await teamAccess())?.permissions ?? new Set<Permission>())
       : expand(ADMIN_PASSWORD_PERMISSIONS);
-  const tools = TOOLS.filter((t) => held.has(t.perm));
+  const tools = TOOLS.filter((t) => [t.perm].flat().some((p) => held.has(p)));
 
   return (
     <Card title="Tools">

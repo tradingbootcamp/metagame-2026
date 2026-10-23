@@ -90,7 +90,7 @@ export const PERMISSIONS = {
     group: "API keys",
     level: "edit",
     label: "Own API keys",
-    description: "Mint and revoke your own API keys from /account.",
+    description: "Mint and revoke your own API keys from /backstage/api-keys.",
   },
   "schema.view": {
     audience: "team",
