@@ -1,6 +1,5 @@
 "use client";
 
-import { InfoIcon } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
@@ -12,6 +11,7 @@ import {
 } from "./actions";
 import { fieldClass, smallButtonClass } from "../ui";
 import type { Role } from "@/lib/permission-store";
+import { InfoTip } from "../InfoTip";
 import { LevelBadge } from "../PermissionLevel";
 import { GROUP_NOTES, permissionGroups, PERMISSIONS } from "@/lib/permissions";
 import { Button } from "@/v2/components/ui/button";
@@ -190,15 +190,9 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
                   {r.auto ? (
                     <span className="inline-flex items-center gap-1">
                       {r.name}
-                      <span
-                        title={`Granted to anyone who ${r.auto}.`}
-                        className="inline-flex text-ink/40"
-                      >
-                        <InfoIcon
-                          className="size-3.5"
-                          aria-label={`Granted to anyone who ${r.auto}.`}
-                        />
-                      </span>
+                      <InfoTip label={`About ${r.name}`}>
+                        Granted to anyone who {r.auto}.
+                      </InfoTip>
                     </span>
                   ) : (
                     <button
@@ -234,10 +228,15 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
                   <tr key={key}>
                     <td
                       className={`${STICKY} ${RULE} px-4 py-2 whitespace-nowrap`}
-                      title={`${key} — ${description}`}
                     >
-                      {label}
-                      <LevelBadge level={level} className="ml-2" />
+                      <span className="inline-flex items-center gap-1.5">
+                        {label}
+                        <InfoTip label={`About ${label}`}>
+                          <span className="block font-mono">{key}</span>
+                          {description}
+                        </InfoTip>
+                        <LevelBadge level={level} />
+                      </span>
                     </td>
                     {roles.map((r) => (
                       <td key={r.id} className="px-3 py-2 align-top">
