@@ -18,6 +18,7 @@ function getResend(): Resend | null {
 }
 
 const FROM = "Metagame 2026 <tickets@metagame.games>";
+const NO_REPLY = "Metagame 2026 <no-reply@metagame.games>";
 const TEAM = "team@metagame.games";
 const CORE = "core@metagame.games";
 // Email clients load images over the network, so assets must point at the
@@ -383,7 +384,7 @@ export async function sendAccountInviteEmail({
   // ?by=code opens the code form; the password form is the default.
   const login = `${SITE}/login?by=code`;
   const { error } = await resend.emails.send({
-    from: FROM,
+    from: NO_REPLY,
     to,
     replyTo: [TEAM],
     subject: "Your Metagame account",
@@ -394,12 +395,12 @@ export async function sendAccountInviteEmail({
         </div>
         <p>Hi ${name},</p>
         <p>An account has been set up for you on metagame.games under this email address.</p>
-        <p>To use it, go to <a href="${login}">${login}</a>, where you'll sign in with an email code and can set up a password.</p>
+        <p>To use it, <a href="${login}">sign in here</a>: you'll get a code by email, and can set up a password after.</p>
         <p style="font-size: 12px; color: #aaa; font-style: italic;">This is not a puzzle.</p>
         <p style="font-size: 12px; color: #888; font-style: italic;">&copy; 2026 Metagame LLC</p>
       </div>
     `,
-    text: `Hi ${name},\n\nAn account has been set up for you on metagame.games under this email address.\n\nTo use it, go to ${login}, where you'll sign in with an email code and can set up a password.\n\nThis is not a puzzle.\n© 2026 Metagame LLC`,
+    text: `Hi ${name},\n\nAn account has been set up for you on metagame.games under this email address.\n\nTo use it, sign in at ${login}: you'll get a code by email, and can set up a password after.\n\nThis is not a puzzle.\n© 2026 Metagame LLC`,
   });
   if (error) throw new Error(`Resend send failed: ${error.message}`);
 }
