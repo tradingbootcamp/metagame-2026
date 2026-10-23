@@ -82,6 +82,7 @@ export default async function AdminUsersPage(
         .filter((r) => !r.auto)
         .map((r) => ({ id: r.id, name: r.name }))}
       viewerIsAdmin={access.admin}
+      viewerCanCreate={access.permissions.has("users.create")}
       viewerCanEdit={access.permissions.has("users.edit")}
       viewerCanDelete={access.permissions.has("users.delete")}
     />

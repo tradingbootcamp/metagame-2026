@@ -366,3 +366,38 @@ export async function sendSignInCodeEmail({ to, code }: SignInCodeEmail) {
   });
   if (error) throw new Error(`Resend send failed: ${error.message}`);
 }
+
+/** Tells someone an account was made for them and how to sign in. */
+export async function sendAccountInviteEmail({
+  to,
+  name,
+}: {
+  to: string;
+  name: string;
+}) {
+  const resend = getResend();
+  if (!resend) {
+    console.warn(`[email] Resend not configured — account invite for ${to}`);
+    return;
+  }
+  const login = `${SITE}/login`;
+  const { error } = await resend.emails.send({
+    from: FROM,
+    to,
+    replyTo: [TEAM],
+    subject: "Your Metagame account",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+        <div style="text-align: center; margin: 24px 0;">
+          <img src="${SITE}/images/dice_logo.png" alt="METAGAME" width="240" style="max-width: 100%; height: auto;" />
+        </div>
+        <p>Hi ${name},</p>
+        <p>An account has been set up for you on metagame.games under this email address.</p>
+        <p>To use it, sign in at <a href="${login}">${login}</a>: enter this email and we'll send you a six-digit code. There's no password to remember.</p>
+        <p style="font-size: 12px; color: #888;">&copy; 2026 Arbor</p>
+      </div>
+    `,
+    text: `Hi ${name},\n\nAn account has been set up for you on metagame.games under this email address.\n\nTo use it, sign in at ${login}: enter this email and we'll send you a six-digit code. There's no password to remember.`,
+  });
+  if (error) throw new Error(`Resend send failed: ${error.message}`);
+}

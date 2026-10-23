@@ -3,6 +3,7 @@
 import {
   ChevronDownIcon,
   ChevronUpIcon,
+  PlusIcon,
   ShieldCheckIcon,
   TicketIcon,
 } from "lucide-react";
@@ -10,6 +11,7 @@ import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { removeUser, setBanned, setRole, type Result } from "./actions";
 import { assignRole } from "./[id]/actions";
+import NewUserDialog, { type Created } from "./NewUserDialog";
 import { fieldClass, selectClass, selectStyle, smallButtonClass } from "../ui";
 import { ticketBadge } from "@/lib/admin-tickets";
 import { Button } from "@/v2/components/ui/button";
@@ -100,6 +102,7 @@ export default function UsersTable({
   initialQuery,
   allRoles,
   viewerIsAdmin,
+  viewerCanCreate,
   viewerCanEdit,
   viewerCanDelete,
 }: {
@@ -109,6 +112,8 @@ export default function UsersTable({
   allRoles: RoleOption[];
   /** Only `user.role = 'admin'` accounts may change the admin role and bans. */
   viewerIsAdmin: boolean;
+  /** `users.create`: the New user button. */
+  viewerCanCreate: boolean;
   /** `users.edit`: assign and remove roles. */
   viewerCanEdit: boolean;
   /** `users.delete`; deleting an admin account still needs an admin. */
@@ -121,6 +126,8 @@ export default function UsersTable({
   const [deleting, setDeleting] = useState<UserRow | null>(null);
   const [promoting, setPromoting] = useState<UserRow | null>(null);
   const [openRoles, setOpenRoles] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [created, setCreated] = useState<Created | null>(null);
 
   const [query, setQuery] = useState(initialQuery);
   /** "" = everyone, "admin", "none", or a role id. */
@@ -211,12 +218,43 @@ export default function UsersTable({
           ))}
           <option value="none">No roles</option>
         </select>
+        {viewerCanCreate && (
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className={`${smallButtonClass} inline-flex items-center gap-1`}
+          >
+            <PlusIcon className="size-3.5" />
+            New user
+          </button>
+        )}
       </div>
       <p className="text-sm text-ink/60">
         {filtered
           ? `${shown.length} of ${rows.length} accounts`
           : `${rows.length} ${rows.length === 1 ? "account" : "accounts"}`}
         {error && <span className="ml-3 text-meeple">{error}</span>}
+        {created && (
+          <span className="ml-3">
+            {created.existed
+              ? `${created.email} already has an account`
+              : `Created ${created.name}`}
+            {created.userId && (
+              <>
+                {" · "}
+                <Link
+                  href={`/backstage/users/${created.userId}`}
+                  className="text-navy hover:underline"
+                >
+                  view
+                </Link>
+              </>
+            )}
+            {created.error && (
+              <span className="ml-2 text-meeple">{created.error}</span>
+            )}
+          </span>
+        )}
       </p>
       <div className="overflow-x-auto rounded-xl border border-line bg-white shadow-sm">
         <table className="w-full text-left text-sm">
@@ -429,6 +467,16 @@ export default function UsersTable({
           </tbody>
         </table>
       </div>
+      <NewUserDialog
+        open={creating}
+        onOpenChange={setCreating}
+        allRoles={allRoles}
+        canAssignRoles={viewerCanEdit}
+        onDone={(result) => {
+          setError(null);
+          setCreated(result);
+        }}
+      />
       <Dialog
         open={promoting !== null}
         onOpenChange={(o) => !o && setPromoting(null)}

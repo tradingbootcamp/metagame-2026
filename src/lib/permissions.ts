@@ -25,6 +25,15 @@ export const PERMISSIONS = {
     description:
       "The account list and each one's roles, permissions and tickets.",
   },
+  "users.create": {
+    audience: "team",
+    group: "Users",
+    level: "edit",
+    label: "Create users",
+    description:
+      "Make an account from a name and email, optionally sending an invite.",
+    implies: ["users.view"],
+  },
   "users.edit": {
     audience: "team",
     group: "Users",

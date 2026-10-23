@@ -6,6 +6,10 @@ import { headers } from "next/headers";
 import { getDb, schema } from "@/db";
 import { teamAccess } from "@/lib/access";
 import { getAuth } from "@/lib/auth";
+import { sendAccountInviteEmail } from "@/lib/email";
+import { listRoles, setUserRole } from "@/lib/permission-store";
+import { PERMISSIONS } from "@/lib/permissions";
+import { ensureAccount, findAccount } from "@/lib/schedule-store";
 
 export type Result = { error?: string };
 
@@ -103,4 +107,65 @@ export async function removeUser(userId: string): Promise<Result> {
   }
   revalidatePath("/backstage/users");
   return {};
+}
+
+export type CreateResult = Result & { userId?: string; existed?: boolean };
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * An unverified account from a name and email; the first code sign-in claims
+ * it. Roles need users.edit and are bounded like assignRole: nothing you
+ * don't hold yourself.
+ */
+export async function createUser(input: {
+  name: string;
+  email: string;
+  roleIds: string[];
+  invite: boolean;
+}): Promise<CreateResult> {
+  const access = await teamAccess();
+  if (!access?.permissions.has("users.create"))
+    return { error: "Sign in with an account that creates users." };
+  const name = input.name.trim();
+  const email = input.email.trim().toLowerCase();
+  if (!name) return { error: "Give them a name." };
+  if (!EMAIL.test(email)) return { error: "That email doesn't look right." };
+  const roleIds = [...new Set(input.roleIds)];
+  if (roleIds.length > 0 && !access.permissions.has("users.edit"))
+    return { error: "Assigning roles needs an account that edits users." };
+  try {
+    const existing = await findAccount(email);
+    if (existing) return { existed: true, userId: existing.userId };
+    const roles = roleIds.length > 0 ? await listRoles() : [];
+    for (const id of roleIds) {
+      const role = roles.find((r) => r.id === id);
+      if (!role) return { error: "That role no longer exists." };
+      const missing = access.admin
+        ? []
+        : role.permissions.filter((p) => !access.permissions.has(p));
+      if (missing.length > 0)
+        return {
+          error: `You can't assign ${role.name}: it carries ${missing
+            .map((p) => PERMISSIONS[p].label)
+            .join(", ")}, which you don't hold.`,
+        };
+    }
+    const { userId } = await ensureAccount(name, email);
+    for (const id of roleIds) await setUserRole(userId, id, true);
+    revalidatePath("/backstage/users");
+    if (input.invite) {
+      try {
+        await sendAccountInviteEmail({ to: email, name });
+      } catch (err) {
+        return {
+          userId,
+          error: `Account created, but the invite didn't send: ${message(err)}`,
+        };
+      }
+    }
+    return { userId };
+  } catch (err) {
+    return { error: message(err) };
+  }
 }
