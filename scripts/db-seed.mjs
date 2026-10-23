@@ -1,12 +1,12 @@
-// Fills a schema-only dev branch with deterministic fake data, so previews
-// never hold real accounts, sessions, or purchases. Everything upserts on
-// fixed ids, so re-running is a no-op; a prune step first removes seed rows
-// the script no longer produces. Refuses to run without --yes or against the
-// production endpoint.
+// Fills a dev database with deterministic fake data, so previews never hold
+// real accounts, sessions, or purchases. Everything upserts on fixed ids, so
+// re-running is a no-op; a prune step first removes seed rows the script no
+// longer produces. Refuses to run without --yes or against the production
+// endpoint.
 //
-// A fresh dev branch:
-//   neonctl branches create --project-id noisy-rice-01985901 \
-//     --name dev --parent main --schema-only
+// The usual way to run it is `pnpm db:reset --yes` (or the "Reset dev DB"
+// workflow), which drops the schema, replays the migrations and then seeds.
+// Against a brand-new schema-only Neon branch, seed before migrating:
 //   DATABASE_URL=<its connection string> pnpm db:seed --yes && pnpm db:migrate
 //
 // Seed before migrating: a schema-only branch copies the tables but not the
