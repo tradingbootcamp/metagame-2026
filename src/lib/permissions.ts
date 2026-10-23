@@ -76,13 +76,12 @@ export const PERMISSIONS = {
     label: "Tracking links",
     description: "Short /go/ links with UTM attribution.",
   },
-  // Not enforced yet: the /account flow is META-4540.
   "api_keys.self": {
     audience: "team",
     group: "API keys",
     level: "edit",
     label: "Own API keys",
-    description: "Mint and revoke your own API keys.",
+    description: "Mint and revoke your own API keys from /account.",
   },
   "schema.view": {
     audience: "team",

@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { PasswordForm, ProfileForm, SignOutButton } from "./AccountForms";
 import AccountTabs from "./AccountTabs";
+import ApiKeysPanel, { type KeyRow } from "./ApiKeysPanel";
+import { listOwnKeys } from "./api-keys-actions";
 import AvatarForm from "./AvatarForm";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel from "./TicketsPanel";
@@ -20,6 +22,13 @@ import {
 } from "@/lib/schedule-store";
 import { emailKey, ticketsForUser } from "@/lib/ticket-store";
 import { ticketView } from "@/lib/ticket-view";
+
+const when = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "America/Los_Angeles",
+});
 
 export const metadata: Metadata = {
   title: "Account — Metagame 2026",
@@ -50,6 +59,7 @@ export default async function AccountPage({
     counts,
     linkable,
     admin,
+    ownKeys,
   ] = await Promise.all([
     getDb()
       .select()
@@ -63,8 +73,19 @@ export default async function AccountPage({
     loadRsvpCounts(),
     canSeeSchedule(),
     can("schedule.manage"),
+    can("api_keys.self").then((s) => (s ? listOwnKeys() : null)),
   ]);
   const tickets = rows.map((t) => ticketView(t, user.id, email));
+  // null hides the section: the account doesn't hold api_keys.self.
+  const keyRows: KeyRow[] | null =
+    ownKeys?.map((k) => ({
+      id: k.id,
+      label: k.label,
+      start: k.start,
+      enabled: k.enabled,
+      created: when.format(k.createdAt),
+      lastUsed: k.lastRequest ? when.format(k.lastRequest) : null,
+    })) ?? null;
 
   return (
     // Same measure and top clearance as ContentPage, without its title block.
@@ -103,6 +124,7 @@ export default async function AccountPage({
                   <SignOutButton />
                 </div>
               </div>
+              {keyRows && <ApiKeysPanel rows={keyRows} />}
             </div>
           ),
           // TicketsPanel carries its own top margin from when it sat below the profile.
