@@ -8,13 +8,17 @@ const LABELS: Record<AccountTab, string> = {
   profile: "Profile",
   tickets: "Tickets",
   sessions: "Sessions",
+  advanced: "Advanced",
 };
 
 export default function AccountTabs({
   initial,
+  tabs = ACCOUNT_TABS,
   panels,
 }: {
   initial: AccountTab;
+  /** Which tabs to show, in order; a tab with nothing to show is left out. */
+  tabs?: readonly AccountTab[];
   panels: Record<AccountTab, ReactNode>;
 }) {
   const [tab, setTab] = useState(initial);
@@ -40,7 +44,7 @@ export default function AccountTabs({
         aria-label="Account"
         className="mb-10 flex max-w-[960px] gap-6 border-b border-line"
       >
-        {ACCOUNT_TABS.map((t) => (
+        {tabs.map((t) => (
           <Tabs.Trigger
             key={t}
             value={t}
@@ -50,7 +54,7 @@ export default function AccountTabs({
           </Tabs.Trigger>
         ))}
       </Tabs.List>
-      {ACCOUNT_TABS.map((t) => (
+      {tabs.map((t) => (
         <Tabs.Content key={t} value={t} className="outline-none">
           {panels[t]}
         </Tabs.Content>

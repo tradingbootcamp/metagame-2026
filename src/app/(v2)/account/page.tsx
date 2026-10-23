@@ -8,7 +8,7 @@ import { listOwnKeys } from "./api-keys-actions";
 import AvatarForm from "./AvatarForm";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel from "./TicketsPanel";
-import { parseAccountTab } from "./tabs";
+import { ACCOUNT_TABS, parseAccountTab } from "./tabs";
 import { canSeeSchedule } from "../schedule/data";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
@@ -96,8 +96,12 @@ export default async function AccountPage({
         </p>
       )}
       <AccountTabs
-        initial={initialTab}
+        initial={initialTab === "advanced" && !keyRows ? "profile" : initialTab}
+        tabs={
+          keyRows ? ACCOUNT_TABS : ACCOUNT_TABS.filter((t) => t !== "advanced")
+        }
         panels={{
+          advanced: keyRows ? <ApiKeysPanel rows={keyRows} /> : null,
           profile: (
             <div className="flex max-w-[960px] flex-col gap-10">
               <AvatarForm
@@ -124,7 +128,6 @@ export default async function AccountPage({
                   <SignOutButton />
                 </div>
               </div>
-              {keyRows && <ApiKeysPanel rows={keyRows} />}
             </div>
           ),
           // TicketsPanel carries its own top margin from when it sat below the profile.
