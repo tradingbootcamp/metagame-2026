@@ -27,7 +27,7 @@
 //                              invited (hosts, team, one admin) who never signed
 //                              in, 10 who bought under an email with no account
 // Plus 60 purchases from people with no account at all, and one API key for
-// admin: x-api-key mg_seed_metabot_000000000000000000000000.
+// admin: x-api-key mg_seed_metabot_000000000000000000000000000000000000000000000000000.
 //
 // Not seeded: promo codes and tracking links live in Stripe and Airtable,
 // not Postgres; sessions (the auth kind) are minted by signing in.
@@ -880,7 +880,8 @@ const spaceOptions = grades.flatMap((g, k) =>
 
 // The apiKey plugin stores base64url(sha256(key)); this key is public and
 // only works on a seeded branch.
-const API_KEY = "mg_seed_metabot_000000000000000000000000";
+const API_KEY =
+  "mg_seed_metabot_000000000000000000000000000000000000000000000000000";
 const apiKeys = [
   {
     id: "seed-apikey-metabot",
