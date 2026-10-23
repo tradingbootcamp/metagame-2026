@@ -319,6 +319,17 @@ const locations = Object.fromEntries(
     ],
   ),
 );
+// On a branch that already has rooms (a copy of prod), reuse them by name
+// rather than adding a second "Rat Park"; those rows are left as they are.
+const reusedRooms = new Set();
+for (const { id, name } of await sql.query(
+  `select id, name from locations where name = any($1::text[])`,
+  [pgArray(ROOMS.map((r) => r[1]))],
+)) {
+  const room = Object.values(locations).find((l) => l.name === name);
+  room.id = id;
+  reusedRooms.add(room);
+}
 const slugify = (title) =>
   `seed-${title
     .toLowerCase()
@@ -1032,7 +1043,11 @@ counts.user_permission_grants = await upsert(
 
 counts.tickets = await upsert("tickets", ["payment_id"], tickets);
 
-counts.locations = await upsert("locations", ["id"], rooms);
+counts.locations = await upsert(
+  "locations",
+  ["id"],
+  rooms.filter((l) => !reusedRooms.has(l)),
+);
 counts.sessions = await upsert("sessions", ["id"], sessions);
 counts.session_hosts = await upsert(
   "session_hosts",
