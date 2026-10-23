@@ -141,6 +141,22 @@ const users = {
   },
 };
 
+const FIRST =
+  "Ada Bo Cy Dee Eli Fay Gus Hal Ivy Jo Kit Lu Max Nia Oz Pia Quin Rae Sol Tess".split(
+    " ",
+  );
+const LAST =
+  "Ash Birch Cole Dale Eyre Frost Gale Hart Idle Jade Kerr Lane Moss Nash Oakes Penn Quill Reed Snow Tate Vale Webb Yates Zorn Finch".split(
+    " ",
+  );
+// i % 20 and 7i % 25 only coincide every 100, so the names are distinct.
+const crowd = Array.from({ length: 100 }, (_, i) => ({
+  id: `seed-att-${String(i + 1).padStart(3, "0")}`,
+  name: `${FIRST[i % FIRST.length]} ${LAST[(i * 7) % LAST.length]}`,
+  i,
+}));
+const everyone = [...Object.values(users), ...crowd];
+
 const locations = {
   hall: { id: uuid(1), name: "Seed Hall", capacity: 80, display_order: 1 },
   lounge: { id: uuid(2), name: "Seed Lounge", capacity: 20, display_order: 2 },
@@ -321,7 +337,34 @@ const tickets = [
     test: true,
     purchaser_email: "tester@metagame.games",
   }),
+  ...crowd.map((u) =>
+    ticket(`pi_seed_${u.id}`, {
+      tier: u.i % 10 === 9 ? "Day pass" : "Standard",
+      amount_cents: u.i % 10 === 9 ? 15000 : 45000,
+      purchaser_email: `${u.id.replace("seed-", "")}@metagame.games`,
+      purchaser_name: u.name,
+      owner_user_id: u.id,
+      claimed_at: new Date(Date.UTC(2026, 8, 1, 12, u.i * 11)).toISOString(),
+    }),
+  ),
 ];
+
+// Crowd RSVPs: `going` until the session is full, then `waitlist`.
+const crowdRsvps = [];
+const fill = (n, pick, cap) => {
+  let going = sessions.find((s) => s.id === uuid(n)).max_capacity - cap;
+  for (const u of crowd.filter(pick)) {
+    crowdRsvps.push({
+      session_id: uuid(n),
+      user_id: u.id,
+      status: going-- > 0 ? "going" : "waitlist",
+    });
+  }
+};
+fill(101, (u) => u.i % 5 !== 0, 2);
+fill(102, (u) => u.i % 7 === 0, 1);
+fill(103, (u) => u.i % 3 === 0, 1);
+fill(104, (u) => u.i % 10 === 0, 0);
 
 const counts = {};
 
@@ -330,7 +373,7 @@ counts.ledger = await seedMigrationLedger();
 counts.user = await upsert(
   "user",
   ["id"],
-  Object.values(users).map((u) => ({
+  everyone.map((u) => ({
     id: u.id,
     name: u.name,
     email: `${u.id.replace("seed-", "")}@metagame.games`,
@@ -343,7 +386,7 @@ counts.user = await upsert(
 counts.account = await upsert(
   "account",
   ["id"],
-  Object.values(users).map((u) => ({
+  everyone.map((u) => ({
     id: `${u.id}-credential`,
     account_id: u.id,
     provider_id: "credential",
@@ -354,12 +397,12 @@ counts.account = await upsert(
 counts.profiles = await upsert(
   "profiles",
   ["user_id"],
-  Object.values(users).map((u) => ({
+  everyone.map((u) => ({
     user_id: u.id,
     pronouns: u === users.host ? "they/them" : null,
     discord_handle: u === users.attendee ? "seed_attendee" : null,
     bio: u === users.host ? "Runs games. Seeded." : null,
-    is_public: u === users.host,
+    is_public: u === users.host || u.i % 3 === 0,
     is_adult: true,
   })),
 );
@@ -430,6 +473,7 @@ counts.rsvps = await upsert(
     { session_id: uuid(102), user_id: users.attendee.id, status: "waitlist" },
     { session_id: uuid(102), user_id: users.grants.id, status: "going" },
     { session_id: uuid(103), user_id: users.attendee.id, status: "going" },
+    ...crowdRsvps,
   ],
 );
 counts.bookmarks = await upsert(
@@ -438,6 +482,12 @@ counts.bookmarks = await upsert(
   [
     { session_id: uuid(104), user_id: users.attendee.id },
     { session_id: uuid(103), user_id: users.newcomer.id },
+    ...crowd
+      .filter((u) => u.i % 6 === 1)
+      .map((u) => ({ session_id: uuid(103), user_id: u.id })),
+    ...crowd
+      .filter((u) => u.i % 9 === 2)
+      .map((u) => ({ session_id: uuid(102), user_id: u.id })),
   ],
 );
 
