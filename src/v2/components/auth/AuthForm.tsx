@@ -222,13 +222,13 @@ export default function AuthForm({
         >
           {pending ? "One sec…" : byCode ? "Email me a code" : "Sign in"}
         </Button>
-        {mode === "signin" && (
-          <Button asChild variant="navy">
-            <Link href="/signup">Create Account</Link>
-          </Button>
-        )}
       </div>
       <Messages state={state} />
+      {mode === "signin" && (
+        <Link href="/signup" className={`${LINK} self-start`}>
+          New here? Create an account
+        </Link>
+      )}
       {mode === "signup" && (
         <Link href="/login" className={`${LINK} self-start`}>
           Already have an account? Sign in
