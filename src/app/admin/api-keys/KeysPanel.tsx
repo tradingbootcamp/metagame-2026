@@ -59,7 +59,7 @@ export default function KeysPanel({ rows }: { rows: KeyRow[] }) {
             name="email"
             type="email"
             required
-            placeholder="claude@…"
+            placeholder="teammember@metagame.games"
             className={fieldClass}
             onBlur={(e) => {
               const email = e.currentTarget.value.trim().toLowerCase();
@@ -73,7 +73,7 @@ export default function KeysPanel({ rows }: { rows: KeyRow[] }) {
           />
         </label>
         <label className="block text-sm">
-          Account name
+          Account display name
           <input
             key={found?.email ?? "new"}
             name="name"
@@ -89,7 +89,7 @@ export default function KeysPanel({ rows }: { rows: KeyRow[] }) {
           )}
         </label>
         <label className="block text-sm">
-          Key name
+          Label
           <input
             name="label"
             required
