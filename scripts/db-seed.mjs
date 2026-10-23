@@ -640,26 +640,25 @@ const crowdHosts = [...program, ...pipeline].flatMap((s, k) => {
   ];
 });
 
-// Prod's tier names and price points: full price, early-bird code, 100% comp
-// code, a Saturday day pass, and the odd supporter ticket.
+// Prod's tier names and price points, in roughly prod's proportions: mostly
+// early-bird code, a third comped, a few full price, day passes, a supporter.
 const T_FULL = "Metagame 2026";
 const T_DAY = "Metagame 2026 Day Pass - Saturday";
 const T_PACK = "Family & Friends Pack — Standard";
 const T_SUP = "Metagame 2026 -- Supporter";
-const price = (i) =>
-  i === 21
-    ? { tier: T_SUP, amount_cents: 65000 }
-    : [
-        { tier: T_FULL, amount_cents: 42500 },
-        { tier: T_FULL, amount_cents: 32500, coupon_code: "SEEDBIRD" },
-        { tier: T_FULL, amount_cents: 32500, coupon_code: "SEEDBIRD" },
-        {
-          tier: T_FULL,
-          amount_cents: 0,
-          coupon_code: `COMP-${LAST[(i * 7) % 100].toUpperCase()}`,
-        },
-        { tier: T_DAY, amount_cents: 22500 },
-      ][i % 5];
+// prettier-ignore
+const PRICES = [1, 1, 1, 1, 2, 2, 2, 0, 3, 1].map((p) => [
+  { tier: T_FULL, amount_cents: 42500 },
+  { tier: T_FULL, amount_cents: 32500, coupon_code: "SEEDBIRD" },
+  { tier: T_FULL, amount_cents: 0, coupon_code: "COMP" },
+  { tier: T_DAY, amount_cents: 22500 },
+][p]);
+const price = (i) => {
+  const p = i === 21 ? { tier: T_SUP, amount_cents: 65000 } : PRICES[i % 10];
+  return p.coupon_code === "COMP"
+    ? { ...p, coupon_code: `COMP-${LAST[(i * 7) % 100].toUpperCase()}` }
+    : p;
+};
 
 const ticket = (payment_id, rest) => ({
   payment_id,
