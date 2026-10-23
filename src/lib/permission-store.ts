@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import {
   isPermission,
@@ -8,7 +8,8 @@ import {
 } from "./permissions";
 import { hasClaimedTicket } from "./ticket-store";
 
-const { roles, rolePermissions, userRoles, userPermissionGrants } = schema;
+const { roles, rolePermissions, userRoles, userPermissionGrants, user } =
+  schema;
 
 // Built-in roles attach themselves instead of being assigned: Attendee is
 // anyone with a claimed ticket. They're ordinary rows, so the roles grid sets
@@ -25,7 +26,8 @@ export type Role = {
   id: string;
   name: string;
   permissions: Permission[];
-  members: number;
+  /** Accounts assigned it, by name. */
+  holders: { id: string; name: string; email: string }[];
   /** Built-in: who gets it automatically, e.g. "has a ticket". */
   auto?: string;
 };
@@ -59,15 +61,20 @@ async function ensureBuiltinRoles(): Promise<void> {
 export async function listRoles(): Promise<Role[]> {
   await ensureBuiltinRoles();
   const db = getDb();
-  const [rows, perms, members] = await Promise.all([
+  const [rows, perms, holders] = await Promise.all([
     db.select().from(roles).orderBy(asc(roles.name)),
     db.select().from(rolePermissions),
     db
-      .select({ roleId: userRoles.roleId, members: count() })
+      .select({
+        roleId: userRoles.roleId,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      })
       .from(userRoles)
-      .groupBy(userRoles.roleId),
+      .innerJoin(user, eq(user.id, userRoles.userId))
+      .orderBy(asc(user.name)),
   ]);
-  const memberCount = new Map(members.map((m) => [m.roleId, m.members]));
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
@@ -75,7 +82,9 @@ export async function listRoles(): Promise<Role[]> {
       .filter((p) => p.roleId === r.id)
       .map((p) => p.permission)
       .filter(isPermission),
-    members: memberCount.get(r.id) ?? 0,
+    holders: holders
+      .filter((h) => h.roleId === r.id)
+      .map(({ id, name, email }) => ({ id, name, email })),
     ...(isBuiltinRole(r.name) ? { auto: BUILTIN[r.name] } : {}),
   }));
 }

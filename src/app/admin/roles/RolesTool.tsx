@@ -1,5 +1,7 @@
 "use client";
 
+import { InfoIcon } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import {
   createRole,
@@ -12,14 +14,136 @@ import { fieldClass, smallButtonClass } from "../ui";
 import type { Role } from "@/lib/permission-store";
 import { LevelBadge } from "../PermissionLevel";
 import { GROUP_NOTES, permissionGroups, PERMISSIONS } from "@/lib/permissions";
+import { Button } from "@/v2/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/v2/components/ui/dialog";
+
+const STICKY = "sticky left-0 z-10 bg-white";
+const RULE = "border-r border-line";
+
+function RoleDialog({
+  role,
+  pending,
+  onClose,
+  onRename,
+  onDelete,
+}: {
+  role: Role;
+  pending: boolean;
+  onClose: () => void;
+  onRename: (name: string) => void;
+  onDelete: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const n = role.holders.length;
+  return (
+    <DialogContent className="flex max-w-[520px] flex-col gap-5 px-8 py-7">
+      <DialogTitle className="font-bebas text-2xl tracking-wide text-cream">
+        {role.name}
+      </DialogTitle>
+      <DialogDescription className="sr-only">
+        Rename or delete the role, and see who holds it.
+      </DialogDescription>
+      <form
+        className="flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const name = String(new FormData(e.currentTarget).get("name") ?? "");
+          if (name.trim() && name.trim() !== role.name) onRename(name);
+        }}
+      >
+        <input
+          name="name"
+          defaultValue={role.name}
+          maxLength={40}
+          aria-label="Role name"
+          className={`${fieldClass} text-ink`}
+        />
+        <Button type="submit" size="sm" disabled={pending}>
+          Rename
+        </Button>
+      </form>
+      <div className="flex items-center gap-3">
+        {confirming ? (
+          <>
+            <span className="text-sm text-cream/80">
+              Delete “{role.name}”? {n}{" "}
+              {n === 1 ? "person loses" : "people lose"} what it granted.
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending}
+              onClick={onDelete}
+            >
+              Delete role
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setConfirming(false)}
+            >
+              Keep
+            </Button>
+          </>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={pending}
+            onClick={() => setConfirming(true)}
+            className="text-salmon"
+          >
+            Delete role
+          </Button>
+        )}
+      </div>
+      <div>
+        <h3 className="mb-2 text-xs tracking-wide text-cream/60 uppercase">
+          Everyone who has it
+        </h3>
+        {n === 0 ? (
+          <p className="text-sm text-cream/60">Nobody yet.</p>
+        ) : (
+          <ul className="max-h-64 divide-y divide-cream/10 overflow-y-auto text-sm">
+            {role.holders.map((h) => (
+              <li key={h.id} className="flex items-baseline gap-3 py-1.5">
+                <Link
+                  href={`/admin/users/${h.id}`}
+                  onClick={onClose}
+                  className="font-semibold text-cream underline-offset-2 hover:underline"
+                >
+                  {h.name.trim() || "Unnamed"}
+                </Link>
+                <span className="font-mono text-xs text-cream/60">
+                  {h.email}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </DialogContent>
+  );
+}
 
 export default function RolesTool({ roles }: { roles: Role[] }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = roles.find((r) => r.id === openId) ?? null;
 
-  const run = (action: () => Promise<Result>) =>
+  const run = (action: () => Promise<Result>, then?: () => void) =>
     startTransition(async () => {
-      setError((await action()).error ?? null);
+      const result = await action();
+      setError(result.error ?? null);
+      if (!result.error) then?.();
     });
 
   return (
@@ -30,11 +154,10 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
           e.preventDefault();
           const form = e.currentTarget;
           const name = String(new FormData(form).get("name") ?? "");
-          startTransition(async () => {
-            const result = await createRole(name);
-            setError(result.error ?? null);
-            if (!result.error) form.reset();
-          });
+          run(
+            () => createRole(name),
+            () => form.reset(),
+          );
         }}
       >
         <input
@@ -56,63 +179,35 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
         <table className="w-full text-left text-sm">
           <thead className="text-xs tracking-wide text-ink/50 uppercase">
             <tr>
-              <th className="px-4 py-2 font-medium">Permission</th>
+              <th className={`${STICKY} ${RULE} px-4 py-2 font-medium`}>
+                Permission
+              </th>
               {roles.map((r) => (
-                <th key={r.id} className="px-4 py-2 font-medium normal-case">
+                <th
+                  key={r.id}
+                  className="w-28 px-3 py-2 text-sm font-semibold whitespace-nowrap text-navy normal-case"
+                >
                   {r.auto ? (
-                    <>
-                      <span className="block px-1 py-0.5 text-sm font-semibold text-navy">
-                        {r.name}
+                    <span className="inline-flex items-center gap-1">
+                      {r.name}
+                      <span
+                        title={`Granted to anyone who ${r.auto}.`}
+                        className="inline-flex text-ink/40"
+                      >
+                        <InfoIcon
+                          className="size-3.5"
+                          aria-label={`Granted to anyone who ${r.auto}.`}
+                        />
                       </span>
-                      <span className="block px-1 text-xs font-normal text-ink/50">
-                        automatic: {r.auto}
-                      </span>
-                    </>
+                    </span>
                   ) : (
-                    <>
-                      <input
-                        key={r.name}
-                        aria-label="Role name"
-                        defaultValue={r.name}
-                        maxLength={40}
-                        disabled={pending}
-                        onBlur={(e) => {
-                          const input = e.currentTarget;
-                          const name = input.value.trim();
-                          if (!name || name === r.name) {
-                            input.value = r.name;
-                            return;
-                          }
-                          startTransition(async () => {
-                            const result = await renameRole(r.id, name);
-                            setError(result.error ?? null);
-                            if (result.error) input.value = r.name;
-                          });
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") e.currentTarget.blur();
-                        }}
-                        className="w-32 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold text-navy hover:border-line focus:border-navy focus:outline-none"
-                      />
-                      <span className="block px-1 text-xs font-normal text-ink/50">
-                        {r.members} {r.members === 1 ? "member" : "members"} ·{" "}
-                        <button
-                          type="button"
-                          disabled={pending}
-                          onClick={() => {
-                            if (
-                              confirm(
-                                `Delete “${r.name}”? Its ${r.members} ${r.members === 1 ? "member loses" : "members lose"} what it granted.`,
-                              )
-                            )
-                              run(() => deleteRole(r.id));
-                          }}
-                          className="hover:text-meeple hover:underline"
-                        >
-                          delete
-                        </button>
-                      </span>
-                    </>
+                    <button
+                      type="button"
+                      onClick={() => setOpenId(r.id)}
+                      className="underline decoration-navy/40 decoration-dashed underline-offset-4 hover:text-meeple hover:decoration-meeple"
+                    >
+                      {r.name}
+                    </button>
                   )}
                 </th>
               ))}
@@ -123,7 +218,7 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
               <tr key={group} className="bg-cream/60">
                 <td
                   colSpan={roles.length + 1}
-                  className="px-4 py-1.5 text-xs font-semibold tracking-wide text-navy uppercase"
+                  className={`${STICKY} bg-[#fffbf9] px-4 py-1.5 text-xs font-semibold tracking-wide text-navy uppercase`}
                 >
                   {group}
                   {GROUP_NOTES[group] && (
@@ -137,7 +232,7 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
                 const { label, description, level } = PERMISSIONS[key];
                 return (
                   <tr key={key}>
-                    <td className="px-4 py-2">
+                    <td className={`${STICKY} ${RULE} px-4 py-2`}>
                       <span className="font-semibold">{label}</span>
                       <LevelBadge level={level} className="ml-2" />
                       <span className="ml-2 font-mono text-xs text-ink/40">
@@ -148,7 +243,7 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
                       </span>
                     </td>
                     {roles.map((r) => (
-                      <td key={r.id} className="px-4 py-2 align-top">
+                      <td key={r.id} className="px-3 py-2 align-top">
                         <input
                           type="checkbox"
                           aria-label={`${r.name}: ${label}`}
@@ -174,6 +269,23 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
           </p>
         )}
       </div>
+      <Dialog open={open !== null} onOpenChange={(o) => !o && setOpenId(null)}>
+        {open && (
+          <RoleDialog
+            key={open.id}
+            role={open}
+            pending={pending}
+            onClose={() => setOpenId(null)}
+            onRename={(name) => run(() => renameRole(open.id, name))}
+            onDelete={() =>
+              run(
+                () => deleteRole(open.id),
+                () => setOpenId(null),
+              )
+            }
+          />
+        )}
+      </Dialog>
     </div>
   );
 }
