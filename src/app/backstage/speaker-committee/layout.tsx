@@ -12,7 +12,11 @@ export default function SpeakerCommitteeLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ToolLayout title="Speaker Committee" href="/backstage/speaker-committee">
+    <ToolLayout
+      title="Speaker Committee"
+      href="/backstage/speaker-committee"
+      wide
+    >
       {children}
     </ToolLayout>
   );

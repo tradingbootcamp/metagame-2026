@@ -166,6 +166,7 @@ export default async function SpeakerCommitteePage(
         ))}
       </nav>
       <PipelineTabs active={tab.key} mode={mode} counts={myCounts(rows, me)} />
+      <p className="text-sm text-ink/60">{tab.blurb}</p>
     </div>
   );
 
