@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { can } from "@/lib/access";
 import { durationMinutes } from "@/lib/rfp-fields";
 import {
@@ -10,11 +11,26 @@ import {
 } from "@/lib/rfp-sessions";
 import { DEFAULT_DRAFT_MINUTES, END_GAP_MINUTES } from "@/lib/schedule";
 import { explainDbError, moveSessionTo } from "@/lib/schedule-store";
+import { PANE_COOKIE } from "./pane";
 
 export type Result = { error?: string };
 
 const PATH = "/backstage/speaker-committee";
 const EXPIRED = "Your session expired. Reload.";
+
+export async function setSchedulePane(on: boolean): Promise<void> {
+  const store = await cookies();
+  if (on) {
+    store.set(PANE_COOKIE, "1", {
+      path: PATH,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  } else {
+    store.delete({ name: PANE_COOKIE, path: PATH });
+  }
+  revalidatePath(PATH, "layout");
+}
 
 /**
  * Drops a proposal on the grid: places its session for the length the host

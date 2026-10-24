@@ -7,6 +7,8 @@ export default function ToolLayout({
   title,
   href,
   nav,
+  wide,
+  fluid,
   children,
 }: {
   title: string;
@@ -15,9 +17,11 @@ export default function ToolLayout({
   nav?: React.ReactNode;
   /** For tools with many columns. */
   wide?: boolean;
+  /** The whole viewport, for side-by-side panes. */
+  fluid?: boolean;
   children: React.ReactNode;
 }) {
-  const width = wide ? "max-w-7xl" : "max-w-5xl";
+  const width = fluid ? "max-w-none" : wide ? "max-w-7xl" : "max-w-5xl";
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
       <header className="sticky top-0 z-50 border-b border-line bg-cream/95 backdrop-blur">

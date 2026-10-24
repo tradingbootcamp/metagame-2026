@@ -99,6 +99,8 @@ export default function ScheduleBoard({
   title,
   state,
   meta,
+  split,
+  children,
 }: {
   sessions: ScheduleSession[];
   queue: QueueRow[];
@@ -113,6 +115,10 @@ export default function ScheduleBoard({
   title: string;
   state: SortState;
   meta: TableMeta;
+  /** Grid in its own column beside the list, on screens with the room. */
+  split?: boolean;
+  /** Replaces the queue in the left column: another tab's list, with the grid alongside. */
+  children?: React.ReactNode;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -259,68 +265,83 @@ export default function ScheduleBoard({
 
       {error && <p className="text-sm text-meeple">{error}</p>}
 
-      <div
-        onDragOver={(e) => {
-          if (canUnschedule) e.preventDefault();
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          if (canUnschedule && carrying) takeOff(carrying);
-        }}
-        className={`rounded-xl transition-colors ${
-          canUnschedule
-            ? "outline-2 outline-offset-4 outline-navy/40 outline-dashed"
-            : ""
-        }`}
-      >
-        {canUnschedule && carrying && (
-          <button
-            type="button"
-            onClick={() => takeOff(carrying)}
-            className="mb-3 w-full rounded-lg border border-dashed border-navy/40 bg-navy/[0.04] px-4 py-3 text-sm text-navy hover:bg-navy/[0.08]"
-          >
-            Drop here to take <strong>{carrying.title}</strong> off the schedule
-          </button>
-        )}
-        {board.queue.length === 0 ? (
-          <p className="rounded-xl border border-line bg-white px-4 py-6 text-center text-sm text-ink/55">
-            Nothing waiting to be scheduled.
-          </p>
-        ) : (
-          <SubmissionGroup
-            title={title}
-            rows={board.queue}
-            state={state}
-            meta={meta}
-            rowClass={(r) => (heldId === queueId(r.id) ? "bg-navy/[0.06]" : "")}
-            lead={(r) => (
-              <GrabHandle
-                session={queueSessions.get(queueId(r.id))!}
-                carrying={heldId === queueId(r.id)}
-                onGrab={grab}
-                className="h-7 w-6"
-              />
-            )}
-          />
-        )}
-      </div>
+      <div className={split ? "md:flex md:items-start md:gap-6" : "space-y-6"}>
+        <div className={split ? "min-w-0 md:flex-1" : ""}>
+          {children ?? (
+            <div
+              onDragOver={(e) => {
+                if (canUnschedule) e.preventDefault();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (canUnschedule && carrying) takeOff(carrying);
+              }}
+              className={`rounded-xl transition-colors ${
+                canUnschedule
+                  ? "outline-2 outline-offset-4 outline-navy/40 outline-dashed"
+                  : ""
+              }`}
+            >
+              {canUnschedule && carrying && (
+                <button
+                  type="button"
+                  onClick={() => takeOff(carrying)}
+                  className="mb-3 w-full rounded-lg border border-dashed border-navy/40 bg-navy/[0.04] px-4 py-3 text-sm text-navy hover:bg-navy/[0.08]"
+                >
+                  Drop here to take <strong>{carrying.title}</strong> off the
+                  schedule
+                </button>
+              )}
+              {board.queue.length === 0 ? (
+                <p className="rounded-xl border border-line bg-white px-4 py-6 text-center text-sm text-ink/55">
+                  Nothing waiting to be scheduled.
+                </p>
+              ) : (
+                <SubmissionGroup
+                  title={title}
+                  rows={board.queue}
+                  state={state}
+                  meta={meta}
+                  rowClass={(r) =>
+                    heldId === queueId(r.id) ? "bg-navy/[0.06]" : ""
+                  }
+                  lead={(r) => (
+                    <GrabHandle
+                      session={queueSessions.get(queueId(r.id))!}
+                      carrying={heldId === queueId(r.id)}
+                      onGrab={grab}
+                      className="h-7 w-6"
+                    />
+                  )}
+                />
+              )}
+            </div>
+          )}
+        </div>
 
-      <section className="space-y-3">
-        <h2 className="font-bebas text-lg tracking-wide text-navy">
-          On the schedule
-        </h2>
-        <ScheduleGrid
-          days={days}
-          locations={locations}
-          going={going}
-          carrying={carrying}
-          carryMinutes={carriedRow?.minutes}
-          muted={(s) => muted.has(s.id)}
-          onOpen={(s) => setOpenId(s.id)}
-          onGrab={grab}
-          onDrop={drop}
-        />
-      </section>
+        <section
+          className={`space-y-3 ${
+            split
+              ? `mt-6 md:sticky md:top-20 md:mt-0 md:w-1/2 md:shrink-0 ${children ? "hidden md:block" : ""}`
+              : ""
+          }`}
+        >
+          <h2 className="font-bebas text-lg tracking-wide text-navy">
+            On the schedule
+          </h2>
+          <ScheduleGrid
+            days={days}
+            locations={locations}
+            going={going}
+            carrying={carrying}
+            carryMinutes={carriedRow?.minutes}
+            muted={(s) => muted.has(s.id)}
+            onOpen={(s) => setOpenId(s.id)}
+            onGrab={grab}
+            onDrop={drop}
+          />
+        </section>
+      </div>
 
       {open && (
         <Dialog open onOpenChange={(o) => !o && setOpenId(null)}>

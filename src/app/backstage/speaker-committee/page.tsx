@@ -1,5 +1,8 @@
+import { PanelRightCloseIcon, PanelRightOpenIcon } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
+import { setSchedulePane } from "./actions";
+import { schedulePaneOn } from "./pane";
 import ScheduleBoard, { type QueueRow } from "./ScheduleBoard";
 import {
   compare,
@@ -19,6 +22,7 @@ import {
   type SortState,
   type TableMeta,
 } from "./SubmissionTable";
+import { smallButtonClass } from "@/app/backstage/ui";
 import ToolSignIn from "@/components/ToolSignIn";
 import { can } from "@/lib/access";
 import { durationMinutes } from "@/lib/rfp-fields";
@@ -106,9 +110,10 @@ export default async function SpeakerCommitteePage(
   }
   const me = account.user.id;
 
-  const [rfpSessions, committee] = await Promise.all([
+  const [rfpSessions, committee, pane] = await Promise.all([
     listRfpSessions(),
     committeeAccounts(),
+    schedulePaneOn(),
   ]);
   const rows = rfpSessions.map(toRow);
 
@@ -164,17 +169,69 @@ export default async function SpeakerCommitteePage(
             {m.label}
           </Link>
         ))}
+        {/* Desktop only: the side-by-side view has no room on a phone. */}
+        <form
+          action={setSchedulePane.bind(null, !pane)}
+          className="ml-auto hidden md:block"
+        >
+          <button
+            type="submit"
+            className={`${smallButtonClass} inline-flex items-center gap-1.5`}
+          >
+            {pane ? (
+              <PanelRightCloseIcon className="size-4" aria-hidden="true" />
+            ) : (
+              <PanelRightOpenIcon className="size-4" aria-hidden="true" />
+            )}
+            {pane ? "Hide schedule" : "Show schedule alongside"}
+          </button>
+        </form>
       </nav>
       <PipelineTabs active={tab.key} mode={mode} counts={myCounts(rows, me)} />
       <p className="text-sm text-ink/60">{tab.blurb}</p>
     </div>
   );
 
-  if (tab.key === "schedule") {
-    const [schedule, rsvps] = await Promise.all([
-      loadSchedule(),
-      loadRsvpCounts(),
-    ]);
+  const onSchedule = tab.key === "schedule";
+  // The grid shows on the schedule tab, or beside every tab with the pane on.
+  const [schedule, rsvps] =
+    onSchedule || pane
+      ? await Promise.all([loadSchedule(), loadRsvpCounts()])
+      : [null, null];
+  const board = (
+    queue: QueueRow[],
+    showInQueue: string[],
+    children?: React.ReactNode,
+  ) => {
+    if (!schedule || !rsvps) return children;
+    return (
+      <ScheduleBoard
+        sessions={schedule.sessions}
+        queue={queue}
+        locations={schedule.locations}
+        going={Object.fromEntries(
+          Object.entries(rsvps).map(([id, c]) => [id, c.going]),
+        )}
+        proposals={Object.fromEntries(rows.map((r) => [r.id, r]))}
+        mutedIds={
+          mineOnly
+            ? schedule.sessions
+                .filter((s) => s.shepherd?.userId !== me)
+                .map((s) => s.id)
+            : []
+        }
+        showInQueue={showInQueue}
+        title="Needs to be scheduled"
+        state={state}
+        meta={meta}
+        split={pane}
+      >
+        {children}
+      </ScheduleBoard>
+    );
+  };
+
+  if (onSchedule && schedule) {
     const byId = new Map(rfpSessions.map((s) => [s.sessionId, s]));
     // Accepted and not on the grid yet; placed ones show on the grid instead.
     const queue: QueueRow[] = visible.map((r) => {
@@ -190,36 +247,16 @@ export default async function SpeakerCommitteePage(
     return (
       <div className="space-y-6">
         {header}
-        <ScheduleBoard
-          sessions={schedule.sessions}
-          queue={queue}
-          locations={schedule.locations}
-          going={Object.fromEntries(
-            Object.entries(rsvps).map(([id, c]) => [id, c.going]),
-          )}
-          proposals={Object.fromEntries(rows.map((r) => [r.id, r]))}
-          mutedIds={
-            mineOnly
-              ? schedule.sessions
-                  .filter((s) => s.shepherd?.userId !== me)
-                  .map((s) => s.id)
-              : []
-          }
-          showInQueue={rows
-            .filter((r) => !mineOnly || r.shepherdId === me)
-            .map((r) => r.id)}
-          title="Needs to be scheduled"
-          state={state}
-          meta={meta}
-        />
+        {board(
+          queue,
+          rows.filter((r) => !mineOnly || r.shepherdId === me).map((r) => r.id),
+        )}
       </div>
     );
   }
 
-  return (
+  const list = (
     <div className="space-y-6">
-      {header}
-
       {/* Plain GET form: filtering needs no client JS. */}
       <form action={PATH} className="flex gap-2">
         <input type="hidden" name="who" value={mode} />
@@ -269,6 +306,13 @@ export default async function SpeakerCommitteePage(
           meta={meta}
         />
       )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {header}
+      {pane ? board([], [], list) : list}
     </div>
   );
 }
