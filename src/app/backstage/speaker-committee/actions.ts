@@ -32,10 +32,7 @@ export async function setSchedulePane(on: boolean): Promise<void> {
   revalidatePath(PATH, "layout");
 }
 
-/**
- * Drops a proposal on the grid: places its session for the length the host
- * asked for and moves it to ready.
- */
+/** Drops a proposal on the grid for the length the host asked for; the step is untouched. */
 export async function scheduleProposal(
   sessionId: string,
   startsAt: string,
@@ -83,7 +80,7 @@ export async function moveScheduled(
   return {};
 }
 
-/** Takes a session off the grid; a ready proposal goes back to "Add to schedule". */
+/** Takes a session off the grid; the step is untouched. */
 export async function unschedule(sessionId: string): Promise<Result> {
   if (!(await can("schedule.manage"))) return { error: EXPIRED };
   try {

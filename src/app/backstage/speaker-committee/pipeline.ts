@@ -71,10 +71,17 @@ export const TABS = [
   {
     key: "schedule",
     label: "Schedule",
-    blurb: "Place accepted sessions on the grid.",
-    // Accepted but not on the grid, whichever of the two phases it's in;
-    // placed sessions show on the grid instead.
-    in: (r) => (r.phase === "scheduling" || r.phase === "ready") && !r.placed,
+    blurb: "Place the session on the grid, then move it along to Done.",
+    // Placed or not: a slot can be picked from any step, and this one ends
+    // when someone says it's done.
+    in: (r) => r.phase === "scheduling",
+    role: "shepherd",
+  },
+  {
+    key: "done",
+    label: "Done",
+    blurb: "No action needed, on the schedule or not.",
+    in: (r) => r.phase === "ready",
     role: "shepherd",
   },
 ] as const satisfies readonly {

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { setSchedulePane } from "./actions";
 import { schedulePaneOn } from "./pane";
-import ScheduleBoard, { type QueueRow } from "./ScheduleBoard";
+import ScheduleBoard, { type Group, type QueueRow } from "./ScheduleBoard";
 import {
   compare,
   groupLabel,
@@ -18,6 +18,7 @@ import {
   PATH,
   SORTS,
   SubmissionGroup,
+  type Row,
   type SortKey,
   type SortState,
   type TableMeta,
@@ -183,7 +184,7 @@ export default async function SpeakerCommitteePage(
             ) : (
               <PanelRightOpenIcon className="size-4" aria-hidden="true" />
             )}
-            {pane ? "Hide schedule" : "Show schedule alongside"}
+            {pane ? "Hide schedule" : "Show schedule"}
           </button>
         </form>
       </nav>
@@ -192,71 +193,30 @@ export default async function SpeakerCommitteePage(
     </div>
   );
 
-  const onSchedule = tab.key === "schedule";
   // The grid shows on the schedule tab, or beside every tab with the pane on.
-  const [schedule, rsvps] =
-    onSchedule || pane
-      ? await Promise.all([loadSchedule(), loadRsvpCounts()])
-      : [null, null];
-  const board = (
-    queue: QueueRow[],
-    showInQueue: string[],
-    children?: React.ReactNode,
-  ) => {
-    if (!schedule || !rsvps) return children;
-    return (
-      <ScheduleBoard
-        sessions={schedule.sessions}
-        queue={queue}
-        locations={schedule.locations}
-        going={Object.fromEntries(
-          Object.entries(rsvps).map(([id, c]) => [id, c.going]),
-        )}
-        proposals={Object.fromEntries(rows.map((r) => [r.id, r]))}
-        mutedIds={
-          mineOnly
-            ? schedule.sessions
-                .filter((s) => s.shepherd?.userId !== me)
-                .map((s) => s.id)
-            : []
-        }
-        showInQueue={showInQueue}
-        title="Needs to be scheduled"
-        state={state}
-        meta={meta}
-        split={pane}
-      >
-        {children}
-      </ScheduleBoard>
-    );
-  };
+  const withGrid = tab.key === "schedule" || pane;
+  const [schedule, rsvps] = withGrid
+    ? await Promise.all([loadSchedule(), loadRsvpCounts()])
+    : [null, null];
 
-  if (onSchedule && schedule) {
-    const byId = new Map(rfpSessions.map((s) => [s.sessionId, s]));
-    // Accepted and not on the grid yet; placed ones show on the grid instead.
-    const queue: QueueRow[] = visible.map((r) => {
-      const row = byId.get(r.id)?.row;
-      return {
-        ...r,
-        minutes:
-          durationMinutes(row?.requestedDuration) ??
-          DEFAULT_DRAFT_MINUTES - END_GAP_MINUTES,
-        category: row?.category ?? null,
-      };
-    });
-    return (
-      <div className="space-y-6">
-        {header}
-        {board(
-          queue,
-          rows.filter((r) => !mineOnly || r.shepherdId === me).map((r) => r.id),
-        )}
-      </div>
-    );
-  }
+  const groups: { title: string; rows: Row[] }[] =
+    tab.key === "all"
+      ? stepsOf(visible).map((step) => ({
+          title: groupLabel(step),
+          rows: visible.filter((s) => s.nextSteps === step),
+        }))
+      : tab.key === "schedule"
+        ? [
+            {
+              title: "Needs a slot",
+              rows: visible.filter((r) => !r.placed),
+            },
+            { title: "Placed", rows: visible.filter((r) => r.placed) },
+          ]
+        : [{ title: tab.label, rows: visible }];
 
   const list = (
-    <div className="space-y-6">
+    <>
       {/* Plain GET form: filtering needs no client JS. */}
       <form action={PATH} className="flex gap-2">
         <input type="hidden" name="who" value={mode} />
@@ -277,8 +237,7 @@ export default async function SpeakerCommitteePage(
           Search
         </button>
       </form>
-
-      {visible.length === 0 ? (
+      {visible.length === 0 && (
         <p className="py-8 text-center text-sm text-ink/55">
           {query
             ? "No proposals match. Try clearing the search."
@@ -286,33 +245,67 @@ export default async function SpeakerCommitteePage(
               ? "Nothing here is assigned to you."
               : "Nothing at this step."}
         </p>
-      ) : tab.key === "all" ? (
-        <div className="space-y-6">
-          {stepsOf(visible).map((step) => (
-            <SubmissionGroup
-              key={step ?? "untriaged"}
-              title={groupLabel(step)}
-              rows={visible.filter((s) => s.nextSteps === step)}
-              state={state}
-              meta={meta}
-            />
-          ))}
-        </div>
-      ) : (
-        <SubmissionGroup
-          title={tab.label}
-          rows={visible}
+      )}
+    </>
+  );
+
+  if (schedule && rsvps) {
+    const byId = new Map(rfpSessions.map((s) => [s.sessionId, s]));
+    const forGrid = (r: Row): QueueRow => {
+      const row = byId.get(r.id)?.row;
+      return {
+        ...r,
+        minutes:
+          durationMinutes(row?.requestedDuration) ??
+          DEFAULT_DRAFT_MINUTES - END_GAP_MINUTES,
+        category: row?.category ?? null,
+      };
+    };
+    const gridGroups: Group[] = groups.map((g) => ({
+      ...g,
+      rows: g.rows.map(forGrid),
+    }));
+    return (
+      <div className="space-y-6">
+        {header}
+        <ScheduleBoard
+          sessions={schedule.sessions}
+          groups={gridGroups}
+          locations={schedule.locations}
+          going={Object.fromEntries(
+            Object.entries(rsvps).map(([id, c]) => [id, c.going]),
+          )}
+          proposals={Object.fromEntries(rows.map((r) => [r.id, r]))}
+          mutedIds={
+            mineOnly
+              ? schedule.sessions
+                  .filter((s) => s.shepherd?.userId !== me)
+                  .map((s) => s.id)
+              : []
+          }
           state={state}
           meta={meta}
-        />
-      )}
-    </div>
-  );
+          split={pane}
+        >
+          {list}
+        </ScheduleBoard>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {header}
-      {pane ? board([], [], list) : list}
+      {list}
+      {groups.map((g) => (
+        <SubmissionGroup
+          key={g.title}
+          title={g.title}
+          rows={g.rows}
+          state={state}
+          meta={meta}
+        />
+      ))}
     </div>
   );
 }

@@ -53,8 +53,9 @@ describe("tabRows", () => {
     expect(ids(tabRows(rows, tab("schedule"), "ana", false))).toEqual([
       "7",
       "8",
-      "10",
+      "11",
     ]);
+    expect(ids(tabRows(rows, tab("done"), "ana", false))).toEqual(["9", "10"]);
     expect(ids(tabRows(rows, tab("all"), "ana", false))).toHaveLength(11);
   });
 
@@ -88,11 +89,12 @@ describe("tabRows", () => {
 });
 
 describe("myCounts", () => {
-  it("counts the viewer's rows per tab, leaving placed sessions out of Schedule", () => {
+  it("counts the viewer's rows per tab, placed or not", () => {
     const counts = myCounts(rows, "ana");
     expect(counts.all).toBe(7);
     expect(counts.grade).toBe(1);
     expect(counts.schedule).toBe(2);
+    expect(counts.done).toBe(2);
     expect(counts["assign-grader"]).toBe(0);
   });
 });
