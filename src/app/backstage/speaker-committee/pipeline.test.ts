@@ -78,6 +78,7 @@ describe("tabRows", () => {
       row({ id: "c", phase: "deciding", graderIds: ["ana"] }),
     ];
     const emailTab = tab("email-verdict");
+    expect(ids(tabRows(notifying, tab("decide"), "ana", false))).toEqual(["c"]);
     expect(ids(tabRows(notifying, emailTab, "ana", false))).toEqual(["a", "b"]);
     expect(ids(tabRows(notifying, emailTab, "ana", true))).toEqual(["a"]);
     expect(ids(tabRows(notifying, emailTab, "bo", true))).toEqual(["b"]);

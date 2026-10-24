@@ -48,6 +48,13 @@ export const TABS = [
     role: "grader",
   },
   {
+    key: "decide",
+    label: "Decide",
+    blurb: "The committee settles on a verdict.",
+    in: (r) => r.phase === "deciding",
+    role: "grader",
+  },
+  {
     key: "email-verdict",
     label: "Notify",
     blurb: "Email the speaker with the verdict.",
