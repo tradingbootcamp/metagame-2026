@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/lib/access";
-import { signOutAccount } from "@/lib/auth";
 import { durationMinutes } from "@/lib/rfp-fields";
 import {
   getRfpSession,
@@ -14,13 +13,8 @@ import { explainDbError, moveSessionTo } from "@/lib/schedule-store";
 
 export type Result = { error?: string };
 
-const PATH = "/speaker_committee";
+const PATH = "/backstage/speaker-committee";
 const EXPIRED = "Your session expired. Reload.";
-
-export async function signOut(): Promise<void> {
-  await signOutAccount();
-  revalidatePath(PATH);
-}
 
 /**
  * Drops a proposal on the grid: places its session for the length the host

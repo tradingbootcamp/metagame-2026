@@ -13,7 +13,7 @@ import {
 // The /grade overview's grouped table, rendered from the server page and from
 // the schedule tab's client component alike, so no server-only imports here.
 
-export const PATH = "/speaker_committee";
+export const PATH = "/backstage/speaker-committee";
 
 export type { Row };
 

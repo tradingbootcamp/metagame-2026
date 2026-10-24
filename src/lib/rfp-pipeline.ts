@@ -6,7 +6,7 @@ import {
   VERDICT_LABELS,
 } from "./rfp-labels";
 
-// The pipeline columns as the /grade and /speaker_committee tables show them:
+// The pipeline columns as the /grade and speaker committee tables show them:
 // one row per session, each select's option labels, and the pill colours.
 // Plain data with a type-only import, so client components can use it.
 

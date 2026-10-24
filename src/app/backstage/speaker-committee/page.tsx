@@ -93,7 +93,7 @@ function PipelineTabs({
 }
 
 export default async function SpeakerCommitteePage(
-  props: PageProps<"/speaker_committee">,
+  props: PageProps<"/backstage/speaker-committee">,
 ) {
   // Per-request on every branch, or the sign-in branch gets baked in as
   // static at build time.

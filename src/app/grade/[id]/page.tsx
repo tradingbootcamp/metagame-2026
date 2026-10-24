@@ -228,10 +228,10 @@ export default async function SubmissionPage(props: PageProps<"/grade/[id]">) {
   );
   const contactRows = rowsFor(contactOf(rfpSession), SHEPHERD_CONTACT_FIELDS);
   const { row: session } = rfpSession;
-  // /speaker_committee takes accounts only; the shared password stops at /grade.
+  // The committee board takes accounts only; the shared password stops at /grade.
   const back =
     access.via === "account"
-      ? { href: "/speaker_committee", label: "← Speaker committee" }
+      ? { href: "/backstage/speaker-committee", label: "← Speaker committee" }
       : { href: "/grade", label: "← All proposals" };
 
   return (

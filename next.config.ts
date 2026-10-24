@@ -34,6 +34,12 @@ const nextConfig: NextConfig = {
       destination: "/backstage/:path*",
       permanent: true,
     },
+    // The speaker committee board moved under /backstage with the other tools.
+    {
+      source: "/speaker_committee",
+      destination: "/backstage/speaker-committee",
+      permanent: true,
+    },
     // Key dates used to be its own page.
     { source: "/key-dates", destination: "/#key-dates", permanent: true },
     // Short link to the session-proposal (RFP) Airtable form.
