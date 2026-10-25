@@ -1,13 +1,47 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useReducer, useRef, useState } from "react";
+import {
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Pencil } from "lucide-react";
+import LogoDice from "@/v2/components/nav/LogoDice";
 
 // True-3D dice (three.js + R3F). Client-only: the WebGL canvas can't render on the
 // server, and ssr:false keeps three out of the initial HTML payload. (ssr:false is
 // only allowed inside a Client Component — hence "use client" above.)
 const Dice3D = dynamic(() => import("./dice3d/Dice3D"), { ssr: false });
+
+// Chrome with hardware acceleration off runs WebGL on the CPU (SwiftShader),
+// and one such machine was pegged by the hero (META-4558). Probe for a real
+// GPU before fetching three at all; without one the stage shows the SVG
+// wordmark instead. `failIfMajorPerformanceCaveat` is the browser's own
+// "this context would be software-rendered" signal.
+function hasHardwareWebGL(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    const attrs: WebGLContextAttributes = {
+      failIfMajorPerformanceCaveat: true,
+    };
+    const gl =
+      (canvas.getContext("webgl2", attrs) as WebGL2RenderingContext | null) ??
+      (canvas.getContext("webgl", attrs) as WebGLRenderingContext | null);
+    if (!gl) return false;
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    return true;
+  } catch {
+    return false;
+  }
+}
+// Probed once per page; null on the server and during hydration.
+let probed: boolean | null = null;
+const probeOnce = () => (probed ??= hasHardwareWebGL());
+const noSubscribe = () => () => {};
+const serverSnapshot = () => null;
 
 // The kept rolls are final. Flip this to true to bring back the dev-only
 // curation panel (edit button under the dice) for re-recording takes; the
@@ -30,6 +64,10 @@ export default function Dice() {
   // controls are gated behind an edit toggle rather than sitting on the page
   // every dev load.
   const [editing, setEditing] = useState(false);
+
+  // null until probed on the client; the stage stays empty meanwhile, exactly
+  // as it does while the three chunk loads.
+  const gpu = useSyncExternalStore(noSubscribe, probeOnce, serverSnapshot);
 
   // Distance from the stage box to the top of the page. The canvas overlay
   // extends by this much both up (so roll-in bounces stay in frame all the way
@@ -69,12 +107,15 @@ export default function Dice() {
       >
         {/* transparent + pointer-events-none, so the overrun neither hides nor
             blocks the content it overlaps */}
-        <div
-          className="pointer-events-none absolute inset-x-0"
-          style={{ top: -runwayPx, bottom: -runwayPx }}
-        >
-          <Dice3D key={diceKey} />
-        </div>
+        {gpu && (
+          <div
+            className="pointer-events-none absolute inset-x-0"
+            style={{ top: -runwayPx, bottom: -runwayPx }}
+          >
+            <Dice3D key={diceKey} />
+          </div>
+        )}
+        {gpu === false && <LogoDice className="mx-auto h-full max-w-[92vw]" />}
       </div>
       {/* dev-only edit toggle + panel, BELOW the canvas so they never cover the dice */}
       {DiceDevPanel && (

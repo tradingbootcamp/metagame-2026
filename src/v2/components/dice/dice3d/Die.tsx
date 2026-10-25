@@ -62,8 +62,8 @@ export const QUAT: Record<Phase, THREE.Quaternion> = {
   year: quat(80, 3), // tips the pip top (+Y) nearly straight-on to read 2026
 };
 
-const TURN_S = 1.0; // seconds for a die to complete its turn
-const STAGGER = 0.04; // tiny per-die delay — the row turns near-unison, not a wave
+export const TURN_S = 1.0; // seconds for a die to complete its turn
+export const STAGGER = 0.04; // tiny per-die delay — the row turns near-unison, not a wave
 
 const SIZE = 1; // die edge length in world units
 const RADIUS = SIZE * 0.06; // bevel radius of the rounded body
