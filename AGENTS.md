@@ -64,14 +64,12 @@ until the speaker committee has accounts, then that goes too.
 
 ## Looking at UI changes
 
-A UI change isn't done until you've seen it. Push the branch; the PR's Vercel
-preview (URL in the bot comment, built against the seeded dev DB) is where
-to look. Run `node scripts/preview-shot.mjs <preview-url> /path [/path…]`:
-it signs in as the seed admin, screenshots each page at phone and desktop
-width, and exits non-zero if anything is wider than its viewport. `TAP=<selector>`
-clicks before the phone shot, for modals. Look at the screenshots, fix what's
-off, repeat. Protection bypass comes from `VERCEL_BYPASS` or
-`~/.config/vercel/metagame-2026-bypass`.
+For any substantive UI change, run `node scripts/preview-shot.mjs <preview-url>
+/path [/path…]` against the PR's Vercel preview (URL in the bot comment) and
+inspect the screenshots to see that things appear correct on mobile and
+desktop. If anything is off, surface the screenshots to the user for review
+rather than iterating on your own. Delete the screenshots afterwards so they
+don't pile up.
 
 ## Issue tracking (Linear)
 
