@@ -18,8 +18,13 @@
 // Every account with a password signs in with "metagame":
 //   admin@metagame.games       role admin (superuser bypass)
 //   grants@metagame.games      per-user grants: tickets.view, links.manage
-//   host@metagame.games        "Team" and "Schedule team" roles; hosts sessions
-//   attendee@metagame.games    claimed ticket, RSVPs, bookmarks
+//   host@metagame.games        "Team" and "Schedule team" roles; lead host of
+//                              three published sessions
+//   team@metagame.games        "Team" role only; claimed comp ticket
+//   schedule@metagame.games    "Schedule team" role only; claimed comp ticket
+//   volunteer@metagame.games   "Volunteer" role only; claimed comp ticket
+//   attendee@metagame.games    claimed ticket (so the built-in Attendee role),
+//                              RSVPs, bookmarks
 //   newcomer@metagame.games    unclaimed purchase under their email
 //   banned@metagame.games      banned
 //   first.last@metagame.games  a crowd of 100 in the mix the invite flow makes:
@@ -162,6 +167,9 @@ const users = {
   admin: { id: "seed-admin", name: "Seed Admin", role: "admin" },
   grants: { id: "seed-grants", name: "Seed Grants" },
   host: { id: "seed-host", name: "Seed Host" },
+  team: { id: "seed-team", name: "Seed Team" },
+  schedule: { id: "seed-schedule", name: "Seed Schedule" },
+  volunteer: { id: "seed-volunteer", name: "Seed Volunteer" },
   attendee: { id: "seed-attendee", name: "Seed Attendee" },
   newcomer: { id: "seed-newcomer", name: "Seed Newcomer" },
   banned: {
@@ -744,6 +752,19 @@ const tickets = [
     test: true,
     purchaser_email: "tester@metagame.games",
   }),
+  // Team, schedule team and volunteers hold comped tickets, so they are
+  // also Attendees.
+  ...[users.team, users.schedule, users.volunteer].map((u, n) =>
+    ticket(`admin:${u.id}-comp`, {
+      source: "admin",
+      amount_cents: 0,
+      coupon_code: "SEEDCOMP",
+      purchaser_email: `${u.id.replace("seed-", "")}@metagame.games`,
+      purchaser_name: u.name,
+      owner_user_id: u.id,
+      claimed_at: `2026-10-0${4 + n}T12:00:00Z`,
+    }),
+  ),
   ...crowd
     .filter((u) => u.kind === "attendee" || u.kind === "buyer")
     .map((u) =>
@@ -980,7 +1001,9 @@ counts.account = await upsert(
 counts.profiles = await upsert("profiles", ["user_id"], everyone.map(profile));
 
 // Attendee is the built-in role src/lib/permission-store.ts expects by name;
-// Team is the one real role, holding everything short of admin.
+// Team holds everything short of admin. Volunteer is the door/check-in
+// bundle until checkin.manage lands: the attendee permissions plus the
+// ticket list to look people up at the door.
 const roleRows = await Promise.all(
   [
     { name: "Attendee", permissions: ["schedule.rsvps"] },
@@ -999,6 +1022,10 @@ const roleRows = await Promise.all(
       ],
     },
     { name: "Schedule team", permissions: ["schedule.manage", "users.view"] },
+    {
+      name: "Volunteer",
+      permissions: ["schedule.preview", "schedule.rsvps", "tickets.view"],
+    },
   ].map(async (r) => {
     const [{ id }] = await sql.query(
       `insert into roles (name) values ($1)
@@ -1016,8 +1043,10 @@ counts.role_permissions = await upsert(
     r.permissions.map((permission) => ({ role_id: r.id, permission })),
   ),
 );
+const roleId = (name) => roleRows.find((r) => r.name === name).id;
 const team = [
   users.host,
+  users.team,
   users.grants,
   ...graders.slice(3),
   invited[0],
@@ -1028,8 +1057,10 @@ counts.user_roles = await upsert(
   "user_roles",
   ["user_id", "role_id"],
   [
-    ...team.map((u) => ({ user_id: u.id, role_id: roleRows[1].id })),
-    { user_id: users.host.id, role_id: roleRows[2].id },
+    ...team.map((u) => ({ user_id: u.id, role_id: roleId("Team") })),
+    { user_id: users.host.id, role_id: roleId("Schedule team") },
+    { user_id: users.schedule.id, role_id: roleId("Schedule team") },
+    { user_id: users.volunteer.id, role_id: roleId("Volunteer") },
   ],
 );
 counts.user_permission_grants = await upsert(
