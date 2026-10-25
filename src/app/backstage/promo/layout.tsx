@@ -19,7 +19,7 @@ export default function AdminPromoLayout({
       nav={
         <Link
           href="/backstage/links"
-          className="text-sm text-ink/60 underline-offset-2 hover:text-meeple hover:underline"
+          className="hidden text-sm whitespace-nowrap text-ink/60 underline-offset-2 hover:text-meeple hover:underline sm:inline"
         >
           Tracking links
         </Link>

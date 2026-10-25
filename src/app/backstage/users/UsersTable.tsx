@@ -2,6 +2,7 @@
 
 import {
   ChevronDownIcon,
+  ChevronRightIcon,
   ChevronUpIcon,
   PlusIcon,
   ShieldCheckIcon,
@@ -126,6 +127,9 @@ export default function UsersTable({
   const [deleting, setDeleting] = useState<UserRow | null>(null);
   const [promoting, setPromoting] = useState<UserRow | null>(null);
   const [openRoles, setOpenRoles] = useState<string | null>(null);
+  // An id, not a row: rows refresh after each action and the sheet must follow.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const openUser = rows.find((u) => u.id === openId) ?? null;
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<Created | null>(null);
 
@@ -256,7 +260,7 @@ export default function UsersTable({
           </span>
         )}
       </p>
-      <div className="overflow-x-auto rounded-xl border border-line bg-white shadow-sm">
+      <div className="hidden overflow-x-auto rounded-xl border border-line bg-white shadow-sm md:block">
         <table className="w-full text-left text-sm">
           <thead className="text-xs tracking-wide text-ink/50 uppercase">
             <tr>
@@ -305,8 +309,8 @@ export default function UsersTable({
                       {u.name.trim() || "Unnamed"}
                     </Link>
                     {u.banned && (
-                      <span className="ml-2 rounded bg-meeple/10 px-1.5 py-0.5 text-xs font-semibold text-meeple">
-                        Banned
+                      <span className="ml-2">
+                        <BannedTag />
                       </span>
                     )}
                   </td>
@@ -354,66 +358,18 @@ export default function UsersTable({
                                 role="menu"
                                 className="absolute left-0 z-20 mt-1 min-w-48 rounded-lg border border-line bg-white p-2 text-left shadow-lg"
                               >
-                                {viewerIsAdmin && (
-                                  <label className="flex items-center gap-2 rounded px-2 py-1 hover:bg-cream">
-                                    <input
-                                      type="checkbox"
-                                      checked={u.admin}
-                                      disabled={pending}
-                                      onChange={(e) => {
-                                        if (e.currentTarget.checked) {
-                                          setOpenRoles(null);
-                                          setPromoting(u);
-                                        } else {
-                                          run(u.id, () =>
-                                            setRole(u.id, "user"),
-                                          );
-                                        }
-                                      }}
-                                      className="size-4 accent-meeple"
-                                    />
-                                    <span className="font-semibold text-navy">
-                                      Admin
-                                    </span>
-                                    <span className="text-xs text-ink/50">
-                                      everything
-                                    </span>
-                                  </label>
-                                )}
-                                {allRoles.map((r) => (
-                                  <label
-                                    key={r.id}
-                                    className="flex items-center gap-2 rounded px-2 py-1 hover:bg-cream"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={u.roles.some(
-                                        (h) => h.id === r.id,
-                                      )}
-                                      disabled={pending || !viewerCanEdit}
-                                      onChange={(e) => {
-                                        const on = e.currentTarget.checked;
-                                        run(u.id, () =>
-                                          assignRole(u.id, r.id, on),
-                                        );
-                                      }}
-                                      className="size-4 accent-meeple"
-                                    />
-                                    {r.name}
-                                  </label>
-                                ))}
-                                {allRoles.length === 0 && (
-                                  <p className="px-2 py-1 text-xs text-ink/50">
-                                    No roles yet.{" "}
-                                    <Link
-                                      href="/backstage/roles"
-                                      className="text-navy hover:underline"
-                                    >
-                                      Create one
-                                    </Link>
-                                    .
-                                  </p>
-                                )}
+                                <RoleChecks
+                                  u={u}
+                                  pending={pending}
+                                  allRoles={allRoles}
+                                  viewerIsAdmin={viewerIsAdmin}
+                                  viewerCanEdit={viewerCanEdit}
+                                  onPromote={() => {
+                                    setOpenRoles(null);
+                                    setPromoting(u);
+                                  }}
+                                  run={run}
+                                />
                               </div>
                             </>
                           )}
@@ -467,6 +423,72 @@ export default function UsersTable({
           </tbody>
         </table>
       </div>
+      <ul className="divide-y divide-line rounded-xl border border-line bg-white text-sm shadow-sm md:hidden">
+        {shown.map((u) => (
+          <li key={u.id}>
+            <button
+              type="button"
+              onClick={() => setOpenId(u.id)}
+              className={`flex w-full items-center gap-3 px-3 py-2.5 text-left ${u.banned ? "text-ink/50" : ""}`}
+            >
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="truncate">{u.name.trim() || "Unnamed"}</span>
+                  {u.admin && <AdminShield />}
+                  {u.banned && <BannedTag />}
+                </span>
+                <span className="block truncate font-mono text-xs text-ink/60">
+                  {u.email}
+                </span>
+              </span>
+              {u.tickets > 0 && (
+                <TicketIcon
+                  className="size-4 shrink-0 text-navy"
+                  aria-label="Has a ticket"
+                />
+              )}
+              <ChevronRightIcon
+                className="size-4 shrink-0 text-ink/40"
+                aria-hidden
+              />
+            </button>
+          </li>
+        ))}
+        {shown.length === 0 && (
+          <li className="px-4 py-6 text-center text-ink/50">
+            No accounts{filtered && " match"}.
+          </li>
+        )}
+      </ul>
+      <Dialog
+        open={openUser !== null}
+        onOpenChange={(o) => !o && setOpenId(null)}
+      >
+        <DialogContent
+          aria-describedby={undefined}
+          className="flex max-w-[480px] flex-col gap-4 px-6 py-6"
+        >
+          {openUser && (
+            <UserDetail
+              u={openUser}
+              pending={busy.has(openUser.id)}
+              allRoles={allRoles}
+              viewerIsAdmin={viewerIsAdmin}
+              viewerCanEdit={viewerCanEdit}
+              viewerCanDelete={viewerCanDelete}
+              run={run}
+              onPromote={() => {
+                setOpenId(null);
+                setPromoting(openUser);
+              }}
+              onDelete={() => {
+                setOpenId(null);
+                setDeleting(openUser);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       <NewUserDialog
         open={creating}
         onOpenChange={setCreating}
@@ -560,5 +582,212 @@ export default function UsersTable({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function BannedTag() {
+  return (
+    <span className="rounded bg-meeple/10 px-1.5 py-0.5 text-xs font-semibold text-meeple">
+      Banned
+    </span>
+  );
+}
+
+type RoleProps = {
+  u: UserRow;
+  pending: boolean;
+  allRoles: RoleOption[];
+  viewerIsAdmin: boolean;
+  viewerCanEdit: boolean;
+  onPromote: () => void;
+  run: (userId: string, action: () => Promise<Result>) => void;
+};
+
+/** Admin + role checkboxes; `dark` restyles them for the navy sheet. */
+function RoleChecks({
+  u,
+  pending,
+  allRoles,
+  viewerIsAdmin,
+  viewerCanEdit,
+  onPromote,
+  run,
+  dark,
+}: RoleProps & { dark?: boolean }) {
+  const row = `flex items-center gap-2 rounded px-2 py-1 ${dark ? "hover:bg-cream/10" : "hover:bg-cream"}`;
+  const muted = dark ? "text-cream/50" : "text-ink/50";
+  return (
+    <>
+      {viewerIsAdmin && (
+        <label className={row}>
+          <input
+            type="checkbox"
+            checked={u.admin}
+            disabled={pending}
+            onChange={(e) => {
+              if (e.currentTarget.checked) onPromote();
+              else run(u.id, () => setRole(u.id, "user"));
+            }}
+            className="size-4 accent-meeple"
+          />
+          <span
+            className={`font-semibold ${dark ? "text-cream" : "text-navy"}`}
+          >
+            Admin
+          </span>
+          <span className={`text-xs ${muted}`}>everything</span>
+        </label>
+      )}
+      {allRoles.map((r) => (
+        <label key={r.id} className={row}>
+          <input
+            type="checkbox"
+            checked={u.roles.some((h) => h.id === r.id)}
+            disabled={pending || !viewerCanEdit}
+            onChange={(e) => {
+              const on = e.currentTarget.checked;
+              run(u.id, () => assignRole(u.id, r.id, on));
+            }}
+            className="size-4 accent-meeple"
+          />
+          {r.name}
+        </label>
+      ))}
+      {allRoles.length === 0 && (
+        <p className={`px-2 py-1 text-xs ${muted}`}>
+          No roles yet.{" "}
+          <Link
+            href="/backstage/roles"
+            className={`hover:underline ${dark ? "text-cream" : "text-navy"}`}
+          >
+            Create one
+          </Link>
+          .
+        </p>
+      )}
+    </>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <dt className="text-xs tracking-wide text-cream/50 uppercase">{label}</dt>
+      <dd className="mt-0.5 break-words">{children}</dd>
+    </div>
+  );
+}
+
+/** One account on a phone: what the table's columns and menus show, in a sheet. */
+function UserDetail({
+  u,
+  pending,
+  allRoles,
+  viewerIsAdmin,
+  viewerCanEdit,
+  viewerCanDelete,
+  run,
+  onPromote,
+  onDelete,
+}: RoleProps & { viewerCanDelete: boolean; onDelete: () => void }) {
+  const names = roleText(u);
+  const pickable = (viewerCanEdit || viewerIsAdmin) && !u.self;
+  const { has } = ticketBadge(u.tickets);
+  return (
+    <>
+      <DialogTitle className="font-bebas pr-8 text-2xl tracking-wide text-cream">
+        {u.name.trim() || "Unnamed"}
+      </DialogTitle>
+      {(u.admin || u.banned || !u.emailVerified) && (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          {u.admin && (
+            <span className="rounded bg-cream/15 px-1.5 py-0.5 font-semibold">
+              Admin
+            </span>
+          )}
+          {u.banned && <BannedTag />}
+          {!u.emailVerified && (
+            <span className="text-cream/50">unverified</span>
+          )}
+        </div>
+      )}
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+        <div className="col-span-2">
+          <Field label="Email">
+            <span className="font-mono text-xs break-all">{u.email}</span>
+          </Field>
+        </div>
+        <Field label="Joined">
+          <span title={u.joinedExact}>{u.joined}</span>
+        </Field>
+        <Field label="Tickets">
+          {has ? (
+            <Link
+              href={`/backstage/tickets?user=${encodeURIComponent(u.id)}`}
+              className="underline underline-offset-2 hover:text-salmon"
+            >
+              {u.tickets} claimed
+            </Link>
+          ) : (
+            <span className="text-cream/40">None</span>
+          )}
+        </Field>
+        <div className="col-span-2">
+          <Field label="Roles">
+            {pickable ? (
+              <div className="-mx-2 mt-1">
+                <RoleChecks
+                  dark
+                  {...{
+                    u,
+                    pending,
+                    allRoles,
+                    viewerIsAdmin,
+                    viewerCanEdit,
+                    onPromote,
+                    run,
+                  }}
+                />
+              </div>
+            ) : (
+              <span className={names ? "" : "text-cream/40"}>
+                {names || "—"}
+              </span>
+            )}
+          </Field>
+        </div>
+      </dl>
+      <div className="flex flex-wrap gap-2 pt-1">
+        <Link href={`/backstage/users/${u.id}`} className={smallButtonClass}>
+          Profile
+        </Link>
+        {!u.self && viewerIsAdmin && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => run(u.id, () => setBanned(u.id, !u.banned))}
+            className={smallButtonClass}
+          >
+            {u.banned ? "Unban" : "Ban"}
+          </button>
+        )}
+        {!u.self && viewerCanDelete && (viewerIsAdmin || !u.admin) && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={onDelete}
+            className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
+          >
+            Delete
+          </button>
+        )}
+      </div>
+    </>
   );
 }
