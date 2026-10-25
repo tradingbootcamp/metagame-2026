@@ -1,15 +1,15 @@
-// The words this browser has cast, and whether DICT's book and TYPE's entry
-// are out. All in localStorage, so the list is still there after a reload has undone the
-// rack. Read lazily on the client, blank on the server: same hydration
-// story as the rack in index.tsx.
+// The words this browser has cast, and whether TYPE's entry is out. DICT's
+// book is out as soon as the list has anything in it. All in localStorage, so
+// the list is still there after a reload has undone the rack. Read lazily on
+// the client, blank on the server: same hydration story as the rack in
+// index.tsx.
 import { useSyncExternalStore } from "react";
 
-type Found = { words: string[]; open: boolean; typing: boolean };
+type Found = { words: string[]; typing: boolean };
 
 const WORDS_KEY = "scrabble-found";
-const OPEN_KEY = "scrabble-dict";
 const TYPING_KEY = "scrabble-type";
-const EMPTY: Found = { words: [], open: false, typing: false };
+const EMPTY: Found = { words: [], typing: false };
 
 let found: Found | null = null;
 const listeners = new Set<() => void>();
@@ -19,7 +19,6 @@ const load = (): Found => {
     const raw = JSON.parse(localStorage.getItem(WORDS_KEY) ?? "[]");
     return {
       words: Array.isArray(raw) ? raw.filter((w) => typeof w === "string") : [],
-      open: localStorage.getItem(OPEN_KEY) === "1",
       typing: localStorage.getItem(TYPING_KEY) === "1",
     };
   } catch {
@@ -31,7 +30,6 @@ const save = (next: Found) => {
   found = next;
   try {
     localStorage.setItem(WORDS_KEY, JSON.stringify(next.words));
-    localStorage.setItem(OPEN_KEY, next.open ? "1" : "0");
     localStorage.setItem(TYPING_KEY, next.typing ? "1" : "0");
   } catch {
     // Storage blocked: the list lasts the page, no more.
@@ -52,11 +50,6 @@ export const recordFind = (word: string) => {
   const cur = getSnapshot();
   if (cur.words.includes(word)) return;
   save({ ...cur, words: [...cur.words, word] });
-};
-
-export const openDict = () => {
-  const cur = getSnapshot();
-  if (!cur.open) save({ ...cur, open: true });
 };
 
 export const openType = () => {

@@ -32,7 +32,7 @@ import { trackEgg, type Via } from "../track";
 import { wobble } from "./wobble";
 import WordEntry from "./WordEntry";
 import Dict from "./Dict";
-import { openDict, openType, recordFind, useFound } from "./found";
+import { openType, recordFind, useFound } from "./found";
 import {
   BASE_LOOK,
   BANG_DRAW_MS,
@@ -1133,7 +1133,7 @@ export default function ScrabbleDivider({
         setBang((n) => n + 1);
         break;
       case "dict":
-        openDict();
+        // The book's out from the first word; DICT is just one more for it.
         break;
       case "love":
         if (reducedMotion()) break;
@@ -1687,7 +1687,7 @@ export default function ScrabbleDivider({
             />
           </div>
         )}
-        {found.open && (
+        {found.words.length > 0 && (
           // DICT's book: always beside the rack, sat on the right-hand
           // hairline just past the tiles, whatever the width.
           <div className="absolute top-1/2 left-[calc(50%+148px)] z-20 -translate-y-1/2">
