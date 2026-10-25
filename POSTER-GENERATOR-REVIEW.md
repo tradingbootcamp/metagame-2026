@@ -1,5 +1,19 @@
 # Poster generator review
 
+## Staff-selected discounts and tracking list
+
+Ordinary `/posters` printing remains public and read-only through `GET /api/posters`. Staff with both `links.manage` and `promo.manage`, and a named identity, can choose existing card/USD and BTC codes separately. Private options are fetched only after the server permission checks. Empty selections retain the existing public poster and normal checkout offers; no new coupons or promotion codes are minted.
+
+The dropdowns offer existing live codes for Standard tickets. Card codes come from the checkout Stripe account, with validity, expiry, redemption caps, customer restrictions, currency, minimum spend, and product applicability checked against the configured Standard price. Customer-specific and first-purchase-only codes are excluded. Because printed QR codes point at the canonical live site, test-mode Stripe codes are never offered for printing; the card list is empty outside live checkout mode. BTC uses the existing Airtable discount definitions and cap ledger, excluding test, expired, duplicate, and exhausted codes. A failed cap lookup refuses the poster offer.
+
+Discounted preview/download uses a same-origin `POST /api/posters` that repeats both permission checks and resolves current discount validity. It saves a distinct Tracking Links row before returning the PDF. A deterministic `pp-` slug identifies the original location mapping and the selected payment-specific codes; design, size, and staff identity do not change that slug. Airtable upsert on Slug and Destination handles concurrent retries, followed by a unique-row verification. Existing incompatible, inactive, or duplicate variants are rejected. Original printed slugs are not rewritten. Failed/uncertain preparation can be retried and reuses an already saved row.
+
+`/backstage/links?view=posters` shows poster/print/metagame-2026 registry rows across creators, including discount variants. Its ordinary view keeps the existing creator default. Refresh and focus refresh use current server rows without resetting selected search/creator filters. Discount variants do not enter the public location catalog, avoiding duplicate-location ambiguity.
+
+`/go` retains the saved discount parameters and existing UTMs. The homepage keeps payment-specific selections for the current browser session and propagates them only to Standard-ticket checkout. A new tracked landing without a poster offer clears an earlier selection, and buyers can explicitly clear poster discounts. Stripe and BTC revalidate the offer before creating a checkout session or charge; an unavailable poster code refuses checkout rather than silently charging full price. Other ticket types and ordinary manually entered codes retain existing behavior.
+
+Local verification uses mocked providers and has no database/service credentials. Unit coverage includes permission boundaries, public no-discount behavior, provider failure, expiry/restrictions/caps, persistent retry reuse, ambiguous variants, list filtering, redirect/checkout propagation, and session clearing. `POSTER_RENDER_CHECK=1` additionally renders both legacy and full-length variant QR codes in every design/size combination and checks decoding and margins. The historical notes below describe the original no-discount implementation.
+
 Direct route: `/posters`. Public, no login, no homepage navigation link, noindex metadata. `GET /api/posters` accepts only an area selection, design, and size. It does not accept a destination URL or arbitrary tracking slug and performs no writes. Existing admin link creation and `/go` attribution behavior are unchanged.
 
 Supported formats: D20 in portrait Letter and 13×19; chess in landscape Letter and 13×19. Every design and size pair maps to its own pinned source file in `assets/posters`.

@@ -1,7 +1,11 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getDayPass, getTicket, supporterTier } from "@/lib/tickets";
-import { countCodeRedemptions, lookupDiscountCode } from "@/lib/discount-codes";
+import {
+  countCodeRedemptions,
+  lookupDiscountCode,
+  resolveBtcPosterDiscount,
+} from "@/lib/discount-codes";
 import { isEarlyBirdActive } from "@/lib/early-bird";
 import { createCharge, getHostedCheckoutUrl } from "@/lib/opennode";
 import { pickUtm, type Utm } from "@/lib/utm";
@@ -25,6 +29,7 @@ export async function POST(request: Request) {
     email?: string;
     discord?: string;
     discountCode?: string;
+    posterDiscount?: boolean;
     btc?: number; // supporter path only: the chosen pay-what-you-want amount
   };
   try {
@@ -93,9 +98,30 @@ export async function POST(request: Request) {
     // The charged BTC price is always server-derived: a valid Airtable discount code
     // lowers it, otherwise full price. A bad/unknown code never charges less — it
     // falls through to full. Never trust a client-sent price.
-    const applied = discountCode
-      ? await lookupDiscountCode(discountCode)
-      : null;
+    let applied: Awaited<ReturnType<typeof lookupDiscountCode>> | null = null;
+    if (body.posterDiscount === true && discountCode) {
+      try {
+        applied = await resolveBtcPosterDiscount(discountCode);
+      } catch {
+        return NextResponse.json(
+          {
+            error:
+              "The poster discount could not be verified. Please try again.",
+          },
+          { status: 503 },
+        );
+      }
+      if (!applied)
+        return NextResponse.json(
+          {
+            error:
+              "This poster discount is no longer available. Choose another code or clear it to continue at the regular price.",
+          },
+          { status: 409 },
+        );
+    } else if (discountCode) {
+      applied = await lookupDiscountCode(discountCode);
+    }
     if (applied?.status === "test") {
       return NextResponse.json(
         { error: "That's a test promo code — it can't be used here." },
@@ -106,7 +132,7 @@ export async function POST(request: Request) {
 
     // Authoritative redemption-cap check — the point a code is actually consumed.
     // Skip when uncapped (maxUses null). Don't create the charge if over the cap.
-    if (valid?.maxUses != null) {
+    if (valid?.maxUses != null && body.posterDiscount !== true) {
       const used = await countCodeRedemptions(valid.code);
       if (used >= valid.maxUses) {
         return NextResponse.json(

@@ -3,6 +3,9 @@ import Link from "next/link";
 import { loadPosterCatalog } from "@/lib/poster-catalog";
 import { GENERIC_AREA } from "@/lib/poster-options";
 import PosterForm from "./poster-form";
+import { posterDiscountAccess } from "@/lib/poster-discount-access";
+import { listStripePosterDiscounts } from "@/lib/stripe-poster-discounts";
+import { listBtcPosterDiscounts } from "@/lib/discount-codes";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -11,6 +14,19 @@ export const metadata: Metadata = {
 };
 
 export default async function PostersPage() {
+  const staff = await posterDiscountAccess();
+  let discounts = null;
+  if (staff) {
+    const [stripe, btc] = await Promise.allSettled([
+      listStripePosterDiscounts(),
+      listBtcPosterDiscounts(),
+    ]);
+    discounts = {
+      stripe: stripe.status === "fulfilled" ? stripe.value : [],
+      btc: btc.status === "fulfilled" ? btc.value : [],
+      unavailable: stripe.status === "rejected" || btc.status === "rejected",
+    };
+  }
   let options;
   try {
     options = (await loadPosterCatalog()).map(
@@ -34,7 +50,11 @@ export default async function PostersPage() {
           </Link>
         </p>
         {options ? (
-          <PosterForm options={options} initialArea={GENERIC_AREA} />
+          <PosterForm
+            options={options}
+            initialArea={GENERIC_AREA}
+            discounts={discounts}
+          />
         ) : (
           <p role="alert" className="rounded-xl border border-current p-6">
             The poster options are temporarily unavailable. Please try again

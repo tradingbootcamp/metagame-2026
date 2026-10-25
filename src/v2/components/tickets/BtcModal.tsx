@@ -36,11 +36,13 @@ export default function BtcModal({
   ticket,
   onClose,
   initialCode = "EARLYBIRD",
+  posterCode = "",
 }: {
   ticket: TicketTier;
   onClose: () => void;
   // The early-bird tile prefills the advertised code; the standard tile none.
   initialCode?: string;
+  posterCode?: string;
 }) {
   const { full } = ticket.prices;
 
@@ -126,6 +128,10 @@ export default function BtcModal({
     e.preventDefault();
     setError(null);
     if (isTestCode) return setError("Remove the test promo code to continue.");
+    if (posterCode && !codeEmpty && (codeInvalid || codeState.validating))
+      return setError(
+        "This poster discount is unavailable or still being checked. Choose a valid code or clear it to continue at the displayed regular price.",
+      );
     if (!name.trim()) return setError("Please enter your name.");
     if (!EMAIL_RE.test(email)) return setError("Please enter a valid email.");
 
@@ -143,6 +149,9 @@ export default function BtcModal({
           // Server re-validates and re-derives the price; an invalid code just
           // falls through to full price.
           ...(discountCode.trim() ? { discountCode: discountCode.trim() } : {}),
+          ...(posterCode && discountCode.trim()
+            ? { posterDiscount: true }
+            : {}),
           ...readUtm(),
         }),
       });

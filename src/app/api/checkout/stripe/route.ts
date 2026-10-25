@@ -12,6 +12,9 @@ import {
 } from "@/lib/tickets";
 import { PREFERRED_CAMPAIGN, slugify } from "@/lib/tracking-links";
 import { pickUtm, type Utm } from "@/lib/utm";
+import { resolveStripePosterDiscount } from "@/lib/stripe-poster-discounts";
+
+class PosterDiscountUnavailable extends Error {}
 
 export const runtime = "nodejs";
 
@@ -102,6 +105,14 @@ async function promoParams(
 }> {
   const box = { session: { allow_promotion_codes: true }, utm: {} };
   const linked = params.get("promo")?.trim();
+  if (params.get("poster_offer") === "1") {
+    const promo = linked ? await resolveStripePosterDiscount(linked) : null;
+    if (!promo) throw new PosterDiscountUnavailable();
+    return {
+      session: { discounts: [{ promotion_code: promo.id }] },
+      utm: compUtm(promo),
+    };
+  }
   const earlyBird =
     params.get("code") !== "own" && isEarlyBirdActive()
       ? ticket.promoCode
@@ -169,6 +180,11 @@ export async function GET(request: Request) {
     if (!session.url) throw new Error(`session ${session.id} has no url`);
     return NextResponse.redirect(session.url, 303);
   } catch (err) {
+    if (err instanceof PosterDiscountUnavailable)
+      return new NextResponse(
+        "This poster discount is no longer available. Go back and choose another offer or remove the poster code before continuing.",
+        { status: 409 },
+      );
     console.error("[checkout/stripe] session create failed:", err);
     return new NextResponse(
       "Couldn't start checkout. Please go back and try again.",

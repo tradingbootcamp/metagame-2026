@@ -272,6 +272,15 @@ export async function findTrackingLink(
 export async function createTrackingLink(
   link: NewTrackingLink,
 ): Promise<TrackingLink> {
+  const fields = trackingLinkFields(link);
+  const created = (await airtable(tableUrl(), {
+    method: "POST",
+    body: JSON.stringify({ records: [{ fields }], typecast: true }),
+  })) as { records: AirtableRecord[] };
+  return toLink(created.records[0]);
+}
+
+function trackingLinkFields(link: NewTrackingLink): Record<string, unknown> {
   const fields: Record<string, unknown> = {
     Slug: link.slug,
     Destination: link.destination,
@@ -283,12 +292,39 @@ export async function createTrackingLink(
   };
   if (link.placement) fields.Placement = link.placement;
   if (link.internalName) fields["Internal Name"] = link.internalName;
-  const created = (await airtable(tableUrl(), {
-    method: "POST",
-    // typecast: a new Source value becomes a choice instead of a 422.
-    body: JSON.stringify({ records: [{ fields }], typecast: true }),
+  return fields;
+}
+
+export async function findUniqueTrackingLink(
+  slug: string,
+): Promise<TrackingLink | null> {
+  const params = new URLSearchParams({
+    filterByFormula: `LOWER({Slug})='${escapeFormula(slug)}'`,
+    maxRecords: "2",
+  });
+  const page = (await airtable(`${tableUrl()}?${params}`)) as {
+    records: AirtableRecord[];
+  };
+  if (page.records.length > 1) throw new Error("Ambiguous tracking link");
+  return page.records[0] ? toLink(page.records[0]) : null;
+}
+
+export async function upsertPosterTrackingLink(
+  link: NewTrackingLink,
+): Promise<TrackingLink> {
+  if (!/^pp-[a-f0-9]{40}$/.test(link.slug))
+    throw new Error("Invalid poster variant");
+  const result = (await airtable(tableUrl(), {
+    method: "PATCH",
+    body: JSON.stringify({
+      performUpsert: { fieldsToMergeOn: ["Slug", "Destination"] },
+      records: [{ fields: trackingLinkFields(link) }],
+      typecast: true,
+    }),
   })) as { records: AirtableRecord[] };
-  return toLink(created.records[0]);
+  cache.delete(link.slug);
+  if (result.records.length !== 1) throw new Error("Ambiguous poster variant");
+  return toLink(result.records[0]);
 }
 
 const FIELD_NAMES: Record<UtmSelectField, string> = {

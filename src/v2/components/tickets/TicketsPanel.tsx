@@ -16,6 +16,17 @@ import {
 import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { withUtm } from "@/lib/utm";
+import {
+  posterStripeHref,
+  type PosterDiscounts,
+} from "@/lib/poster-discount-params";
+import {
+  EMPTY_POSTER_DISCOUNT_SNAPSHOT,
+  clearPosterDiscounts,
+  posterDiscountSnapshot,
+  readPosterDiscounts,
+  subscribePosterDiscounts,
+} from "@/lib/poster-discount-session";
 import { FINANCIAL_AID_FORM_URL } from "@/v2/lib/links";
 import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import {
@@ -49,7 +60,7 @@ const FULL_PRICE_HREF = stripeCheckoutHref({ tier: "standard", code: "own" });
 // UTMs live in localStorage, so they're added at click time (not render) to keep
 // the server-rendered href stable.
 const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-  e.currentTarget.href = withUtm(href);
+  e.currentTarget.href = posterStripeHref(withUtm(href), readPosterDiscounts());
 };
 
 export default function TicketsPanel({
@@ -78,6 +89,15 @@ export default function TicketsPanel({
     () => earlyBird,
   );
   const standard = getTicket("standard");
+  const posterDiscounts: PosterDiscounts = JSON.parse(
+    useSyncExternalStore(
+      subscribePosterDiscounts,
+      posterDiscountSnapshot,
+      () => EMPTY_POSTER_DISCOUNT_SNAPSHOT,
+    ),
+  );
+  const earlyBirdHref = posterStripeHref(EARLY_BIRD_HREF, posterDiscounts);
+  const fullPriceHref = posterStripeHref(FULL_PRICE_HREF, posterDiscounts);
   const [supporterOpen, setSupporterOpen] = useState(false);
   const [dayPassOpen, setDayPassOpen] = useState(false);
   const [familyPackOpen, setFamilyPackOpen] = useState(false);
@@ -89,7 +109,7 @@ export default function TicketsPanel({
   const closeSupporter = () => {
     setSupporterOpen(false);
     if (window.location.hash === "#supporter") {
-      router.replace(pathname, { scroll: false });
+      router.replace(pathname + window.location.search, { scroll: false });
     }
   };
   useEffect(() => {
@@ -153,6 +173,23 @@ export default function TicketsPanel({
         </span>
       </button>
 
+      {(posterDiscounts.stripe || posterDiscounts.btc) && (
+        <p className="mb-4 text-sm">
+          Poster discount for Standard tickets:{" "}
+          {posterDiscounts.stripe && `card/USD code ${posterDiscounts.stripe}`}
+          {posterDiscounts.stripe && posterDiscounts.btc ? "; " : ""}
+          {posterDiscounts.btc && `BTC code ${posterDiscounts.btc}`}.
+          Availability and final price are checked at checkout. Other ticket
+          types use their usual pricing.{" "}
+          <button
+            type="button"
+            onClick={clearPosterDiscounts}
+            className="underline"
+          >
+            Clear poster discounts
+          </button>
+        </p>
+      )}
       <div
         className={`flex flex-wrap items-stretch gap-[18px] max-[460px]:*:w-full ${start ? "justify-start" : "justify-center"}`}
       >
@@ -179,7 +216,7 @@ export default function TicketsPanel({
           ) : (
             <Button asChild variant="raised" className={TILE}>
               <a
-                href={EARLY_BIRD_HREF}
+                href={earlyBirdHref}
                 onClick={addUtm(EARLY_BIRD_HREF)}
                 onAuxClick={addUtm(EARLY_BIRD_HREF)}
                 target="_blank"
@@ -216,7 +253,7 @@ export default function TicketsPanel({
           ) : (
             <Button asChild variant="raised" className={TILE}>
               <a
-                href={FULL_PRICE_HREF}
+                href={fullPriceHref}
                 onClick={addUtm(FULL_PRICE_HREF)}
                 onAuxClick={addUtm(FULL_PRICE_HREF)}
                 target="_blank"
@@ -321,7 +358,10 @@ export default function TicketsPanel({
       {btcOpen && standard && (
         <BtcModal
           ticket={standard}
-          initialCode={btcOpen === "early-bird" ? "EARLYBIRD" : ""}
+          initialCode={
+            posterDiscounts.btc || (btcOpen === "early-bird" ? "EARLYBIRD" : "")
+          }
+          posterCode={posterDiscounts.btc}
           onClose={() => setBtcOpen(null)}
         />
       )}

@@ -2,6 +2,7 @@
 
 import {
   useId,
+  useEffect,
   useRef,
   useState,
   type FormEvent,
@@ -10,6 +11,7 @@ import {
 } from "react";
 import { ChevronDown } from "lucide-react";
 import type { PosterOption, PosterTracking } from "@/lib/poster-options";
+import type { DiscountOption } from "@/lib/stripe-poster-discounts";
 
 const inputClass =
   "mt-2 w-full rounded-lg border border-[#19345b]/30 bg-white p-3 text-base";
@@ -17,9 +19,15 @@ const inputClass =
 export default function PosterForm({
   options,
   initialArea,
+  discounts,
 }: {
   options: PosterOption[];
   initialArea: string;
+  discounts: {
+    stripe: DiscountOption[];
+    btc: DiscountOption[];
+    unavailable: boolean;
+  } | null;
 }) {
   const [area, setArea] = useState(
     options.some((option) => option.value === initialArea) ? initialArea : "",
@@ -28,26 +36,61 @@ export default function PosterForm({
   const [size, setSize] = useState("letter");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [stripe, setStripe] = useState("");
+  const [btc, setBtc] = useState("");
+  const [prepared, setPrepared] = useState<{
+    query: string;
+    url: string;
+    slug: string;
+  } | null>(null);
+  useEffect(
+    () => () => {
+      if (prepared) URL.revokeObjectURL(prepared.url);
+    },
+    [prepared],
+  );
+  const discounted = Boolean(stripe || btc);
   const selected = options.find((option) => option.value === area);
-  const query = new URLSearchParams({ area, design, size }).toString();
+  const query = new URLSearchParams({
+    area,
+    design,
+    size,
+    ...(discounted ? { stripe, btc } : {}),
+  }).toString();
   async function download(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    await prepare(true);
+  }
+  async function prepare(downloadFile: boolean) {
     setError("");
     setBusy(true);
     try {
-      const response = await fetch(`/api/posters?${query}`);
-      if (!response.ok)
+      const response = discounted
+        ? await fetch("/api/posters", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ area, design, size, stripe, btc }),
+          })
+        : await fetch(`/api/posters?${query}`);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
         throw new Error(
-          response.status === 409
-            ? "This location’s poster link is not ready yet. Please choose another location or try again later."
-            : "We couldn’t create your poster. Please try again shortly.",
+          body?.error ??
+            "We couldn't create your poster. Please try again shortly.",
         );
+      }
       const url = URL.createObjectURL(await response.blob());
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `metagame-${design}-${size}.pdf`;
-      anchor.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setPrepared({
+        query,
+        url,
+        slug: response.headers.get("X-Poster-Slug") ?? "",
+      });
+      if (downloadFile) {
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `metagame-${design}-${size}.pdf`;
+        anchor.click();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Download failed.");
     } finally {
@@ -61,11 +104,15 @@ export default function PosterForm({
       className="grid gap-8 rounded-2xl border border-[#19345b]/20 bg-white/60 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_320px]"
     >
       <div className="min-w-0">
-        {selected?.available ? (
+        {selected?.available && (!discounted || prepared?.query === query) ? (
           <iframe
             key={query}
             title="Poster preview"
-            src={`/api/posters?${query}&preview=1#toolbar=0&navpanes=0&view=Fit`}
+            src={
+              discounted
+                ? `${prepared!.url}#toolbar=0&navpanes=0&view=Fit`
+                : `/api/posters?${query}&preview=1#toolbar=0&navpanes=0&view=Fit`
+            }
             className={`block w-full rounded-lg border border-[#19345b]/20 bg-white ${
               landscape ? "" : "mx-auto max-w-md"
             }`}
@@ -82,9 +129,11 @@ export default function PosterForm({
             role="status"
             className="flex aspect-[8.5/11] max-w-md items-center justify-center rounded-lg border border-dashed border-[#19345b]/30 p-6 text-center text-sm"
           >
-            {selected
-              ? "This location has more than one poster link, so its QR code is ambiguous. Fix the duplicate in the tracking links table."
-              : "Choose a poster location to see a preview."}
+            {selected?.available && discounted
+              ? "Preview or download to prepare the poster with your selected discounts."
+              : selected
+                ? "This location has more than one poster link, so its QR code is ambiguous. Fix the duplicate in the tracking links table."
+                : "Choose a poster location to see a preview."}
           </p>
         )}
       </div>
@@ -94,7 +143,54 @@ export default function PosterForm({
           value={area}
           fallback={initialArea}
           onChange={setArea}
+          showTracking={!discounted}
         />
+        {discounts && (
+          <fieldset className="space-y-3" disabled={busy}>
+            <legend className="font-semibold">Staff discounts</legend>
+            <label className="block text-sm">
+              Card / USD discount
+              <select
+                className={inputClass}
+                value={stripe}
+                onChange={(event) => setStripe(event.target.value)}
+              >
+                <option value="">No additional discount</option>
+                {discounts.stripe.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              Bitcoin discount
+              <select
+                className={inputClass}
+                value={btc}
+                onChange={(event) => setBtc(event.target.value)}
+              >
+                <option value="">No additional discount</option>
+                {discounts.btc.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="text-xs text-[#19345b]/70">
+              Existing live codes for Standard tickets only. Each selection
+              applies only to its payment method. Empty selections leave normal
+              pricing and existing offers unchanged. Codes are checked again at
+              checkout.
+            </p>
+            {discounts.unavailable && (
+              <p role="status" className="text-sm">
+                Some discount options could not be loaded. Reload to try again.
+              </p>
+            )}
+          </fieldset>
+        )}
         <label className="block font-semibold">
           Design
           <select
@@ -129,6 +225,21 @@ export default function PosterForm({
             {error}
           </p>
         )}
+        {discounted && (
+          <button
+            type="button"
+            disabled={!selected?.available || busy}
+            onClick={() => void prepare(false)}
+            className="w-full rounded-lg border border-[#19345b] px-6 py-3 font-semibold disabled:opacity-40"
+          >
+            Preview discounted poster
+          </button>
+        )}
+        {discounted && prepared?.query === query && prepared.slug && (
+          <p className="text-xs break-all">
+            QR: https://metagame.games/go/{prepared.slug}
+          </p>
+        )}
         <button
           disabled={!selected?.available || busy}
           className="w-full rounded-lg bg-[#19345b] px-6 py-4 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
@@ -150,12 +261,14 @@ function LocationCombobox({
   value,
   fallback,
   onChange,
+  showTracking,
 }: {
   options: PosterOption[];
   value: string;
   /** Selected while the typed text matches nothing, so a poster always shows. */
   fallback: string;
   onChange: (value: string) => void;
+  showTracking: boolean;
 }) {
   const id = useId();
   const selected = options.find((option) => option.value === value);
@@ -278,7 +391,9 @@ function LocationCombobox({
           ))}
         </ul>
       )}
-      {selected?.tracking && <TrackingSummary tracking={selected.tracking} />}
+      {showTracking && selected?.tracking && (
+        <TrackingSummary tracking={selected.tracking} />
+      )}
     </div>
   );
 }
