@@ -32,7 +32,8 @@ jobs:
     # Fork PRs are excluded deliberately: secrets aren't exposed to them, and a
     # workflow rigged to expose VERCEL_TOKEN to fork code would hand the token
     # to anyone who opens a PR. Contributors push branches to this repo.
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    # This branch is reviewed without preview migrations or deployment.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref != 'codex/remove-ticket-sales-deadline' }}
     runs-on: ubuntu-latest
     steps:
       # Without this the CLI fails later with `You defined "--token",

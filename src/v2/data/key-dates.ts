@@ -88,13 +88,6 @@ export const KEY_DATES: KeyDate[] = [
     cta: "Apply to volunteer",
   },
   {
-    label: "Oct 29",
-    title: "Ticket sales close",
-    endsAt: endOfDay(10, 29),
-    href: "/#tickets",
-    cta: "Get tickets",
-  },
-  {
     label: "Nov 6–8",
     title: "Metagame 2026!",
     endsAt: endOfDay(11, 8),
