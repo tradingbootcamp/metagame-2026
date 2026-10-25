@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown } from "lucide-react";
 import Link from "next/link";
-import { PersonLink, profileHref, StatusTag, TestTag } from "./parts";
+import {
+  PersonLink,
+  profileHref,
+  shortDate,
+  StatusTag,
+  TestTag,
+} from "./parts";
 import { fieldClass, selectStyle, smallButtonClass } from "../ui";
 import {
   pageOf,
@@ -47,12 +53,6 @@ export type TableState = {
 const monthDay = new Intl.DateTimeFormat("en-US", {
   month: "numeric",
   day: "numeric",
-  timeZone: "America/Los_Angeles",
-});
-
-const fullDate = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeStyle: "short",
   timeZone: "America/Los_Angeles",
 });
 
@@ -256,7 +256,10 @@ export default function TicketsTable({
       </ul>
 
       <Dialog open={open !== null} onOpenChange={(o) => !o && setOpen(null)}>
-        <DialogContent className="flex max-w-[480px] flex-col gap-4 px-6 py-6">
+        <DialogContent
+          aria-describedby={undefined}
+          className="flex max-w-[480px] flex-col gap-4 px-6 py-6"
+        >
           {open && <TicketDetail ticket={open} />}
         </DialogContent>
       </Dialog>
@@ -389,7 +392,7 @@ function TicketDetail({ ticket: { t, people } }: { ticket: AdminTicket }) {
         <span className="font-mono text-xs text-cream/70">{t.code}</span>
       </div>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <Field label="Purchased">{fullDate.format(t.createdAt)}</Field>
+        <Field label="Purchased">{shortDate.format(t.createdAt)}</Field>
         <Field label="Amount">
           <span className="tabular-nums">{amount(t.amountCents)}</span>
           {t.couponCode && (
