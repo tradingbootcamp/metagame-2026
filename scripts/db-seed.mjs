@@ -22,7 +22,6 @@
 //                              three published sessions
 //   team@metagame.games        "Team" role only; claimed comp ticket
 //   schedule@metagame.games    "Schedule team" role only; claimed comp ticket
-//   volunteer@metagame.games   "Volunteer" role only; claimed comp ticket
 //   attendee@metagame.games    claimed ticket (so the built-in Attendee role),
 //                              RSVPs, bookmarks
 //   newcomer@metagame.games    unclaimed purchase under their email
@@ -169,7 +168,6 @@ const users = {
   host: { id: "seed-host", name: "Seed Host" },
   team: { id: "seed-team", name: "Seed Team" },
   schedule: { id: "seed-schedule", name: "Seed Schedule" },
-  volunteer: { id: "seed-volunteer", name: "Seed Volunteer" },
   attendee: { id: "seed-attendee", name: "Seed Attendee" },
   newcomer: { id: "seed-newcomer", name: "Seed Newcomer" },
   banned: {
@@ -752,9 +750,8 @@ const tickets = [
     test: true,
     purchaser_email: "tester@metagame.games",
   }),
-  // Team, schedule team and volunteers hold comped tickets, so they are
-  // also Attendees.
-  ...[users.team, users.schedule, users.volunteer].map((u, n) =>
+  // Team and schedule team hold comped tickets, so they are also Attendees.
+  ...[users.team, users.schedule].map((u, n) =>
     ticket(`admin:${u.id}-comp`, {
       source: "admin",
       amount_cents: 0,
@@ -1001,9 +998,7 @@ counts.account = await upsert(
 counts.profiles = await upsert("profiles", ["user_id"], everyone.map(profile));
 
 // Attendee is the built-in role src/lib/permission-store.ts expects by name;
-// Team holds everything short of admin. Volunteer is the door/check-in
-// bundle until checkin.manage lands: the attendee permissions plus the
-// ticket list to look people up at the door.
+// Team holds everything short of admin.
 const roleRows = await Promise.all(
   [
     { name: "Attendee", permissions: ["schedule.rsvps"] },
@@ -1022,10 +1017,6 @@ const roleRows = await Promise.all(
       ],
     },
     { name: "Schedule team", permissions: ["schedule.manage", "users.view"] },
-    {
-      name: "Volunteer",
-      permissions: ["schedule.preview", "schedule.rsvps", "tickets.view"],
-    },
   ].map(async (r) => {
     const [{ id }] = await sql.query(
       `insert into roles (name) values ($1)
@@ -1060,7 +1051,6 @@ counts.user_roles = await upsert(
     ...team.map((u) => ({ user_id: u.id, role_id: roleId("Team") })),
     { user_id: users.host.id, role_id: roleId("Schedule team") },
     { user_id: users.schedule.id, role_id: roleId("Schedule team") },
-    { user_id: users.volunteer.id, role_id: roleId("Volunteer") },
   ],
 );
 counts.user_permission_grants = await upsert(
