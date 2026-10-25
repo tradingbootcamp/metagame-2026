@@ -167,10 +167,10 @@ export default function TicketsTable({
                 <td className="px-4 py-2">
                   <div className="break-words">{t.tier}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <StatusTag status={t.status} />
+                    {t.status !== "paid" && <StatusTag status={t.status} />}
                     {t.test && <TestTag />}
-                    <span className="font-mono text-xs text-ink/60">
-                      {t.code}
+                    <span className="text-xs text-ink/60">
+                      Code <span className="font-mono">{t.code}</span>
                     </span>
                   </div>
                 </td>
@@ -179,8 +179,8 @@ export default function TicketsTable({
                     {amount(t.amountCents)}
                   </div>
                   {t.couponCode && (
-                    <div className="mt-1 font-mono text-xs break-all text-ink/60">
-                      {t.couponCode}
+                    <div className="mt-1 text-xs break-all text-ink/60">
+                      Coupon <span className="font-mono">{t.couponCode}</span>
                     </div>
                   )}
                 </td>
@@ -233,7 +233,9 @@ export default function TicketsTable({
                   )}
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-ink/60">
-                  <StatusTag status={row.t.status} />
+                  {row.t.status !== "paid" && (
+                    <StatusTag status={row.t.status} />
+                  )}
                   {row.t.test && <TestTag />}
                   <span className="truncate">{row.t.tier}</span>
                 </span>
@@ -386,19 +388,25 @@ function TicketDetail({ ticket: { t, people } }: { ticket: AdminTicket }) {
       <DialogTitle className="font-bebas pr-8 text-2xl tracking-wide text-cream">
         {t.tier}
       </DialogTitle>
-      <div className="flex flex-wrap items-center gap-1.5">
-        <StatusTag status={t.status} />
-        {t.test && <TestTag />}
-        <span className="font-mono text-xs text-cream/70">{t.code}</span>
-      </div>
+      {(t.status !== "paid" || t.test) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {t.status !== "paid" && <StatusTag status={t.status} />}
+          {t.test && <TestTag />}
+        </div>
+      )}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+        <Field label="Code">
+          <span className="font-mono">{t.code}</span>
+        </Field>
         <Field label="Purchased">{shortDate.format(t.createdAt)}</Field>
         <Field label="Amount">
           <span className="tabular-nums">{amount(t.amountCents)}</span>
-          {t.couponCode && (
-            <div className="font-mono text-xs break-all text-cream/60">
-              {t.couponCode}
-            </div>
+        </Field>
+        <Field label="Coupon">
+          {t.couponCode ? (
+            <span className="font-mono break-all">{t.couponCode}</span>
+          ) : (
+            <span className="text-cream/40">—</span>
           )}
         </Field>
         <Field label="Buyer">
