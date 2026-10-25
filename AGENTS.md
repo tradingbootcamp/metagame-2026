@@ -67,9 +67,10 @@ until the speaker committee has accounts, then that goes too.
 For any substantive UI change, run `node scripts/preview-shot.mjs <preview-url>
 /path [/path…]` against the PR's Vercel preview (URL in the bot comment) and
 inspect the screenshots to see that things appear correct on mobile and
-desktop. It needs `node_modules/playwright` and its Chromium
-(`npx playwright install chromium-headless-shell`); if either is missing, ask
-before installing and say it's for the screenshots. If anything is off,
+desktop. It needs `node_modules/playwright` plus a Chromium: the per-machine
+one from `npx playwright install chromium-headless-shell`, or any Chromium on
+the box via `SHOT_BROWSER=<path>`. If either is missing, ask before installing
+and say it's for the screenshots. If anything is off,
 surface the screenshots to the user for review rather than iterating on your
 own. Delete the screenshots afterwards so they don't pile up.
 
