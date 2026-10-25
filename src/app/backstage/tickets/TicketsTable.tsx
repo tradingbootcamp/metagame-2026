@@ -420,11 +420,13 @@ function TicketDetail({ ticket: { t, people } }: { ticket: AdminTicket }) {
             </div>
           )}
         </Field>
-        {!people.holderIsBuyer && people.holder && (
-          <Field label="Held by">
+        <Field label="Holder">
+          {people.holderIsBuyer ? (
+            <span className="text-cream/60">The buyer</span>
+          ) : (
             <Person person={people.holder} />
-          </Field>
-        )}
+          )}
+        </Field>
         <Field label="Source">
           <span className="capitalize">{t.source}</span>
         </Field>
