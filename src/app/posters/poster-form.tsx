@@ -135,7 +135,7 @@ export default function PosterForm({
           >
             {promoBad
               ? "Codes use letters, numbers, dashes, and underscores only."
-              : "Scanning applies the code at Standard checkout. Any code you know works; Stripe checks it."}
+              : "Auto-applies to checkouts after scanning the QR code."}
           </p>
         </label>
         <label className="block font-semibold">
