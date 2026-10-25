@@ -11,9 +11,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Live codes from /backstage/promo, for staff who may hand them out; null for everyone else. */
-async function promoChoices(): Promise<PromoChoice[] | null> {
-  if (!(await toolAccess("promo.manage"))) return null;
+/** Live codes from /backstage/promo as typing suggestions for staff; empty for everyone else. */
+async function promoChoices(): Promise<PromoChoice[]> {
+  if (!(await toolAccess("promo.manage"))) return [];
   try {
     return (await listStripeCodes())
       .filter((c) => c.active && (c.max == null || c.redeemed < c.max))

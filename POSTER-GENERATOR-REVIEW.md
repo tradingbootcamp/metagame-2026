@@ -2,7 +2,7 @@
 
 Direct route: `/posters`. Public, no login, no homepage navigation link, noindex metadata. `GET /api/posters` accepts only an area selection, design, and size. It does not accept a destination URL or arbitrary tracking slug and performs no writes. Existing admin link creation and `/go` attribution behavior are unchanged.
 
-Promo codes: `/go/<slug>?promo=CODE` forwards the code to the destination, the homepage stores it in localStorage with the last-touch UTMs, and the Standard ticket buttons add `promo=CODE` to the Stripe checkout URL, which already applies a linked code and shows the code box if it isn't redeemable. A stored code stays until another link sets one. Staff with `promo.manage` see a promo dropdown on `/posters`, fed by the promo tool's live codes, which puts `?promo=` on the QR; no tracking row is created or changed, and the same area link prints with or without a code.
+Promo codes: `/go/<slug>?promo=CODE` forwards the code to the destination, the homepage stores it in localStorage with the last-touch UTMs, and the Standard ticket buttons add `promo=CODE` to the Stripe checkout URL, which already applies a linked code and shows the code box if it isn't redeemable. A stored code stays until another link sets one. Anyone on `/posters` can type a code into the optional Promo code field (staff with `promo.manage` get the promo tool's live codes as suggestions), which puts `?promo=` on the QR; a code is no secret once printed and Stripe decides whether it applies; no tracking row is created or changed, and the same area link prints with or without a code.
 
 Supported formats: D20 in portrait Letter and 13×19; chess in landscape Letter and 13×19. Every design and size pair maps to its own pinned source file in `assets/posters`.
 

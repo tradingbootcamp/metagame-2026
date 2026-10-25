@@ -10,7 +10,7 @@ import {
 } from "react";
 import { ChevronDown } from "lucide-react";
 import type { PosterOption, PosterTracking } from "@/lib/poster-options";
-import { PROMO_PARAM } from "@/lib/tracking-links";
+import { PROMO_PARAM, promoCode } from "@/lib/tracking-links";
 
 export type PromoChoice = { code: string; label: string };
 
@@ -24,8 +24,8 @@ export default function PosterForm({
 }: {
   options: PosterOption[];
   initialArea: string;
-  /** Codes staff may put on a poster; null hides the field. */
-  promos: PromoChoice[] | null;
+  /** Suggested codes for staff with promo.manage; empty for everyone else. */
+  promos: PromoChoice[];
 }) {
   const [area, setArea] = useState(
     options.some((option) => option.value === initialArea) ? initialArea : "",
@@ -33,6 +33,7 @@ export default function PosterForm({
   const [design, setDesign] = useState("d20");
   const [size, setSize] = useState("letter");
   const [promo, setPromo] = useState("");
+  const promoBad = promo !== "" && promoCode(promo) !== promo;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const selected = options.find((option) => option.value === area);
@@ -67,6 +68,7 @@ export default function PosterForm({
     }
   }
   const landscape = design === "chess";
+  const promoListId = useId();
   return (
     <form
       onSubmit={download}
@@ -108,29 +110,34 @@ export default function PosterForm({
           onChange={setArea}
           promo={promo}
         />
-        {promos && (
-          <label className="block font-semibold">
-            Promo code
-            <select
-              aria-label="Promo code"
-              className={inputClass}
-              value={promo}
-              onChange={(event) => setPromo(event.target.value)}
-            >
-              <option value="">None</option>
+        <label className="block font-semibold">
+          Promo code <span className="font-normal">(optional)</span>
+          <input
+            aria-label="Promo code"
+            className={inputClass}
+            list={promos.length ? promoListId : undefined}
+            value={promo}
+            onChange={(event) => setPromo(event.target.value.trim())}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {promos.length > 0 && (
+            <datalist id={promoListId}>
               {promos.map((choice) => (
                 <option key={choice.code} value={choice.code}>
-                  {choice.code}
-                  {choice.label ? ` · ${choice.label}` : ""}
+                  {choice.label}
                 </option>
               ))}
-            </select>
-            <p className="mt-2 text-xs font-normal text-[#19345b]/60">
-              Scanning applies the code at Standard checkout. Codes come from
-              the promo tool.
-            </p>
-          </label>
-        )}
+            </datalist>
+          )}
+          <p
+            className={`mt-2 text-xs font-normal ${promoBad ? "text-red-700" : "text-[#19345b]/60"}`}
+          >
+            {promoBad
+              ? "Codes use letters, numbers, dashes, and underscores only."
+              : "Scanning applies the code at Standard checkout. Any code you know works; Stripe checks it."}
+          </p>
+        </label>
         <label className="block font-semibold">
           Design
           <select
@@ -166,7 +173,7 @@ export default function PosterForm({
           </p>
         )}
         <button
-          disabled={!selected?.available || busy}
+          disabled={!selected?.available || busy || promoBad}
           className="w-full rounded-lg bg-[#19345b] px-6 py-4 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy ? "Preparing your PDF…" : "Download PDF"}
