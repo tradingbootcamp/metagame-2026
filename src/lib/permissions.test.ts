@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  ADMIN_PASSWORD_PERMISSIONS,
   effectivePermissions,
   expand,
   explainPermissions,
@@ -29,8 +28,6 @@ describe("catalog", () => {
         expect(q).not.toBe(key);
       }
     }
-    for (const key of ADMIN_PASSWORD_PERMISSIONS)
-      expect(PERMISSION_KEYS).toContain(key);
   });
 });
 

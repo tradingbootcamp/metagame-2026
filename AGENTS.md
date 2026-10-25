@@ -57,11 +57,10 @@ one check, resolving roles (`/admin/roles`) and per-user grants
 plugin) bypasses it all and is only set by SQL or by another admin on
 `/admin/users`; the first admin is bootstrapped by hand in the Neon console:
 `update "user" set role = 'admin' where email = '…'`. `toolAccess()` /
-`requireAccess()` (`src/lib/admin-auth.ts`) and `gradeAccess()`
-(`src/lib/grader-auth.ts`) layer the password fallback on `can()`, as a fixed
-permission set. That fallback (`ADMIN_PASSWORD`, `GRADER_PASSWORD` and their
-secrets) stays until the team has accounts, then those env vars and the
-password paths go.
+`requireAccess()` (`src/lib/admin-auth.ts`) wrap `can()` for `/backstage`,
+which takes accounts only. `gradeAccess()` (`src/lib/grader-auth.ts`) still
+layers a shared-password fallback (`GRADER_PASSWORD` + secret) on `can()`
+until the speaker committee has accounts, then that goes too.
 
 ## Issue tracking (Linear)
 

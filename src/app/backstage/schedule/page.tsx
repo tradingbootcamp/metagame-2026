@@ -1,6 +1,5 @@
 import { connection } from "next/server";
 import SignIn from "../SignIn";
-import { NameForm } from "../SignInForms";
 import ScheduleTool from "./ScheduleTool";
 import { toolAccess } from "@/lib/admin-auth";
 import {
@@ -16,17 +15,13 @@ export default async function AdminSchedulePage() {
 
   const access = await toolAccess("schedule.manage");
   if (!access) return <SignIn next="/backstage/schedule" />;
-  if (!access.name) return <NameForm />;
 
   const [schedule, attendance, plans] = await Promise.all([
     loadSchedule(),
     loadAttendance(),
-    access.via === "account" ? loadViewerPlans(access.userId) : null,
+    loadViewerPlans(access.userId),
   ]);
-  const viewer =
-    access.via === "account" && plans
-      ? { ...plans, userId: access.userId }
-      : null;
+  const viewer = { ...plans, userId: access.userId };
   // Mirrors the guard in actions.ts: sample data only against a local database.
   const canSeed = process.env.NODE_ENV === "development";
   return (

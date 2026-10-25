@@ -40,16 +40,7 @@ async function save(request: Request, ctx: Ctx, mode: "replace" | "merge") {
   if (!named.ok) return error(named.error, 400, named.field);
   // Grading as someone else is for admins only. authorize() already requires
   // an admin, so this holds for every caller today; keep it if that changes.
-  const ref =
-    named.value ?? (access.via === "account" ? access.userId : undefined);
-  if (ref === undefined) {
-    return error(
-      "Signed in without an account: name the grader with graderUserId or graderEmail.",
-      400,
-      "graderUserId",
-    );
-  }
-  const grader = await resolveGrader(ref);
+  const grader = await resolveGrader(named.value ?? access.userId);
   if ("error" in grader) return error(grader.error, 400, "graderUserId");
 
   const rfpSession = await findRfpSession((await ctx.params).id);

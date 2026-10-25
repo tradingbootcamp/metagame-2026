@@ -172,14 +172,6 @@ export const hasTeamPermission = (held: Iterable<Permission>): boolean => {
   return false;
 };
 
-/** What a shared-password session may do: the tools the password reached before accounts. */
-export const ADMIN_PASSWORD_PERMISSIONS: readonly Permission[] = [
-  "schedule.manage",
-  "promo.manage",
-  "links.manage",
-  "schema.view",
-];
-
 export type AccessInput = {
   /** Better Auth `user.role = 'admin'`: holds everything. */
   admin: boolean;

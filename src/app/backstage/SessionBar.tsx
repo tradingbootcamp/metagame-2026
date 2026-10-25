@@ -9,13 +9,9 @@ export default async function SessionBar() {
 
   return (
     <div className="flex items-center gap-3 text-sm text-ink/60">
-      {access.via === "account" ? (
-        <Link href="/account" className="hover:text-meeple">
-          {access.name}
-        </Link>
-      ) : (
-        access.name && <span>{access.name}</span>
-      )}
+      <Link href="/account" className="hover:text-meeple">
+        {access.name}
+      </Link>
       <form action={signOut}>
         <button
           type="submit"

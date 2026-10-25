@@ -1,6 +1,5 @@
 import { connection } from "next/server";
 import SignIn from "../SignIn";
-import { NameForm } from "../SignInForms";
 import PromoTool from "./PromoTool";
 import { toolAccess } from "@/lib/admin-auth";
 import { listCoupons, type Coupon } from "@/lib/promo-codes-stripe";
@@ -14,7 +13,6 @@ export default async function AdminPromoPage() {
 
   const access = await toolAccess("promo.manage");
   if (!access) return <SignIn next="/backstage/promo" />;
-  if (!access.name) return <NameForm />;
 
   // A missing/unreadable coupon list disables the form with a message rather
   // than breaking the page.

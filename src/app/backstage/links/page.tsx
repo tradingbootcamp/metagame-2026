@@ -1,6 +1,5 @@
 import { connection } from "next/server";
 import SignIn from "../SignIn";
-import { NameForm } from "../SignInForms";
 import LinksTool from "./LinksTool";
 import { toolAccess } from "@/lib/admin-auth";
 import { matchLabel } from "@/lib/name-match";
@@ -14,7 +13,6 @@ export default async function AdminLinksPage() {
 
   const access = await toolAccess("links.manage");
   if (!access) return <SignIn next="/backstage/links" />;
-  if (!access.name) return <NameForm />;
 
   const [links, options, origin] = await Promise.all([
     listTrackingLinks(),

@@ -13,15 +13,10 @@ import {
 import Link from "next/link";
 import { connection } from "next/server";
 import SignIn from "../SignIn";
-import { NameForm } from "../SignInForms";
 import { Card } from "../ui";
 import { teamAccess } from "@/lib/access";
 import { toolAccess } from "@/lib/admin-auth";
-import {
-  ADMIN_PASSWORD_PERMISSIONS,
-  expand,
-  type Permission,
-} from "@/lib/permissions";
+import type { Permission } from "@/lib/permissions";
 
 // `perm`: holding any one of them lists the tool.
 const TOOLS: {
@@ -102,12 +97,8 @@ export default async function AdminIndexPage() {
 
   const access = await toolAccess();
   if (!access) return <SignIn next="/backstage" />;
-  if (!access.name) return <NameForm />;
 
-  const held =
-    access.via === "account"
-      ? ((await teamAccess())?.permissions ?? new Set<Permission>())
-      : expand(ADMIN_PASSWORD_PERMISSIONS);
+  const held = (await teamAccess())?.permissions ?? new Set<Permission>();
   const tools = TOOLS.filter((t) => [t.perm].flat().some((p) => held.has(p)));
 
   return (

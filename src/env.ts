@@ -79,18 +79,6 @@ const ENV_SPEC: EnvSpec[] = [
       "Set to 1 to copy /grade's database writes onto the Airtable RFP rows outside production. Production always copies; local dev and previews skip, since they'd write the real base.",
   },
   {
-    name: "ADMIN_PASSWORD",
-    required: false,
-    description:
-      "Shared password for the team tools under /backstage. Fallback while the team gets accounts; admin accounts sign in without it. Remove once they do.",
-  },
-  {
-    name: "ADMIN_SESSION_SECRET",
-    required: false,
-    description:
-      "Random string used to sign the /backstage session cookie. Rotating it signs everyone out.",
-  },
-  {
     name: "OPENNODE_ENV",
     required: false,
     description:

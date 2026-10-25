@@ -4,7 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { requireAccess, type NamedAccess } from "./admin-auth";
+import { requireAccess, type Access } from "./admin-auth";
 import { API_KEY_HEADER, getAuth } from "./auth";
 import {
   toPacificWall,
@@ -29,7 +29,7 @@ export const error = (message: string, status: number, field?: string) =>
  * The caller when they may manage the schedule, else the 401/403 to send.
  * Accepts a browser session too, so a team member can hit GET from the address bar.
  */
-export async function authorize(): Promise<NamedAccess | Response> {
+export async function authorize(): Promise<Access | Response> {
   const access = await requireAccess("schedule.manage");
   if (access) return access;
   const key = (await headers()).get(API_KEY_HEADER);
