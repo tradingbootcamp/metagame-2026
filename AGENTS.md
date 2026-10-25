@@ -62,6 +62,17 @@ which takes accounts only. `gradeAccess()` (`src/lib/grader-auth.ts`) still
 layers a shared-password fallback (`GRADER_PASSWORD` + secret) on `can()`
 until the speaker committee has accounts, then that goes too.
 
+## Looking at UI changes
+
+A UI change isn't done until you've seen it. Push the branch; the PR's Vercel
+preview (URL in the bot comment, built against the seeded dev DB) is where
+to look. Run `node scripts/preview-shot.mjs <preview-url> /path [/path…]`:
+it signs in as the seed admin, screenshots each page at phone and desktop
+width, and exits non-zero if anything is wider than its viewport. `TAP=<selector>`
+clicks before the phone shot, for modals. Look at the screenshots, fix what's
+off, repeat. Protection bypass comes from `VERCEL_BYPASS` or
+`~/.config/vercel/metagame-2026-bypass`.
+
 ## Issue tracking (Linear)
 
 Work is tracked in Linear (Metagame team): attach PRs by putting `[META-###]` in the PR title or using the Linear-provided branch name, and file issues generously — including to record work already done. In the PR body only `Fixes META-###` attaches; avoid `Ref`, which blocks the on-merge status transitions. A linked PR moves the issue to In Progress on open and In Review on merge — In Review means "merged, pending human review", and nothing moves an issue to Done automatically, so never mark issues Done yourself. No Linear access? Skip all this — a clear PR description is enough.
