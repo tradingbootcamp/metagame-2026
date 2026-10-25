@@ -1,6 +1,20 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  filterTrackingLinks,
+  initialLinkCreator,
+  type TrackingLinkView,
+} from "@/lib/tracking-link-list";
 import { createLink, type CreateState } from "./actions";
 import {
   buttonClass,
@@ -83,29 +97,28 @@ const autoLabel = (draft: Draft) =>
 const initial: CreateState = {};
 
 export default function LinksTool({
-  links: initialLinks,
+  links,
   options,
   origin,
   me,
+  view,
 }: {
   links: TrackingLink[];
   options: LinkOptions;
   origin: string;
   me: string;
+  view: TrackingLinkView;
 }) {
   const [state, action, pending] = useActionState(createLink, initial);
   const [draft, setDraft] = useState<Draft>(() => emptyDraft(options));
-  const [links, setLinks] = useState(initialLinks);
   const formRef = useRef<HTMLFormElement>(null);
   const lastCreated = useRef<string | null>(null);
 
-  // A fresh create lands in the existing list immediately and resets the form; the
-  // server's revalidated list catches up on the next navigation.
+  // createLink revalidates this page; server props remain the list's source of truth.
   useEffect(() => {
     const created = state.created?.link;
     if (!created || created.id === lastCreated.current) return;
     lastCreated.current = created.id;
-    setLinks((prev) => [created, ...prev.filter((l) => l.id !== created.id)]);
     setDraft((prev) => ({
       ...prev,
       placement: "",
@@ -329,9 +342,11 @@ export default function LinksTool({
       </section>
 
       <Library
+        key={view}
         links={links}
         origin={origin}
         me={me}
+        view={view}
         onUseTemplate={applyTemplate}
       />
     </div>
@@ -426,57 +441,80 @@ function Library({
   links,
   origin,
   me,
+  view,
   onUseTemplate,
 }: {
   links: TrackingLink[];
   origin: string;
   me: string;
+  view: TrackingLinkView;
   onUseTemplate: (link: TrackingLink) => void;
 }) {
   const [query, setQuery] = useState("");
   const [creator, setCreator] = useState(() =>
-    links.some((l) => l.createdBy === me) ? me : "",
+    initialLinkCreator(links, me, view),
   );
+  const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
+  useEffect(() => {
+    const refresh = () => startRefresh(() => router.refresh());
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [router, startRefresh]);
   const creators = useMemo(
     () =>
-      Array.from(new Set(links.map((l) => l.createdBy).filter(Boolean))).sort(),
-    [links],
+      Array.from(
+        new Set([...links.map((l) => l.createdBy), creator].filter(Boolean)),
+      ).sort(),
+    [links, creator],
   );
 
   const q = query.trim().toLowerCase();
-  const shown = links.filter(
-    (l) =>
-      (!creator || l.createdBy === creator) &&
-      (!q ||
-        [
-          l.internalName,
-          l.slug,
-          l.destination,
-          l.campaign,
-          l.source,
-          l.placement,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(q)),
-  );
+  const shown = filterTrackingLinks(links, { view, creator, query });
 
   return (
     <section>
+      <nav aria-label="Tracking link views" className="mb-3 flex gap-4 text-sm">
+        <Link
+          href="/backstage/links"
+          aria-current={view === "all" ? "page" : undefined}
+          className="underline"
+        >
+          All links
+        </Link>
+        <Link
+          href="/backstage/links?view=posters"
+          aria-current={view === "posters" ? "page" : undefined}
+          className="underline"
+        >
+          Poster links
+        </Link>
+        <Link href="/posters" className="underline">
+          Print posters
+        </Link>
+      </nav>
+      {view === "posters" && (
+        <p className="mb-3 text-sm text-ink/60">
+          Poster QR codes use these saved tracking links. Printing another copy
+          reuses its link.
+        </p>
+      )}
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <h2 className="font-bebas text-2xl tracking-wide text-navy">
-          Existing{" "}
+          {view === "posters" ? "Poster links" : "Existing"}{" "}
           <span className="text-base text-ink/50">({shown.length})</span>
         </h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <input
             type="search"
             placeholder="Search"
+            aria-label="Search tracking links"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className={`${fieldClass} w-48`}
           />
           <select
+            aria-label="Created by"
             value={creator}
             onChange={(e) => setCreator(e.target.value)}
             className={selectClass}
@@ -489,6 +527,14 @@ function Library({
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            disabled={refreshing}
+            onClick={() => startRefresh(() => router.refresh())}
+            className={smallButtonClass}
+          >
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </button>
         </div>
       </div>
 
