@@ -1,4 +1,5 @@
 import posthog from "posthog-js";
+import { PROMO_PARAM, promoCode } from "@/lib/tracking-links";
 
 // Last-touch attribution: the UTMs from the most recent tracking link a visitor
 // arrived through, when they first visited, and their PostHog id ride along into
@@ -21,6 +22,9 @@ const STORAGE_KEY = "last-touch-utm";
 // we have for them until they arrive through another tracking link.
 const LEGACY_STORAGE_KEY = "first-touch-utm";
 const FIRST_VISIT_KEY = "first-visit";
+// A promo code from the landing URL (a poster QR, /go/<slug>?promo=CODE). Kept
+// until a later link sets another; it's applied to Standard checkout.
+const PROMO_STORAGE_KEY = "promo-code";
 const MAX_LEN = 200;
 
 /** The UTM values `get` returns, trimmed and capped; blanks and non-strings dropped. */
@@ -59,19 +63,23 @@ export function captureUtm(search: string): void {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(utm));
       localStorage.removeItem(LEGACY_STORAGE_KEY);
     }
+    const promo = promoCode(params.get(PROMO_PARAM));
+    if (promo) localStorage.setItem(PROMO_STORAGE_KEY, promo);
   } catch {
     // Storage blocked — attribution is best-effort.
   }
 }
 
 /**
- * Drop utm_* from the address bar once they've been read. PostHog captured them
- * at init, and in history_change mode it only re-fires a pageview when the
- * pathname changes, so a query-only replaceState is silent.
+ * Drop utm_* and promo from the address bar once they've been read. PostHog
+ * captured them at init, and in history_change mode it only re-fires a pageview
+ * when the pathname changes, so a query-only replaceState is silent.
  */
 export function stripUtmFromUrl(): void {
   const url = new URL(window.location.href);
-  const had = [...url.searchParams.keys()].filter((k) => k.startsWith("utm_"));
+  const had = [...url.searchParams.keys()].filter(
+    (k) => k.startsWith("utm_") || k === PROMO_PARAM,
+  );
   if (had.length === 0) return;
   for (const k of had) url.searchParams.delete(k);
   window.history.replaceState(window.history.state, "", url);
@@ -107,4 +115,21 @@ export function withUtm(href: string): string {
     url.searchParams.set(key, value);
   }
   return url.pathname + url.search;
+}
+
+export function readPromo(): string {
+  try {
+    return promoCode(localStorage.getItem(PROMO_STORAGE_KEY));
+  } catch {
+    return "";
+  }
+}
+
+/** `href` with the stored promo code set, so checkout pre-applies it. Client-only. */
+export function withPromo(href: string): string {
+  const promo = readPromo();
+  if (!promo) return href;
+  const url = new URL(href, "http://localhost");
+  url.searchParams.set(PROMO_PARAM, promo);
+  return url.pathname + url.search + url.hash;
 }

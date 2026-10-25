@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import {
   buildDestinationUrl,
   isAllowedDestination,
+  PROMO_PARAM,
+  promoCode,
   resolveTrackingLink,
 } from "@/lib/tracking-links";
 import { siteOrigin } from "@/lib/site-origin";
@@ -20,6 +22,7 @@ export async function GET(
 ) {
   const origin = siteOrigin(request);
   const slug = (await params).slug.toLowerCase();
+  const promo = promoCode(new URL(request.url).searchParams.get(PROMO_PARAM));
 
   let target = origin + "/";
   try {
@@ -29,6 +32,11 @@ export async function GET(
     }
   } catch (err) {
     console.error(`[go] lookup failed for ${slug}:`, err);
+  }
+  if (promo) {
+    const url = new URL(target);
+    url.searchParams.set(PROMO_PARAM, promo);
+    target = url.toString();
   }
   return redirect(target);
 }

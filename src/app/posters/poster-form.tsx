@@ -10,6 +10,9 @@ import {
 } from "react";
 import { ChevronDown } from "lucide-react";
 import type { PosterOption, PosterTracking } from "@/lib/poster-options";
+import { PROMO_PARAM } from "@/lib/tracking-links";
+
+export type PromoChoice = { code: string; label: string };
 
 const inputClass =
   "mt-2 w-full rounded-lg border border-[#19345b]/30 bg-white p-3 text-base";
@@ -17,19 +20,28 @@ const inputClass =
 export default function PosterForm({
   options,
   initialArea,
+  promos,
 }: {
   options: PosterOption[];
   initialArea: string;
+  /** Codes staff may put on a poster; null hides the field. */
+  promos: PromoChoice[] | null;
 }) {
   const [area, setArea] = useState(
     options.some((option) => option.value === initialArea) ? initialArea : "",
   );
   const [design, setDesign] = useState("d20");
   const [size, setSize] = useState("letter");
+  const [promo, setPromo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const selected = options.find((option) => option.value === area);
-  const query = new URLSearchParams({ area, design, size }).toString();
+  const query = new URLSearchParams({
+    area,
+    design,
+    size,
+    ...(promo ? { [PROMO_PARAM]: promo } : {}),
+  }).toString();
   async function download(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -45,7 +57,7 @@ export default function PosterForm({
       const url = URL.createObjectURL(await response.blob());
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `metagame-${design}-${size}.pdf`;
+      anchor.download = `metagame-${design}${promo ? `-${promo}` : ""}-${size}.pdf`;
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
@@ -94,7 +106,31 @@ export default function PosterForm({
           value={area}
           fallback={initialArea}
           onChange={setArea}
+          promo={promo}
         />
+        {promos && (
+          <label className="block font-semibold">
+            Promo code
+            <select
+              aria-label="Promo code"
+              className={inputClass}
+              value={promo}
+              onChange={(event) => setPromo(event.target.value)}
+            >
+              <option value="">None</option>
+              {promos.map((choice) => (
+                <option key={choice.code} value={choice.code}>
+                  {choice.code}
+                  {choice.label ? ` · ${choice.label}` : ""}
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-xs font-normal text-[#19345b]/60">
+              Scanning applies the code at Standard checkout. Codes come from
+              the promo tool.
+            </p>
+          </label>
+        )}
         <label className="block font-semibold">
           Design
           <select
@@ -150,12 +186,14 @@ function LocationCombobox({
   value,
   fallback,
   onChange,
+  promo,
 }: {
   options: PosterOption[];
   value: string;
   /** Selected while the typed text matches nothing, so a poster always shows. */
   fallback: string;
   onChange: (value: string) => void;
+  promo: string;
 }) {
   const id = useId();
   const selected = options.find((option) => option.value === value);
@@ -278,20 +316,31 @@ function LocationCombobox({
           ))}
         </ul>
       )}
-      {selected?.tracking && <TrackingSummary tracking={selected.tracking} />}
+      {selected?.tracking && (
+        <TrackingSummary tracking={selected.tracking} promo={promo} />
+      )}
     </div>
   );
 }
 
-function TrackingSummary({ tracking }: { tracking: PosterTracking }) {
+function TrackingSummary({
+  tracking,
+  promo,
+}: {
+  tracking: PosterTracking;
+  promo: string;
+}) {
   const utms = new URL(tracking.redirectUrl).searchParams;
+  const qrUrl = promo
+    ? `${tracking.qrUrl}?${new URLSearchParams({ [PROMO_PARAM]: promo })}`
+    : tracking.qrUrl;
   const tags = ["utm_source", "utm_medium", "utm_content"]
     .map((key) => utms.get(key))
     .join(" · ");
   return (
     <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5 text-xs text-[#19345b]/60">
       <dt>QR</dt>
-      <dd className="font-mono break-all">{tracking.qrUrl}</dd>
+      <dd className="font-mono break-all">{qrUrl}</dd>
       <dt>Tracking</dt>
       <dd className="font-mono">{tags}</dd>
     </dl>
