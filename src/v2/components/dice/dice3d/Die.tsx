@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { COLORS, letterTexture, pipTexture } from "./faceTexture";
 import type { IntroDriver } from "./introDriver";
+import type { RenderBudget } from "./renderBudget";
 
 export type DieData = {
   front: string; // blue letter (+Z)
@@ -62,8 +63,8 @@ export const QUAT: Record<Phase, THREE.Quaternion> = {
   year: quat(80, 3), // tips the pip top (+Y) nearly straight-on to read 2026
 };
 
-export const TURN_S = 1.0; // seconds for a die to complete its turn
-export const STAGGER = 0.04; // tiny per-die delay — the row turns near-unison, not a wave
+const TURN_S = 1.0; // seconds for a die to complete its turn
+const STAGGER = 0.04; // tiny per-die delay — the row turns near-unison, not a wave
 
 const SIZE = 1; // die edge length in world units
 const RADIUS = SIZE * 0.06; // bevel radius of the rounded body
@@ -134,6 +135,7 @@ export default function Die({
   x,
   intro,
   staticLetters,
+  budget,
 }: {
   data: DieData;
   phase: Phase;
@@ -141,6 +143,7 @@ export default function Die({
   x: number;
   intro?: IntroDriver; // roll-in pose source; Scene ticks it, dice read from it
   staticLetters?: StaticLetters;
+  budget?: RenderBudget; // held while this die is turning or a face loads
 }) {
   const group = useRef<THREE.Group>(null);
   const mover = useRef<THREE.Group>(null); // outer group: position (roll-in flight path)
@@ -149,16 +152,18 @@ export default function Die({
   const panelGeo = useMemo(() => roundedPanelGeometry(PANEL, PANEL_R), []);
   useEffect(() => () => panelGeo.dispose(), [panelGeo]);
 
-  // Per-face textures, built once.
+  // Per-face textures, built once. Letter faces rasterize async; redraw when
+  // they land or an idle (static / reduced-motion) die keeps blank faces.
   const textures = useMemo(() => {
-    const blue = letterTexture(data.front, "blue");
-    const blueBack = letterTexture(data.front, "blue");
-    const orange = letterTexture(data.right, "orange");
-    const orangeLeft = letterTexture(data.right, "orange");
+    const onLoad = () => budget?.wake(0);
+    const blue = letterTexture(data.front, "blue", onLoad);
+    const blueBack = letterTexture(data.front, "blue", onLoad);
+    const orange = letterTexture(data.right, "orange", onLoad);
+    const orangeLeft = letterTexture(data.right, "orange", onLoad);
     const top = pipTexture(data.top);
     const bottom = pipTexture(7 - data.top);
     return [blue, blueBack, orange, orangeLeft, top, bottom];
-  }, [data]);
+  }, [data, budget]);
 
   useEffect(() => () => textures.forEach((t) => t.dispose()), [textures]);
 
@@ -167,15 +172,16 @@ export default function Die({
   const staticTextures = useMemo(() => {
     if (!staticLetters) return null;
     const { front, right } = staticLetters;
+    const onLoad = () => budget?.wake(0);
     return [
-      letterTexture(front.letter, front.color),
-      letterTexture(front.letter, front.color),
-      letterTexture(right.letter, right.color),
-      letterTexture(right.letter, right.color),
+      letterTexture(front.letter, front.color, onLoad),
+      letterTexture(front.letter, front.color, onLoad),
+      letterTexture(right.letter, right.color, onLoad),
+      letterTexture(right.letter, right.color, onLoad),
       pipTexture(data.top),
       pipTexture(7 - data.top),
     ];
-  }, [staticLetters, data.top]);
+  }, [staticLetters, data.top, budget]);
 
   useEffect(
     () => () => staticTextures?.forEach((t) => t.dispose()),
@@ -210,11 +216,20 @@ export default function Die({
   const fromQ = useRef(new THREE.Quaternion());
   const prog = useRef(1); // 0..1 along the current turn; 1 = settled
   const wait = useRef(0);
+  // The turn holds the render budget until it settles (motion, not a timer,
+  // decides when frames stop — so a turn paused off-screen resumes on return).
+  const holdRelease = useRef<(() => void) | null>(null);
+  const settle = useCallback(() => {
+    holdRelease.current?.();
+    holdRelease.current = null;
+  }, []);
   useEffect(() => {
     if (group.current) fromQ.current.copy(group.current.quaternion);
     prog.current = 0;
     wait.current = index * STAGGER;
-  }, [phase, index]);
+    holdRelease.current = budget?.hold() ?? null;
+    return settle;
+  }, [phase, index, budget, settle]);
 
   useFrame((_, rawDt) => {
     const g = group.current;
@@ -234,11 +249,12 @@ export default function Die({
       if (settled) {
         introDone.current = true;
         prog.current = 1;
+        settle();
       }
       return;
     }
 
-    if (prog.current >= 1) return;
+    if (prog.current >= 1) return settle();
     if (wait.current > 0) {
       wait.current -= dt;
       return;
@@ -248,6 +264,7 @@ export default function Die({
     const u = prog.current;
     const e = u * u * u * (u * (6 * u - 15) + 10);
     g.quaternion.slerpQuaternions(fromQ.current, target, e);
+    if (prog.current >= 1) settle();
   });
 
   return (

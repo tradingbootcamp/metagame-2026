@@ -16,11 +16,9 @@ import LogoDice from "@/v2/components/nav/LogoDice";
 // only allowed inside a Client Component — hence "use client" above.)
 const Dice3D = dynamic(() => import("./dice3d/Dice3D"), { ssr: false });
 
-// Chrome with hardware acceleration off runs WebGL on the CPU (SwiftShader),
-// and one such machine was pegged by the hero (META-4558). Probe for a real
-// GPU before fetching three at all; without one the stage shows the SVG
-// wordmark instead. `failIfMajorPerformanceCaveat` is the browser's own
-// "this context would be software-rendered" signal.
+// Software WebGL (Chrome with acceleration off → SwiftShader) can't afford the
+// scene; `failIfMajorPerformanceCaveat` refuses such a context, so probe before
+// fetching three at all and show the SVG wordmark instead.
 function hasHardwareWebGL(): boolean {
   try {
     const canvas = document.createElement("canvas");
@@ -28,8 +26,7 @@ function hasHardwareWebGL(): boolean {
       failIfMajorPerformanceCaveat: true,
     };
     const gl =
-      (canvas.getContext("webgl2", attrs) as WebGL2RenderingContext | null) ??
-      (canvas.getContext("webgl", attrs) as WebGLRenderingContext | null);
+      canvas.getContext("webgl2", attrs) ?? canvas.getContext("webgl", attrs);
     if (!gl) return false;
     gl.getExtension("WEBGL_lose_context")?.loseContext();
     return true;

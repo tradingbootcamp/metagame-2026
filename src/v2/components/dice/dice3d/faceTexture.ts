@@ -64,6 +64,7 @@ function tintedGlyph(img: HTMLImageElement, fill: string): HTMLCanvasElement {
 export function letterTexture(
   letter: string,
   color: "blue" | "orange",
+  onLoad?: () => void,
 ): THREE.CanvasTexture {
   const [canvas, ctx] = makeCanvas();
   const tex = toTexture(canvas);
@@ -81,6 +82,7 @@ export function letterTexture(
     }
     ctx.drawImage(tintedGlyph(img, COLORS[color]), 0, 0);
     tex.needsUpdate = true;
+    onLoad?.();
   };
   return tex;
 }

@@ -1,23 +1,23 @@
-// Decides when the dice canvas draws. The Canvas runs frameloop="never" and
-// FrameDriver (Dice3D) asks this before each frame: draw only while something
-// is moving (a hold, or a timed wake), only while the hero is on screen, and
-// never more than ~60 times a second. Without it the default loop redraws an
-// idle scene at the display's refresh rate for the life of the page, which on
-// a 144 Hz monitor — or Chrome's software WebGL — pegs a core. META-4558.
+// Draw only while something moves and the hero is on screen, at most ~60/s
+// (the Canvas runs frameloop="never"; FrameDriver in Dice3D asks `wants`).
+export const MIN_FRAME_MS = 1000 / 60;
+
 export class RenderBudget {
-  visible = true;
-  /** Draw every frame until this performance.now() timestamp. */
-  until = 0;
-  /** Draw at least one more frame, whenever the throttle next allows. */
-  pending = false;
-  /** Open-ended motion (the roll-in); draw while any hold is open. */
-  holds = 0;
+  private _visible = true;
+  private until = 0;
+  private holds = 0;
   private kick: (() => void) | null = null;
+
+  get visible() {
+    return this._visible;
+  }
 
   /** Keep drawing for `ms` from now (0 = just one frame). */
   wake(ms = 0) {
-    this.pending = true;
-    this.until = Math.max(this.until, performance.now() + ms);
+    this.until = Math.max(
+      this.until,
+      performance.now() + ms + 2 * MIN_FRAME_MS,
+    );
     this.kick?.();
   }
 
@@ -25,25 +25,19 @@ export class RenderBudget {
   hold(): () => void {
     this.holds++;
     this.kick?.();
-    let released = false;
     return () => {
-      if (released) return;
-      released = true;
       this.holds--;
     };
   }
 
   setVisible(visible: boolean) {
-    if (visible === this.visible) return;
-    this.visible = visible;
-    // repaint on re-entry: the resting pose may have changed while hidden
+    if (visible === this._visible) return;
+    this._visible = visible;
     if (visible) this.wake(0);
   }
 
   wants(now: number) {
-    return (
-      this.visible && (this.holds > 0 || this.pending || now <= this.until)
-    );
+    return this._visible && (this.holds > 0 || now <= this.until);
   }
 
   /** The driver's "schedule a frame" hook; called on every wake/hold. */
