@@ -25,7 +25,11 @@ import {
   verdictField,
   type MirrorGroup,
 } from "./rfp-mirror";
-import { accountName, assertSlotFree } from "./schedule-store";
+import {
+  accountName,
+  assertSlotFree,
+  searchAccounts as searchAccountRows,
+} from "./schedule-store";
 
 // The RFP pipeline in Postgres: sessions that came through the RFP or were
 // given a phase, their grades, and the committee's edits. Every write is copied onto
@@ -412,6 +416,11 @@ export async function committeeAccounts(): Promise<
       Boolean(a.committeeName),
     )
     .sort((a, b) => a.committeeName.localeCompare(b.committeeName));
+}
+
+/** Accounts whose name or email contains the query, a few at most. */
+export async function searchAccounts(query: string): Promise<Account[]> {
+  return (await searchAccountRows(query)).map(withCommittee);
 }
 
 /**

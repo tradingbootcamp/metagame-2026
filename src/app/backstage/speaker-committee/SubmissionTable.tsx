@@ -1,6 +1,7 @@
 import Link from "next/link";
 import InfoTip from "@/app/grade/InfoTip";
 import InlineSelect from "@/app/grade/InlineSelect";
+import ShepherdPicker from "@/app/grade/ShepherdPicker";
 import {
   MEGAGAME_INTEGRATION_INFO,
   PIPELINE_COLORS,
@@ -98,24 +99,41 @@ export function SubmissionGroup({
     ? "lg:grid-cols-[1.5rem_minmax(0,1fr)_repeat(6,6.5rem)]"
     : "lg:grid-cols-[minmax(0,1fr)_repeat(6,6.5rem)]";
 
+  const cell = (label: string, control: React.ReactNode) => (
+    <span className="flex min-w-0 items-center gap-1.5">
+      {/* Below lg the columns stack, so they need their own labels. */}
+      <span className="shrink-0 text-xs text-ink/40 lg:hidden">{label}</span>
+      {control}
+    </span>
+  );
   const pill = (
     row: Row,
     field: PipelineField,
     value: string | null,
     label: string,
-  ) => (
-    <span className="flex min-w-0 items-center gap-1.5">
-      {/* Below lg the columns stack, so they need their own labels. */}
-      <span className="shrink-0 text-xs text-ink/40 lg:hidden">{label}</span>
+  ) =>
+    cell(
+      label,
       <InlineSelect
         sessionId={row.id}
         field={field}
         value={value}
         options={meta.options[field]}
         colors={PIPELINE_COLORS[field]}
-      />
-    </span>
-  );
+      />,
+    );
+  const shepherd = (row: Row) =>
+    cell(
+      "Shepherd",
+      <ShepherdPicker
+        sessionId={row.id}
+        value={
+          row.shepherdId && row.shepherd
+            ? { userId: row.shepherdId, label: row.shepherd }
+            : null
+        }
+      />,
+    );
 
   return (
     <section>
@@ -173,7 +191,7 @@ export function SubmissionGroup({
               {pill(row, "grader", row.grader, "Grader")}
               {pill(row, "verdict", row.verdict, "Verdict")}
               {pill(row, "nextSteps", row.nextSteps, "Next steps")}
-              {pill(row, "shepherd", row.shepherd, "Shepherd")}
+              {shepherd(row)}
               {pill(row, "speakerTier", row.speakerTier, "Speaker tier")}
               {pill(
                 row,

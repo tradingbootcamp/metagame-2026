@@ -34,10 +34,12 @@ import {
 import { loadedKey, MARKETING_CONSENT_FIELD } from "@/lib/rfp-rubric";
 import {
   clearGraders,
+  committeeAccounts,
   committeeUserId,
   getRfpSession,
   reassignGrader,
   saveGrade,
+  searchAccounts,
   spaceOptionLocations,
   updateRfpSession,
   type Account,
@@ -170,16 +172,9 @@ export async function setPipelineField(
         await updateRfpSession(sessionId, { phase });
         break;
       }
-      case "shepherd": {
-        if (!value) {
-          await updateRfpSession(sessionId, { shepherdUserId: null });
-          break;
-        }
-        const account = await committeeAccount(value);
-        if ("error" in account) return account;
-        await updateRfpSession(sessionId, { shepherdUserId: account.userId });
-        break;
-      }
+      case "shepherd":
+        // Any account can shepherd, so the column has its own picker.
+        return { error: "Set the shepherd from its picker." };
       case "grader": {
         // One select over possibly several grade rows: a pick replaces the
         // open assignments, and submitted grades are never thrown away.
@@ -210,6 +205,33 @@ export async function setPipelineField(
   // mid-edit is worse than it being one refresh stale.
   revalidatePath(`/grade/${sessionId}`);
   return { value: after ? toRow(after)[field] : null, note };
+}
+
+/** Accounts for the shepherd picker: the committee until two characters are typed. */
+export async function findShepherds(query: string): Promise<Account[]> {
+  if (!(await gradeAccess())?.identity) return [];
+  const q = query.trim();
+  return q.length < 2 ? committeeAccounts() : searchAccounts(q);
+}
+
+/** Sets or clears a session's shepherd; any account will do. */
+export async function setShepherd(
+  sessionId: string,
+  userId: string | null,
+): Promise<PipelineResult> {
+  if (!(await gradeAccess())?.identity)
+    return { error: "Your session expired." };
+  if (!(await getRfpSession(sessionId)))
+    return { error: "That session no longer exists." };
+  try {
+    await updateRfpSession(sessionId, { shepherdUserId: userId });
+  } catch (err) {
+    console.error("[grade] shepherd save failed:", err);
+    return explainDbError(err);
+  }
+  const after = await getRfpSession(sessionId);
+  revalidatePath(`/grade/${sessionId}`);
+  return { value: after ? toRow(after).shepherd : null };
 }
 
 export type SaveState = { savedAt?: number; error?: string };
