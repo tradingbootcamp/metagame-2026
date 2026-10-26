@@ -69,7 +69,7 @@ describe("budget sheet", () => {
       ["Income", "Revenue", "Tickets", 53000],
       ["Total income", "", "", 101500],
       [],
-      ["Expense", "Venue", "Venue rental", 52000],
+      ["Expense", "Venue", "Venue rental", 52000, 52000, 0, 26000, 0, 0, 52000],
       ["Expense", "Overhead", "Taxes", ""],
     ]);
     expect(cats.map((c) => c.name)).toEqual([
@@ -78,5 +78,8 @@ describe("budget sheet", () => {
       "Taxes",
     ]);
     expect(cats[2].budget).toBeNull();
+    expect(cats[1].actual).toBe(26000);
+    expect(cats[1].forecast).toBe(52000);
+    expect(cats[2].forecast).toBeNull();
   });
 });

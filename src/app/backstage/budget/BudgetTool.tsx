@@ -20,6 +20,7 @@ import {
   selectStyle,
   smallButtonClass,
 } from "../ui";
+import BudgetBrowse from "./BudgetBrowse";
 import { PHASES, type Category, type LedgerRow } from "@/lib/budget-ledger";
 import { tokens, usd } from "@/lib/budget-pricing";
 import type { XeroStatus } from "@/lib/xero";
@@ -80,6 +81,7 @@ function Flash({ result }: { result: Result | null }) {
 export default function BudgetTool({
   queue: initialQueue,
   plans: initialPlans,
+  ledger,
   categories,
   canManage,
   xero,
@@ -92,6 +94,7 @@ export default function BudgetTool({
 }: {
   queue: LedgerRow[];
   plans: LedgerRow[];
+  ledger: LedgerRow[];
   categories: Category[];
   canManage: boolean;
   xero: XeroStatus & { configured: boolean };
@@ -107,7 +110,9 @@ export default function BudgetTool({
   const [hidden, setHidden] = useState<Set<string>>(() => new Set());
   const queue = initialQueue.filter((r) => !hidden.has(r.id));
   const plans = initialPlans;
-  const [tab, setTab] = useState<"queue" | "add" | "ask">("queue");
+  const [tab, setTab] = useState<"budget" | "queue" | "add" | "ask">(
+    initialQueue.length > 0 ? "queue" : "budget",
+  );
 
   const hide = (ids: string[]) => {
     setHidden((h) => new Set([...h, ...ids]));
@@ -152,15 +157,16 @@ export default function BudgetTool({
         spend={spend}
       />
 
-      <nav className="flex gap-2">
+      <nav className="flex flex-wrap gap-2">
         {(
           [
+            ["budget", "Budget"],
             ["queue", `Review (${queue.length})`],
             ["add", "Add a plan"],
             ["ask", "Ask Claude"],
           ] as const
         )
-          .filter(([key]) => canManage || key === "queue")
+          .filter(([key]) => canManage || key === "queue" || key === "budget")
           .map(([key, text]) => (
             <button
               key={key}
@@ -177,6 +183,14 @@ export default function BudgetTool({
           ))}
       </nav>
 
+      {tab === "budget" && (
+        <BudgetBrowse
+          categories={categories}
+          ledger={ledger}
+          pending={queue.length}
+          sheetUrl={sheetUrl}
+        />
+      )}
       {tab === "queue" && (
         <Queue
           queue={queue}

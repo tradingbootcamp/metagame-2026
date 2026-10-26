@@ -98,6 +98,7 @@ export default async function BudgetPage({
     <BudgetTool
       queue={rows.filter((r) => r.status === "Proposed")}
       plans={rows.filter(isPlanRow)}
+      ledger={rows.filter((r) => r.status !== "Proposed")}
       categories={categories}
       canManage={canManage}
       xero={{ ...xero, configured: xeroConfigured() }}

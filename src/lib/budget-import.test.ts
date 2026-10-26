@@ -44,15 +44,23 @@ const row = (over: Partial<LedgerRow>): LedgerRow => ({
   ...over,
 });
 
+const cat = (group: string, name: string, budget: number): Category => ({
+  type: "Expense",
+  group,
+  name,
+  budget,
+  allocated: null,
+  unallocated: null,
+  actual: null,
+  unplanned: null,
+  unallocatedRemaining: null,
+  forecast: null,
+});
+
 const categories: Category[] = [
-  { type: "Expense", group: "Core team", name: "Staff cars", budget: 1800 },
-  { type: "Expense", group: "Core team", name: "Staff travel", budget: 3250 },
-  {
-    type: "Expense",
-    group: "Contingency",
-    name: "Contingency (oops)",
-    budget: 5000,
-  },
+  cat("Core team", "Staff cars", 1800),
+  cat("Core team", "Staff travel", 3250),
+  cat("Contingency", "Contingency (oops)", 5000),
 ];
 
 describe("budget import", () => {
