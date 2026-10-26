@@ -72,6 +72,7 @@ export default function BudgetTool({
   queue: initialQueue,
   plans: initialPlans,
   categories,
+  canManage,
   xero,
   runs,
   sheetUrl,
@@ -82,6 +83,7 @@ export default function BudgetTool({
   queue: LedgerRow[];
   plans: LedgerRow[];
   categories: Category[];
+  canManage: boolean;
   xero: XeroStatus & { configured: boolean };
   runs: RunSummary[];
   sheetUrl: string;
@@ -135,6 +137,7 @@ export default function BudgetTool({
         runs={runs}
         sheetUrl={sheetUrl}
         defaultSince={defaultSince}
+        canManage={canManage}
       />
 
       <nav className="flex gap-2">
@@ -144,20 +147,22 @@ export default function BudgetTool({
             ["add", "Add a plan"],
             ["ask", "Ask Claude"],
           ] as const
-        ).map(([key, text]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            className={`rounded-full px-3 py-1 text-sm ${
-              tab === key
-                ? "bg-navy text-white"
-                : "border border-line bg-white text-ink/70"
-            }`}
-          >
-            {text}
-          </button>
-        ))}
+        )
+          .filter(([key]) => canManage || key === "queue")
+          .map(([key, text]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              className={`rounded-full px-3 py-1 text-sm ${
+                tab === key
+                  ? "bg-navy text-white"
+                  : "border border-line bg-white text-ink/70"
+              }`}
+            >
+              {text}
+            </button>
+          ))}
       </nav>
 
       {tab === "queue" && (
@@ -167,6 +172,7 @@ export default function BudgetTool({
           categories={categories}
           highIds={highIds}
           confidence={confidence}
+          readOnly={!canManage}
           onDone={(id) => hide([id])}
           onDoneMany={hide}
         />
@@ -195,11 +201,13 @@ function ImportPanel({
   runs,
   sheetUrl,
   defaultSince,
+  canManage,
 }: {
   xero: XeroStatus & { configured: boolean };
   runs: RunSummary[];
   sheetUrl: string;
   defaultSince: string;
+  canManage: boolean;
 }) {
   const [since, setSince] = useState(defaultSince);
   const [result, setResult] = useState<Result | null>(null);
@@ -225,7 +233,7 @@ function ImportPanel({
           )}
         </div>
         <div className="flex gap-3 text-sm">
-          {xero.configured && (
+          {xero.configured && canManage && (
             <a
               href="/api/budget/xero/connect"
               className="underline underline-offset-2"
@@ -244,33 +252,35 @@ function ImportPanel({
         </div>
       </div>
 
-      <form
-        className="mt-4 flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          start(async () => setResult(await runImportAction(since)));
-        }}
-      >
-        <div>
-          <label htmlFor="since" className={label}>
-            Xero lines since
-          </label>
-          <input
-            id="since"
-            type="date"
-            value={since}
-            onChange={(e) => setSince(e.target.value)}
-            className={fieldClass.replace("w-full", "")}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={pending || !xero.connected}
-          className={primary}
+      {canManage && (
+        <form
+          className="mt-4 flex flex-wrap items-end gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            start(async () => setResult(await runImportAction(since)));
+          }}
         >
-          {pending ? "Importing…" : "Run import"}
-        </button>
-      </form>
+          <div>
+            <label htmlFor="since" className={label}>
+              Xero lines since
+            </label>
+            <input
+              id="since"
+              type="date"
+              value={since}
+              onChange={(e) => setSince(e.target.value)}
+              className={fieldClass.replace("w-full", "")}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={pending || !xero.connected}
+            className={primary}
+          >
+            {pending ? "Importing…" : "Run import"}
+          </button>
+        </form>
+      )}
       <Flash result={result} />
 
       {last && (
@@ -398,6 +408,7 @@ function Queue({
   categories,
   highIds,
   confidence,
+  readOnly,
   onDone,
   onDoneMany,
 }: {
@@ -406,6 +417,7 @@ function Queue({
   categories: Category[];
   highIds: string[];
   confidence: (r: LedgerRow) => "high" | "medium" | "low";
+  readOnly: boolean;
   onDone: (id: string) => void;
   onDoneMany: (ids: string[]) => void;
 }) {
@@ -421,7 +433,7 @@ function Queue({
   }
   return (
     <section className="space-y-3">
-      {highIds.length > 1 && (
+      {highIds.length > 1 && !readOnly && (
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -447,6 +459,7 @@ function Queue({
           plans={plans}
           categories={categories}
           confidence={confidence(row)}
+          readOnly={readOnly}
           onDone={onDone}
         />
       ))}
@@ -459,12 +472,14 @@ function ProposalCard({
   plans,
   categories,
   confidence,
+  readOnly,
   onDone,
 }: {
   row: LedgerRow;
   plans: LedgerRow[];
   categories: Category[];
   confidence: "high" | "medium" | "low";
+  readOnly: boolean;
   onDone: (id: string) => void;
 }) {
   const [patch, setPatch] = useState<RowPatch>({
@@ -523,7 +538,10 @@ function ProposalCard({
         <p className="mt-2 text-sm text-ink/80 italic">{row.proposal}</p>
       )}
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <fieldset
+        disabled={readOnly}
+        className="mt-3 grid gap-3 disabled:opacity-70 sm:grid-cols-2"
+      >
         <div className="sm:col-span-2">
           <label htmlFor={`${row.id}-item`} className={label}>
             Item
@@ -581,65 +599,67 @@ function ProposalCard({
             className={fieldClass}
           />
         </div>
-      </div>
+      </fieldset>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          disabled={pending}
-          className={primary}
-          onClick={() =>
-            start(async () => {
-              const r = await approveAction(row.id, patch);
-              setResult(r);
-              if (r.ok) onDone(row.id);
-            })
-          }
-        >
-          Approve
-        </button>
-        {rejecting ? (
-          <>
-            <input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder={
-                row.xeroId ? "Why? (kept so it won't come back)" : "Why?"
-              }
-              className={`${fieldClass} max-w-xs`}
-            />
-            <button
-              type="button"
-              disabled={pending}
-              className={smallButtonClass}
-              onClick={() =>
-                start(async () => {
-                  const r = await rejectAction(row.id, reason);
-                  setResult(r);
-                  if (r.ok) onDone(row.id);
-                })
-              }
-            >
-              Confirm reject
-            </button>
-            <button
-              type="button"
-              className={smallButtonClass}
-              onClick={() => setRejecting(false)}
-            >
-              Cancel
-            </button>
-          </>
-        ) : (
+      {readOnly ? null : (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className={smallButtonClass}
-            onClick={() => setRejecting(true)}
+            disabled={pending}
+            className={primary}
+            onClick={() =>
+              start(async () => {
+                const r = await approveAction(row.id, patch);
+                setResult(r);
+                if (r.ok) onDone(row.id);
+              })
+            }
           >
-            Reject
+            Approve
           </button>
-        )}
-      </div>
+          {rejecting ? (
+            <>
+              <input
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder={
+                  row.xeroId ? "Why? (kept so it won't come back)" : "Why?"
+                }
+                className={`${fieldClass} max-w-xs`}
+              />
+              <button
+                type="button"
+                disabled={pending}
+                className={smallButtonClass}
+                onClick={() =>
+                  start(async () => {
+                    const r = await rejectAction(row.id, reason);
+                    setResult(r);
+                    if (r.ok) onDone(row.id);
+                  })
+                }
+              >
+                Confirm reject
+              </button>
+              <button
+                type="button"
+                className={smallButtonClass}
+                onClick={() => setRejecting(false)}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className={smallButtonClass}
+              onClick={() => setRejecting(true)}
+            >
+              Reject
+            </button>
+          )}
+        </div>
+      )}
       <Flash result={result} />
     </article>
   );

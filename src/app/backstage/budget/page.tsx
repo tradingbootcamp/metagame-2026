@@ -24,8 +24,9 @@ export default async function BudgetPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await connection();
-  const access = await toolAccess("budget.manage");
+  const access = await toolAccess("budget.view");
   if (!access) return <SignIn next="/backstage/budget" />;
+  const canManage = Boolean(await toolAccess("budget.manage"));
 
   const params = await searchParams;
   const notice = xeroNotice(params);
@@ -75,6 +76,7 @@ export default async function BudgetPage({
       queue={rows.filter((r) => r.status === "Proposed")}
       plans={rows.filter(isPlanRow)}
       categories={categories}
+      canManage={canManage}
       xero={{ ...xero, configured: xeroConfigured() }}
       runs={runs}
       sheetUrl={sheetUrl()}

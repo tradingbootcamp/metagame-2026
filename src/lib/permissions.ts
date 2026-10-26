@@ -85,13 +85,22 @@ export const PERMISSIONS = {
     label: "Tracking links",
     description: "Short /go/ links with UTM attribution.",
   },
+  "budget.view": {
+    audience: "team",
+    group: "Budget",
+    level: "view",
+    label: "View budget",
+    description:
+      "The review queue, plans and import history at /backstage/budget, read-only.",
+  },
   "budget.manage": {
     audience: "team",
     group: "Budget",
     level: "edit",
-    label: "Budget",
+    label: "Manage budget",
     description:
-      "Review Xero imports into the budget sheet and connect Xero, at /backstage/budget.",
+      "Approve or reject proposals, add plans, run imports and connect Xero.",
+    implies: ["budget.view"],
   },
   "api_keys.self": {
     audience: "team",

@@ -81,7 +81,7 @@ const TOOLS: {
     icon: WalletIcon,
     name: "Budget",
     blurb: "New Xero lines, categorized for review into the budget sheet.",
-    perm: "budget.manage",
+    perm: "budget.view",
   },
   {
     href: "/backstage/api-keys",
