@@ -48,6 +48,13 @@ export type Category = {
   group: string;
   name: string;
   budget: number | null;
+  /** The Categories tab's own rollups (cols E–J), as the sheet computes them. */
+  allocated: number | null;
+  unallocated: number | null;
+  actual: number | null;
+  unplanned: number | null;
+  unallocatedRemaining: number | null;
+  forecast: number | null;
 };
 
 /** The fields a new or edited row carries; formula columns are never written. */
@@ -129,6 +136,12 @@ export function parseCategories(values: CellValue[][]): Category[] {
       group: str(v[1]).trim(),
       name: str(v[2]).trim(),
       budget: num(v[3]),
+      allocated: num(v[4]),
+      unallocated: num(v[5]),
+      actual: num(v[6]),
+      unplanned: num(v[7]),
+      unallocatedRemaining: num(v[8]),
+      forecast: num(v[9]),
     }))
     .filter((c) => c.name && (c.type === "Income" || c.type === "Expense"));
 }

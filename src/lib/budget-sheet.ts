@@ -38,8 +38,8 @@ export async function loadLedger(): Promise<{
 }> {
   const [ledger, income, expense] = await readRanges(sheetId(), [
     `'${LEDGER_TAB}'!A2:T${LAST_ROW}`,
-    `'${CATEGORIES_TAB}'!A5:D7`,
-    `'${CATEGORIES_TAB}'!A10:D80`,
+    `'${CATEGORIES_TAB}'!A5:J7`,
+    `'${CATEGORIES_TAB}'!A10:J80`,
   ]);
   return {
     rows: parseLedger(ledger),

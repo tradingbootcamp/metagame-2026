@@ -20,11 +20,14 @@ import {
   selectStyle,
   smallButtonClass,
 } from "../ui";
+import BudgetBrowse from "./BudgetBrowse";
 import { PHASES, type Category, type LedgerRow } from "@/lib/budget-ledger";
+import { tokens, usd } from "@/lib/budget-pricing";
 import type { XeroStatus } from "@/lib/xero";
 
 export type RunSummary = {
   id: string;
+  kind: string;
   status: string;
   triggeredBy: string | null;
   since: string;
@@ -34,7 +37,14 @@ export type RunSummary = {
   summary: string | null;
   error: string | null;
   startedAt: string;
+  model: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  /** USD, or null when the model isn't in the price table. */
+  cost: number | null;
 };
+
+export type Spend = { calls: number; cost: number | null; tokens: number };
 
 const money = (n: number | null) =>
   n === null
@@ -71,10 +81,12 @@ function Flash({ result }: { result: Result | null }) {
 export default function BudgetTool({
   queue: initialQueue,
   plans: initialPlans,
+  ledger,
   categories,
   canManage,
   xero,
   runs,
+  spend,
   sheetUrl,
   sheetError,
   defaultSince,
@@ -82,10 +94,12 @@ export default function BudgetTool({
 }: {
   queue: LedgerRow[];
   plans: LedgerRow[];
+  ledger: LedgerRow[];
   categories: Category[];
   canManage: boolean;
   xero: XeroStatus & { configured: boolean };
   runs: RunSummary[];
+  spend: Spend;
   sheetUrl: string;
   sheetError: string | null;
   defaultSince: string;
@@ -96,7 +110,9 @@ export default function BudgetTool({
   const [hidden, setHidden] = useState<Set<string>>(() => new Set());
   const queue = initialQueue.filter((r) => !hidden.has(r.id));
   const plans = initialPlans;
-  const [tab, setTab] = useState<"queue" | "add" | "ask">("queue");
+  const [tab, setTab] = useState<"budget" | "queue" | "add" | "ask">(
+    initialQueue.length > 0 ? "queue" : "budget",
+  );
 
   const hide = (ids: string[]) => {
     setHidden((h) => new Set([...h, ...ids]));
@@ -138,17 +154,19 @@ export default function BudgetTool({
         sheetUrl={sheetUrl}
         defaultSince={defaultSince}
         canManage={canManage}
+        spend={spend}
       />
 
-      <nav className="flex gap-2">
+      <nav className="flex flex-wrap gap-2">
         {(
           [
+            ["budget", "Budget"],
             ["queue", `Review (${queue.length})`],
             ["add", "Add a plan"],
             ["ask", "Ask Claude"],
           ] as const
         )
-          .filter(([key]) => canManage || key === "queue")
+          .filter(([key]) => canManage || key === "queue" || key === "budget")
           .map(([key, text]) => (
             <button
               key={key}
@@ -165,6 +183,14 @@ export default function BudgetTool({
           ))}
       </nav>
 
+      {tab === "budget" && (
+        <BudgetBrowse
+          categories={categories}
+          ledger={ledger}
+          pending={queue.length}
+          sheetUrl={sheetUrl}
+        />
+      )}
       {tab === "queue" && (
         <Queue
           queue={queue}
@@ -202,17 +228,20 @@ function ImportPanel({
   sheetUrl,
   defaultSince,
   canManage,
+  spend,
 }: {
   xero: XeroStatus & { configured: boolean };
   runs: RunSummary[];
   sheetUrl: string;
   defaultSince: string;
   canManage: boolean;
+  spend: Spend;
 }) {
   const [since, setSince] = useState(defaultSince);
   const [result, setResult] = useState<Result | null>(null);
   const [pending, start] = useTransition();
-  const last = runs[0];
+  const [history, setHistory] = useState(false);
+  const last = runs.find((r) => r.kind === "import");
 
   return (
     <section className={panel}>
@@ -285,15 +314,63 @@ function ImportPanel({
 
       {last && (
         <p className="mt-3 text-xs text-ink/60">
-          Last run {when(last.startedAt)} by {last.triggeredBy ?? "?"}:{" "}
+          Last import {when(last.startedAt)} by {last.triggeredBy ?? "?"}:{" "}
           {last.status === "failed"
             ? `failed — ${last.error}`
             : last.status === "running"
               ? "still running"
               : `${last.pulled} pulled, ${last.proposed} proposed, ${last.skipped} already in the sheet.`}
+          {last.inputTokens > 0 && <RunCost run={last} />}
         </p>
       )}
+      {spend.calls > 0 && (
+        <p className="mt-1 text-xs text-ink/60">
+          Claude so far: {spend.calls} call{spend.calls === 1 ? "" : "s"},{" "}
+          {tokens(spend.tokens)} tokens
+          {spend.cost !== null ? `, about ${usd(spend.cost)}` : ""}.{" "}
+          <button
+            type="button"
+            onClick={() => setHistory((h) => !h)}
+            className="underline underline-offset-2"
+          >
+            {history ? "Hide history" : "History"}
+          </button>
+        </p>
+      )}
+      {history && (
+        <ul className="mt-2 divide-y divide-line text-xs">
+          {runs.map((r) => (
+            <li key={r.id} className="py-1.5">
+              <span className="text-ink/50">{when(r.startedAt)} · </span>
+              {r.kind === "request" ? "Ask Claude" : `Import since ${r.since}`}
+              {r.triggeredBy ? ` by ${r.triggeredBy}` : ""}:{" "}
+              {r.status === "failed"
+                ? `failed — ${r.error}`
+                : r.kind === "request"
+                  ? `${r.proposed} proposed`
+                  : `${r.pulled} pulled, ${r.proposed} proposed`}
+              {r.inputTokens > 0 && <RunCost run={r} />}
+              {r.summary && (
+                <span className="block truncate text-ink/50" title={r.summary}>
+                  {r.summary}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
+  );
+}
+
+function RunCost({ run }: { run: RunSummary }) {
+  return (
+    <span className="text-ink/50">
+      {" "}
+      · {tokens(run.inputTokens)} in / {tokens(run.outputTokens)} out
+      {run.cost !== null ? ` ≈ ${usd(run.cost)}` : ""}
+      {run.model ? ` (${run.model.replace(/^claude-/, "")})` : ""}
+    </span>
   );
 }
 
