@@ -24,7 +24,9 @@ import { xeroGet } from "./xero";
 
 const EVENT_TAG = "Metagame 2026";
 // Stripe ticket revenue and merchant fees come in through the Tickets tab.
-const SKIP_ACCOUNTS = new Set(["4100", "6040"]);
+// 4100/6040: Stripe ticket revenue and fees (the Tickets tab covers them).
+// 2131 Payroll Clearing: Gusto bank debits; the tagged record is the journal.
+const SKIP_ACCOUNTS = new Set(["4100", "6040", "2131"]);
 const DEFAULT_MODEL = "claude-opus-5-5";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 
