@@ -11,10 +11,28 @@ import {
 } from "./budget-verdicts";
 import type { Category, LedgerRow } from "./budget-ledger";
 
+const cat = (
+  type: string,
+  group: string,
+  name: string,
+  budget: number,
+): Category => ({
+  type,
+  group,
+  name,
+  budget,
+  allocated: null,
+  unallocated: null,
+  actual: null,
+  unplanned: null,
+  unallocatedRemaining: null,
+  forecast: null,
+});
+
 const categories: Category[] = [
-  { type: "Income", group: "Revenue", name: "Sponsors", budget: 40500 },
-  { type: "Expense", group: "Core team", name: "Staff travel", budget: 3250 },
-  { type: "Expense", group: "Core team", name: "Staff cars", budget: 1800 },
+  cat("Income", "Revenue", "Sponsors", 40500),
+  cat("Expense", "Core team", "Staff travel", 3250),
+  cat("Expense", "Core team", "Staff cars", 1800),
 ];
 
 const plan = (over: Partial<LedgerRow>): LedgerRow => ({
