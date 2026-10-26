@@ -10,6 +10,7 @@ import {
   isoToSerial,
   parseCategories,
   parseLedger,
+  type Category,
   type LedgerRow,
   type RowInput,
 } from "./budget-ledger";
