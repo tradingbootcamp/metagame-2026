@@ -91,6 +91,47 @@ const ENV_SPEC: EnvSpec[] = [
       "Neon Postgres connection string (set by the Neon integration on Vercel; a personal branch locally). Without it, anything that touches the database throws a clear error.",
   },
   {
+    name: "XERO_CLIENT_ID",
+    required: false,
+    description:
+      "Xero app client id for the budget tool's Xero connection (/backstage/budget). Without it the Connect button is off.",
+  },
+  {
+    name: "XERO_CLIENT_SECRET",
+    required: false,
+    description: "Xero app client secret, paired with XERO_CLIENT_ID.",
+  },
+  {
+    name: "ANTHROPIC_API_KEY",
+    required: false,
+    description:
+      "Anthropic API key — categorizes new Xero lines into budget proposals. Without it imports fail with a clear error.",
+  },
+  {
+    name: "GOOGLE_SERVICE_ACCOUNT_JSON",
+    required: false,
+    description:
+      "Google service-account key (the JSON, raw or base64) with edit access to the budget sheet. Without it the budget tool can't read the sheet.",
+  },
+  {
+    name: "BUDGET_SHEET_ID",
+    required: false,
+    description:
+      "Google Sheet id of the Metagame 2026 Budget. Defaults to the 2026 sheet in src/lib/budget-sheet.ts.",
+  },
+  {
+    name: "BUDGET_MODEL",
+    required: false,
+    description:
+      "Claude model id used for budget proposals. Defaults to claude-opus-5-5.",
+  },
+  {
+    name: "CRON_SECRET",
+    required: false,
+    description:
+      "Bearer token Vercel sends to cron routes (/api/budget/xero/keepalive). Without it the cron route refuses every call.",
+  },
+  {
     name: "BETTER_AUTH_SECRET",
     required: false,
     description:
@@ -139,4 +180,11 @@ export const env = {
   DATABASE_URL: process.env.DATABASE_URL,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
+  XERO_CLIENT_ID: process.env.XERO_CLIENT_ID,
+  XERO_CLIENT_SECRET: process.env.XERO_CLIENT_SECRET,
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+  GOOGLE_SERVICE_ACCOUNT_JSON: process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+  BUDGET_SHEET_ID: process.env.BUDGET_SHEET_ID,
+  BUDGET_MODEL: process.env.BUDGET_MODEL,
+  CRON_SECRET: process.env.CRON_SECRET,
 } as const;

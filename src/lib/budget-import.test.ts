@@ -1,0 +1,198 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildRows,
+  defaultSince,
+  ledgerAmount,
+  xeroDateToIso,
+  type XeroLine,
+} from "./budget-import";
+import type { Category, LedgerRow } from "./budget-ledger";
+
+const line = (over: Partial<XeroLine>): XeroLine => ({
+  xeroId: "abcd1234",
+  date: "2026-10-20",
+  kind: "SPEND",
+  contact: "Uber",
+  amount: 25,
+  accountCode: "6300",
+  account: "Rideshare / Taxi",
+  description: "metagame uber",
+  ...over,
+});
+
+const row = (over: Partial<LedgerRow>): LedgerRow => ({
+  row: 2,
+  id: "T001",
+  item: "",
+  parent: "",
+  category: "",
+  group: "",
+  type: "",
+  phase: "",
+  counterparty: "",
+  budgeted: null,
+  actual: null,
+  forecast: null,
+  remaining: null,
+  status: "Planned",
+  date: null,
+  notes: "",
+  xeroId: "",
+  xeroDescription: "",
+  flags: "",
+  proposal: "",
+  ...over,
+});
+
+const categories: Category[] = [
+  { type: "Expense", group: "Core team", name: "Staff cars", budget: 1800 },
+  { type: "Expense", group: "Core team", name: "Staff travel", budget: 3250 },
+  {
+    type: "Expense",
+    group: "Contingency",
+    name: "Contingency (oops)",
+    budget: 5000,
+  },
+];
+
+describe("budget import", () => {
+  it("parses Xero's wrapped dates", () => {
+    expect(xeroDateToIso("/Date(1792281600000+0000)/")).toBe("2026-10-18");
+  });
+
+  it("makes expense refunds negative and leaves income positive", () => {
+    expect(ledgerAmount(line({}))).toBe(25);
+    expect(ledgerAmount(line({ kind: "RECEIVE" }))).toBe(-25);
+    expect(ledgerAmount(line({ kind: "RECEIVE", accountCode: "4200" }))).toBe(
+      25,
+    );
+  });
+
+  it("starts two weeks before the newest imported line", () => {
+    expect(defaultSince([])).toBe("2026-01-01");
+    expect(
+      defaultSince([
+        row({ xeroId: "a", date: "2026-10-23" }),
+        row({ date: "2026-12-01" }),
+      ]),
+    ).toBe("2026-10-09");
+  });
+
+  it("repairs bad categories and parents, keeping the model's reason", () => {
+    const rows = [
+      row({
+        id: "T017",
+        item: "Sparr travel",
+        category: "Staff travel",
+        budgeted: 350,
+        status: "Planned",
+      }),
+      row({
+        id: "T021",
+        item: "Sparr flights",
+        parent: "T017",
+        category: "Staff travel",
+        actual: 377,
+        status: "Done",
+      }),
+    ];
+    const lines = [
+      line({}),
+      line({
+        xeroId: "ffff0000",
+        accountCode: "6200",
+        account: "Flights",
+        description: "Sparr return flight",
+      }),
+    ];
+    const out = buildRows(
+      {
+        summary: "",
+        newParents: [],
+        proposals: [
+          {
+            xeroId: "abcd1234",
+            item: "Uber",
+            category: "Staff Cars",
+            parent: "T021",
+            phase: "Pre",
+            counterparty: "Uber",
+            confidence: "high",
+            reason: "rideshare",
+          },
+          {
+            xeroId: "ffff0000",
+            item: "Sparr return flight",
+            category: "Staff travel",
+            parent: "T017",
+            phase: "Event",
+            counterparty: "Sparr",
+            confidence: "high",
+            reason: "flight",
+          },
+        ],
+      },
+      lines,
+      rows,
+      categories,
+      "2026-10-25",
+    );
+    expect(out[0]).toMatchObject({
+      id: "T022",
+      category: "Contingency (oops)",
+      parent: "",
+      actual: 25,
+      status: "Proposed",
+      xeroId: "abcd1234",
+    });
+    expect(out[0].proposal).toMatch(/unknown/);
+    expect(out[0].proposal).toMatch(/not found/);
+    expect(out[1]).toMatchObject({
+      id: "T023",
+      parent: "T017",
+      category: "Staff travel",
+      date: "2026-10-20",
+    });
+  });
+
+  it("creates proposed parents first and links children to them", () => {
+    const out = buildRows(
+      {
+        summary: "",
+        newParents: [
+          {
+            tempId: "p1",
+            item: "Van rental",
+            category: "Staff cars",
+            phase: "Event",
+            budgeted: 900,
+            reason: "deposit",
+          },
+        ],
+        proposals: [
+          {
+            xeroId: "abcd1234",
+            item: "Van deposit",
+            category: "Staff cars",
+            parent: "p1",
+            phase: "Event",
+            counterparty: "Hertz",
+            confidence: "medium",
+            reason: "first half",
+          },
+        ],
+      },
+      [line({})],
+      [],
+      categories,
+      "2026-10-25",
+    );
+    expect(out.map((r) => r.id)).toEqual(["T001", "T002"]);
+    expect(out[0]).toMatchObject({
+      budgeted: 900,
+      status: "Proposed",
+      actual: undefined,
+    });
+    expect(out[1].parent).toBe("T001");
+  });
+});

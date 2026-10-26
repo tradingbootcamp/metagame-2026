@@ -85,6 +85,14 @@ export const PERMISSIONS = {
     label: "Tracking links",
     description: "Short /go/ links with UTM attribution.",
   },
+  "budget.manage": {
+    audience: "team",
+    group: "Budget",
+    level: "edit",
+    label: "Budget",
+    description:
+      "Review Xero imports into the budget sheet and connect Xero, at /backstage/budget.",
+  },
   "api_keys.self": {
     audience: "team",
     group: "API keys",

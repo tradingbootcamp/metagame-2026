@@ -9,6 +9,7 @@ import {
   TicketIcon,
   UserIcon,
   UsersIcon,
+  WalletIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -74,6 +75,13 @@ const TOOLS: {
     name: "Speaker committee",
     blurb: "Session proposals from grading through scheduling.",
     perm: "schedule.manage",
+  },
+  {
+    href: "/backstage/budget",
+    icon: WalletIcon,
+    name: "Budget",
+    blurb: "New Xero lines, categorized for review into the budget sheet.",
+    perm: "budget.manage",
   },
   {
     href: "/backstage/api-keys",

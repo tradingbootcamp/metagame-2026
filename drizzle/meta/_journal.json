@@ -134,6 +134,13 @@
       "when": 1792716765410,
       "tag": "0018_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792972548780,
+      "tag": "0019_budget_tool",
+      "breakpoints": true
     }
   ]
 }
