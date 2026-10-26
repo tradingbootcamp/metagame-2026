@@ -276,25 +276,28 @@ const profile = (u) => {
 };
 
 // Lighthaven's rooms, as the schedule shows them; hidden ones stay for
-// placement. Images are Vercel Blob URLs in prod and stay null here.
+// placement. Prod room images live in Vercel Blob and get deleted on replace,
+// so the seed points at last year's venue photos on the prod site instead
+// (any https URL passes the schema check; non-Blob URLs are never deleted).
+const VENUE = "https://metagame.games/last-year-venues/";
 // prettier-ignore
 const ROOMS = [
-  ["foodtruck", "Food Truck Parking", null, "Behind E", 0],
-  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1],
-  ["eigen", "Eigen Hall", 40, "Building E, 1st floor", 2],
-  ["cantor", "Cantor's Diagonal", 60, "Building C", 3],
-  ["glass", "Glass Hall", 35, "Building A, 1st floor", 4],
-  ["courtyard", "Central Courtyard", 200, "The center of campus", 5],
-  ["thingspace", "Thingspace", 20, "Building A, 2nd floor", 6],
-  ["attic", "Bayes Attic", 35, "Building B, top floor", 8],
-  ["gardens", "The Gardens", 80, "Outdoors, behind E", 9],
-  ["ground", "Bayes Ground", 40, "Building B, 1st floor", 11],
-  ["exobrain", "Exobrain", 30, "Building E, 2nd floor", 12],
-  ["d2", "1D2", null, "Building D, 1st floor", 13],
-  ["caprica", "New Caprica", null, "Building B, 2nd floor", 14],
-  ["d1", "1D1", 6, "Building D, 1st floor", 100, false],
-  ["gyroscope", "Gyroscope", 30, "Building E, 2nd floor", 100, false, false],
-  ["other", "Other", null, null, 100, false, false],
+  ["foodtruck", "Food Truck Parking", null, "Behind E", 0, "daf174ba-91c6-4518-a160-75f355e6d109.jpeg"],
+  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1, "fe8520ea-f5dc-49f4-8621-9dbdeb29c4dd.jpg"],
+  ["eigen", "Eigen Hall", 40, "Building E, 1st floor", 2, "b39b5322-6a87-4dbf-8729-01f8fb5f2ec8.jpg"],
+  ["cantor", "Cantor's Diagonal", 60, "Building C", 3, "6d3671c0-9531-4c59-b78d-4b334b5d507f.jpg"],
+  ["glass", "Glass Hall", 35, "Building A, 1st floor", 4, "424098c2-2fef-45c1-9949-505a5c5e2eb8.jpg"],
+  ["courtyard", "Central Courtyard", 200, "The center of campus", 5, "0f856355-02d5-411a-a680-a6a410d4fb29.jpeg"],
+  ["thingspace", "Thingspace", 20, "Building A, 2nd floor", 6, "fd1d4520-ff5b-4874-b2e7-8fec211d536d.jpg"],
+  ["attic", "Bayes Attic", 35, "Building B, top floor", 8, "ac4cc8ce-f7b7-4b13-8332-2c65ffadc691.jpg"],
+  ["gardens", "The Gardens", 80, "Outdoors, behind E", 9, "feb94644-8e6d-4d74-9760-7771b6083457.jpg"],
+  ["ground", "Bayes Ground", 40, "Building B, 1st floor", 11, "aa6a436b-c837-4cb2-8807-da65ddb0d0f3.jpg"],
+  ["exobrain", "Exobrain", 30, "Building E, 2nd floor", 12, "cea51a16-a237-4854-aadd-dddbe8c0c86d.jpg"],
+  ["d2", "1D2", null, "Building D, 1st floor", 13, null],
+  ["caprica", "New Caprica", null, "Building B, 2nd floor", 14, "58b0eb1a-7367-4515-9708-481f058a4366.jpg"],
+  ["d1", "1D1", 6, "Building D, 1st floor", 100, null, false],
+  ["gyroscope", "Gyroscope", 30, "Building E, 2nd floor", 100, null, false, false],
+  ["other", "Other", null, null, 100, null, false, false],
 ];
 const locations = Object.fromEntries(
   ROOMS.map(
@@ -305,6 +308,7 @@ const locations = Object.fromEntries(
         capacity,
         campus_location,
         display_order,
+        image,
         show = true,
         synced = true,
       ],
@@ -317,6 +321,8 @@ const locations = Object.fromEntries(
         capacity,
         campus_location,
         display_order,
+        thumbnail_url: image && VENUE + image,
+        image_url: image && VENUE + image,
         show_in_schedule: show,
         airtable_record_id: synced
           ? `recSEEDLOC${String(k + 1).padStart(7, "0")}`
