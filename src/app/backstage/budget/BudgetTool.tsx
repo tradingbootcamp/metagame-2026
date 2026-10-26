@@ -374,6 +374,9 @@ function RunCost({ run }: { run: RunSummary }) {
   );
 }
 
+// Searchable across every plan, not just the current category: picking a plan
+// from another category moves the row into it, since a child must share its
+// parent's category.
 function ParentSelect({
   value,
   category,
@@ -384,29 +387,140 @@ function ParentSelect({
   value: string;
   category: string;
   plans: LedgerRow[];
-  onChange: (v: string) => void;
+  onChange: (parent: string, category: string) => void;
   id: string;
 }) {
-  const options = plans.filter((p) => p.category === category);
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const chosen = plans.find((p) => p.id === value);
+  const q = query.trim().toLowerCase();
+  const hit = (p: LedgerRow) =>
+    !q ||
+    p.id.toLowerCase().includes(q) ||
+    p.item.toLowerCase().includes(q) ||
+    p.counterparty.toLowerCase().includes(q) ||
+    p.category.toLowerCase().includes(q);
+  const matches = plans
+    .filter(hit)
+    .sort((a, b) =>
+      (a.category === category) === (b.category === category)
+        ? 0
+        : a.category === category
+          ? -1
+          : 1,
+    )
+    .slice(0, q ? 12 : 8);
+  const pick = (p: LedgerRow | null) => {
+    onChange(p?.id ?? "", p?.category ?? category);
+    setQuery("");
+    setOpen(false);
+  };
+  const describe = (p: LedgerRow) =>
+    `${p.id} · ${p.item}${p.budgeted !== null ? ` (${money(p.budgeted)})` : ""}`;
+
   return (
-    <select
-      id={id}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={selectClass}
-      style={selectStyle}
+    <div
+      className="relative"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
+      }}
     >
-      <option value="">No parent</option>
-      {options.map((p) => (
-        <option key={p.id} value={p.id}>
-          {p.id} · {p.item}
-          {p.budgeted !== null ? ` (${money(p.budgeted)})` : ""}
-        </option>
-      ))}
-      {value && !options.some((p) => p.id === value) && (
-        <option value={value}>{value} (other category)</option>
+      {chosen && !open ? (
+        <div className={`${fieldClass} flex items-center gap-2`}>
+          <span className="min-w-0 flex-1 truncate text-sm">
+            {describe(chosen)}
+            <span className="text-ink/50"> · {chosen.category}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="shrink-0 text-xs text-ink/60 underline underline-offset-2"
+          >
+            change
+          </button>
+          <button
+            type="button"
+            onClick={() => pick(null)}
+            aria-label="Clear parent"
+            className="shrink-0 text-ink/60"
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <input
+          id={id}
+          type="text"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={`${id}-list`}
+          value={query}
+          placeholder={
+            value && !chosen ? `${value} (not a plan row)` : "No parent"
+          }
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+            if (e.key === "Enter" && q && matches[0]) {
+              e.preventDefault();
+              pick(matches[0]);
+            }
+          }}
+          className={fieldClass}
+        />
       )}
-    </select>
+      {open && (
+        <ul
+          id={`${id}-list`}
+          role="listbox"
+          className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-line bg-white py-1 text-sm shadow-lg"
+        >
+          {value && (
+            <li>
+              <button
+                type="button"
+                role="option"
+                aria-selected={false}
+                onClick={() => pick(null)}
+                className="w-full px-3 py-1.5 text-left text-ink/60 hover:bg-ink/5"
+              >
+                No parent
+              </button>
+            </li>
+          )}
+          {matches.length === 0 && (
+            <li className="px-3 py-1.5 text-ink/50">No plan rows match.</li>
+          )}
+          {matches.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={p.id === value}
+                onClick={() => pick(p)}
+                className="flex w-full items-baseline justify-between gap-2 px-3 py-1.5 text-left hover:bg-ink/5"
+              >
+                <span className="min-w-0 truncate">{describe(p)}</span>
+                <span
+                  className={`shrink-0 text-xs ${p.category === category ? "text-ink/40" : "text-navy"}`}
+                >
+                  {p.category}
+                </span>
+              </button>
+            </li>
+          ))}
+          {!q && (
+            <li className="px-3 pt-1 text-xs text-ink/40">
+              Type an id, name or category to search all plans.
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -652,7 +766,9 @@ function ProposalCard({
             value={patch.parent}
             category={patch.category}
             plans={plans}
-            onChange={set("parent")}
+            onChange={(parent, category) =>
+              setPatch((p) => ({ ...p, parent, category }))
+            }
           />
         </div>
         <div>
@@ -848,7 +964,9 @@ function AddPlan({
           value={plan.parent}
           category={plan.category}
           plans={plans}
-          onChange={set("parent")}
+          onChange={(parent, category) =>
+            setPlan((p) => ({ ...p, parent, category }))
+          }
         />
       </div>
       <div>
