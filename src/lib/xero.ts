@@ -19,15 +19,16 @@ const CONNECTIONS_URL = "https://api.xero.com/connections";
 const API = "https://api.xero.com/api.xro/2.0/";
 const LEASE_SECONDS = 30;
 
+// Granular scopes: this app rejects the umbrella accounting.transactions.*.
 export const SCOPES = [
   "openid",
   "profile",
   "email",
   "offline_access",
-  "accounting.transactions.read",
+  "accounting.banktransactions.read",
+  "accounting.manualjournals.read",
   "accounting.settings.read",
   "accounting.contacts.read",
-  "accounting.reports.read",
 ].join(" ");
 
 export type XeroTenant = { tenantId: string; tenantName: string };
