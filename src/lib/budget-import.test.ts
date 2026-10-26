@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildRequestRows,
   buildRows,
   defaultSince,
   ledgerAmount,
@@ -202,5 +203,63 @@ describe("budget import", () => {
       actual: undefined,
     });
     expect(out[1].parent).toBe("T001");
+  });
+
+  it("builds a requested plan with its children in one answer", () => {
+    const inputs = buildRequestRows(
+      {
+        rows: [
+          {
+            key: null,
+            item: "Uber to JFK",
+            category: "Staff cars",
+            parent: "p1",
+            phase: "Event",
+            counterparty: "Uber",
+            budgeted: 65,
+            actual: null,
+            status: "Planned",
+            reason: "outbound",
+          },
+          {
+            key: "p1",
+            item: "Yemima cars",
+            category: "Staff cars",
+            parent: null,
+            phase: "Event",
+            counterparty: "",
+            budgeted: 150,
+            actual: null,
+            status: "Planned",
+            reason: "envelope",
+          },
+          {
+            key: null,
+            item: "Uber from JFK",
+            category: "Staff travel",
+            parent: "p1",
+            phase: "Event",
+            counterparty: "Uber",
+            budgeted: 65,
+            actual: null,
+            status: "Planned",
+            reason: "return",
+          },
+        ],
+        summary: "three rows",
+      },
+      [],
+      categories,
+      "Brian",
+      "ubers to and from JFK",
+      "2026-10-26",
+    );
+    expect(inputs.map((i) => [i.id, i.item, i.parent])).toEqual([
+      ["T001", "Yemima cars", ""],
+      ["T002", "Uber to JFK", "T001"],
+      ["T003", "Uber from JFK", ""],
+    ]);
+    expect(inputs[2].proposal).toContain("is in Staff cars, left blank");
+    expect(inputs.every((i) => i.status === "Proposed")).toBe(true);
   });
 });
