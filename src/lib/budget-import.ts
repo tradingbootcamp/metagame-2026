@@ -303,7 +303,7 @@ export async function proposeRows(
   lines: XeroLine[],
   rows: LedgerRow[],
   categories: Category[],
-): Promise<ProposalSet> {
+): Promise<{ input: ProposalSet; usage: Usage }> {
   return callClaude<ProposalSet>(
     RULES,
     userMessage(lines, rows, categories),
@@ -478,6 +478,14 @@ export type RequestResult = { rows: RequestedRow[]; summary: string };
 
 type Block = { type: string; text?: string; name?: string; input?: unknown };
 
+export type Usage = {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+};
+
+export const modelName = (): string => env.BUDGET_MODEL ?? DEFAULT_MODEL;
+
 /**
  * One tool-use round trip. The model is asked, not forced, to call the tool
  * (forced tool_choice isn't supported on every model); if it answers in prose
@@ -487,12 +495,13 @@ async function callClaude<T>(
   system: string,
   user: string,
   tool: typeof PROPOSE_TOOL | typeof REQUEST_TOOL,
-): Promise<T> {
+): Promise<{ input: T; usage: Usage }> {
   const key = env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("ANTHROPIC_API_KEY is not set.");
   const messages: { role: "user" | "assistant"; content: unknown }[] = [
     { role: "user", content: user },
   ];
+  const usage: Usage = { model: modelName(), inputTokens: 0, outputTokens: 0 };
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await fetch(ANTHROPIC_URL, {
       method: "POST",
@@ -502,7 +511,7 @@ async function callClaude<T>(
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: env.BUDGET_MODEL ?? DEFAULT_MODEL,
+        model: usage.model,
         max_tokens: 8192,
         system: `${system}\n\nAlways answer by calling the ${tool.name} tool, never in prose.`,
         tools: [tool],
@@ -511,11 +520,16 @@ async function callClaude<T>(
     });
     if (!res.ok)
       throw new Error(`Anthropic API: ${res.status} ${await res.text()}`);
-    const data = (await res.json()) as { content: Block[] };
+    const data = (await res.json()) as {
+      content: Block[];
+      usage?: { input_tokens?: number; output_tokens?: number };
+    };
+    usage.inputTokens += data.usage?.input_tokens ?? 0;
+    usage.outputTokens += data.usage?.output_tokens ?? 0;
     const call = data.content.find(
       (c) => c.type === "tool_use" && c.name === tool.name,
     );
-    if (call?.input) return call.input as T;
+    if (call?.input) return { input: call.input as T, usage };
     if (attempt === 0) {
       messages.push(
         { role: "assistant", content: data.content },
@@ -556,8 +570,8 @@ export async function requestRows(
   rows: LedgerRow[],
   categories: Category[],
   requestedBy: string,
-): Promise<{ inputs: RowInput[]; summary: string }> {
-  const result = await callClaude<RequestResult>(
+): Promise<{ inputs: RowInput[]; summary: string; usage: Usage }> {
+  const { input: result, usage } = await callClaude<RequestResult>(
     REQUEST_RULES,
     `${ledgerContext(rows, categories)}\n\nRequest from ${requestedBy}:\n${text}`,
     REQUEST_TOOL,
@@ -597,7 +611,7 @@ export async function requestRows(
     });
     existing.push({ id } as LedgerRow);
   }
-  return { inputs, summary: result.summary };
+  return { inputs, summary: result.summary, usage };
 }
 
 const DAY = 86_400_000;
@@ -647,7 +661,7 @@ export async function runImport(options: {
       });
       return { run, pulled: lines.length, proposed: 0, skipped, summary };
     }
-    const set = await proposeRows(fresh, rows, categories);
+    const { input: set, usage } = await proposeRows(fresh, rows, categories);
     const today = new Date().toISOString().slice(0, 10);
     const inputs = buildRows(set, fresh, rows, categories, today);
     await appendRows(rows, inputs);
@@ -657,6 +671,7 @@ export async function runImport(options: {
       proposed: inputs.length,
       skipped,
       summary: set.summary,
+      ...usage,
     });
     return {
       run,
