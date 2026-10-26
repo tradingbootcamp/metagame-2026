@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
-import { PersonLink, StatusTag, TestTag } from "./parts";
+import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown } from "lucide-react";
+import Link from "next/link";
+import {
+  PersonLink,
+  profileHref,
+  shortDate,
+  StatusTag,
+  TestTag,
+} from "./parts";
 import { fieldClass, selectStyle, smallButtonClass } from "../ui";
 import {
   pageOf,
@@ -12,9 +19,11 @@ import {
   ticketMatch,
   type SortDir,
   type TicketPeople,
+  type TicketPerson,
   type TicketSort,
 } from "@/lib/admin-tickets";
 import type { TicketRow } from "@/lib/ticket-store";
+import { Dialog, DialogContent, DialogTitle } from "@/v2/components/ui/dialog";
 
 export type AdminTicket = {
   t: {
@@ -53,6 +62,9 @@ const usd = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
+const amount = (cents: number | null) =>
+  cents === null ? "—" : usd.format(cents / 100);
+
 // Newest purchases and highest prices first; names A→Z.
 const defaultDir = (sort: TicketSort): SortDir =>
   sort === "purchased" || sort === "pay" ? "desc" : "asc";
@@ -66,6 +78,7 @@ export default function TicketsTable({
   initial: TableState;
 }) {
   const [state, setState] = useState(initial);
+  const [open, setOpen] = useState<AdminTicket | null>(null);
   const { q, sort, dir, size } = state;
 
   const matching = useMemo(
@@ -115,7 +128,7 @@ export default function TicketsTable({
         </span>
       </div>
 
-      <div className="rounded-xl border border-line bg-white shadow-sm">
+      <div className="hidden rounded-xl border border-line bg-white shadow-sm md:block">
         <table className="w-full table-fixed text-left text-sm">
           <colgroup>
             <col className="w-[5.5rem]" />
@@ -154,22 +167,20 @@ export default function TicketsTable({
                 <td className="px-4 py-2">
                   <div className="break-words">{t.tier}</div>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <StatusTag status={t.status} />
+                    {t.status !== "paid" && <StatusTag status={t.status} />}
                     {t.test && <TestTag />}
-                    <span className="font-mono text-xs text-ink/60">
-                      {t.code}
+                    <span className="text-xs text-ink/60">
+                      Code <span className="font-mono">{t.code}</span>
                     </span>
                   </div>
                 </td>
                 <td className="px-4 py-2 tabular-nums">
                   <div className="whitespace-nowrap">
-                    {t.amountCents === null
-                      ? "—"
-                      : usd.format(t.amountCents / 100)}
+                    {amount(t.amountCents)}
                   </div>
                   {t.couponCode && (
-                    <div className="mt-1 font-mono text-xs break-all text-ink/60">
-                      {t.couponCode}
+                    <div className="mt-1 text-xs break-all text-ink/60">
+                      Coupon <span className="font-mono">{t.couponCode}</span>
                     </div>
                   )}
                 </td>
@@ -201,6 +212,59 @@ export default function TicketsTable({
           </tbody>
         </table>
       </div>
+
+      <ul className="divide-y divide-line rounded-xl border border-line bg-white text-sm shadow-sm md:hidden">
+        {page.rows.map((row) => (
+          <li key={row.t.id}>
+            <button
+              type="button"
+              onClick={() => setOpen(row)}
+              className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+            >
+              <span className="w-10 shrink-0 text-ink/60 tabular-nums">
+                {monthDay.format(row.t.createdAt)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">
+                  {row.people.buyer ? (
+                    personLabel(row.people.buyer)
+                  ) : (
+                    <span className="text-ink/40">—</span>
+                  )}
+                </span>
+                <span className="mt-0.5 flex items-center gap-1.5 text-xs text-ink/60">
+                  {row.t.status !== "paid" && (
+                    <StatusTag status={row.t.status} />
+                  )}
+                  {row.t.test && <TestTag />}
+                  <span className="truncate">{row.t.tier}</span>
+                </span>
+              </span>
+              <span className="shrink-0 tabular-nums">
+                {amount(row.t.amountCents)}
+              </span>
+              <ChevronRight
+                className="size-4 shrink-0 text-ink/40"
+                aria-hidden
+              />
+            </button>
+          </li>
+        ))}
+        {page.rows.length === 0 && (
+          <li className="px-4 py-6 text-center text-ink/50">
+            No tickets{q && " match"}.
+          </li>
+        )}
+      </ul>
+
+      <Dialog open={open !== null} onOpenChange={(o) => !o && setOpen(null)}>
+        <DialogContent
+          aria-describedby={undefined}
+          className="flex max-w-[480px] flex-col gap-4 px-6 py-6"
+        >
+          {open && <TicketDetail ticket={open} />}
+        </DialogContent>
+      </Dialog>
 
       <nav className="flex flex-wrap items-center gap-3 text-sm">
         <button
@@ -275,5 +339,98 @@ function SortHeader({
         />
       </button>
     </th>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <dt className="text-xs tracking-wide text-cream/50 uppercase">{label}</dt>
+      <dd className="mt-0.5 break-words">{children}</dd>
+    </div>
+  );
+}
+
+function Person({ person }: { person: TicketPerson | null }) {
+  if (!person) return <span className="text-cream/40">—</span>;
+  const label = personLabel(person);
+  return (
+    <>
+      {person.userId ? (
+        <Link
+          href={profileHref(person.userId)}
+          className="underline underline-offset-2 hover:text-salmon"
+        >
+          {label}
+        </Link>
+      ) : (
+        label
+      )}
+      {person.email && person.email !== label && (
+        <div className="font-mono text-xs break-all text-cream/60">
+          {person.email}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Everything the desktop table shows for one ticket, for the phone modal. */
+function TicketDetail({ ticket: { t, people } }: { ticket: AdminTicket }) {
+  return (
+    <>
+      <DialogTitle className="font-bebas pr-8 text-2xl tracking-wide text-cream">
+        {t.tier}
+      </DialogTitle>
+      {(t.status !== "paid" || t.test) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {t.status !== "paid" && <StatusTag status={t.status} />}
+          {t.test && <TestTag />}
+        </div>
+      )}
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+        <Field label="Code">
+          <span className="font-mono">{t.code}</span>
+        </Field>
+        <Field label="Purchased">{shortDate.format(t.createdAt)}</Field>
+        <Field label="Amount">
+          <span className="tabular-nums">{amount(t.amountCents)}</span>
+        </Field>
+        <Field label="Coupon">
+          {t.couponCode ? (
+            <span className="font-mono break-all">{t.couponCode}</span>
+          ) : (
+            <span className="text-cream/40">—</span>
+          )}
+        </Field>
+        <Field label="Buyer">
+          <Person person={people.buyer} />
+        </Field>
+        <Field label="Claimer">
+          <Person person={people.claimer} />
+          {t.claimedAt && (
+            <div className="text-xs text-cream/60">
+              Claimed {monthDay.format(t.claimedAt)}
+            </div>
+          )}
+        </Field>
+        <Field label="Holder">
+          {people.holderIsBuyer ? (
+            <span className="text-cream/60">The buyer</span>
+          ) : (
+            <Person person={people.holder} />
+          )}
+        </Field>
+        <Field label="Source">
+          <span className="capitalize">{t.source}</span>
+        </Field>
+      </dl>
+    </>
   );
 }

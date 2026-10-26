@@ -19,7 +19,7 @@ export default function AdminLinksLayout({
       nav={
         <Link
           href="/backstage/promo"
-          className="text-sm text-ink/60 underline-offset-2 hover:text-meeple hover:underline"
+          className="hidden text-sm whitespace-nowrap text-ink/60 underline-offset-2 hover:text-meeple hover:underline sm:inline"
         >
           Promo codes
         </Link>

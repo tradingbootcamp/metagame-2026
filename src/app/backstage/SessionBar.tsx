@@ -8,8 +8,8 @@ export default async function SessionBar() {
   if (!access) return null;
 
   return (
-    <div className="flex items-center gap-3 text-sm text-ink/60">
-      <Link href="/account" className="hover:text-meeple">
+    <div className="flex shrink-0 items-center gap-3 text-sm whitespace-nowrap text-ink/60">
+      <Link href="/account" className="hidden hover:text-meeple sm:inline">
         {access.name}
       </Link>
       <form action={signOut}>

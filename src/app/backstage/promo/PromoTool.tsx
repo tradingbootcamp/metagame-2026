@@ -173,7 +173,7 @@ export default function PromoTool({
                 required
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
-                className={`${selectClass} sm:w-64`}
+                className={`${selectClass} w-full sm:w-64`}
                 style={selectStyle}
               >
                 <option value="">Select…</option>
@@ -320,7 +320,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`text-sm ${className}`}>
+    <div className={`min-w-0 text-sm ${className}`}>
       <span className="mb-1 block text-ink/70">
         {label}
         {required && (
@@ -498,13 +498,13 @@ function Existing({
         <h2 className="font-bebas text-2xl tracking-wide text-navy">
           Existing codes
         </h2>
-        <div className="flex gap-2">
+        <div className="flex w-full gap-2 sm:w-auto">
           <input
             type="search"
             placeholder="Filter by name, email, code"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className={`${fieldClass} w-56`}
+            className={`${fieldClass} min-w-0 flex-1 sm:w-56 sm:flex-none`}
           />
           <button
             type="button"
@@ -582,7 +582,7 @@ function StripeRow({
   onToggle: () => void;
 }) {
   return (
-    <li className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+    <li className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0 flex-1 text-sm">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono font-semibold">{c.code}</span>

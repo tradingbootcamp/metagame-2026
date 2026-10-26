@@ -26,13 +26,13 @@ export default function ToolLayout({
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
       <header className="sticky top-0 z-50 border-b border-line bg-cream/95 backdrop-blur">
         <div
-          className={`mx-auto flex ${width} items-center justify-between gap-4 px-4 py-3`}
+          className={`mx-auto flex ${width} items-center justify-between gap-3 px-4 py-3`}
         >
-          <nav className="flex items-center gap-4">
+          <nav className="flex min-w-0 items-center gap-3 sm:gap-4">
             {href !== "/backstage" && <BackToTools />}
             <Link
               href={href}
-              className="font-bebas text-xl tracking-wide text-navy"
+              className="font-bebas truncate text-xl tracking-wide whitespace-nowrap text-navy"
             >
               {title}
             </Link>
