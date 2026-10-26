@@ -126,6 +126,18 @@ const ENV_SPEC: EnvSpec[] = [
       "Claude model id used for budget proposals. Defaults to claude-opus-5-5.",
   },
   {
+    name: "BUDGET_COMPARE_MODELS",
+    required: false,
+    description:
+      "Comma-separated model ids to run side by side on each import (first one is written to the sheet). Empty = single BUDGET_MODEL call. META-4571.",
+  },
+  {
+    name: "TYPESAFE_API_KEY",
+    required: false,
+    description:
+      "TypeSafe AI key for Jev models in BUDGET_COMPARE_MODELS (ids starting jev-).",
+  },
+  {
     name: "CRON_SECRET",
     required: false,
     description:
@@ -186,5 +198,7 @@ export const env = {
   GOOGLE_SERVICE_ACCOUNT_JSON: process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
   BUDGET_SHEET_ID: process.env.BUDGET_SHEET_ID,
   BUDGET_MODEL: process.env.BUDGET_MODEL,
+  BUDGET_COMPARE_MODELS: process.env.BUDGET_COMPARE_MODELS,
+  TYPESAFE_API_KEY: process.env.TYPESAFE_API_KEY,
   CRON_SECRET: process.env.CRON_SECRET,
 } as const;

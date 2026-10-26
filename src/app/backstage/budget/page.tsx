@@ -10,7 +10,9 @@ import {
   type Category,
   type LedgerRow,
 } from "@/lib/budget-sheet";
+import { verdictsFor } from "@/lib/budget-models";
 import { recentRuns } from "@/lib/budget-store";
+import type { VerdictRow } from "@/lib/budget-verdicts";
 import { sheetsConfigured } from "@/lib/google-sheets";
 import { xeroConfigured, xeroStatus, type XeroStatus } from "@/lib/xero";
 
@@ -52,9 +54,17 @@ export default async function BudgetPage({
     updatedAt: null,
   };
   let runs: RunSummary[] = [];
+  let verdicts: Record<string, VerdictRow[]> = {};
   try {
-    const [status, recent] = await Promise.all([xeroStatus(), recentRuns()]);
+    const [status, recent, stored] = await Promise.all([
+      xeroStatus(),
+      recentRuns(),
+      verdictsFor(
+        rows.filter((r) => r.status === "Proposed").map((r) => r.xeroId),
+      ),
+    ]);
     xero = status;
+    verdicts = stored;
     runs = recent.map((r) => ({
       id: r.id,
       status: r.status,
@@ -74,6 +84,7 @@ export default async function BudgetPage({
   return (
     <BudgetTool
       queue={rows.filter((r) => r.status === "Proposed")}
+      verdicts={verdicts}
       plans={rows.filter(isPlanRow)}
       categories={categories}
       canManage={canManage}

@@ -192,7 +192,7 @@ export type ProposalSet = {
   summary: string;
 };
 
-const RULES = `You place bank lines from Xero into the Metagame 2026 budget ledger (a Google Sheet). Each line becomes one Proposed row that a human reviews, so prefer a clear best guess with honest confidence over hedging.
+export const RULES = `You place bank lines from Xero into the Metagame 2026 budget ledger (a Google Sheet). Each line becomes one Proposed row that a human reviews, so prefer a clear best guess with honest confidence over hedging.
 
 Rules of the ledger:
 - Category must be one of the listed categories, spelled exactly. Expense lines go in Expense categories; account codes starting with 4 are income and go in Income categories.
@@ -206,7 +206,7 @@ Rules of the ledger:
 Category mapping that has held so far (Xero account → Category):
 Advertising / Printing → Marketing. Speakers-Travel → Speaker travel. Flights / Travel (staff) → Staff travel. Hotel / Lodging → Staff housing. Rideshare / Transit → Staff cars (Phase Pre if before the event). Meals → Staff food (Phase Pre if before the event). Office Space → Ops misc. Supplies → Event supplies, or Megagame impl when the description says megagame. Software & Web → SaaS. Sponsor Revenue → Sponsors. Contract Labor by person: Ben Karcher → Chief of staff, Brendan Hurst → Conference lead, David Holt → Marketing.`;
 
-const PROPOSE_TOOL = {
+export const PROPOSE_TOOL = {
   name: "propose",
   description: "Return the ledger rows to propose for the given Xero lines.",
   input_schema: {
@@ -277,7 +277,7 @@ const PROPOSE_TOOL = {
   },
 } as const;
 
-function userMessage(
+export function userMessage(
   lines: XeroLine[],
   rows: LedgerRow[],
   categories: Category[],
@@ -647,7 +647,11 @@ export async function runImport(options: {
       });
       return { run, pulled: lines.length, proposed: 0, skipped, summary };
     }
-    const set = await proposeRows(fresh, rows, categories);
+    // Lazy so budget-models can import the prompt from here without a cycle.
+    const compare = await import("./budget-models");
+    const set = compare.comparisonOn()
+      ? await compare.compareAndPropose(run.id, fresh, rows, categories)
+      : await proposeRows(fresh, rows, categories);
     const today = new Date().toISOString().slice(0, 10);
     const inputs = buildRows(set, fresh, rows, categories, today);
     await appendRows(rows, inputs);
