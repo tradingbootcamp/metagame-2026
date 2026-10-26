@@ -95,9 +95,9 @@ it("forwards a promo code through /go and keeps it for Standard checkout", async
   expect(withPromo("/api/checkout/stripe?tier=standard&code=own")).toBe(
     "/api/checkout/stripe?tier=standard&code=own&promo=POSTER20",
   );
-  // A later tracking link without a code leaves it; one with a code replaces it.
+  // A None poster must not accidentally revive the previous poster's discount.
   captureUtm("?utm_source=newer");
-  expect(readPromo()).toBe("POSTER20");
+  expect(readPromo()).toBe("");
   captureUtm("?promo=OTHER");
   expect(readPromo()).toBe("OTHER");
 });

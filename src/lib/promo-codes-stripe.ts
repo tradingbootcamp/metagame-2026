@@ -16,6 +16,7 @@ import {
   type Prior,
 } from "@/lib/promo-codes";
 import { getPromoStripe, promoMode } from "@/lib/stripe-promo";
+import { isRedeemablePromo } from "@/lib/redeemable-promo";
 
 // Each code is a Stripe promotion code pointing at a
 // hand-made dashboard coupon. Never set `customer` on a promotion code — a
@@ -39,6 +40,7 @@ export type StripeCode = {
   redeemed: number;
   max: number | null; // null = uncapped
   active: boolean;
+  redeemable: boolean;
   created: number; // unix seconds
   coupon: string;
 };
@@ -245,6 +247,7 @@ export async function listStripeCodes(): Promise<StripeCode[]> {
         redeemed: p.times_redeemed ?? 0,
         max: p.max_redemptions ?? null,
         active: p.active,
+        redeemable: isRedeemablePromo(p),
         created: p.created,
         coupon: couponLabel(typeof coupon === "string" ? null : coupon),
       };

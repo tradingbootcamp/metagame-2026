@@ -1,4 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
+vi.mock("@/lib/poster-discounts", () => ({ posterDiscounts: vi.fn() }));
+import { posterDiscounts } from "@/lib/poster-discounts";
 vi.mock("@/lib/poster-catalog", () => ({ loadPosterCatalog: vi.fn() }));
 vi.mock("@/lib/tracking-links", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/tracking-links")>()),
@@ -46,6 +48,9 @@ it("uses the existing admin workflow's Generic poster placement", async () => {
 });
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(posterDiscounts).mockResolvedValue([
+    { code: "POSTER20", label: "20% off" },
+  ]);
   vi.mocked(loadPosterCatalog).mockResolvedValue([
     {
       value: "area:Berkeley",
@@ -133,4 +138,26 @@ it("puts a promo code on the QR and refuses malformed ones", async () => {
       )
     ).status,
   ).toBe(400);
+});
+
+it("rejects unauthorized and stale discounts without rendering a PDF", async () => {
+  const discounted = request(
+    "area=area:Berkeley&design=d20&size=letter&promo=POSTER20",
+  );
+  vi.mocked(posterDiscounts).mockResolvedValue(null);
+  expect((await GET(discounted)).status).toBe(403);
+  vi.mocked(posterDiscounts).mockResolvedValue([]);
+  expect((await GET(discounted)).status).toBe(409);
+  expect(createPosterPdf).not.toHaveBeenCalled();
+});
+
+it("does not read private discounts for public no-discount posters", async () => {
+  vi.mocked(posterDiscounts).mockRejectedValue(new Error("private details"));
+  expect((await GET(request())).status).toBe(200);
+  expect(posterDiscounts).not.toHaveBeenCalled();
+  const result = await GET(
+    request("area=area:Berkeley&design=d20&size=letter&promo=POSTER20"),
+  );
+  expect(result.status).toBe(503);
+  expect(await result.text()).not.toContain("private details");
 });

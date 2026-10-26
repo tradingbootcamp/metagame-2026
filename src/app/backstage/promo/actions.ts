@@ -39,10 +39,10 @@ export async function mint(
   const unlimited = formData.get("unlimited") === "on";
   const maxUses = unlimited ? null : Number(str(formData, "uses")) || 1;
   const customCode = str(formData, "customCode");
-  if (customCode && !/^[A-Za-z0-9-]+$/.test(customCode))
+  if (customCode && !/^[A-Za-z0-9-]{1,100}$/.test(customCode))
     return {
       field: "customCode",
-      error: "Letters, digits, and dashes only.",
+      error: "Use up to 100 letters, digits, and dashes.",
     };
 
   try {

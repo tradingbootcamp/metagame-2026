@@ -23,7 +23,7 @@ const STORAGE_KEY = "last-touch-utm";
 const LEGACY_STORAGE_KEY = "first-touch-utm";
 const FIRST_VISIT_KEY = "first-visit";
 // A promo code from the landing URL (a poster QR, /go/<slug>?promo=CODE). Kept
-// until a later link sets another; it's applied to Standard checkout.
+// until a later tracked link replaces or clears it; applied to Standard checkout.
 const PROMO_STORAGE_KEY = "promo-code";
 const MAX_LEN = 200;
 
@@ -65,6 +65,8 @@ export function captureUtm(search: string): void {
     }
     const promo = promoCode(params.get(PROMO_PARAM));
     if (promo) localStorage.setItem(PROMO_STORAGE_KEY, promo);
+    else if (Object.keys(utm).length > 0 || params.has(PROMO_PARAM))
+      localStorage.removeItem(PROMO_STORAGE_KEY);
   } catch {
     // Storage blocked — attribution is best-effort.
   }
@@ -130,6 +132,7 @@ export function withPromo(href: string): string {
   const promo = readPromo();
   if (!promo) return href;
   const url = new URL(href, "http://localhost");
+  if (url.searchParams.has(PROMO_PARAM)) return href;
   url.searchParams.set(PROMO_PARAM, promo);
   return url.pathname + url.search + url.hash;
 }

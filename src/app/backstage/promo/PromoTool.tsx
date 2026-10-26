@@ -13,13 +13,13 @@ import {
 import { PURPOSES, type MintResult } from "@/lib/promo-codes";
 import type { Coupon, StripeCode } from "@/lib/promo-codes-stripe";
 import type { PromoMode } from "@/lib/stripe-promo";
+import { discountTrackingUrl } from "@/lib/discount-links";
 
 const CUSTOM = "__custom__";
 // Coupons are made by hand in the dashboard (the key is Coupons: Read only).
 const STRIPE_ACCOUNT = "acct_1QeQd1CtO443EG3n";
 
-const redeemUrl = (origin: string, code: string) =>
-  `${origin.replace(/\/$/, "")}/buy/${code}`;
+const redeemUrl = discountTrackingUrl;
 
 const initial: MintState = {};
 
@@ -361,7 +361,7 @@ function CopyButtons({ code, url }: { code: string; url?: string }) {
           onClick={() => urlCopy.copy(url)}
           className={smallButtonClass}
         >
-          {label(urlCopy.status, "Copy link")}
+          {label(urlCopy.status, "Copy tracking link")}
         </button>
       )}
     </>

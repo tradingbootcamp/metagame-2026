@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { loadPosterCatalog } from "@/lib/poster-catalog";
 import { GENERIC_AREA } from "@/lib/poster-options";
-import { toolAccess } from "@/lib/admin-auth";
-import { listStripeCodes } from "@/lib/promo-codes-stripe";
+import { posterDiscounts } from "@/lib/poster-discounts";
 import PosterForm, { type PromoChoice } from "./poster-form";
 
 export const dynamic = "force-dynamic";
@@ -11,16 +10,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Live codes from /backstage/promo as typing suggestions for staff; empty for everyone else. */
-async function promoChoices(): Promise<PromoChoice[]> {
-  if (!(await toolAccess("promo.manage"))) return [];
+async function promoChoices(): Promise<PromoChoice[] | null> {
   try {
-    return (await listStripeCodes())
-      .filter((c) => c.active && (c.max == null || c.redeemed < c.max))
-      .map((c) => ({ code: c.code, label: c.coupon }))
-      .sort((a, b) => a.code.localeCompare(b.code));
+    return await posterDiscounts();
   } catch {
-    return [];
+    return null;
   }
 }
 

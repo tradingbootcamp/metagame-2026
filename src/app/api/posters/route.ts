@@ -2,6 +2,7 @@ import { loadPosterCatalog } from "@/lib/poster-catalog";
 import { isPosterLink } from "@/lib/poster-options";
 import { findTrackingLink, PROMO_PARAM, promoCode } from "@/lib/tracking-links";
 import { createPosterPdf } from "@/lib/poster-pdf";
+import { posterDiscounts } from "@/lib/poster-discounts";
 
 export const runtime = "nodejs";
 const headers = {
@@ -30,6 +31,22 @@ export async function GET(request: Request) {
     );
   }
   try {
+    if (promo) {
+      const discounts = await posterDiscounts();
+      if (discounts === null)
+        return Response.json(
+          { error: "Discount access required." },
+          { status: 403, headers },
+        );
+      if (!discounts.some((choice) => choice.code === promo))
+        return Response.json(
+          {
+            error:
+              "Discount unavailable. Refresh the page and choose another code or None.",
+          },
+          { status: 409, headers },
+        );
+    }
     const choice = (await loadPosterCatalog()).find(
       (option) => option.value === area,
     );

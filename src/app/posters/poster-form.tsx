@@ -24,8 +24,8 @@ export default function PosterForm({
 }: {
   options: PosterOption[];
   initialArea: string;
-  /** Suggested codes for staff with promo.manage; empty for everyone else. */
-  promos: PromoChoice[];
+  /** Null unless the visitor has promo.manage. */
+  promos: PromoChoice[] | null;
 }) {
   const [area, setArea] = useState(
     options.some((option) => option.value === initialArea) ? initialArea : "",
@@ -51,9 +51,13 @@ export default function PosterForm({
       const response = await fetch(`/api/posters?${query}`);
       if (!response.ok)
         throw new Error(
-          response.status === 409
-            ? "This location’s poster link is not ready yet. Please choose another location or try again later."
-            : "We couldn’t create your poster. Please try again shortly.",
+          promo && response.status === 409
+            ? "This discount or location is no longer available. Refresh and choose another discount or None."
+            : response.status === 403
+              ? "Your discount access expired. Refresh the page."
+              : response.status === 409
+                ? "This location’s poster link is not ready yet. Please choose another location or try again later."
+                : "We couldn’t create your poster. Please try again shortly.",
         );
       const url = URL.createObjectURL(await response.blob());
       const anchor = document.createElement("a");
@@ -68,7 +72,6 @@ export default function PosterForm({
     }
   }
   const landscape = design === "chess";
-  const promoListId = useId();
   return (
     <form
       onSubmit={download}
@@ -110,34 +113,28 @@ export default function PosterForm({
           onChange={setArea}
           promo={promo}
         />
-        <label className="block font-semibold">
-          Promo code <span className="font-normal">(optional)</span>
-          <input
-            aria-label="Promo code"
-            className={inputClass}
-            list={promos.length ? promoListId : undefined}
-            value={promo}
-            onChange={(event) => setPromo(event.target.value.trim())}
-            autoComplete="off"
-            spellCheck={false}
-          />
-          {promos.length > 0 && (
-            <datalist id={promoListId}>
+        {promos !== null && (
+          <label className="block font-semibold">
+            Discount
+            <select
+              aria-label="Discount"
+              className={inputClass}
+              value={promo}
+              onChange={(event) => setPromo(event.target.value)}
+            >
+              <option value="">None</option>
               {promos.map((choice) => (
                 <option key={choice.code} value={choice.code}>
-                  {choice.label}
+                  {choice.code} — {choice.label}
                 </option>
               ))}
-            </datalist>
-          )}
-          <p
-            className={`mt-2 text-xs font-normal ${promoBad ? "text-red-700" : "text-[#19345b]/60"}`}
-          >
-            {promoBad
-              ? "Codes use letters, numbers, dashes, and underscores only."
-              : "Auto-applies to checkouts after scanning the QR code."}
-          </p>
-        </label>
+            </select>
+            <p className="mt-2 text-xs font-normal text-[#19345b]/60">
+              Keeps the location&apos;s tracking and adds this code to the QR.
+              Applies to Standard card checkout only. None adds no code.
+            </p>
+          </label>
+        )}
         <label className="block font-semibold">
           Design
           <select

@@ -12,6 +12,7 @@ import {
 } from "@/lib/tickets";
 import { PREFERRED_CAMPAIGN, slugify } from "@/lib/tracking-links";
 import { pickUtm, type Utm } from "@/lib/utm";
+import { isRedeemablePromo } from "@/lib/redeemable-promo";
 
 export const runtime = "nodejs";
 
@@ -110,8 +111,13 @@ async function promoParams(
   if (!code) return box;
   const {
     data: [promo],
-  } = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
-  if (!promo) {
+  } = await stripe.promotionCodes.list({
+    code,
+    active: true,
+    limit: 1,
+    expand: ["data.promotion.coupon"],
+  });
+  if (!promo || !isRedeemablePromo(promo)) {
     console.warn(
       `[checkout/stripe] no active ${code} promotion code — showing the code box instead`,
     );
