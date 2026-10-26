@@ -15,7 +15,8 @@ import {
   type RowInput,
 } from "./budget-ledger";
 
-// Reads and writes against the Metagame 2026 Budget sheet. The row model,
+// Reads and writes against the Metagame 2026 Budget sheet. Expense categories
+// start at Categories row 10; the read runs long so inserted rows are seen. The row model,
 // column rules and pure helpers live in budget-ledger.ts so client code can
 // import them without pulling in the service-account client.
 
@@ -38,7 +39,7 @@ export async function loadLedger(): Promise<{
   const [ledger, income, expense] = await readRanges(sheetId(), [
     `'${LEDGER_TAB}'!A2:T${LAST_ROW}`,
     `'${CATEGORIES_TAB}'!A5:D7`,
-    `'${CATEGORIES_TAB}'!A10:D39`,
+    `'${CATEGORIES_TAB}'!A10:D80`,
   ]);
   return {
     rows: parseLedger(ledger),
