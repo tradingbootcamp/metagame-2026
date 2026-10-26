@@ -148,6 +148,13 @@
       "when": 1793011835889,
       "tag": "0020_budget_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793011960739,
+      "tag": "0021_proposal_verdicts",
+      "breakpoints": true
     }
   ]
 }

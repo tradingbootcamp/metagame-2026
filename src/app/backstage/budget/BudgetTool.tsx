@@ -24,6 +24,9 @@ import BudgetBrowse from "./BudgetBrowse";
 import { PHASES, type Category, type LedgerRow } from "@/lib/budget-ledger";
 import { tokens, usd } from "@/lib/budget-pricing";
 import type { XeroStatus } from "@/lib/xero";
+import type { Verdict, VerdictRow } from "@/lib/budget-verdicts";
+import VerdictOptions from "./VerdictOptions";
+import { pickVerdictAction } from "./verdict-actions";
 
 export type RunSummary = {
   id: string;
@@ -84,6 +87,7 @@ export default function BudgetTool({
   ledger,
   categories,
   canManage,
+  verdicts,
   xero,
   runs,
   spend,
@@ -97,6 +101,7 @@ export default function BudgetTool({
   ledger: LedgerRow[];
   categories: Category[];
   canManage: boolean;
+  verdicts: Record<string, VerdictRow[]>;
   xero: XeroStatus & { configured: boolean };
   runs: RunSummary[];
   spend: Spend;
@@ -199,6 +204,7 @@ export default function BudgetTool({
           highIds={highIds}
           confidence={confidence}
           readOnly={!canManage}
+          verdicts={verdicts}
           onDone={(id) => hide([id])}
           onDoneMany={hide}
         />
@@ -600,6 +606,7 @@ function Queue({
   highIds,
   confidence,
   readOnly,
+  verdicts,
   onDone,
   onDoneMany,
 }: {
@@ -609,6 +616,7 @@ function Queue({
   highIds: string[];
   confidence: (r: LedgerRow) => "high" | "medium" | "low";
   readOnly: boolean;
+  verdicts: Record<string, VerdictRow[]>;
   onDone: (id: string) => void;
   onDoneMany: (ids: string[]) => void;
 }) {
@@ -651,6 +659,7 @@ function Queue({
           categories={categories}
           confidence={confidence(row)}
           readOnly={readOnly}
+          verdicts={verdicts[row.xeroId] ?? []}
           onDone={onDone}
         />
       ))}
@@ -664,6 +673,7 @@ function ProposalCard({
   categories,
   confidence,
   readOnly,
+  verdicts,
   onDone,
 }: {
   row: LedgerRow;
@@ -671,6 +681,7 @@ function ProposalCard({
   categories: Category[];
   confidence: "high" | "medium" | "low";
   readOnly: boolean;
+  verdicts: VerdictRow[];
   onDone: (id: string) => void;
 }) {
   const [patch, setPatch] = useState<RowPatch>({
@@ -684,6 +695,17 @@ function ProposalCard({
   const [pending, start] = useTransition();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
+  const [pickedModel, setPickedModel] = useState<string | null>(null);
+  const pick = (model: string, v: Verdict) => {
+    setPickedModel(model);
+    setPatch({
+      item: v.item,
+      category: v.category,
+      parent: v.parent ?? "",
+      phase: v.phase,
+      counterparty: v.counterparty,
+    });
+  };
   const set = (k: keyof RowPatch) => (v: string) =>
     setPatch((p) => ({ ...p, [k]: v }));
 
@@ -728,6 +750,12 @@ function ProposalCard({
       {row.proposal && (
         <p className="mt-2 text-sm text-ink/80 italic">{row.proposal}</p>
       )}
+
+      <VerdictOptions
+        verdicts={verdicts}
+        pickedModel={pickedModel}
+        onPick={pick}
+      />
 
       <fieldset
         disabled={readOnly}
@@ -804,6 +832,9 @@ function ProposalCard({
               start(async () => {
                 const r = await approveAction(row.id, patch);
                 setResult(r);
+                if (r.ok && pickedModel && row.xeroId) {
+                  await pickVerdictAction(row.xeroId, pickedModel);
+                }
                 if (r.ok) onDone(row.id);
               })
             }

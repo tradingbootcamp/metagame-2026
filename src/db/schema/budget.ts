@@ -1,4 +1,12 @@
-import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { timestamps } from "./auth";
 
 // The budget tool at /backstage/budget. The budget itself stays in the Google
@@ -45,5 +53,21 @@ export const budgetIgnoredLines = pgTable("budget_ignored_lines", {
   xeroId: text().primaryKey(),
   reason: text(),
   ignoredBy: text(),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+});
+
+// META-4571: one row per (Xero line, model) when BUDGET_COMPARE_MODELS is set,
+// so the reviewer can see every model's answer and we can tally the picks.
+export const budgetProposalVerdicts = pgTable("budget_proposal_verdicts", {
+  id: uuid().primaryKey().defaultRandom(),
+  runId: uuid(),
+  xeroId: text().notNull(),
+  model: text().notNull(),
+  verdict: jsonb(),
+  error: text(),
+  inputTokens: integer(),
+  outputTokens: integer(),
+  latencyMs: integer(),
+  picked: boolean().notNull().default(false),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 });
