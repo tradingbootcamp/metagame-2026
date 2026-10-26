@@ -35,6 +35,14 @@ export default function BudgetBrowse({
 }: Props) {
   const [open, setOpen] = useState<string | null>(null);
 
+  if (categories.length === 0) {
+    return (
+      <p className="text-sm text-ink/60">
+        Nothing to show until the sheet is reachable.
+      </p>
+    );
+  }
+
   const income = categories.filter((c) => c.type === "Income");
   const expense = categories.filter((c) => c.type === "Expense");
   const totals = {
