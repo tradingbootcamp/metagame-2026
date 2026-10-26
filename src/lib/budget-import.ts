@@ -303,7 +303,7 @@ export async function proposeRows(
   lines: XeroLine[],
   rows: LedgerRow[],
   categories: Category[],
-): Promise<ProposalSet> {
+): Promise<{ input: ProposalSet; usage: Usage }> {
   return callClaude<ProposalSet>(
     RULES,
     userMessage(lines, rows, categories),
@@ -411,6 +411,8 @@ Rules:
 - A new sponsor, grant or sale is an Income row: category Sponsors (or Tickets / Room rentals), budgeted = the expected amount, status Planned (Committed if the request says it's signed or confirmed).
 - A new planned expense is an Expense row with budgeted = the amount, status Planned or Committed as above. Money already spent with no Xero line yet is an actual: put it in actual, status Done.
 - Category must be one of the listed categories, spelled exactly. Parent only when it is in the same category and is a root row (no parent of its own).
+- Several rows from one request are normal: "ubers to and from the airport" is two rows. To make a plan with its parts in one go, give the plan row a key and set each part's parent to that key: e.g. "Yemima cars" budgeted 150 with key "p1", then "Uber to JFK" 65 and "Uber from JFK" 65, each parent "p1". The parts must share the plan's category.
+- Follow the ledger's categories over the request's wording: a ride is Staff cars even if the request says "under her travel"; say so in the reason.
 - Phase: Pre = run-up before the event week, Event = the conference itself, Post = after. Leave blank for income.
 - Item: short human label under 60 chars, no amount in it.
 - If the request is ambiguous, still return your best reading and say what you assumed in the reason. If it asks for something the ledger can't express (deleting rows, changing categories), return no rows and explain in summary.`;
@@ -426,12 +428,17 @@ const REQUEST_TOOL = {
         items: {
           type: "object",
           properties: {
+            key: {
+              type: ["string", "null"],
+              description:
+                'A short handle (e.g. "p1") when other rows in this answer should be children of this row; otherwise null.',
+            },
             item: { type: "string" },
             category: { type: "string" },
             parent: {
               type: ["string", "null"],
               description:
-                "An existing root row id (T###) in the same category, or null.",
+                "An existing root row id (T###) in the same category, or the key of another row in this answer, or null.",
             },
             phase: { type: "string", enum: [...PHASES, ""] },
             counterparty: { type: "string" },
@@ -463,6 +470,8 @@ const REQUEST_TOOL = {
 } as const;
 
 export type RequestedRow = {
+  /** Optional handle so other rows in the same answer can be its children. */
+  key?: string | null;
   item: string;
   category: string;
   parent: string | null;
@@ -478,6 +487,14 @@ export type RequestResult = { rows: RequestedRow[]; summary: string };
 
 type Block = { type: string; text?: string; name?: string; input?: unknown };
 
+export type Usage = {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+};
+
+export const modelName = (): string => env.BUDGET_MODEL ?? DEFAULT_MODEL;
+
 /**
  * One tool-use round trip. The model is asked, not forced, to call the tool
  * (forced tool_choice isn't supported on every model); if it answers in prose
@@ -487,12 +504,13 @@ async function callClaude<T>(
   system: string,
   user: string,
   tool: typeof PROPOSE_TOOL | typeof REQUEST_TOOL,
-): Promise<T> {
+): Promise<{ input: T; usage: Usage }> {
   const key = env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("ANTHROPIC_API_KEY is not set.");
   const messages: { role: "user" | "assistant"; content: unknown }[] = [
     { role: "user", content: user },
   ];
+  const usage: Usage = { model: modelName(), inputTokens: 0, outputTokens: 0 };
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await fetch(ANTHROPIC_URL, {
       method: "POST",
@@ -502,7 +520,7 @@ async function callClaude<T>(
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: env.BUDGET_MODEL ?? DEFAULT_MODEL,
+        model: usage.model,
         max_tokens: 8192,
         system: `${system}\n\nAlways answer by calling the ${tool.name} tool, never in prose.`,
         tools: [tool],
@@ -511,11 +529,16 @@ async function callClaude<T>(
     });
     if (!res.ok)
       throw new Error(`Anthropic API: ${res.status} ${await res.text()}`);
-    const data = (await res.json()) as { content: Block[] };
+    const data = (await res.json()) as {
+      content: Block[];
+      usage?: { input_tokens?: number; output_tokens?: number };
+    };
+    usage.inputTokens += data.usage?.input_tokens ?? 0;
+    usage.outputTokens += data.usage?.output_tokens ?? 0;
     const call = data.content.find(
       (c) => c.type === "tool_use" && c.name === tool.name,
     );
-    if (call?.input) return call.input as T;
+    if (call?.input) return { input: call.input as T, usage };
     if (attempt === 0) {
       messages.push(
         { role: "assistant", content: data.content },
@@ -556,31 +579,74 @@ export async function requestRows(
   rows: LedgerRow[],
   categories: Category[],
   requestedBy: string,
-): Promise<{ inputs: RowInput[]; summary: string }> {
-  const result = await callClaude<RequestResult>(
+): Promise<{ inputs: RowInput[]; summary: string; usage: Usage }> {
+  const { input: result, usage } = await callClaude<RequestResult>(
     REQUEST_RULES,
     `${ledgerContext(rows, categories)}\n\nRequest from ${requestedBy}:\n${text}`,
     REQUEST_TOOL,
   );
+  const today = new Date().toISOString().slice(0, 10);
+  const inputs = buildRequestRows(
+    result,
+    rows,
+    categories,
+    requestedBy,
+    text,
+    today,
+  );
+  return { inputs, summary: result.summary, usage };
+}
+
+/**
+ * Requested rows → Proposed inputs. A row may name another row in the same
+ * answer as its parent by that row's key, so a plan and its children can
+ * arrive together; parents are written first so the ids line up.
+ */
+export function buildRequestRows(
+  result: RequestResult,
+  rows: LedgerRow[],
+  categories: Category[],
+  requestedBy: string,
+  text: string,
+  today: string,
+): RowInput[] {
   const catByName = new Map(categories.map((c) => [c.name, c]));
   const planById = new Map(rows.filter(isPlanRow).map((r) => [r.id, r]));
+  const requested = result.rows ?? [];
+  const keys = new Set(requested.map((r) => r.key).filter(Boolean));
+  const parentsFirst = [
+    ...requested.filter((r) => r.key && keys.has(r.key)),
+    ...requested.filter((r) => !(r.key && keys.has(r.key))),
+  ];
   const existing = [...rows];
-  const today = new Date().toISOString().slice(0, 10);
+  const idByKey = new Map<string, { id: string; category: string }>();
   const inputs: RowInput[] = [];
-  for (const r of result.rows ?? []) {
+  for (const r of parentsFirst) {
     const notes: string[] = [];
     if (!catByName.has(r.category)) {
       notes.push(`category "${r.category}" unknown; pick one`);
     }
     let parent = "";
-    if (r.parent) {
+    const sibling = r.parent ? idByKey.get(r.parent) : undefined;
+    if (sibling) {
+      if (sibling.category !== r.category) {
+        notes.push(
+          `parent ${sibling.id} is in ${sibling.category}, left blank`,
+        );
+      } else parent = sibling.id;
+    } else if (r.parent) {
       const target = planById.get(r.parent);
       if (!target) notes.push(`parent ${r.parent} not found, left blank`);
       else if (target.category !== r.category) {
         notes.push(`parent ${target.id} is in ${target.category}, left blank`);
       } else parent = target.id;
     }
+    if (parent && r.key && keys.has(r.key)) {
+      notes.push("a plan with children can't have a parent itself, left blank");
+      parent = "";
+    }
     const id = nextId(existing);
+    if (r.key) idByKey.set(r.key, { id, category: r.category });
     inputs.push({
       id,
       item: r.item,
@@ -597,7 +663,7 @@ export async function requestRows(
     });
     existing.push({ id } as LedgerRow);
   }
-  return { inputs, summary: result.summary };
+  return inputs;
 }
 
 const DAY = 86_400_000;
@@ -649,7 +715,7 @@ export async function runImport(options: {
     }
     // Lazy so budget-models can import the prompt from here without a cycle.
     const compare = await import("./budget-models");
-    const set = compare.comparisonOn()
+    const { input: set, usage } = compare.comparisonOn()
       ? await compare.compareAndPropose(run.id, fresh, rows, categories)
       : await proposeRows(fresh, rows, categories);
     const today = new Date().toISOString().slice(0, 10);
@@ -661,6 +727,7 @@ export async function runImport(options: {
       proposed: inputs.length,
       skipped,
       summary: set.summary,
+      ...usage,
     });
     return {
       run,

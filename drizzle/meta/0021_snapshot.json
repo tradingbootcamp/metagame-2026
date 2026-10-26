@@ -1,6 +1,6 @@
 {
   "id": "2eeae531-3ee8-430a-9bce-c36c8015db9f",
-  "prevId": "2db3eef7-208d-4845-9be6-f3020f34e0a7",
+  "prevId": "b4b3d9fb-e8f0-43c2-9e42-582574a71431",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2058,6 +2058,13 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'import'"
+        },
         "status": {
           "name": "status",
           "type": "text",
@@ -2108,6 +2115,26 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "input_tokens": {
+          "name": "input_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "output_tokens": {
+          "name": "output_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "started_at": {
           "name": "started_at",

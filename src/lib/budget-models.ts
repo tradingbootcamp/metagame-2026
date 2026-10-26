@@ -7,6 +7,7 @@ import {
   RULES,
   userMessage,
   type ProposalSet,
+  type Usage as ImportUsage,
   type XeroLine,
 } from "./budget-import";
 import { isPlanRow, type Category, type LedgerRow } from "./budget-ledger";
@@ -232,7 +233,7 @@ export async function compareAndPropose(
   lines: XeroLine[],
   rows: LedgerRow[],
   categories: Category[],
-): Promise<ProposalSet> {
+): Promise<{ input: ProposalSet; usage: ImportUsage }> {
   const models = compareModels();
   const results = await Promise.all(
     models.map((m) => runModel(m, lines, rows, categories)),
@@ -257,7 +258,10 @@ export async function compareAndPropose(
   if (!primary.set) {
     throw new Error(`${primary.model} failed: ${primary.error}`);
   }
-  return primary.set;
+  return {
+    input: primary.set,
+    usage: { model: primary.model, ...primary.usage },
+  };
 }
 
 /** Stored verdicts for the queue, keyed by Xero id. */

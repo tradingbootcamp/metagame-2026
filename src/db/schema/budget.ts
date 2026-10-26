@@ -29,8 +29,11 @@ export const xeroConnections = pgTable("xero_connections", {
   ...timestamps,
 });
 
+// One row per Claude call from the tool: "import" runs and "request"s from
+// the Ask Claude box. Token counts come from the API response.
 export const budgetImportRuns = pgTable("budget_import_runs", {
   id: uuid().primaryKey().defaultRandom(),
+  kind: text().notNull().default("import"),
   status: text().notNull(),
   triggeredBy: text(),
   since: text().notNull(),
@@ -39,6 +42,9 @@ export const budgetImportRuns = pgTable("budget_import_runs", {
   skipped: integer().notNull().default(0),
   summary: text(),
   error: text(),
+  model: text(),
+  inputTokens: integer().notNull().default(0),
+  outputTokens: integer().notNull().default(0),
   startedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   finishedAt: timestamp({ withTimezone: true }),
 });

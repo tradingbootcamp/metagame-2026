@@ -14,7 +14,7 @@ import {
   type LedgerRow,
   type RowInput,
 } from "@/lib/budget-sheet";
-import { ignoreXeroId } from "@/lib/budget-store";
+import { finishRun, ignoreXeroId, startRun } from "@/lib/budget-store";
 
 const PATH = "/backstage/budget";
 
@@ -72,21 +72,33 @@ export async function requestAction(text: string): Promise<Result> {
   if (!admin) return { ok: false, error: EXPIRED };
   const trimmed = text.trim();
   if (!trimmed) return { ok: false, error: "Say what to add." };
+  const today = new Date().toISOString().slice(0, 10);
+  const run = await startRun(today, admin.name, "request");
   try {
     const { rows, categories } = await loadLedger();
-    const { inputs, summary } = await requestRows(
+    const { inputs, summary, usage } = await requestRows(
       trimmed,
       rows,
       categories,
       admin.name,
     );
     if (inputs.length) await appendRows(rows, inputs);
+    await finishRun(run.id, {
+      status: "done",
+      proposed: inputs.length,
+      summary: `${trimmed.slice(0, 120)} → ${summary}`,
+      ...usage,
+    });
     revalidatePath(PATH);
     return {
       ok: true,
       message: `${inputs.length} row${inputs.length === 1 ? "" : "s"} proposed. ${summary}`,
     };
   } catch (err) {
+    await finishRun(run.id, {
+      status: "failed",
+      error: err instanceof Error ? err.message : String(err),
+    });
     return fail(err);
   }
 }
