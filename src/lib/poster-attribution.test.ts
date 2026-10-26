@@ -6,7 +6,7 @@ vi.mock("@/lib/tracking-links", async (importOriginal) => ({
 vi.mock("posthog-js", () => ({ default: { __loaded: false } }));
 import { GET } from "@/app/go/[slug]/route";
 import { resolveTrackingLink, type TrackingLink } from "./tracking-links";
-import { captureUtm, readUtm } from "./utm";
+import { captureUtm, readPromo, readUtm, withPromo } from "./utm";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -54,6 +54,52 @@ it("carries the area through /go into last-touch attribution", async () => {
     utm_content: "new-area",
   });
   expect(readUtm().utm_term).toBeUndefined();
+});
+it("forwards a promo code through /go and keeps it for Standard checkout", async () => {
+  vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://metagame.games");
+  vi.mocked(resolveTrackingLink).mockResolvedValue({
+    slug: "berkeley",
+    destination: "https://metagame.games/#tickets",
+    source: "poster",
+    medium: "print",
+    campaign: "metagame-2026",
+    placement: "Berkeley",
+    active: true,
+  } as TrackingLink);
+  const go = (query: string) =>
+    GET(new Request(`https://metagame.games/go/berkeley${query}`), {
+      params: Promise.resolve({ slug: "berkeley" }),
+    });
+  const destination = new URL(
+    (await go("?promo=POSTER20")).headers.get("location")!,
+  );
+  expect(destination.searchParams.get("promo")).toBe("POSTER20");
+  expect(destination.searchParams.get("utm_term")).toBe("berkeley");
+  expect(destination.hash).toBe("#tickets");
+  const junk = new URL(
+    (await go("?promo=bad%20code")).headers.get("location")!,
+  );
+  expect(junk.searchParams.has("promo")).toBe(false);
+
+  const values = new Map<string, string>();
+  vi.stubGlobal("localStorage", {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => values.set(key, value),
+    removeItem: (key: string) => values.delete(key),
+  });
+  expect(withPromo("/api/checkout/stripe?tier=standard&code=own")).toBe(
+    "/api/checkout/stripe?tier=standard&code=own",
+  );
+  captureUtm(destination.search);
+  expect(readPromo()).toBe("POSTER20");
+  expect(withPromo("/api/checkout/stripe?tier=standard&code=own")).toBe(
+    "/api/checkout/stripe?tier=standard&code=own&promo=POSTER20",
+  );
+  // A later tracking link without a code leaves it; one with a code replaces it.
+  captureUtm("?utm_source=newer");
+  expect(readPromo()).toBe("POSTER20");
+  captureUtm("?promo=OTHER");
+  expect(readPromo()).toBe("OTHER");
 });
 it("does not mistake the missing-slug homepage fallback for tracked attribution", async () => {
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://metagame.games");

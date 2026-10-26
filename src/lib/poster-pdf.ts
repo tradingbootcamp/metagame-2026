@@ -5,7 +5,12 @@ import path from "node:path";
 import { PDFDocument, rgb } from "pdf-lib";
 import QRCode from "qrcode";
 import { POSTER_ORIGIN } from "@/lib/poster-options";
-import { shortUrl, validateSlug } from "@/lib/tracking-links";
+import {
+  PROMO_PARAM,
+  promoCode,
+  shortUrl,
+  validateSlug,
+} from "@/lib/tracking-links";
 
 export type PosterDesign = "d20" | "chess";
 export type PosterSize = "letter" | "13x19";
@@ -45,12 +50,21 @@ const templates = {
   },
 };
 
+/** The URL a poster's QR encodes: the short link, plus `?promo=` when a code is on it. */
+export function posterQrUrl(slug: string, promo = ""): string {
+  const url = new URL(shortUrl(POSTER_ORIGIN, slug));
+  if (promo) url.searchParams.set(PROMO_PARAM, promo);
+  return url.toString();
+}
+
 export async function createPosterPdf(
   design: PosterDesign,
   size: PosterSize,
   slug: string,
+  promo = "",
 ): Promise<Uint8Array> {
-  if (validateSlug(slug)) throw new Error("Invalid poster link");
+  if (validateSlug(slug) || promoCode(promo) !== promo)
+    throw new Error("Invalid poster link");
   const template = templates[`${design}-${size}`];
   const bytes = await readFile(
     path.join(process.cwd(), "assets/posters", template.file),
@@ -76,7 +90,7 @@ export async function createPosterPdf(
     height: qr.size,
     color: rgb(1, 1, 1),
   });
-  const matrix = QRCode.create(shortUrl(POSTER_ORIGIN, slug), {
+  const matrix = QRCode.create(posterQrUrl(slug, promo), {
     errorCorrectionLevel: "M",
   }).modules;
   const moduleSize = qr.size / (matrix.size + 2 * QUIET_MODULES);

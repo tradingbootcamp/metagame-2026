@@ -15,7 +15,7 @@ import {
 } from "@/v2/lib/tickets";
 import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
-import { withUtm } from "@/lib/utm";
+import { withPromo, withUtm } from "@/lib/utm";
 import { FINANCIAL_AID_FORM_URL } from "@/v2/lib/links";
 import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import {
@@ -46,10 +46,10 @@ const subscribeNever = () => () => {};
 const EARLY_BIRD_HREF = stripeCheckoutHref({ tier: "standard" });
 const FULL_PRICE_HREF = stripeCheckoutHref({ tier: "standard", code: "own" });
 
-// UTMs live in localStorage, so they're added at click time (not render) to keep
-// the server-rendered href stable.
+// UTMs and any promo code live in localStorage, so they're added at click time
+// (not render) to keep the server-rendered href stable.
 const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-  e.currentTarget.href = withUtm(href);
+  e.currentTarget.href = withPromo(withUtm(href));
 };
 
 export default function TicketsPanel({

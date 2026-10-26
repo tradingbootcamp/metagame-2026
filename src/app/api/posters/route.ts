@@ -1,6 +1,6 @@
 import { loadPosterCatalog } from "@/lib/poster-catalog";
 import { isPosterLink } from "@/lib/poster-options";
-import { findTrackingLink } from "@/lib/tracking-links";
+import { findTrackingLink, PROMO_PARAM, promoCode } from "@/lib/tracking-links";
 import { createPosterPdf } from "@/lib/poster-pdf";
 
 export const runtime = "nodejs";
@@ -15,11 +15,14 @@ export async function GET(request: Request) {
   const design = params.get("design");
   const size = params.get("size");
   const disposition = params.get("preview") === "1" ? "inline" : "attachment";
+  const promoRaw = params.get(PROMO_PARAM) ?? "";
+  const promo = promoCode(promoRaw);
   if (
     !area ||
     area.length > 200 ||
     !["d20", "chess"].includes(design ?? "") ||
-    !["letter", "13x19"].includes(size ?? "")
+    !["letter", "13x19"].includes(size ?? "") ||
+    promo !== promoRaw.trim()
   ) {
     return Response.json(
       { error: "Choose an area, design, and paper size." },
@@ -46,12 +49,14 @@ export async function GET(request: Request) {
       design as "d20" | "chess",
       size as "letter" | "13x19",
       choice.slug,
+      promo,
     );
+    const name = [design, choice.slug, promo, size].filter(Boolean).join("-");
     return new Response(new Uint8Array(pdf), {
       headers: {
         ...headers,
         "Content-Type": "application/pdf",
-        "Content-Disposition": `${disposition}; filename="metagame-${design}-${choice.slug}-${size}.pdf"`,
+        "Content-Disposition": `${disposition}; filename="metagame-${name}.pdf"`,
         "X-Content-Type-Options": "nosniff",
       },
     });
