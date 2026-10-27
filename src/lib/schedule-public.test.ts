@@ -89,6 +89,20 @@ describe("publicSchedule", () => {
     expect(sessions[0].hosts).toEqual([{ name: "Ada" }]);
   });
 
+  it("does not show a nameless host's email as their name", () => {
+    const { sessions } = publicSchedule({
+      locations: [],
+      sessions: [
+        session({
+          hosts: [
+            { userId: "u2", name: "bob@example.com", email: "bob@example.com" },
+          ],
+        }),
+      ],
+    });
+    expect(sessions[0].hosts).toEqual([{ name: "Someone" }]);
+  });
+
   it("shows marked rooms plus unmarked ones a published session uses", () => {
     const { locations } = publicSchedule({
       locations: [

@@ -55,6 +55,19 @@ export type ScheduleAccount = {
   email: string;
 };
 
+/**
+ * An account's name as other attendees see it. The loaders read it with
+ * accountName(), which falls back to the email when the name is blank, so
+ * that fallback has to be undone before the name leaves the team's tools.
+ */
+export function publicAccountName(account: {
+  name: string;
+  email: string;
+}): string {
+  const name = account.name.trim();
+  return name && name !== account.email ? name : "Someone";
+}
+
 export const RSVP_STATUSES = ["going", "waitlist"] as const;
 export type RsvpStatus = (typeof RSVP_STATUSES)[number];
 
@@ -437,7 +450,7 @@ export function publicSchedule(schedule: {
       locationId: s.locationId,
       maxCapacity: s.maxCapacity,
       ages: s.ages,
-      hosts: s.hosts.map((h) => ({ name: h.name })),
+      hosts: s.hosts.map((h) => ({ name: publicAccountName(h) })),
     }));
   const used = new Set(sessions.map((s) => s.locationId));
   const locations = schedule.locations

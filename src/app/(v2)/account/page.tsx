@@ -101,6 +101,7 @@ export default async function AccountPage({
               <div className="grid gap-12 md:grid-cols-2">
                 <ProfileForm
                   email={user.email}
+                  profileHref={`/u/${encodeURIComponent(user.id)}`}
                   initialValues={{
                     name: user.name,
                     pronouns: profile?.pronouns ?? "",

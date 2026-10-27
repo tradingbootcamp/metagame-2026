@@ -13,21 +13,15 @@ import {
 import ToolSignIn from "@/components/ToolSignIn";
 import { getDb, schema } from "@/db";
 import { teamAccess } from "@/lib/access";
-import {
-  accountSessions,
-  type AccountSessionRow,
-} from "@/lib/account-sessions";
 import { ticketPeople, ticketRoles } from "@/lib/admin-tickets";
 import { ticketAccounts } from "@/lib/admin-store";
 import { listRoles, userAccess } from "@/lib/permission-store";
 import { explainPermissions, isPermission } from "@/lib/permissions";
-import {
-  loadRsvpCounts,
-  loadSchedule,
-  loadViewerPlans,
-} from "@/lib/schedule-store";
+import { loadSchedule, loadViewerPlans } from "@/lib/schedule-store";
 import { formatTicketCode } from "@/lib/ticket-code-format";
 import { ticketLabel, ticketsForUser } from "@/lib/ticket-store";
+import { SESSION_ROLES, TEAM_AUDIENCE, userSessions } from "@/lib/user-profile";
+import UserSessions from "@/v2/components/schedule/UserSessions";
 
 const yesNo = (v: boolean | null | undefined) =>
   v == null ? "—" : v ? "Yes" : "No";
@@ -64,35 +58,6 @@ function Section({
   );
 }
 
-function SessionList({
-  rows,
-  empty,
-  note,
-}: {
-  rows: AccountSessionRow[];
-  empty: string;
-  note?: (s: AccountSessionRow) => string | null;
-}) {
-  if (rows.length === 0) return <p className="text-sm text-ink/50">{empty}</p>;
-  return (
-    <ul className="divide-y divide-line text-sm">
-      {rows.map((s) => (
-        <li key={s.id} className="flex flex-wrap items-baseline gap-x-3 py-2">
-          <span className="font-semibold">{s.title}</span>
-          {s.status === "draft" && (
-            <span className={`${TAG} bg-tan/30 text-ink`}>Draft</span>
-          )}
-          <span className="text-ink/60">
-            {s.when ?? "Time TBA"}
-            {s.room && ` · ${s.room}`}
-          </span>
-          {note?.(s) && <span className="text-xs text-ink/50">{note(s)}</span>}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 // Admin role and ban changes stay on the users table; roles and per-user
 // grants are edited here.
 export default async function AdminUserProfilePage(
@@ -117,11 +82,10 @@ export default async function AdminUserProfilePage(
   const { user, profile } = row;
 
   const admin = user.role === "admin";
-  const [tickets, schedule, plans, counts, roles, held] = await Promise.all([
+  const [tickets, schedule, plans, roles, held] = await Promise.all([
     ticketsForUser(user.id, user.email),
     loadSchedule(),
     loadViewerPlans(user.id),
-    loadRsvpCounts(),
     listRoles(),
     userAccess(user.id, admin),
   ]);
@@ -143,14 +107,7 @@ export default async function AdminUserProfilePage(
     explanation: explainPermissions(held),
   };
   const { accounts, byEmail } = await ticketAccounts(tickets);
-  const sessions = accountSessions(
-    user.id,
-    schedule.sessions,
-    schedule.locations,
-    plans,
-    counts,
-    true,
-  );
+  const sessions = userSessions(user.id, schedule, plans, TEAM_AUDIENCE);
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -186,7 +143,19 @@ export default async function AdminUserProfilePage(
           <Field label="Name">{user.name || null}</Field>
           <Field label="Pronouns">{profile?.pronouns}</Field>
           <Field label="Discord">{profile?.discordHandle}</Field>
-          <Field label="Public profile">{yesNo(profile?.isPublic)}</Field>
+          <Field label="Public profile">
+            {profile?.isPublic ? (
+              <Link
+                href={`/u/${encodeURIComponent(user.id)}`}
+                className="text-navy hover:text-meeple hover:underline"
+              >
+                Yes — open it
+              </Link>
+            ) : (
+              "No — only they can see /u"
+            )}
+          </Field>
+          <Field label="Website">{profile?.website}</Field>
           <Field label="Adult">{yesNo(profile?.isAdult)}</Field>
           <Field label="Bringing children">
             {yesNo(profile?.bringingChildren)}
@@ -286,28 +255,13 @@ export default async function AdminUserProfilePage(
       </Section>
 
       <Section title="Sessions">
-        <div className="space-y-5">
-          <div>
-            <h3 className="mb-1 text-sm font-semibold">Hosting</h3>
-            <SessionList
-              rows={sessions.running}
-              empty="Not hosting any sessions."
-              note={(s) => (s.lead ? "Lead host" : "Co-host")}
-            />
-          </div>
-          <div>
-            <h3 className="mb-1 text-sm font-semibold">RSVPs</h3>
-            <SessionList
-              rows={sessions.plans}
-              empty="No RSVPs."
-              note={(s) => (s.rsvp === "waitlist" ? "Waitlist" : "Going")}
-            />
-          </div>
-          <div>
-            <h3 className="mb-1 text-sm font-semibold">Bookmarks</h3>
-            <SessionList rows={sessions.bookmarks} empty="No bookmarks." />
-          </div>
-        </div>
+        <UserSessions
+          sessions={sessions.sessions}
+          locations={sessions.locations}
+          roles={[...SESSION_ROLES]}
+          linkable={viewer.permissions.has("schedule.preview")}
+          emptyLabel="Not hosting, shepherding or attending anything."
+        />
       </Section>
     </div>
   );
