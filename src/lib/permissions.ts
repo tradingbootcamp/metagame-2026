@@ -63,13 +63,21 @@ export const PERMISSIONS = {
     label: "RSVP names",
     description: "RSVP names on a session page, not just the counts.",
   },
+  "schedule.volunteer_rooms": {
+    audience: "attendee",
+    group: "Schedule",
+    level: "view",
+    label: "Volunteer rooms",
+    description:
+      "Rooms marked volunteer-only, such as ops desks, alongside the public ones.",
+  },
   "schedule.manage": {
     audience: "team",
     group: "Schedule",
     level: "edit",
     label: "Edit schedule",
     description: "On the admin grid and over the API.",
-    implies: ["schedule.preview"],
+    implies: ["schedule.preview", "schedule.volunteer_rooms"],
   },
   "promo.manage": {
     audience: "team",

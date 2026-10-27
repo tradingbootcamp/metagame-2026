@@ -36,6 +36,7 @@ describe("expand", () => {
     expect([...expand(["schedule.manage", "gone.away"])]).toEqual([
       "schedule.manage",
       "schedule.preview",
+      "schedule.volunteer_rooms",
     ]);
     expect(expand([]).size).toBe(0);
   });
@@ -53,13 +54,18 @@ describe("effectivePermissions", () => {
       "promo.manage",
       "schedule.manage",
       "schedule.preview",
+      "schedule.volunteer_rooms",
       "tickets.view",
     ]);
   });
 
   it("expands a grant's implications", () => {
     const got = effectivePermissions(input({ grants: ["schedule.manage"] }));
-    expect([...got].sort()).toEqual(["schedule.manage", "schedule.preview"]);
+    expect([...got].sort()).toEqual([
+      "schedule.manage",
+      "schedule.preview",
+      "schedule.volunteer_rooms",
+    ]);
   });
 
   it("gives admins everything", () => {

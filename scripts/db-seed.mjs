@@ -275,8 +275,8 @@ const profile = (u) => {
   };
 };
 
-// Lighthaven's rooms, as the schedule shows them; hidden ones stay for
-// placement. Images are Vercel Blob URLs in prod and stay null here.
+// Lighthaven's rooms, as the schedule shows them; the ones the public can't
+// see stay for placement. Images are Vercel Blob URLs in prod, null here.
 // prettier-ignore
 const ROOMS = [
   ["foodtruck", "Food Truck Parking", null, "Behind E", 0],
@@ -292,9 +292,9 @@ const ROOMS = [
   ["exobrain", "Exobrain", 30, "Building E, 2nd floor", 12],
   ["d2", "1D2", null, "Building D, 1st floor", 13],
   ["caprica", "New Caprica", null, "Building B, 2nd floor", 14],
-  ["d1", "1D1", 6, "Building D, 1st floor", 100, false],
-  ["gyroscope", "Gyroscope", 30, "Building E, 2nd floor", 100, false, false],
-  ["other", "Other", null, null, 100, false, false],
+  ["d1", "1D1", 6, "Building D, 1st floor", 100, "hidden"],
+  ["gyroscope", "Gyroscope", 30, "Building E, 2nd floor", 100, "volunteer", false],
+  ["other", "Other", null, null, 100, "hidden", false],
 ];
 const locations = Object.fromEntries(
   ROOMS.map(
@@ -305,7 +305,7 @@ const locations = Object.fromEntries(
         capacity,
         campus_location,
         display_order,
-        show = true,
+        visibility = "public",
         synced = true,
       ],
       k,
@@ -317,7 +317,7 @@ const locations = Object.fromEntries(
         capacity,
         campus_location,
         display_order,
-        show_in_schedule: show,
+        visibility,
         airtable_record_id: synced
           ? `recSEEDLOC${String(k + 1).padStart(7, "0")}`
           : null,

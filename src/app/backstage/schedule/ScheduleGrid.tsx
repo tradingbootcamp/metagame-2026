@@ -460,7 +460,7 @@ export default function ScheduleGrid({
       [
         l.campusLocation,
         l.capacity ? `Max ${l.capacity}` : null,
-        l.showInSchedule ? null : "hidden",
+        l.visibility === "public" ? null : l.visibility,
       ]
         .filter(Boolean)
         .join(" · ") || null,

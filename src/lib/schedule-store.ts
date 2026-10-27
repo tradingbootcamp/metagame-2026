@@ -88,7 +88,7 @@ export async function loadSchedule(): Promise<Schedule> {
       campusLocation: l.campusLocation,
       description: l.description,
       displayOrder: l.displayOrder,
-      showInSchedule: l.showInSchedule,
+      visibility: l.visibility,
       thumbnailUrl: l.thumbnailUrl,
       imageUrl: l.imageUrl,
     })),
@@ -858,7 +858,7 @@ export async function insertSample(): Promise<void> {
         SAMPLE_LOCATIONS.map((l) => ({
           ...l,
           name: SAMPLE_ROOM_PREFIX + l.name,
-          showInSchedule: true,
+          visibility: "public" as const,
         })),
       )
       .returning({ id: locations.id });

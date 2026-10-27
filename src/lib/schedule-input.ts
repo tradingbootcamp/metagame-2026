@@ -5,6 +5,7 @@
 import {
   AGES,
   CATEGORIES,
+  LOCATION_VISIBILITIES,
   STATUSES,
   fromPacificWall,
   outsideHours,
@@ -199,7 +200,15 @@ export function parseLocationFields(raw: Raw): Parsed<LocationFields> {
   const displayOrder = int(raw, "displayOrder") ?? 100;
   if (Number.isNaN(displayOrder))
     return { ok: false, field: "displayOrder", error: "Whole number." };
-  const show = raw.showInSchedule;
+  const visibilityRaw = str(raw, "visibility");
+  const visibility = oneOf(visibilityRaw, LOCATION_VISIBILITIES);
+  if (visibilityRaw && !visibility) {
+    return {
+      ok: false,
+      field: "visibility",
+      error: `One of ${LOCATION_VISIBILITIES.join(", ")}.`,
+    };
+  }
   return {
     ok: true,
     value: {
@@ -208,8 +217,7 @@ export function parseLocationFields(raw: Raw): Parsed<LocationFields> {
       campusLocation: optional(raw, "campusLocation"),
       description: optional(raw, "description"),
       displayOrder,
-      // "on" is the checkbox; the API sends a boolean.
-      showInSchedule: show === true || show === "on" || show === "true",
+      visibility: visibility ?? "hidden",
     },
   };
 }

@@ -75,6 +75,12 @@ export const discordStatus = pgEnum("discord_status", [
   "session_host",
   "refused",
 ]);
+// Who a room shows up for on the schedule; "hidden" is the team's own view.
+export const locationVisibility = pgEnum("location_visibility", [
+  "public",
+  "volunteer",
+  "hidden",
+]);
 
 export const locations = pgTable(
   "locations",
@@ -85,7 +91,7 @@ export const locations = pgTable(
     campusLocation: text(),
     description: text(),
     displayOrder: integer().notNull().default(100),
-    showInSchedule: boolean().notNull().default(false),
+    visibility: locationVisibility().notNull().default("hidden"),
     // Vercel Blob URLs; images never live in the database. The thumbnail is
     // what the schedule shows; image_url is a large copy for detail views.
     thumbnailUrl: text(),
