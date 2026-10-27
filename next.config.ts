@@ -40,6 +40,13 @@ const nextConfig: NextConfig = {
       destination: "/backstage/speaker-committee",
       permanent: true,
     },
+    // The committee board replaced /grade's own overview; the rubric for one
+    // proposal stays at /grade/<id>.
+    {
+      source: "/grade",
+      destination: "/backstage/speaker-committee",
+      permanent: true,
+    },
     // Key dates used to be its own page.
     { source: "/key-dates", destination: "/#key-dates", permanent: true },
     // Short link to the session-proposal (RFP) Airtable form.

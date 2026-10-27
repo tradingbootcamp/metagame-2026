@@ -61,18 +61,6 @@ const ENV_SPEC: EnvSpec[] = [
       "OpenNode API key for Bitcoin ticket checkout. Without it the BTC routes throw a clear error and BTC checkout is unavailable.",
   },
   {
-    name: "GRADER_PASSWORD",
-    required: false,
-    description:
-      "Shared password for the speaker committee's grading tool at /grade. Fallback while the committee gets accounts; admin accounts sign in without it. Remove once they do.",
-  },
-  {
-    name: "GRADER_SESSION_SECRET",
-    required: false,
-    description:
-      "Random string used to sign the /grade session cookie. Rotating it signs everyone out.",
-  },
-  {
     name: "RFP_AIRTABLE_MIRROR",
     required: false,
     description:

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { signOut, switchGrader } from "./actions";
-import { gradeAccess } from "@/lib/grader-auth";
-import { identityLabel } from "@/lib/grader-identity";
+import { signOut } from "./actions";
+import { can } from "@/lib/access";
+import { accountLabel } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Session Rubric — Metagame",
@@ -14,33 +14,23 @@ export default async function GradeLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const access = await gradeAccess();
+  const session = await can("submissions.grade");
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cream text-ink">
       <header className="sticky top-0 z-10 border-b border-line bg-cream/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <Link
-            href="/grade"
+            href="/backstage/speaker-committee"
             className="font-bebas text-xl tracking-wide text-navy"
           >
             Session Rubric
           </Link>
-          {access && (
+          {session && (
             <div className="flex items-center gap-3 text-sm text-ink/60">
-              {access.via === "account" ? (
-                <Link href="/account" className="hover:text-meeple">
-                  {identityLabel(access.identity)}
-                </Link>
-              ) : (
-                access.identity && (
-                  <form action={switchGrader}>
-                    <button type="submit" className="hover:text-meeple">
-                      {identityLabel(access.identity)}
-                    </button>
-                  </form>
-                )
-              )}
+              <Link href="/account" className="hover:text-meeple">
+                {accountLabel(session.user)}
+              </Link>
               <form action={signOut}>
                 <button
                   type="submit"

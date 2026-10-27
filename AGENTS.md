@@ -57,10 +57,13 @@ one check, resolving roles (`/admin/roles`) and per-user grants
 plugin) bypasses it all and is only set by SQL or by another admin on
 `/admin/users`; the first admin is bootstrapped by hand in the Neon console:
 `update "user" set role = 'admin' where email = '…'`. `toolAccess()` /
-`requireAccess()` (`src/lib/admin-auth.ts`) wrap `can()` for `/backstage`,
-which takes accounts only. `gradeAccess()` (`src/lib/grader-auth.ts`) still
-layers a shared-password fallback (`GRADER_PASSWORD` + secret) on `can()`
-until the speaker committee has accounts, then that goes too.
+`requireAccess()` (`src/lib/admin-auth.ts`) wrap `can()` for `/backstage`.
+Every team tool now takes accounts only; the shared-password fallbacks are
+gone.
+
+The speaker committee works at `/backstage/speaker-committee`
+(`schedule.manage`), which `/grade` redirects to; `/grade/<id>` is still the
+rubric for one proposal, gated on `submissions.grade`.
 
 ## Looking at UI changes
 
