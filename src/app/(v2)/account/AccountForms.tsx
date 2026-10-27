@@ -126,15 +126,17 @@ export function ProfileForm({
             defaultChecked={v.isPublic}
             className="size-4 accent-meeple"
           />
-          Publish my profile page
+          Show my profile to other attendees
         </label>
         <p className="text-sm text-ink/60">
-          Your name, pronouns, photo, bio and the sessions you&rsquo;re hosting,
-          at{" "}
+          Your page at{" "}
           <a href={profileHref} className="underline underline-offset-2">
             {profileHref}
-          </a>
-          . Your email, Discord handle and RSVPs are never shown there.
+          </a>{" "}
+          shows your name, pronouns, photo, bio, link and the sessions
+          you&rsquo;re hosting. Never your email, Discord handle or RSVPs, and
+          never to the open web — it takes an account to open, and the
+          organisers can see it either way.
         </p>
       </div>
       <Button type="submit" disabled={pending} className="self-start">

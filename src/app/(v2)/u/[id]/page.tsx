@@ -13,9 +13,11 @@ import {
 import ContentPage from "@/v2/components/ContentPage";
 import UserSessions from "@/v2/components/schedule/UserSessions";
 
-// Public attendee profile. Everything here is something the person typed into
-// their own profile form, plus the sessions they're hosting; see
-// PUBLIC_AUDIENCE in src/lib/user-profile.ts for what's deliberately left out.
+// An attendee's profile. Signed-in only, and everything on it is either
+// something the person typed into their own profile form or a session they're
+// hosting; see PUBLIC_AUDIENCE in src/lib/user-profile.ts for what's left out.
+
+const NOTICE = "mb-8 rounded-xl border px-4 py-3 text-sm";
 
 export async function generateMetadata(
   props: PageProps<"/u/[id]">,
@@ -34,7 +36,7 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
   const { id } = await props.params;
   const view = await loadProfileView(id);
   if (!view) notFound();
-  const { profile, preview } = view;
+  const { profile, access } = view;
 
   const [schedule, linkable] = await Promise.all([
     loadSchedule(),
@@ -49,14 +51,20 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
 
   return (
     <ContentPage title={profile.name} wide>
-      {preview && (
-        <p className="mb-8 rounded-xl border border-tan/60 bg-peach/30 px-4 py-3 text-sm text-ink/80">
-          Only you can see this page. Tick “Show my profile to other attendees”
-          on your{" "}
+      {access === "own-preview" && (
+        <p className={`${NOTICE} border-tan/60 bg-peach/30 text-ink/80`}>
+          Only you and the team can see this page. Tick “Show my profile to
+          other attendees” on your{" "}
           <Link href="/account" className="underline underline-offset-2">
             account
           </Link>{" "}
-          to publish it.
+          to show it to everyone else with an account.
+        </p>
+      )}
+      {access === "team-private" && (
+        <p className={`${NOTICE} border-line bg-sky/40 text-ink/80`}>
+          {profile.name} hasn’t shown this profile to other attendees. You can
+          see it because of your role.
         </p>
       )}
       <div className="flex flex-col gap-10 lg:flex-row lg:gap-14">

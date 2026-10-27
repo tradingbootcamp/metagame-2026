@@ -143,17 +143,13 @@ export default async function AdminUserProfilePage(
           <Field label="Name">{user.name || null}</Field>
           <Field label="Pronouns">{profile?.pronouns}</Field>
           <Field label="Discord">{profile?.discordHandle}</Field>
-          <Field label="Public profile">
-            {profile?.isPublic ? (
-              <Link
-                href={`/u/${encodeURIComponent(user.id)}`}
-                className="text-navy hover:text-meeple hover:underline"
-              >
-                Yes — open it
-              </Link>
-            ) : (
-              "No — only they can see /u"
-            )}
+          <Field label="Shown to attendees">
+            <Link
+              href={`/u/${encodeURIComponent(user.id)}`}
+              className="text-navy hover:text-meeple hover:underline"
+            >
+              {profile?.isPublic ? "Yes — open /u" : "No — open /u anyway"}
+            </Link>
           </Field>
           <Field label="Website">{profile?.website}</Field>
           <Field label="Adult">{yesNo(profile?.isAdult)}</Field>

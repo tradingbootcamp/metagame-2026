@@ -74,21 +74,58 @@ export function websiteLabel(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
 
+export type ProfileViewer = {
+  /** There is a signed-in account; /u is closed to the logged out. */
+  signedIn: boolean;
+  /** The viewer is this profile's owner. Implies signedIn. */
+  self: boolean;
+  /** Holds profiles.view — team, admins and volunteers. */
+  canViewAll: boolean;
+};
+
 /**
- * The public view of a profile, or null when there isn't one to show:
- * `isPublic` off, no profile row at all, or a banned account. Callers 404 on
- * null rather than 403, so nothing confirms the account exists.
+ * Which page this viewer gets. "none" is a 404 rather than a 403, so the
+ * route never confirms that an account exists.
  */
-export function publicProfile(row: ProfileRow): PublicProfile | null {
-  if (!row.profile?.isPublic || row.user.banned) return null;
+export type ProfileAccess =
+  | "none"
+  /** The profile as anyone signed in sees it. */
+  | "shown"
+  /** The owner's look at their own page before they've shown it to anyone. */
+  | "own-preview"
+  /** A profiles.view holder reading a profile its owner hasn't shown. */
+  | "team-private";
+
+/**
+ * `isPublic` means "other attendees may see this", which is what the account
+ * checkbox has always said — so it gates other attendees, not the team, and
+ * never reaches the logged out. A banned account has no page at all; the team
+ * reads those on /backstage/users instead.
+ */
+export function profileAccess(
+  row: ProfileRow,
+  viewer: ProfileViewer,
+): ProfileAccess {
+  if (!viewer.signedIn || row.user.banned) return "none";
+  if (row.profile?.isPublic) return "shown";
+  if (viewer.self) return "own-preview";
+  if (viewer.canViewAll) return "team-private";
+  return "none";
+}
+
+/**
+ * The person's own words, projected onto the six fields a profile page may
+ * show. This is a projection, not a gate — callers run profileAccess() first.
+ */
+export function publicProfileFields(row: ProfileRow): PublicProfile {
   return {
     userId: row.user.id,
     name: publicName(row.user.name),
-    pronouns: clean(row.profile.pronouns),
-    bio: clean(row.profile.bio),
-    website: safeWebsite(row.profile.website),
+    pronouns: clean(row.profile?.pronouns),
+    bio: clean(row.profile?.bio),
+    website: safeWebsite(row.profile?.website),
     // The column has an https-only check constraint; this keeps a stray row honest.
-    imageUrl: row.profile.imageUrl?.startsWith("https://")
+    imageUrl: row.profile?.imageUrl?.startsWith("https://")
       ? row.profile.imageUrl
       : null,
   };

@@ -1,27 +1,30 @@
 import { eq } from "drizzle-orm";
 import { cache } from "react";
 import { getDb, schema } from "@/db";
+import { can } from "@/lib/access";
 import { currentSession } from "@/lib/auth";
-import { publicProfile, type PublicProfile } from "@/lib/user-profile";
-
-const EMPTY = {
-  pronouns: null,
-  bio: null,
-  website: null,
-  imageUrl: null,
-};
+import {
+  profileAccess,
+  publicProfileFields,
+  type ProfileAccess,
+  type PublicProfile,
+} from "@/lib/user-profile";
 
 export type ProfileView = {
   profile: PublicProfile;
-  /** The owner looking at their own page before they've made it public. */
-  preview: boolean;
+  /** Which of the three tiers let this viewer in; drives the page's notice. */
+  access: Exclude<ProfileAccess, "none">;
 };
 
 /**
- * The public profile for `id`, or null when there is nothing to show. Its own
- * owner gets a preview of the page while `isPublic` is still off; for anyone
- * else a hidden profile is indistinguishable from an account that isn't
- * there, so nothing on this route confirms an email has an account.
+ * The profile page for `id`, or null when this viewer gets a 404. Signed-in
+ * only: `isPublic` opens it to other attendees, profiles.view to the team and
+ * volunteers, and the owner always sees their own.
+ *
+ * META-4585: the sessions this feeds are read from loadSchedule() raw, so
+ * they aren't filtered by room visibility. When #334's viewer-aware
+ * publicSchedule() lands, the viewer tier decided here is the seam to thread
+ * through to it.
  */
 export const loadProfileView = cache(
   async (id: string): Promise<ProfileView | null> => {
@@ -32,15 +35,17 @@ export const loadProfileView = cache(
       .where(eq(schema.user.id, id))
       .limit(1);
     if (!row) return null;
-    const profile = publicProfile(row);
-    if (profile) return { profile, preview: false };
 
-    const viewer = await currentSession();
-    if (viewer?.user.id !== id || row.user.banned) return null;
-    const own = publicProfile({
-      user: row.user,
-      profile: { ...(row.profile ?? EMPTY), isPublic: true },
+    const [session, viewAll] = await Promise.all([
+      currentSession(),
+      can("profiles.view"),
+    ]);
+    const access = profileAccess(row, {
+      signedIn: !!session,
+      self: !!session && session.user.id === id,
+      canViewAll: !!viewAll,
     });
-    return own && { profile: own, preview: true };
+    if (access === "none") return null;
+    return { profile: publicProfileFields(row), access };
   },
 );

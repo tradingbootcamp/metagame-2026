@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { ScheduleLocation, ScheduleSession } from "./schedule";
 import {
-  publicProfile,
+  profileAccess,
+  publicProfileFields,
   PUBLIC_AUDIENCE,
   safeWebsite,
   TEAM_AUDIENCE,
@@ -9,6 +10,7 @@ import {
   websiteLabel,
   withRole,
   type ProfileRow,
+  type ProfileViewer,
 } from "./user-profile";
 
 const row = (
@@ -39,9 +41,9 @@ const row = (
     },
   }) as ProfileRow;
 
-describe("publicProfile", () => {
+describe("publicProfileFields", () => {
   it("keeps only the fields the person typed for other people", () => {
-    const profile = publicProfile(row())!;
+    const profile = publicProfileFields(row());
     expect(Object.keys(profile).sort()).toEqual([
       "bio",
       "imageUrl",
@@ -55,22 +57,83 @@ describe("publicProfile", () => {
       expect(json).not.toContain(secret);
   });
 
-  it("is null when the profile is private, missing or banned", () => {
-    expect(publicProfile(row({ isPublic: false }))).toBeNull();
-    expect(
-      publicProfile({ user: { id: "u1", name: "Ada" }, profile: null }),
-    ).toBeNull();
-    expect(publicProfile(row({}, { banned: true }))).toBeNull();
-  });
-
   it("never falls back to the email for a blank name", () => {
-    expect(publicProfile(row({}, { name: "  " }))!.name).toBe("Someone");
+    expect(publicProfileFields(row({}, { name: "  " })).name).toBe("Someone");
   });
 
   it("drops an image url that isn't https", () => {
     expect(
-      publicProfile(row({ imageUrl: "http://x/a.png" }))!.imageUrl,
+      publicProfileFields(row({ imageUrl: "http://x/a.png" })).imageUrl,
     ).toBeNull();
+  });
+
+  it("copes with an account that has no profile row", () => {
+    expect(
+      publicProfileFields({ user: { id: "u1", name: "Ada" }, profile: null }),
+    ).toEqual({
+      userId: "u1",
+      name: "Ada",
+      pronouns: null,
+      bio: null,
+      website: null,
+      imageUrl: null,
+    });
+  });
+});
+
+describe("profileAccess", () => {
+  const viewer = (over: Partial<ProfileViewer> = {}): ProfileViewer => ({
+    signedIn: true,
+    self: false,
+    canViewAll: false,
+    ...over,
+  });
+  const shown = row();
+  const hidden = row({ isPublic: false });
+
+  it("404s the logged out, whatever isPublic says", () => {
+    const out = viewer({ signedIn: false });
+    expect(profileAccess(shown, out)).toBe("none");
+    expect(profileAccess(hidden, out)).toBe("none");
+    expect(
+      profileAccess(shown, { signedIn: false, self: false, canViewAll: true }),
+    ).toBe("none");
+  });
+
+  it("shows a profile marked public to any signed-in account", () => {
+    expect(profileAccess(shown, viewer())).toBe("shown");
+  });
+
+  it("404s a hidden profile for an ordinary signed-in account", () => {
+    expect(profileAccess(hidden, viewer())).toBe("none");
+    expect(
+      profileAccess(
+        { user: { id: "u1", name: "Ada" }, profile: null },
+        viewer(),
+      ),
+    ).toBe("none");
+  });
+
+  it("lets a profiles.view holder past isPublic, and says so", () => {
+    expect(profileAccess(hidden, viewer({ canViewAll: true }))).toBe(
+      "team-private",
+    );
+    expect(profileAccess(shown, viewer({ canViewAll: true }))).toBe("shown");
+  });
+
+  it("always gives the owner their own page", () => {
+    expect(profileAccess(hidden, viewer({ self: true }))).toBe("own-preview");
+    expect(profileAccess(shown, viewer({ self: true }))).toBe("shown");
+  });
+
+  it("gives a banned account no page at all", () => {
+    const banned = row({}, { banned: true });
+    for (const v of [
+      viewer(),
+      viewer({ self: true }),
+      viewer({ canViewAll: true }),
+    ])
+      expect(profileAccess(banned, v)).toBe("none");
   });
 });
 

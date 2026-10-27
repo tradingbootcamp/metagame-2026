@@ -24,6 +24,8 @@ export const PERMISSIONS = {
     label: "View users",
     description:
       "The account list and each one's roles, permissions and tickets.",
+    // Strictly more than the profile page, so the /u link from here works.
+    implies: ["profiles.view"],
   },
   "users.create": {
     audience: "team",
@@ -41,6 +43,16 @@ export const PERMISSIONS = {
     label: "Edit users",
     description: "Change other accounts' roles and per-user permissions.",
     implies: ["users.view"],
+  },
+  // Attendee, not team: team audience opens the whole /backstage index via
+  // hasTeamPermission(), and this is meant for volunteers on the door.
+  "profiles.view": {
+    audience: "attendee",
+    group: "Profiles",
+    level: "view",
+    label: "View profiles",
+    description:
+      "Anyone's /u profile page, including the ones not shown to other attendees.",
   },
   "tickets.view": {
     audience: "team",

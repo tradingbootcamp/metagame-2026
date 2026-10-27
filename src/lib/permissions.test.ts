@@ -3,6 +3,7 @@ import {
   effectivePermissions,
   expand,
   explainPermissions,
+  hasTeamPermission,
   permissionGroups,
   PERMISSION_KEYS,
   PERMISSIONS,
@@ -28,6 +29,20 @@ describe("catalog", () => {
         expect(q).not.toBe(key);
       }
     }
+  });
+});
+
+describe("profiles.view", () => {
+  it("is attendee audience, so a volunteer holding it gets no backstage", () => {
+    expect(PERMISSIONS["profiles.view"].audience).toBe("attendee");
+    expect(hasTeamPermission(expand(["profiles.view"]))).toBe(false);
+    expect(hasTeamPermission(expand(["schedule.rsvps", "profiles.view"]))).toBe(
+      false,
+    );
+  });
+
+  it("comes with users.view, which already shows strictly more", () => {
+    expect(expand(["users.view"]).has("profiles.view")).toBe(true);
   });
 });
 
