@@ -17,7 +17,7 @@ import { COMMITTEE_EMAILS, committeeName } from "./rfp-committee";
 import { nextStepsFor, SPACE_OPTION_LOCATIONS } from "./rfp-labels";
 import {
   gradeFields,
-  graderField,
+  graderWrite,
   mirror,
   nextStepsField,
   sessionFields,
@@ -606,7 +606,7 @@ export async function assignGrader(
     .values({ sessionId, graderUserId: userId })
     .onConflictDoNothing();
   await mirrorSession(sessionId, { kind: "assignment", phase: null }, (s) => [
-    graderField(s.grader),
+    graderWrite(s.grader),
   ]);
 }
 
@@ -635,7 +635,7 @@ export async function unassignGrader(
     return kept ? "submitted" : "missing";
   }
   await mirrorSession(sessionId, { kind: "assignment", phase: null }, (s) => [
-    graderField(s.grader),
+    graderWrite(s.grader),
   ]);
   return "removed";
 }
@@ -739,7 +739,7 @@ export async function saveGrade(
         ...gradeFields(input.grade, spaceNames),
         ...sessionFields(input.session),
       },
-      graderField(s.grader),
+      graderWrite(s.grader),
     ],
   );
 }
@@ -786,7 +786,7 @@ export async function reassignGrader(
       ),
   ]);
   await mirrorSession(sessionId, { kind: "assignment", phase: null }, (s) => [
-    graderField(s.grader),
+    graderWrite(s.grader),
   ]);
   return { submitted: await submittedGraders(sessionId) };
 }
@@ -804,7 +804,7 @@ export async function clearGraders(
       ),
     );
   await mirrorSession(sessionId, { kind: "assignment", phase: null }, (s) => [
-    graderField(s.grader),
+    graderWrite(s.grader),
   ]);
   return { submitted: await submittedGraders(sessionId) };
 }

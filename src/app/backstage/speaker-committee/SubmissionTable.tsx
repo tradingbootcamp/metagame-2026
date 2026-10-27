@@ -1,7 +1,7 @@
 import Link from "next/link";
 import InfoTip from "@/app/grade/InfoTip";
 import InlineSelect from "@/app/grade/InlineSelect";
-import ShepherdPicker from "@/app/grade/ShepherdPicker";
+import AccountPicker, { type PickerField } from "@/app/grade/AccountPicker";
 import {
   MEGAGAME_INTEGRATION_INFO,
   PIPELINE_COLORS,
@@ -122,18 +122,18 @@ export function SubmissionGroup({
         colors={PIPELINE_COLORS[field]}
       />,
     );
-  const shepherd = (row: Row) =>
-    cell(
-      "Shepherd",
-      <ShepherdPicker
+  const picker = (row: Row, field: PickerField, label: string) => {
+    const userId = field === "grader" ? row.graderId : row.shepherdId;
+    const name = field === "grader" ? row.grader : row.shepherd;
+    return cell(
+      label,
+      <AccountPicker
         sessionId={row.id}
-        value={
-          row.shepherdId && row.shepherd
-            ? { userId: row.shepherdId, label: row.shepherd }
-            : null
-        }
+        field={field}
+        value={userId && name ? { userId, label: name } : null}
       />,
     );
+  };
 
   return (
     <section>
@@ -188,10 +188,10 @@ export function SubmissionGroup({
                   {row.host || "—"}
                 </span>
               </span>
-              {pill(row, "grader", row.grader, "Grader")}
+              {picker(row, "grader", "Grader")}
               {pill(row, "verdict", row.verdict, "Verdict")}
               {pill(row, "nextSteps", row.nextSteps, "Next steps")}
-              {shepherd(row)}
+              {picker(row, "shepherd", "Shepherd")}
               {pill(row, "speakerTier", row.speakerTier, "Speaker tier")}
               {pill(
                 row,

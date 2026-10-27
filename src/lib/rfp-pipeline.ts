@@ -32,6 +32,8 @@ export type Row = {
   placed: boolean;
   /** The latest-assigned grader's committee name, as the Grader column shows. */
   grader: string | null;
+  /** That grader's account, for the Grader picker. */
+  graderId: string | null;
   graderIds: string[];
   shepherd: string | null;
   shepherdId: string | null;
@@ -69,6 +71,7 @@ export function toRow(s: RfpSession): Row {
     phase: s.phase,
     placed: s.row.startsAt !== null,
     grader: s.grader ? committeeLabel(s.grader) : null,
+    graderId: s.grader?.userId ?? null,
     graderIds: s.grades.map((g) => g.grader.userId),
     shepherd: s.shepherd ? committeeLabel(s.shepherd) : null,
     shepherdId: s.shepherd?.userId ?? null,

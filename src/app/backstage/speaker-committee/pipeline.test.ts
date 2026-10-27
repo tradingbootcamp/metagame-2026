@@ -10,6 +10,7 @@ const row = (over: Partial<Row>): Row => ({
   phase: null,
   placed: false,
   grader: null,
+  graderId: null,
   graderIds: [],
   shepherd: null,
   shepherdId: null,
