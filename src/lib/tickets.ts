@@ -272,6 +272,44 @@ export function tierLabelForPaymentLinkUrl(
   return dayPassForPaymentLinkUrl(url)?.label;
 }
 
+// Stripe product names → tier labels, for checkouts that come from neither
+// /api/checkout/stripe nor a Payment Link in this file (e.g. a product made in
+// the dashboard and sold through a dashboard-issued checkout). Keys are matched
+// case-insensitively on the product name as Stripe reports it.
+const PRODUCT_TIER_LABELS: Record<string, string> = {
+  "metagame 2026": ticketTiers[0].label,
+  "metagame 2026 -- supporter": supporterTier.label,
+  "metagame 2026 day pass - friday": "Friday Day Pass",
+  "metagame 2026 day pass - saturday": "Saturday Day Pass",
+  "metagame 2026 day pass - sunday": "Sunday Day Pass",
+  "metagame 2026 - guest of honor": "Guest of Honor",
+};
+
+/**
+ * The tier label to store for a Stripe checkout, so the tickets table and the
+ * Airtable "Ticket Type" read "Standard" / "Supporter" / "Guest of Honor" no
+ * matter which rail sold the ticket (BTC checkouts already store labels).
+ * Site-created sessions carry the tier in metadata; old Payment Links match by
+ * URL; anything else maps by product name, falling back to the raw name so an
+ * unmapped product is still recorded rather than blank.
+ */
+export function tierLabelForStripeCheckout({
+  metadata,
+  paymentLinkUrl,
+  productName,
+}: {
+  metadata: Record<string, string> | null | undefined;
+  paymentLinkUrl: string | null | undefined;
+  productName: string | undefined;
+}): string | undefined {
+  return (
+    tierForCheckoutMetadata(metadata)?.label ??
+    tierLabelForPaymentLinkUrl(paymentLinkUrl) ??
+    (productName && PRODUCT_TIER_LABELS[productName.trim().toLowerCase()]) ??
+    productName
+  );
+}
+
 /**
  * Checkout URL for the active Stripe mode, with the early-bird promo code
  * prefilled. Returns null when no link is configured for this mode yet, so the
