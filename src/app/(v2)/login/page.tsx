@@ -23,15 +23,8 @@ export default async function LoginPage({
 
   return (
     <ContentPage
-      eyebrow="Account"
       title="Sign in"
-      intro={
-        <p>
-          Enter your email to sign in or create an account. If you have a
-          password we&apos;ll ask for it; otherwise we&apos;ll email you a
-          one-time code.
-        </p>
-      }
+      intro={<p>Enter your email to sign in or create an account.</p>}
     >
       <AuthForm next={target} />
     </ContentPage>
