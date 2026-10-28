@@ -85,7 +85,9 @@ export default function PosterForm({
             }`}
             style={{
               aspectRatio: landscape
-                ? "11 / 8.5"
+                ? size === "letter"
+                  ? "11 / 8.5"
+                  : "19 / 13"
                 : size === "letter"
                   ? "8.5 / 11"
                   : "13 / 19",

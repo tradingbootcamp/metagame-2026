@@ -42,7 +42,12 @@ export default async function PostersPage() {
   return (
     <main className="min-h-screen bg-[#fffaf0] px-6 py-16 text-[#19345b]">
       <div className="mx-auto max-w-5xl">
-        <h1 className="mb-8 text-4xl font-bold">Posters</h1>
+        <h1 className="mb-4 text-4xl font-bold">Posters</h1>
+        <p className="mb-8 max-w-2xl">
+          Choose a location, design, and paper size. Both designs include our
+          Gold, Silver, and Patron sponsors in every preview and download. Print
+          at actual size (100%) to keep the quarter-inch margins.
+        </p>
         {options ? (
           <PosterForm
             options={options}

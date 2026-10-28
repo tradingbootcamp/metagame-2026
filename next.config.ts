@@ -12,7 +12,10 @@ validateEnv();
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
-    "/api/posters": ["./assets/posters/*.pdf"],
+    "/api/posters": [
+      "./assets/posters/*.pdf",
+      "./assets/posters/sponsors/*.png",
+    ],
     // The sent-email catalog reads emails/ at request time. Keys are globs,
     // so `[slug]` can't be spelled out.
     "/backstage/emails": ["./emails/*"],

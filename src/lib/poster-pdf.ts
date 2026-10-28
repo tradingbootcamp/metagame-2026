@@ -26,6 +26,7 @@ const templates = {
     width: 612,
     height: 792,
     qr: { x: 91, top: 578, size: 89.5 },
+    sponsors: { x: 89, top: 688, width: 434, height: 84 },
   },
   "d20-13x19": {
     file: "poster_d20_13x19.pdf",
@@ -33,6 +34,7 @@ const templates = {
     width: 936,
     height: 1368,
     qr: { x: 138.5, top: 961, size: 138.5 },
+    sponsors: { x: 136, top: 1144, width: 664, height: 186 },
   },
   "chess-letter": {
     file: "poster_chess_letter.pdf",
@@ -40,6 +42,7 @@ const templates = {
     width: 792,
     height: 612,
     qr: { x: 38.5, top: 364, size: 107.5 },
+    sponsors: { x: 35, top: 511, width: 300, height: 78 },
   },
   "chess-13x19": {
     file: "poster_chess_13x19.pdf",
@@ -47,6 +50,7 @@ const templates = {
     width: 1368,
     height: 936,
     qr: { x: 58, top: 556, size: 166 },
+    sponsors: { x: 55, top: 782, width: 465, height: 126 },
   },
 };
 
@@ -82,6 +86,21 @@ export async function createPosterPdf(
     throw new Error("Poster artwork geometry changed; reverify QR placement");
   }
   const qr = template.qr;
+  const sponsors = await source.embedPng(
+    await readFile(
+      path.join(
+        process.cwd(),
+        "assets/posters/sponsors",
+        `${design}-${size}.png`,
+      ),
+    ),
+  );
+  page.drawImage(sponsors, {
+    x: template.sponsors.x,
+    y: page.getHeight() - template.sponsors.top - template.sponsors.height,
+    width: template.sponsors.width,
+    height: template.sponsors.height,
+  });
   const y = page.getHeight() - qr.top - qr.size;
   page.drawRectangle({
     x: qr.x,
@@ -111,6 +130,7 @@ export async function createPosterPdf(
   const [width, height] =
     design === "chess" ? [...portrait].reverse() : portrait;
   const target = output.addPage([width, height]);
+  await source.flush();
   const [artwork] = await output.embedPages([page]);
   const scale = Math.min(
     (width - 2 * PRINT_MARGIN) / template.width,
