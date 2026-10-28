@@ -25,7 +25,11 @@ function Messages({ state }: { state: AuthState }) {
   );
 }
 
-/** A link-styled submit that fires one of the action's intents. */
+/**
+ * A link-styled submit that fires one of the action's intents. None of them
+ * need the step's fields, so they skip the browser's required-field check
+ * (otherwise "Use a different email" would demand a password first).
+ */
 function IntentButton({
   intent,
   disabled,
@@ -40,6 +44,7 @@ function IntentButton({
       type="submit"
       name="intent"
       value={intent}
+      formNoValidate
       disabled={disabled}
       className={LINK}
     >
