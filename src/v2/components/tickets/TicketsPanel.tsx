@@ -77,20 +77,28 @@ export default function TicketsPanel({
   const [dayPassOpen, setDayPassOpen] = useState(false);
   const [familyPackOpen, setFamilyPackOpen] = useState(false);
   const [discountOpen, setDiscountOpen] = useState(false);
-  // /#supporter deep-links into the modal (e.g. from /sponsor); the tile's id
-  // gives the browser its scroll target. Closing drops the hash so a repeat
-  // click on the same link changes the URL again and reopens it.
+  // /#supporter and /#family-pack deep-link into their modals (e.g. from
+  // /sponsor and emails); the tile's id gives the browser its scroll target.
+  // Closing drops the hash so a repeat click on the same link changes the URL
+  // again and reopens it.
   const router = useRouter();
   const pathname = usePathname();
-  const closeSupporter = () => {
-    setSupporterOpen(false);
-    if (window.location.hash === "#supporter") {
+  const closeHashModal = (hash: string, close: () => void) => () => {
+    close();
+    if (window.location.hash === hash) {
       router.replace(pathname, { scroll: false });
     }
   };
+  const closeSupporter = closeHashModal("#supporter", () =>
+    setSupporterOpen(false),
+  );
+  const closeFamilyPack = closeHashModal("#family-pack", () =>
+    setFamilyPackOpen(false),
+  );
   useEffect(() => {
     const check = () => {
       if (window.location.hash === "#supporter") setSupporterOpen(true);
+      if (window.location.hash === "#family-pack") setFamilyPackOpen(true);
     };
     check();
     window.addEventListener("hashchange", check);
@@ -267,6 +275,7 @@ export default function TicketsPanel({
         <Button
           type="button"
           variant="raised"
+          id="family-pack"
           onClick={() => setFamilyPackOpen(true)}
           // Narrower padding so the long label fits the shared 210px tile.
           className={TILE.replace("px-7", "px-4")}
@@ -309,9 +318,7 @@ export default function TicketsPanel({
       {discountOpen && (
         <DiscountRateModal onClose={() => setDiscountOpen(false)} />
       )}
-      {familyPackOpen && (
-        <FamilyPackModal onClose={() => setFamilyPackOpen(false)} />
-      )}
+      {familyPackOpen && <FamilyPackModal onClose={closeFamilyPack} />}
       {btcOpen && standard && (
         <BtcModal
           ticket={standard}
