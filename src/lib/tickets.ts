@@ -276,6 +276,11 @@ export function tierLabelForPaymentLinkUrl(
 // /api/checkout/stripe nor a Payment Link in this file (e.g. a product made in
 // the dashboard and sold through a dashboard-issued checkout). Keys are matched
 // case-insensitively on the product name as Stripe reports it.
+// A booth is sold through the same checkout as tickets and gets a tickets row
+// like any admission (vendors are checked in by ticket code too); the label is
+// what tells it apart in the tickets table and Airtable.
+export const NIGHT_MARKET_BOOTH_LABEL = "Night Market Booth";
+
 const PRODUCT_TIER_LABELS: Record<string, string> = {
   "metagame 2026": ticketTiers[0].label,
   "metagame 2026 -- supporter": supporterTier.label,
@@ -283,6 +288,7 @@ const PRODUCT_TIER_LABELS: Record<string, string> = {
   "metagame 2026 day pass - saturday": "Saturday Day Pass",
   "metagame 2026 day pass - sunday": "Sunday Day Pass",
   "metagame 2026 - guest of honor": "Guest of Honor",
+  "metagame night market booth": NIGHT_MARKET_BOOTH_LABEL,
 };
 
 /**

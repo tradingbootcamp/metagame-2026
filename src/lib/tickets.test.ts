@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  NIGHT_MARKET_BOOTH_LABEL,
   dayPasses,
   supporterTier,
   ticketTiers,
@@ -80,5 +81,17 @@ describe("tierLabelForStripeCheckout", () => {
         productName: undefined,
       }),
     ).toBeUndefined();
+  });
+});
+
+describe("Night Market booth", () => {
+  it("records under its own label so check-in can tell it from a ticket", () => {
+    expect(
+      tierLabelForStripeCheckout({
+        metadata: null,
+        paymentLinkUrl: undefined,
+        productName: "Metagame Night Market Booth",
+      }),
+    ).toBe(NIGHT_MARKET_BOOTH_LABEL);
   });
 });
