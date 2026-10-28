@@ -5,7 +5,7 @@ export const FAMILY_PACK = {
   id: "family-friends",
   label: "Family & Friends Pack",
   usd: 375,
-  min: 4,
+  min: 2,
   max: 6,
   priceIds: {
     test: "price_1US939CtO443EG3nJQbU6ork",
@@ -27,7 +27,7 @@ export function parsePackAttendees(value: unknown): PackAttendee[] {
     value.length < FAMILY_PACK.min ||
     value.length > FAMILY_PACK.max
   ) {
-    throw new Error("Choose 4–6 paid attendees.");
+    throw new Error("Choose 2–6 paid attendees.");
   }
   return value.map((entry: unknown) => {
     if (!entry || typeof entry !== "object")

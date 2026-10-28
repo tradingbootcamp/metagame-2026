@@ -13,7 +13,7 @@ const attendees = (count: number) =>
   }));
 
 describe("family pack eligibility", () => {
-  it.each([4, 5, 6])(
+  it.each([2, 3, 4, 5, 6])(
     "round-trips %i named admissions through Stripe metadata",
     (count) => {
       expect(
@@ -23,7 +23,7 @@ describe("family pack eligibility", () => {
       ).toEqual(attendees(count));
     },
   );
-  it.each([0, 1, 2, 3, 7, 100])("rejects %i admissions", (count) => {
+  it.each([0, 1, 7, 100])("rejects %i admissions", (count) => {
     expect(() => parsePackAttendees(attendees(count))).toThrow();
   });
   it("keeps an optional Discord handle without its leading @", () => {
@@ -52,7 +52,7 @@ describe("family pack eligibility", () => {
 });
 
 describe("group accounting", () => {
-  it.each([4, 5, 6])(
+  it.each([2, 3, 4, 5, 6])(
     "retains every cent of fees and net across %i tickets",
     (count) => {
       for (const cents of [0, 1, 17, 4381, count * 37500 - 4381]) {
