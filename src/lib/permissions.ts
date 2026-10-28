@@ -102,6 +102,13 @@ export const PERMISSIONS = {
       "Approve or reject proposals, add plans, run imports and connect Xero.",
     implies: ["budget.view"],
   },
+  "emails.view": {
+    audience: "team",
+    group: "Emails",
+    level: "view",
+    label: "View sent emails",
+    description: "The announcements and other emails we've sent, as a catalog.",
+  },
   "api_keys.self": {
     audience: "team",
     group: "API keys",

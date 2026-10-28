@@ -5,6 +5,7 @@ import {
   KeyIcon,
   LinkIcon,
   type LucideIcon,
+  MailIcon,
   MicIcon,
   TicketIcon,
   UserIcon,
@@ -33,6 +34,13 @@ const TOOLS: {
     name: "Tracking links",
     blurb: "Short /go/ links with UTM attribution.",
     perm: "links.manage",
+  },
+  {
+    href: "/backstage/emails",
+    icon: MailIcon,
+    name: "Sent emails",
+    blurb: "The announcements and other emails we've sent, to read back.",
+    perm: "emails.view",
   },
   {
     href: "/backstage/promo",
