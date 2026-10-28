@@ -7,6 +7,7 @@ import goodhartLabs from "../../../public/images/sponsors/goodhart-labs-logos/sv
 import manifund from "../../../public/images/sponsors/manifund_logo.png";
 import outsideTheAsylum from "../../../public/images/sponsors/outside_the_asylum.png";
 import rogueSignal from "../../../public/images/sponsors/rogue_signal/rogue_signal_horiz.svg";
+import spire from "../../../public/images/sponsors/spire.svg";
 
 export type Sponsor = {
   name: string;
@@ -53,6 +54,7 @@ export const PATRON_SPONSORS: Sponsor[] = [
     url: "https://franciscosan.org",
     logo: franciscoSan,
   },
+  { name: "The Spire", logo: spire },
   { name: "Manifund", url: "https://manifund.org", logo: manifund },
   {
     name: "Outside the Asylum",

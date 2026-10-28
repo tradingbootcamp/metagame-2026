@@ -660,7 +660,7 @@ export default function Home() {
                 label: "Patron",
                 sponsors: PATRON_SPONSORS,
                 logo: "h-14 md:h-[72px]",
-                // 2x2 on phones; logos shrink to fit their column.
+                // Two columns on phones; logos shrink to fit their column.
                 row: "grid w-full grid-cols-2 justify-items-center gap-x-6 gap-y-8 md:flex md:flex-wrap md:justify-center md:gap-x-12 md:gap-y-6",
               },
             ].map(({ label, sponsors, logo, row }) => (

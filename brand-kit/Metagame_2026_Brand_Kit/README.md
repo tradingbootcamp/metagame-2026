@@ -1,6 +1,6 @@
 # Metagame 2026 brand kit
 
-A working collection derived from the public Metagame website, reviewed September 28, 2026. Sponsor roster updated October 15, 2026. Open `reference/Metagame_2026_Brand_Guide.pdf` for usage guidance.
+A working collection derived from the public Metagame website, reviewed September 28, 2026. The Spire added to the Patron roster October 28, 2026. Open `reference/Metagame_2026_Brand_Guide.pdf` for usage guidance.
 
 ## Contents
 
@@ -14,9 +14,10 @@ A working collection derived from the public Metagame website, reviewed Septembe
 
 - Gold: Rogue Signal.
 - Silver: d_model.
-- Patron, in website display order: Arbor Trading Bootcamp, Francisco San, Manifund, Outside the Asylum.
+- Patron, in website display order: Arbor Trading Bootcamp, Francisco San, The Spire, Manifund, Outside the Asylum.
 - d_model artwork: `sponsors/d-model.png`, copied unchanged from `public/images/sponsors/dmodel_logo.png` in the website repository. Sponsor link: https://dmodel.ai. Silver sponsorship confirmed in the October 11–13 email thread; this is the logo already used on the website. No newer logo was found in the connected sponsor email thread as of October 15, 2026.
 - Arbor artwork: `sponsors/arbor.png`, copied unchanged from `public/images/sponsors/arbor_logo.png` in the website repository. Sponsor link: https://www.trading.camp.
+- The Spire artwork: `sponsors/spire/spire-logo-3.svg`, supplied by David on October 28, 2026 and preserved unchanged. See [provenance and usage](sponsors/spire/README.md). Patron sponsorship confirmed by David; no website URL verified.
 - Preserve each sponsor mark's proportions and supplied colors. Use comparable visual weight within a tier, with Gold larger than Silver and Silver larger than Patron.
 
 ## Type
@@ -29,7 +30,7 @@ A working collection derived from the public Metagame website, reviewed Septembe
 
 The fonts are referenced, not bundled. Install or load them before editing templates.
 
-The bundled PDF guide sponsor page was updated October 15, 2026 to include d_model in the Silver tier. The remaining five pages retain the original guide content.
+The bundled PDF guide is a historical snapshot: its sponsor page was updated October 15, 2026 to include d_model in the Silver tier. The remaining five pages retain the original guide content.
 
 ## Sources
 
