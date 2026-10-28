@@ -24,12 +24,18 @@ export type PipelineField = (typeof PIPELINE_FIELDS)[number];
 export type Row = {
   /** The session id. */
   id: string;
+  /** For the session page the Scheduled column links to. */
+  slug: string;
   title: string;
   /** The hosts' names; empty when none has one. */
   host: string;
   phase: RfpSession["phase"];
   /** On the grid: has a start time. */
   placed: boolean;
+  /** Where it sits on the grid, ISO like ScheduleSession; null until placed. */
+  startsAt: string | null;
+  endsAt: string | null;
+  locationId: string | null;
   /** The latest-assigned grader's committee name, as the Grader column shows. */
   grader: string | null;
   /** That grader's account, for the Grader picker. */
@@ -66,10 +72,14 @@ export const hostNames = (hosts: { name: string }[]) =>
 export function toRow(s: RfpSession): Row {
   return {
     id: s.sessionId,
+    slug: s.slug,
     title: s.title,
     host: hostNames(s.hosts),
     phase: s.phase,
     placed: s.row.startsAt !== null,
+    startsAt: s.row.startsAt?.toISOString() ?? null,
+    endsAt: s.row.endsAt?.toISOString() ?? null,
+    locationId: s.row.locationId,
     grader: s.grader ? committeeLabel(s.grader) : null,
     graderId: s.grader?.userId ?? null,
     graderIds: s.grades.map((g) => g.grader.userId),
@@ -153,7 +163,7 @@ export const PIPELINE_COLORS: Record<PipelineField, Record<string, string>> = {
     "5. Shepherd meeting": "blueLight1",
     "6. Add to schedule": "blueBright",
     "7. None! We're good :) ": "grayLight2",
-    "N/A": "grayLight2",
+    "Not adding to schedule": "grayLight2",
   },
   speakerTier: {
     "Free ticket + flights + housing": "blueLight2",

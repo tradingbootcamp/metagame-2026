@@ -91,6 +91,13 @@ export const TABS = [
     in: (r) => r.phase === "ready",
     role: "shepherd",
   },
+  {
+    key: "not-scheduling",
+    label: "Not scheduling",
+    blurb: "Decided against putting this on the schedule.",
+    in: (r) => r.phase === "declined",
+    role: "either",
+  },
 ] as const satisfies readonly {
   key: string;
   label: string;
@@ -136,7 +143,38 @@ export function myCounts(
   ) as Record<TabKey, number>;
 }
 
+export const GROUPINGS = [
+  { key: "step", label: "By step" },
+  { key: "shepherd", label: "By shepherd" },
+] as const;
+export type Grouping = (typeof GROUPINGS)[number]["key"];
+
+/**
+ * The All tab's rows bucketed by shepherd, each bucket named. Unassigned
+ * comes last, the way the Shepherd sort pushes it to the bottom.
+ */
+export function byShepherd(rows: Row[]): { title: string; rows: Row[] }[] {
+  const names = [
+    ...new Set(rows.map((r) => r.shepherd).filter((n): n is string => !!n)),
+  ].sort((a, b) => a.localeCompare(b));
+  const groups = names.map((name) => ({
+    title: name,
+    rows: rows.filter((r) => r.shepherd === name),
+  }));
+  const unassigned = rows.filter((r) => !r.shepherd);
+  return unassigned.length > 0
+    ? [...groups, { title: "No shepherd", rows: unassigned }]
+    : groups;
+}
+
 export function compare(a: Row, b: Row, sort: SortKey) {
+  if (sort === "scheduled") {
+    // Unplaced rows last, so an ascending sort reads as the running order.
+    if (a.startsAt === b.startsAt) return a.title.localeCompare(b.title);
+    if (!a.startsAt) return 1;
+    if (!b.startsAt) return -1;
+    return a.startsAt.localeCompare(b.startsAt);
+  }
   if (sort === "host") {
     return a.host.localeCompare(b.host) || a.title.localeCompare(b.title);
   }

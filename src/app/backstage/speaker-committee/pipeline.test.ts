@@ -1,14 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { compare, myCounts, stepsOf, tabRows, TABS } from "./pipeline";
+import {
+  byShepherd,
+  compare,
+  myCounts,
+  stepsOf,
+  tabRows,
+  TABS,
+} from "./pipeline";
 import { durationMinutes } from "@/lib/rfp-fields";
 import type { Row } from "@/lib/rfp-pipeline";
 
 const row = (over: Partial<Row>): Row => ({
   id: "00000000-0000-0000-0000-000000000000",
+  slug: "a",
   title: "A",
   host: "",
   phase: null,
   placed: false,
+  startsAt: null,
+  endsAt: null,
+  locationId: null,
   grader: null,
   graderId: null,
   graderIds: [],
@@ -144,6 +155,56 @@ describe("compare", () => {
         "megagame",
       ),
     ).toEqual(["deep", "puzzle", "premade", "none", "undecided"]);
+  });
+});
+
+describe("not-scheduling tab", () => {
+  it("collects the declined phase, which no other tab shows", () => {
+    const declined = [
+      ...rows,
+      row({ id: "12", phase: "declined" }),
+      row({ id: "13", phase: "declined", shepherdId: "ana" }),
+    ];
+    expect(ids(tabRows(declined, tab("not-scheduling"), "ana", false))).toEqual(
+      ["12", "13"],
+    );
+    // Every other tab leaves it alone, so nothing is double-counted.
+    for (const t of TABS) {
+      if (t.key === "not-scheduling" || t.key === "all") continue;
+      expect(ids(tabRows(declined, t, "ana", false))).not.toContain("12");
+    }
+  });
+});
+
+describe("byShepherd", () => {
+  it("groups by name, alphabetically, with unassigned last", () => {
+    const groups = byShepherd([
+      row({ id: "a", shepherd: "Bo" }),
+      row({ id: "b", shepherd: null }),
+      row({ id: "c", shepherd: "Ana" }),
+      row({ id: "d", shepherd: "Bo" }),
+    ]);
+    expect(groups.map((g) => g.title)).toEqual(["Ana", "Bo", "No shepherd"]);
+    expect(groups.map((g) => ids(g.rows))).toEqual([["c"], ["a", "d"], ["b"]]);
+  });
+
+  it("leaves out the unassigned group when everything has a shepherd", () => {
+    const groups = byShepherd([row({ id: "a", shepherd: "Ana" })]);
+    expect(groups.map((g) => g.title)).toEqual(["Ana"]);
+  });
+});
+
+describe("compare by scheduled", () => {
+  it("orders by start time and sinks the unplaced", () => {
+    expect(
+      ids(
+        [
+          row({ id: "none" }),
+          row({ id: "late", startsAt: "2026-06-13T20:00:00.000Z" }),
+          row({ id: "early", startsAt: "2026-06-12T17:00:00.000Z" }),
+        ].sort((a, b) => compare(a, b, "scheduled")),
+      ),
+    ).toEqual(["early", "late", "none"]);
   });
 });
 

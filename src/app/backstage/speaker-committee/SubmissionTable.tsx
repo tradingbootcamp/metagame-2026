@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatPacificDay, formatPacificTime } from "@/lib/schedule";
 import InfoTip from "@/app/grade/InfoTip";
 import InlineSelect from "@/app/grade/InlineSelect";
 import AccountPicker, { type PickerField } from "@/app/grade/AccountPicker";
@@ -27,6 +28,7 @@ export const SORTS = [
   "shepherd",
   "tier",
   "megagame",
+  "scheduled",
 ] as const;
 export type SortKey = (typeof SORTS)[number];
 
@@ -38,9 +40,13 @@ export type SortState = {
   base: Record<string, string>;
 };
 
-/** Pill options per pipeline column. */
+/** Pill options per pipeline column, and what the Scheduled column needs. */
 export type TableMeta = {
   options: Record<PipelineField, readonly string[]>;
+  /** Location id → name, for the room a placed session sits in. */
+  rooms: Record<string, string>;
+  /** Pre-launch the session pages 404, so the time reads as plain text. */
+  linkSessions: boolean;
 };
 
 function SortLink({
@@ -96,8 +102,8 @@ export function SubmissionGroup({
   if (rows.length === 0) return null;
 
   const cols = lead
-    ? "lg:grid-cols-[1.5rem_minmax(0,1fr)_repeat(6,6.5rem)]"
-    : "lg:grid-cols-[minmax(0,1fr)_repeat(6,6.5rem)]";
+    ? "lg:grid-cols-[1.5rem_minmax(0,1fr)_repeat(6,6.5rem)_9rem]"
+    : "lg:grid-cols-[minmax(0,1fr)_repeat(6,6.5rem)_9rem]";
 
   const cell = (label: string, control: React.ReactNode) => (
     <span className="flex min-w-0 items-center gap-1.5">
@@ -122,6 +128,34 @@ export function SubmissionGroup({
         colors={PIPELINE_COLORS[field]}
       />,
     );
+  const scheduled = (row: Row) => {
+    if (!row.placed || !row.startsAt) {
+      return cell(
+        "Scheduled",
+        <span className="text-sm text-ink/40">Not yet scheduled</span>,
+      );
+    }
+    const when = `${formatPacificDay(row.startsAt)} ${formatPacificTime(row.startsAt)}`;
+    const room = row.locationId ? meta.rooms[row.locationId] : null;
+    return cell(
+      "Scheduled",
+      <span className="min-w-0 text-sm">
+        {meta.linkSessions ? (
+          <Link
+            href={`/schedule/${row.slug}`}
+            className="block truncate text-navy hover:text-meeple hover:underline"
+          >
+            {when}
+          </Link>
+        ) : (
+          <span className="block truncate text-ink/70">{when}</span>
+        )}
+        <span className="block truncate text-xs text-ink/50">
+          {room ?? "No room"}
+        </span>
+      </span>,
+    );
+  };
   const picker = (row: Row, field: PickerField, label: string) => {
     const userId = field === "grader" ? row.graderId : row.shepherdId;
     const name = field === "grader" ? row.grader : row.shepherd;
@@ -168,6 +202,7 @@ export function SubmissionGroup({
             <SortLink column="megagame" label="Megagame" state={state} />
             <InfoTip text={MEGAGAME_INTEGRATION_INFO} />
           </span>
+          <SortLink column="scheduled" label="Scheduled" state={state} />
         </div>
 
         <ul className="divide-y divide-line">
@@ -199,6 +234,7 @@ export function SubmissionGroup({
                 row.megagameIntegration,
                 "Megagame",
               )}
+              {scheduled(row)}
             </li>
           ))}
         </ul>

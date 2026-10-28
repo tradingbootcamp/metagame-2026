@@ -33,7 +33,7 @@ export const NEXT_STEPS_PHASE: Record<
   "5. Shepherd meeting": "shepherding",
   "6. Add to schedule": "scheduling",
   "7. None! We're good :) ": "ready",
-  "N/A": "declined",
+  "Not adding to schedule": "declined",
 };
 
 export const VERDICT_LABELS: Labels<typeof sessionVerdict> = {
@@ -169,7 +169,7 @@ export function nextStepsFor(
       // The trailing space is part of the Airtable option.
       return "7. None! We're good :) ";
     case "declined":
-      return "N/A";
+      return "Not adding to schedule";
   }
 }
 
