@@ -16,7 +16,6 @@ import { ticketCode } from "@/lib/ticket-code";
 import { currentTicketCode, recordTicket } from "@/lib/ticket-store";
 import {
   dayPassForPaymentLinkUrl,
-  isAdmissionLabel,
   tierForCheckoutMetadata,
   tierLabelForStripeCheckout,
 } from "@/lib/tickets";
@@ -189,9 +188,6 @@ export async function POST(request: Request) {
       paymentLinkUrl,
       productName: product && "name" in product ? product.name : undefined,
     });
-    // A Night Market booth is a purchase, not an admission: it's logged for
-    // finance but gets no tickets row, ticket code or ticket email.
-    const admission = isAdmissionLabel(ticketType);
 
     // The customer-facing promo code (e.g. "EARLYBIRD") — the coupon is the
     // discount definition behind it; this is the string the buyer actually used.
@@ -231,9 +227,7 @@ export async function POST(request: Request) {
       // Prefer the PaymentIntent id (the canonical payment) as the upsert key.
       id: paymentIntent?.id ?? full.id,
       // A retry after an unclaim must not write the old code back.
-      ticketCode: admission
-        ? await currentTicketCode(paymentIntent?.id ?? full.id)
-        : undefined,
+      ticketCode: await currentTicketCode(paymentIntent?.id ?? full.id),
       customerName: full.customer_details?.name ?? undefined,
       preferredName,
       customerEmail: full.customer_details?.email ?? undefined,
@@ -255,7 +249,7 @@ export async function POST(request: Request) {
       test: !event.livemode || isTestCoupon,
     };
     await recordPurchase(purchase);
-    if (admission) await recordTicket(purchase);
+    await recordTicket(purchase);
     await capturePurchase(purchase);
 
     // Confirmation email once the money is settled (or none was owed): card
@@ -263,7 +257,7 @@ export async function POST(request: Request) {
     // still-Pending session. Failures are soft: the purchase is already recorded,
     // so log + alert instead of a 500 (which would make Stripe retry the event).
     const email = full.customer_details?.email;
-    if (admission && status === "Paid" && email) {
+    if (status === "Paid" && email) {
       // Buyers join the mailing list unless their email has been on it before.
       // Soft-fail, like the email below.
       let addedToMailingList = false;
