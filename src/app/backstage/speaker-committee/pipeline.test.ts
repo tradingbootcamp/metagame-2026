@@ -125,19 +125,9 @@ describe("stepsOf", () => {
 });
 
 describe("compare", () => {
-  it("sorts tier and Megagame in option order, blanks last", () => {
-    const sorted = (rs: Row[], sort: "tier" | "megagame") =>
+  it("sorts Megagame in option order, blanks last", () => {
+    const sorted = (rs: Row[], sort: "megagame") =>
       ids([...rs].sort((a, b) => compare(a, b, sort)));
-    expect(
-      sorted(
-        [
-          row({ id: "blank" }),
-          row({ id: "ticket", speakerTier: "Free ticket" }),
-          row({ id: "full", speakerTier: "Free ticket + flights + housing" }),
-        ],
-        "tier",
-      ),
-    ).toEqual(["full", "ticket", "blank"]);
     expect(
       sorted(
         [
