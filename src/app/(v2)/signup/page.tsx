@@ -1,15 +1,8 @@
-import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { currentSession } from "@/lib/auth";
 import { safeNextPath } from "@/lib/next-path";
-import AuthForm from "@/v2/components/auth/AuthForm";
-import ContentPage from "@/v2/components/ContentPage";
 
-export const metadata: Metadata = {
-  title: "Create an account — Metagame 2026",
-  robots: { index: false },
-};
-
+// Sign-up is folded into /login (it asks for the email first and creates
+// the account when the address is new); old links land there.
 export default async function SignupPage({
   searchParams,
 }: {
@@ -17,20 +10,9 @@ export default async function SignupPage({
 }) {
   const { next } = await searchParams;
   const target = safeNextPath(Array.isArray(next) ? next[0] : next);
-  if (await currentSession()) redirect(target);
-
-  return (
-    <ContentPage
-      eyebrow="Account"
-      title="Create an account"
-      intro={
-        <p>
-          Enter your email and we&apos;ll send a six-digit code to confirm it.
-          That&apos;s the whole sign-up; you can add a password afterwards.
-        </p>
-      }
-    >
-      <AuthForm mode="signup" next={target} />
-    </ContentPage>
+  redirect(
+    target === "/account"
+      ? "/login"
+      : `/login?next=${encodeURIComponent(target)}`,
   );
 }

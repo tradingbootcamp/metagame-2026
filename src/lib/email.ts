@@ -381,8 +381,9 @@ export async function sendAccountInviteEmail({
     console.warn(`[email] Resend not configured — account invite for ${to}`);
     return;
   }
-  // ?by=code opens the code form; the password form is the default.
-  const login = `${SITE}/login?by=code`;
+  // /login asks for the email first and, with no password on the account
+  // yet, sends the code straight away.
+  const login = `${SITE}/login`;
   const { error } = await resend.emails.send({
     from: NO_REPLY,
     to,

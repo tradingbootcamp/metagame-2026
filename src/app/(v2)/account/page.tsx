@@ -32,9 +32,9 @@ export const metadata: Metadata = {
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ notice?: string; tab?: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
-  const { notice, tab } = await searchParams;
+  const { tab } = await searchParams;
   const initialTab = parseAccountTab(tab);
   const session = await currentSession();
   if (!session)
@@ -74,11 +74,6 @@ export default async function AccountPage({
   return (
     // Same measure and top clearance as ContentPage, without its title block.
     <div className="mx-auto max-w-[1180px] px-8 pt-28 pb-20">
-      {notice === "welcome-back" && (
-        <p className="mb-8 text-base text-ink/70">
-          Looks like you already had an account, so we signed you in.
-        </p>
-      )}
       <AccountTabs
         initial={initialTab}
         trailing={

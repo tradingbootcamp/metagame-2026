@@ -1,13 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useRef } from "react";
 import PinInput from "./PinInput";
-import {
-  authenticate,
-  type AuthMode,
-  type AuthState,
-} from "@/app/(v2)/login/actions";
+import { authenticate, type AuthState } from "@/app/(v2)/login/actions";
 import { Button } from "@/v2/components/ui/button";
 import { Input } from "@/v2/components/ui/input";
 import { FIELD_LIGHT } from "@/v2/components/styles";
@@ -30,32 +25,123 @@ function Messages({ state }: { state: AuthState }) {
   );
 }
 
-export default function AuthForm({
-  mode,
-  next,
-  startByCode,
+/** A link-styled submit that fires one of the action's intents. */
+function IntentButton({
+  intent,
+  disabled,
+  children,
 }: {
-  mode: AuthMode;
-  next: string;
-  /** Open on the email-code form, for people who have no password yet. */
-  startByCode?: boolean;
+  intent: string;
+  disabled: boolean;
+  children: React.ReactNode;
 }) {
+  return (
+    <button
+      type="submit"
+      name="intent"
+      value={intent}
+      disabled={disabled}
+      className={LINK}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Email first; the next step depends on what that address has. See the
+// state chart in login/actions.ts.
+export default function AuthForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState(authenticate, initial);
-  const [byCode, setByCode] = useState(startByCode || mode === "signup");
   const verifyButton = useRef<HTMLButtonElement>(null);
 
-  const hidden = (
-    <>
-      <input type="hidden" name="mode" value={mode} />
-      <input type="hidden" name="next" value={next} />
-    </>
+  const hidden = <input type="hidden" name="next" value={next} />;
+  // Past the first step the address is settled; it rides along hidden, with
+  // "Use a different email" the way to change it. Rendered as a real (if
+  // hidden) email field where there's a password, so password managers file
+  // it under the right account.
+  const fixedEmail = (
+    <input
+      type="email"
+      name="email"
+      value={state.email}
+      autoComplete="username"
+      readOnly
+      hidden
+    />
   );
+  const differentEmail = (
+    <IntentButton intent="restart" disabled={pending}>
+      Use a different email
+    </IntentButton>
+  );
+
+  if (state.step === "password") {
+    return (
+      <form action={action} className={FORM}>
+        {hidden}
+        {fixedEmail}
+        <p className="text-base text-ink">
+          Welcome back. Enter the password for <strong>{state.email}</strong>.
+        </p>
+        <Input
+          type="password"
+          name="password"
+          autoComplete="current-password"
+          placeholder="Password"
+          required
+          autoFocus
+          className={FIELD_LIGHT}
+        />
+        <Button
+          type="submit"
+          name="intent"
+          value="password"
+          disabled={pending}
+          className="self-start"
+        >
+          {pending ? "One sec…" : "Sign in"}
+        </Button>
+        <Messages state={state} />
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          <IntentButton intent="code" disabled={pending}>
+            Forgot it? Email me a code
+          </IntentButton>
+          {differentEmail}
+        </div>
+      </form>
+    );
+  }
+
+  if (state.step === "new") {
+    return (
+      <form action={action} className={FORM}>
+        {hidden}
+        {fixedEmail}
+        <p className="text-base text-ink">
+          There&apos;s no account under <strong>{state.email}</strong> yet. Want
+          one? We&apos;ll email you a six-digit code to confirm the address, and
+          that&apos;s the whole sign-up.
+        </p>
+        <Button
+          type="submit"
+          name="intent"
+          value="code"
+          disabled={pending}
+          className="self-start"
+        >
+          {pending ? "One sec…" : "Create my account"}
+        </Button>
+        <Messages state={state} />
+        {differentEmail}
+      </form>
+    );
+  }
 
   if (state.step === "code") {
     return (
       <form action={action} className={FORM}>
         {hidden}
-        <input type="hidden" name="email" value={state.email} />
+        {fixedEmail}
         <p className="text-base text-ink">
           We emailed a six-digit code to <strong>{state.email}</strong>. Enter
           it below; it works for 10 minutes. Not there? Check spam, or send a
@@ -78,56 +164,20 @@ export default function AuthForm({
         </Button>
         <Messages state={state} />
         <div className="flex flex-wrap gap-x-5 gap-y-2">
-          <button
-            type="submit"
-            name="intent"
-            value="resend"
-            disabled={pending}
-            className={LINK}
-          >
+          <IntentButton intent="resend" disabled={pending}>
             Send a new code
-          </button>
-          <button
-            type="submit"
-            name="intent"
-            value="restart"
-            disabled={pending}
-            className={LINK}
-          >
-            Use a different email
-          </button>
-          {mode === "signin" && (
-            <button
-              type="submit"
-              name="intent"
-              value="restart"
-              disabled={pending}
-              onClick={() => setByCode(false)}
-              className={LINK}
-            >
-              Sign in with a password instead
-            </button>
-          )}
+          </IntentButton>
+          {differentEmail}
         </div>
       </form>
     );
   }
 
-  if (state.step === "password") {
+  if (state.step === "set-password") {
     return (
       <form action={action} className={FORM}>
         {hidden}
-        {/* A real (hidden) username field, so password managers treat this as
-            a new-password form for this account instead of guessing. */}
-        <input
-          type="email"
-          name="email"
-          value={state.email}
-          autoComplete="username"
-          readOnly
-          hidden
-        />
-        {state.notice && <p className="text-sm text-ink/70">{state.notice}</p>}
+        {fixedEmail}
         <p className="text-base text-ink">
           {state.replacing
             ? "You're signed in. Forgot your password? Set a new one here, or skip this if you remember it."
@@ -169,45 +219,17 @@ export default function AuthForm({
               ? "Set new password"
               : "Save password"}
         </Button>
-        <Messages state={{ ...state, notice: undefined }} />
-        <button
-          type="submit"
-          name="intent"
-          value="skip"
-          disabled={pending}
-          className={`${LINK} self-start`}
-        >
+        <Messages state={state} />
+        <IntentButton intent="skip" disabled={pending}>
           Skip for now
-        </button>
+        </IntentButton>
       </form>
     );
   }
 
-  // The two ways in, as one toggle. Spelled out because a code is also how
-  // you sign in with no password yet, and how you get past a forgotten one.
-  const forgot = mode === "signin" && (
-    <p className="self-start text-sm text-ink/55">
-      {byCode ? "Have a password? " : "No password, or forgot it? "}
-      <button
-        type="button"
-        onClick={() => setByCode((v) => !v)}
-        className="font-semibold text-ink/70 underline-offset-2 hover:text-ink hover:underline"
-      >
-        {byCode ? "Sign in with it instead" : "Email me a code instead"}
-      </button>
-    </p>
-  );
-
   return (
     <form action={action} className={FORM}>
       {hidden}
-      {mode === "signin" && (
-        <p className="text-base text-ink">
-          {byCode
-            ? "We'll email a six-digit code to this address and sign you in with it. No password needed, and if you had one, you can set a new one after."
-            : "Sign in with your email and password."}
-        </p>
-      )}
       <Input
         type="email"
         name="email"
@@ -218,42 +240,16 @@ export default function AuthForm({
         autoFocus
         className={FIELD_LIGHT}
       />
-      {byCode ? (
-        forgot
-      ) : (
-        <div className="flex flex-col gap-1.5">
-          <Input
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            placeholder="Password"
-            required
-            className={FIELD_LIGHT}
-          />
-          {forgot}
-        </div>
-      )}
-      <div className="flex flex-wrap gap-3">
-        <Button
-          type="submit"
-          name="intent"
-          value={byCode ? "code" : "password"}
-          disabled={pending}
-        >
-          {pending ? "One sec…" : byCode ? "Email me a code" : "Sign in"}
-        </Button>
-      </div>
+      <Button
+        type="submit"
+        name="intent"
+        value="lookup"
+        disabled={pending}
+        className="self-start"
+      >
+        {pending ? "One sec…" : "Continue"}
+      </Button>
       <Messages state={state} />
-      {mode === "signin" && (
-        <Link href="/signup" className={`${LINK} self-start`}>
-          First time here? Create an account
-        </Link>
-      )}
-      {mode === "signup" && (
-        <Link href="/login" className={`${LINK} self-start`}>
-          Already have an account? Sign in
-        </Link>
-      )}
     </form>
   );
 }

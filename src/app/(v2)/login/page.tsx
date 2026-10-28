@@ -10,12 +10,14 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
+// Sign in and sign up are the same form: it asks for the email first and
+// takes it from there.
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string | string[]; by?: string | string[] }>;
+  searchParams: Promise<{ next?: string | string[] }>;
 }) {
-  const { next, by } = await searchParams;
+  const { next } = await searchParams;
   const target = safeNextPath(Array.isArray(next) ? next[0] : next);
   if (await currentSession()) redirect(target);
 
@@ -25,12 +27,13 @@ export default async function LoginPage({
       title="Sign in"
       intro={
         <p>
-          Use your password, or have us email you a one-time code. The code also
-          works if you haven&apos;t set a password yet or forgot it.
+          Enter your email to sign in or create an account. If you have a
+          password we&apos;ll ask for it; otherwise we&apos;ll email you a
+          one-time code.
         </p>
       }
     >
-      <AuthForm mode="signin" next={target} startByCode={by === "code"} />
+      <AuthForm next={target} />
     </ContentPage>
   );
 }
