@@ -2,7 +2,6 @@ import {
   MEGAGAME_INTEGRATION_ORDER,
   NEXT_STEPS_ORDER,
   rank,
-  SPEAKER_TIER_ORDER,
   VERDICT_ORDER,
   type Row,
 } from "@/lib/rfp-pipeline";
@@ -196,13 +195,6 @@ export function compare(a: Row, b: Row, sort: SortKey) {
     return (
       rank(NEXT_STEPS_ORDER, a.nextSteps) -
         rank(NEXT_STEPS_ORDER, b.nextSteps) || a.title.localeCompare(b.title)
-    );
-  }
-  if (sort === "tier") {
-    return (
-      rank(SPEAKER_TIER_ORDER, a.speakerTier) -
-        rank(SPEAKER_TIER_ORDER, b.speakerTier) ||
-      a.title.localeCompare(b.title)
     );
   }
   if (sort === "megagame") {

@@ -8,7 +8,6 @@ import {
   PIPELINE_COLORS,
   SHEPHERD_INFO,
   slotLinkable,
-  SPEAKER_TIER_INFO,
   type PipelineField,
   type Row,
 } from "@/lib/rfp-pipeline";
@@ -27,7 +26,6 @@ export const SORTS = [
   "verdict",
   "next",
   "shepherd",
-  "tier",
   "megagame",
   "scheduled",
 ] as const;
@@ -102,9 +100,11 @@ export function SubmissionGroup({
 }) {
   if (rows.length === 0) return null;
 
+  // Speaker tier is edited on the proposal page, not here: the row had grown
+  // too wide to read.
   const cols = lead
-    ? "lg:grid-cols-[1.5rem_minmax(0,1fr)_repeat(6,6.5rem)_9rem]"
-    : "lg:grid-cols-[minmax(0,1fr)_repeat(6,6.5rem)_9rem]";
+    ? "lg:grid-cols-[1.5rem_minmax(0,1fr)_repeat(5,6.5rem)_9rem]"
+    : "lg:grid-cols-[minmax(0,1fr)_repeat(5,6.5rem)_9rem]";
 
   const cell = (label: string, control: React.ReactNode) => (
     <span className="flex min-w-0 items-center gap-1.5">
@@ -199,10 +199,6 @@ export function SubmissionGroup({
             <InfoTip text={SHEPHERD_INFO} />
           </span>
           <span className="flex items-center whitespace-nowrap">
-            <SortLink column="tier" label="Tier" state={state} />
-            <InfoTip text={SPEAKER_TIER_INFO} />
-          </span>
-          <span className="flex items-center whitespace-nowrap">
             <SortLink column="megagame" label="Megagame" state={state} />
             <InfoTip text={MEGAGAME_INTEGRATION_INFO} />
           </span>
@@ -231,7 +227,6 @@ export function SubmissionGroup({
               {pill(row, "verdict", row.verdict, "Verdict")}
               {pill(row, "nextSteps", row.nextSteps, "Next steps")}
               {picker(row, "shepherd", "Shepherd")}
-              {pill(row, "speakerTier", row.speakerTier, "Speaker tier")}
               {pill(
                 row,
                 "megagameIntegration",
