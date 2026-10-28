@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useActionState, useRef, useState } from "react";
 import PinInput from "./PinInput";
 import { authenticate, type AuthState } from "@/app/(v2)/login/actions";
 import { Button } from "@/v2/components/ui/button";
@@ -56,7 +56,13 @@ function IntentButton({
 // Email first; the next step depends on what that address has. See the
 // state chart in login/actions.ts.
 export default function AuthForm({ next }: { next: string }) {
-  const [state, action, pending] = useActionState(authenticate, initial);
+  const [result, action, pending] = useActionState(authenticate, initial);
+  // "Use a different email" is just going back, so it's done here rather
+  // than by a round trip: remember which result was backed out of, and show
+  // the email step until the next result replaces it.
+  const [backedOut, setBackedOut] = useState<AuthState | null>(null);
+  const state: AuthState =
+    backedOut === result ? { step: "email", email: result.email } : result;
   const verifyButton = useRef<HTMLButtonElement>(null);
 
   const hidden = <input type="hidden" name="next" value={next} />;
@@ -75,9 +81,14 @@ export default function AuthForm({ next }: { next: string }) {
     />
   );
   const differentEmail = (
-    <IntentButton intent="restart" disabled={pending}>
+    <button
+      type="button"
+      disabled={pending}
+      onClick={() => setBackedOut(result)}
+      className={LINK}
+    >
       Use a different email
-    </IntentButton>
+    </button>
   );
 
   if (state.step === "password") {

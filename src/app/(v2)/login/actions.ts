@@ -75,7 +75,6 @@ export async function authenticate(
   const next = safeNextPath(formData.get("next"));
 
   if (intent === "skip") redirect(next);
-  if (intent === "restart") return { step: "email", email };
 
   if (intent === "set-password") {
     const session = await currentSession();
