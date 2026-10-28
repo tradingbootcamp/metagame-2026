@@ -48,6 +48,8 @@ export type TableMeta = {
   rooms: Record<string, string>;
   /** Pre-launch the session pages 404, so the time reads as plain text. */
   linkSessions: boolean;
+  /** Saving needs submissions.grade; the board itself only needs schedule.manage. */
+  editable: boolean;
 };
 
 function SortLink({
@@ -127,6 +129,7 @@ export function SubmissionGroup({
         value={value}
         options={meta.options[field]}
         colors={PIPELINE_COLORS[field]}
+        readOnly={!meta.editable}
       />,
     );
   const scheduled = (row: Row) => {
@@ -169,6 +172,7 @@ export function SubmissionGroup({
         sessionId={row.id}
         field={field}
         value={userId && name ? { userId, label: name } : null}
+        readOnly={!meta.editable}
       />,
     );
   };

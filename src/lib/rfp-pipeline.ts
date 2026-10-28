@@ -41,7 +41,11 @@ export type Row = {
    * published sessions — so this decides whether the slot can be linked.
    */
   status: RfpSession["row"]["status"];
-  /** The latest-assigned grader's committee name, as the Grader column shows. */
+  /**
+   * The attributed grader's label, as the Grader column shows: whoever graded
+   * most recently, else the latest assignment. Any account, not only the
+   * committee.
+   */
   grader: string | null;
   /** That grader's account, for the Grader picker. */
   graderId: string | null;

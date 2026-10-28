@@ -50,6 +50,8 @@ export type MirrorGroup = Fields | Write | null;
  * "Rubric: Grader" for the attributed grader, by committee name else display
  * name. Typecast is on, so a grader the select doesn't list — the committee
  * members it never had an option for included — is added to it as it saves.
+ * A grader with no name to add falls back to the select's "Other", so the
+ * cell never keeps naming whoever graded before.
  */
 export function graderWrite(
   grader: { email: string; name: string } | null,
@@ -58,14 +60,9 @@ export function graderWrite(
     return { fields: { "Rubric: Grader": "Unassigned" }, typecast: true };
   }
   const name = committeeName(grader.email) ?? (grader.name.trim() || null);
-  // An email would become a Grader option; better to leave the cell alone.
-  if (!name || name.includes("@")) {
-    console.warn(
-      `[rfp-mirror] no name for grader ${grader.email}; skipping Rubric: Grader`,
-    );
-    return null;
-  }
-  return { fields: { "Rubric: Grader": name }, typecast: true };
+  // An email would become a Grader option.
+  const option = !name || name.includes("@") ? "Other" : name;
+  return { fields: { "Rubric: Grader": option }, typecast: true };
 }
 
 /**

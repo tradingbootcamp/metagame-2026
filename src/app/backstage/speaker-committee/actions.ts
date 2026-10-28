@@ -4,15 +4,12 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import type { PipelineResult } from "@/app/grade/actions";
 import { can } from "@/lib/access";
+import { pickerAccounts, pickGrader } from "@/lib/grader-pick";
 import { durationMinutes } from "@/lib/rfp-fields";
-import { committeeLabel, toRow } from "@/lib/rfp-pipeline";
+import { toRow } from "@/lib/rfp-pipeline";
 import {
-  clearGraders,
-  committeeAccounts,
   getRfpSession,
   placeRfpSession,
-  reassignGrader,
-  searchAccounts,
   unplaceRfpSession,
   type Account,
 } from "@/lib/rfp-sessions";
@@ -102,11 +99,8 @@ export async function unschedule(sessionId: string): Promise<Result> {
 /** Accounts for the grader picker: the committee until two characters are typed. */
 export async function findGradeAccounts(query: string): Promise<Account[]> {
   if (!(await can("submissions.grade"))) return [];
-  const q = query.trim();
-  return q.length < 2 ? committeeAccounts() : searchAccounts(q);
+  return pickerAccounts(query);
 }
-
-const names = (accounts: Account[]) => accounts.map(committeeLabel).join(", ");
 
 /**
  * Sets or clears a session's grader; any account will do. One pick over
@@ -118,31 +112,19 @@ export async function setGrader(
   userId: string | null,
 ): Promise<PipelineResult> {
   if (!(await can("submissions.grade"))) return { error: EXPIRED };
-  if (!(await getRfpSession(sessionId)))
-    return { error: "That session no longer exists." };
 
-  let submitted: Account[];
+  let picked: Awaited<ReturnType<typeof pickGrader>>;
   try {
-    const result = userId
-      ? await reassignGrader(sessionId, userId)
-      : await clearGraders(sessionId);
-    submitted = result.submitted;
+    picked = await pickGrader(sessionId, userId);
   } catch (err) {
     console.error("[speaker-committee] grader save failed:", err);
     return explainDbError(err);
   }
+  if (!picked.after) return { error: "That session no longer exists." };
 
-  const after = await getRfpSession(sessionId);
-  const others = submitted.filter((a) => a.userId !== userId);
-  const picked = after?.grades.find((g) => g.grader.userId === userId)?.grader;
-  const note =
-    others.length === 0
-      ? undefined
-      : picked
-        ? `${names(others)} already graded this; ${committeeLabel(picked)} was added as another grader.`
-        : `${names(others)} already graded this; only open assignments were cleared.`;
   // Deliberately not revalidating the board: re-sorting the list under the
   // cursor mid-edit is worse than it being one refresh stale.
   revalidatePath(`/grade/${sessionId}`);
-  return { value: after ? toRow(after).grader : null, note };
+  const row = toRow(picked.after);
+  return { value: row.grader, valueId: row.graderId, note: picked.note };
 }

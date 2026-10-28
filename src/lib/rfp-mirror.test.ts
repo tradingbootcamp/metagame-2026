@@ -67,10 +67,15 @@ describe("graderWrite", () => {
     });
   });
 
-  it("skips a grader whose only name is an email or blank", () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    expect(graderWrite({ email: "x@y.z", name: "x@y.z" })).toBeNull();
-    expect(graderWrite({ email: "x@y.z", name: " " })).toBeNull();
+  it("writes Other for a grader whose only name is an email or blank", () => {
+    expect(graderWrite({ email: "x@y.z", name: "x@y.z" })).toEqual({
+      fields: { "Rubric: Grader": "Other" },
+      typecast: true,
+    });
+    expect(graderWrite({ email: "x@y.z", name: " " })).toEqual({
+      fields: { "Rubric: Grader": "Other" },
+      typecast: true,
+    });
   });
 
   it("marks nobody Unassigned", () => {

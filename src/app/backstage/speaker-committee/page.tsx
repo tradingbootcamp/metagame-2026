@@ -122,13 +122,15 @@ export default async function SpeakerCommitteePage(
 
   // The schedule comes along on every tab now: each row names the slot it
   // sits in, which needs the room names.
-  const [rfpSessions, committee, pane, schedule, canLink] = await Promise.all([
-    listRfpSessions(),
-    committeeAccounts(),
-    schedulePaneOn(),
-    loadSchedule(),
-    canSeeSchedule(),
-  ]);
+  const [rfpSessions, committee, pane, schedule, canLink, grader] =
+    await Promise.all([
+      listRfpSessions(),
+      committeeAccounts(),
+      schedulePaneOn(),
+      loadSchedule(),
+      canSeeSchedule(),
+      can("submissions.grade"),
+    ]);
   const rows = rfpSessions.map(toRow);
 
   const params = await props.searchParams;
@@ -160,6 +162,9 @@ export default async function SpeakerCommitteePage(
     options: pipelineOptions(committee.map((a) => a.committeeName)),
     rooms: Object.fromEntries(schedule.locations.map((l) => [l.id, l.name])),
     linkSessions: canLink,
+    // The pills save through the grading actions, so a scheduler who can't
+    // grade sees them but can't open them.
+    editable: grader !== null,
   };
 
   const visible = tabRows(rows, tab, me, mineOnly)

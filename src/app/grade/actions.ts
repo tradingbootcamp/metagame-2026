@@ -11,6 +11,7 @@ import {
 } from "@/lib/grade-input";
 import { can } from "@/lib/access";
 import { signOutAccount } from "@/lib/auth";
+import { pickerAccounts, pickGrader } from "@/lib/grader-pick";
 import {
   fromLabel,
   MEGAGAME_INTEGRATION_LABELS,
@@ -18,24 +19,16 @@ import {
   SPEAKER_TIER_LABELS,
   VERDICT_LABELS,
 } from "@/lib/rfp-labels";
-import {
-  committeeLabel,
-  PIPELINE_FIELDS,
-  toRow,
-  type PipelineField,
-} from "@/lib/rfp-pipeline";
+import { PIPELINE_FIELDS, toRow, type PipelineField } from "@/lib/rfp-pipeline";
 import { loadedKey, MARKETING_CONSENT_FIELD } from "@/lib/rfp-rubric";
 import {
-  clearGraders,
-  committeeAccounts,
   committeeUserId,
   getRfpSession,
-  reassignGrader,
   saveGrade,
-  searchAccounts,
   spaceOptionLocations,
   updateRfpSession,
   type Account,
+  type RfpSession,
 } from "@/lib/rfp-sessions";
 import { explainDbError } from "@/lib/schedule-store";
 
@@ -62,11 +55,11 @@ export type PipelineResult = {
   error?: string;
   /** The column's label as now stored, which may differ from what was picked. */
   value?: string | null;
+  /** The account behind `value`, for the pickers; null when nobody's. */
+  valueId?: string | null;
   /** Why the stored value isn't the one picked. */
   note?: string;
 };
-
-const names = (accounts: Account[]) => accounts.map(committeeLabel).join(", ");
 
 /**
  * One-column save from the overview's row dropdowns. The value is the option
@@ -87,6 +80,7 @@ export async function setPipelineField(
   if (!before) return { error: "That session no longer exists." };
 
   let note: string | undefined;
+  let after: RfpSession | null | undefined;
   try {
     switch (field) {
       case "verdict": {
@@ -135,20 +129,13 @@ export async function setPipelineField(
       case "grader": {
         // One select over possibly several grade rows: a pick replaces the
         // open assignments, and submitted grades are never thrown away.
-        if (!value) {
-          const { submitted } = await clearGraders(sessionId);
-          if (submitted.length > 0) {
-            note = `${names(submitted)} already graded this; only open assignments were cleared.`;
-          }
-          break;
+        let userId: string | null = null;
+        if (value) {
+          const account = await committeeAccount(value);
+          if ("error" in account) return account;
+          userId = account.userId;
         }
-        const account = await committeeAccount(value);
-        if ("error" in account) return account;
-        const { submitted } = await reassignGrader(sessionId, account.userId);
-        const others = submitted.filter((a) => a.userId !== account.userId);
-        if (others.length > 0) {
-          note = `${names(others)} already graded this; ${value} was added as another grader.`;
-        }
+        ({ after, note } = await pickGrader(sessionId, userId));
         break;
       }
     }
@@ -157,7 +144,7 @@ export async function setPipelineField(
     return explainDbError(err);
   }
 
-  const after = await getRfpSession(sessionId);
+  after ??= await getRfpSession(sessionId);
   // Deliberately not revalidating the committee board: re-sorting the list
   // under the cursor mid-edit is worse than it being one refresh stale.
   revalidatePath(`/grade/${sessionId}`);
@@ -167,8 +154,7 @@ export async function setPipelineField(
 /** Accounts for the shepherd picker: the committee until two characters are typed. */
 export async function findShepherds(query: string): Promise<Account[]> {
   if (!(await can("submissions.grade"))) return [];
-  const q = query.trim();
-  return q.length < 2 ? committeeAccounts() : searchAccounts(q);
+  return pickerAccounts(query);
 }
 
 /** Sets or clears a session's shepherd; any account will do. */
@@ -188,7 +174,8 @@ export async function setShepherd(
   }
   const after = await getRfpSession(sessionId);
   revalidatePath(`/grade/${sessionId}`);
-  return { value: after ? toRow(after).shepherd : null };
+  const row = after ? toRow(after) : null;
+  return { value: row?.shepherd ?? null, valueId: row?.shepherdId ?? null };
 }
 
 export type SaveState = { savedAt?: number; error?: string };

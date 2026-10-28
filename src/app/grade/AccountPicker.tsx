@@ -35,10 +35,13 @@ export default function AccountPicker({
   sessionId,
   field,
   value,
+  readOnly = false,
 }: {
   sessionId: string;
   field: PickerField;
   value: Assignee | null;
+  /** Shows the pill without a menu, for a viewer who can't change it. */
+  readOnly?: boolean;
 }) {
   const [current, setCurrent] = useState(value);
   const [open, setOpen] = useState(false);
@@ -122,8 +125,18 @@ export default function AccountPicker({
         return;
       }
       // What's stored can differ from the pick: a grader added beside one who
-      // already graded shows as whoever Airtable's single Grader names.
-      if (result.value && next) setCurrent({ ...next, label: result.value });
+      // already graded shows as whoever Airtable's single Grader names, and
+      // clearing leaves a submitted grader in place.
+      if (result.value !== undefined) {
+        setCurrent(
+          result.value
+            ? {
+                userId: result.valueId ?? next?.userId ?? "",
+                label: result.value,
+              }
+            : null,
+        );
+      }
       setNote(result.note ?? null);
     });
   }
@@ -155,6 +168,18 @@ export default function AccountPicker({
   const pillClass = `w-full truncate rounded-full py-1 pr-5 pl-2.5 text-left text-xs font-medium outline-none ${
     saving ? "opacity-60" : ""
   }`;
+
+  if (readOnly) {
+    return (
+      <span
+        title={current?.label || "Not set"}
+        style={tone ?? undefined}
+        className={`block ${pillClass} ${tone ? "" : "bg-ink/6 text-ink/55"}`}
+      >
+        {current?.label || "—"}
+      </span>
+    );
+  }
 
   return (
     <span ref={anchor} className="relative block min-w-0">
