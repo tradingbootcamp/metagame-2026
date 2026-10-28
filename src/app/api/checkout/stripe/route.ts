@@ -126,7 +126,7 @@ async function promoParams(
 /**
  * GET /api/checkout/stripe?tier=standard[&code=own | &promo=<code>]
  *   | ?tier=supporter&chip=<usd> | ?tier=day-pass&day=<friday|saturday|sunday>
- *   [&utm_source=…&utm_medium=…&utm_campaign=…&first_visit=…&posthog_id=…]
+ *   [&utm_source=…&utm_medium=…&utm_campaign=…&first_visit=…&posthog_id=…&posthog_session_id=…]
  * Creates a hosted Checkout Session and redirects to it. /buy and /buy/<code>
  * redirect here (next.config.ts).
  */

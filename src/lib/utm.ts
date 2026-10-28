@@ -2,9 +2,9 @@ import posthog from "posthog-js";
 import { PROMO_PARAM, promoCode } from "@/lib/tracking-links";
 
 // Last-touch attribution: the UTMs from the most recent tracking link a visitor
-// arrived through, when they first visited, and their PostHog id ride along into
-// checkout (Stripe session metadata / OpenNode charge metadata) and end up on
-// their Airtable purchase row.
+// arrived through, when they first visited, and their PostHog ids (browser and
+// session) ride along into checkout (Stripe session metadata / OpenNode charge
+// metadata) and end up on their Airtable purchase row.
 
 const LANDING_KEYS = [
   "utm_source",
@@ -13,7 +13,12 @@ const LANDING_KEYS = [
   "utm_content",
   "utm_term",
 ] as const;
-export const UTM_KEYS = [...LANDING_KEYS, "first_visit", "posthog_id"] as const;
+export const UTM_KEYS = [
+  ...LANDING_KEYS,
+  "first_visit",
+  "posthog_id",
+  "posthog_session_id",
+] as const;
 
 export type Utm = Partial<Record<(typeof UTM_KEYS)[number], string>>;
 
@@ -98,13 +103,21 @@ export function readUtm(): Utm {
     firstVisit = localStorage.getItem(FIRST_VISIT_KEY);
   } catch {}
   let posthogId: string | undefined;
+  let posthogSessionId: string | undefined;
   try {
     // Only set when PostHog initialized (NEXT_PUBLIC_POSTHOG_KEY present).
-    if (posthog.__loaded) posthogId = posthog.get_distinct_id();
+    if (posthog.__loaded) {
+      posthogId = posthog.get_distinct_id();
+      posthogSessionId = posthog.get_session_id();
+    }
   } catch {}
   return pickUtm(
     (key) =>
-      ({ first_visit: firstVisit, posthog_id: posthogId })[key] ?? stored[key],
+      ({
+        first_visit: firstVisit,
+        posthog_id: posthogId,
+        posthog_session_id: posthogSessionId,
+      })[key] ?? stored[key],
   );
 }
 

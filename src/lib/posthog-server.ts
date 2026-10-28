@@ -12,7 +12,8 @@ function eventUuid(purchaseId: string): string {
 /** The capture payload for a settled purchase; undefined while it isn't Paid. */
 export function purchaseEvent(purchase: PurchaseRecord) {
   if (purchase.status !== "Paid") return undefined;
-  const { posthog_id, first_visit, ...utm } = purchase.utm ?? {};
+  const { posthog_id, posthog_session_id, first_visit, ...utm } =
+    purchase.utm ?? {};
   return {
     // Test purchases get their own event so they never count as sales.
     event: purchase.test ? "ticket_purchased_test" : "ticket_purchased",
@@ -23,6 +24,9 @@ export function purchaseEvent(purchase: PurchaseRecord) {
     properties: {
       // The site's visitors are anonymous; don't mint a person for a purchase.
       $process_person_profile: false,
+      // Joins the purchase to the visit it was clicked from, so PostHog can
+      // credit the session's entry URL / referrer even without UTMs.
+      ...(posthog_session_id ? { $session_id: posthog_session_id } : {}),
       payment_method: purchase.paymentMethod,
       ticket_type: purchase.ticketType,
       amount_usd: purchase.amount,
