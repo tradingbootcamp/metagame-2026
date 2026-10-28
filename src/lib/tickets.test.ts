@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  NIGHT_MARKET_BOOTH_LABEL,
   dayPasses,
+  isAdmissionLabel,
   supporterTier,
   ticketTiers,
   tierLabelForStripeCheckout,
@@ -80,5 +82,30 @@ describe("tierLabelForStripeCheckout", () => {
         productName: undefined,
       }),
     ).toBeUndefined();
+  });
+});
+
+describe("isAdmissionLabel", () => {
+  it("treats the Night Market booth as a purchase, not an admission", () => {
+    const label = tierLabelForStripeCheckout({
+      metadata: null,
+      paymentLinkUrl: undefined,
+      productName: "Metagame Night Market Booth",
+    });
+    expect(label).toBe(NIGHT_MARKET_BOOTH_LABEL);
+    expect(isAdmissionLabel(label)).toBe(false);
+  });
+
+  it("treats every ticket tier, and an unknown product, as an admission", () => {
+    for (const label of [
+      "Standard",
+      "Supporter",
+      "Guest of Honor",
+      "Saturday Day Pass",
+      "Some New Product",
+      undefined,
+    ]) {
+      expect(isAdmissionLabel(label)).toBe(true);
+    }
   });
 });
