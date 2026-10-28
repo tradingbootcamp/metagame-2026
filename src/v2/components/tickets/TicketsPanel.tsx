@@ -52,6 +52,16 @@ const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
   e.currentTarget.href = withPromo(withUtm(href));
 };
 
+const HASH_MODALS = [
+  "supporter",
+  "day-pass",
+  "family-pack",
+  "discount-rate",
+] as const;
+type HashModal = (typeof HASH_MODALS)[number];
+const isHashModal = (id: string): id is HashModal =>
+  (HASH_MODALS as readonly string[]).includes(id);
+
 export default function TicketsPanel({
   showHeading = true,
   align = "center",
@@ -73,24 +83,24 @@ export default function TicketsPanel({
     () => earlyBird,
   );
   const standard = getTicket("standard");
-  const [supporterOpen, setSupporterOpen] = useState(false);
-  const [dayPassOpen, setDayPassOpen] = useState(false);
-  const [familyPackOpen, setFamilyPackOpen] = useState(false);
-  const [discountOpen, setDiscountOpen] = useState(false);
-  // /#supporter deep-links into the modal (e.g. from /sponsor); the tile's id
-  // gives the browser its scroll target. Closing drops the hash so a repeat
-  // click on the same link changes the URL again and reopens it.
+  // Each tile that opens a modal (rather than linking straight to Stripe)
+  // deep-links from /#<id>, e.g. /#supporter from /sponsor or /#family-pack
+  // from an email; the tile's id gives the browser its scroll target. Closing
+  // drops the hash so a repeat click on the same link changes the URL again
+  // and reopens it.
+  const [openModal, setOpenModal] = useState<HashModal | null>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const closeSupporter = () => {
-    setSupporterOpen(false);
-    if (window.location.hash === "#supporter") {
+  const closeModal = () => {
+    setOpenModal(null);
+    if (isHashModal(window.location.hash.slice(1))) {
       router.replace(pathname, { scroll: false });
     }
   };
   useEffect(() => {
     const check = () => {
-      if (window.location.hash === "#supporter") setSupporterOpen(true);
+      const id = window.location.hash.slice(1);
+      if (isHashModal(id)) setOpenModal(id);
     };
     check();
     window.addEventListener("hashchange", check);
@@ -231,7 +241,7 @@ export default function TicketsPanel({
           type="button"
           variant="raised"
           id="supporter"
-          onClick={() => setSupporterOpen(true)}
+          onClick={() => setOpenModal("supporter")}
           className={`${TILE} scroll-mt-24`}
         >
           <span className={TILE_LABEL}>Supporter</span>
@@ -247,7 +257,8 @@ export default function TicketsPanel({
         <Button
           type="button"
           variant="raised"
-          onClick={() => setDayPassOpen(true)}
+          id="day-pass"
+          onClick={() => setOpenModal("day-pass")}
           // Narrower padding + a 32px line box so the three-price line fits the
           // shared 210px tile at the same height as the others.
           className={TILE.replace("px-7", "px-4")}
@@ -267,7 +278,8 @@ export default function TicketsPanel({
         <Button
           type="button"
           variant="raised"
-          onClick={() => setFamilyPackOpen(true)}
+          id="family-pack"
+          onClick={() => setOpenModal("family-pack")}
           // Narrower padding so the long label fits the shared 210px tile.
           className={TILE.replace("px-7", "px-4")}
         >
@@ -287,7 +299,8 @@ export default function TicketsPanel({
         <Button
           type="button"
           variant="raised"
-          onClick={() => setDiscountOpen(true)}
+          id="discount-rate"
+          onClick={() => setOpenModal("discount-rate")}
           className={TILE}
         >
           <span className={TILE_LABEL}>Student / Aid</span>
@@ -304,14 +317,12 @@ export default function TicketsPanel({
           </VolunteerFormLink>
         </Button>
       </div>
-      {supporterOpen && <SupporterModal onClose={closeSupporter} />}
-      {dayPassOpen && <DayPassModal onClose={() => setDayPassOpen(false)} />}
-      {discountOpen && (
-        <DiscountRateModal onClose={() => setDiscountOpen(false)} />
+      {openModal === "supporter" && <SupporterModal onClose={closeModal} />}
+      {openModal === "day-pass" && <DayPassModal onClose={closeModal} />}
+      {openModal === "discount-rate" && (
+        <DiscountRateModal onClose={closeModal} />
       )}
-      {familyPackOpen && (
-        <FamilyPackModal onClose={() => setFamilyPackOpen(false)} />
-      )}
+      {openModal === "family-pack" && <FamilyPackModal onClose={closeModal} />}
       {btcOpen && standard && (
         <BtcModal
           ticket={standard}
