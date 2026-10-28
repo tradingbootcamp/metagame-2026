@@ -17,7 +17,7 @@ import { currentTicketCode, recordTicket } from "@/lib/ticket-store";
 import {
   dayPassForPaymentLinkUrl,
   tierForCheckoutMetadata,
-  tierLabelForPaymentLinkUrl,
+  tierLabelForStripeCheckout,
 } from "@/lib/tickets";
 import { mailingListOptOutUrl } from "@/lib/purchase-buyer";
 import { pickUtm } from "@/lib/utm";
@@ -177,7 +177,17 @@ export async function POST(request: Request) {
     const product = expanded<Stripe.Product | Stripe.DeletedProduct>(
       full.line_items?.data[0]?.price?.product,
     );
-    const ticketType = product && "name" in product ? product.name : undefined;
+    const paymentLinkUrl = expanded<Stripe.PaymentLink>(full.payment_link)?.url;
+    // Sessions from /api/checkout/stripe carry the tier in metadata; purchases
+    // through an old Payment Link are matched by its URL instead.
+    const tier = tierForCheckoutMetadata(full.metadata);
+    // Stored as the ticket's type: a tier label ("Standard"), not the Stripe
+    // product name, so every rail records the same strings.
+    const ticketType = tierLabelForStripeCheckout({
+      metadata: full.metadata,
+      paymentLinkUrl,
+      productName: product && "name" in product ? product.name : undefined,
+    });
 
     // The customer-facing promo code (e.g. "EARLYBIRD") — the coupon is the
     // discount definition behind it; this is the string the buyer actually used.
@@ -247,10 +257,6 @@ export async function POST(request: Request) {
     // still-Pending session. Failures are soft: the purchase is already recorded,
     // so log + alert instead of a 500 (which would make Stripe retry the event).
     const email = full.customer_details?.email;
-    const paymentLinkUrl = expanded<Stripe.PaymentLink>(full.payment_link)?.url;
-    // Sessions from /api/checkout/stripe carry the tier in metadata; purchases
-    // through an old Payment Link are matched by its URL instead.
-    const tier = tierForCheckoutMetadata(full.metadata);
     if (status === "Paid" && email) {
       // Buyers join the mailing list unless their email has been on it before.
       // Soft-fail, like the email below.
@@ -277,11 +283,7 @@ export async function POST(request: Request) {
           to: email,
           purchaserName:
             preferredName ?? full.customer_details?.name ?? undefined,
-          tierLabel:
-            tier?.label ??
-            tierLabelForPaymentLinkUrl(paymentLinkUrl) ??
-            ticketType ??
-            "Metagame 2026 ticket",
+          tierLabel: ticketType ?? "Metagame 2026 ticket",
           eventDay: tier
             ? tier.day
             : dayPassForPaymentLinkUrl(paymentLinkUrl)?.date,

@@ -13,6 +13,10 @@ validateEnv();
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/posters": ["./assets/posters/*.pdf"],
+    // The sent-email catalog reads emails/ at request time. Keys are globs,
+    // so `[slug]` can't be spelled out.
+    "/backstage/emails": ["./emails/*"],
+    "/backstage/emails/**": ["./emails/*"],
   },
   // public/ files are served max-age=0 by default, so the hero backdrop
   // revalidated on every visit. Filenames are stable; bump them if the
@@ -37,6 +41,13 @@ const nextConfig: NextConfig = {
     // The speaker committee board moved under /backstage with the other tools.
     {
       source: "/speaker_committee",
+      destination: "/backstage/speaker-committee",
+      permanent: true,
+    },
+    // The committee board replaced /grade's own overview; the rubric for one
+    // proposal stays at /grade/<id>.
+    {
+      source: "/grade",
       destination: "/backstage/speaker-committee",
       permanent: true,
     },

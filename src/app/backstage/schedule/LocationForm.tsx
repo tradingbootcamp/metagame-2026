@@ -9,9 +9,19 @@ import {
 } from "react";
 import { XIcon } from "lucide-react";
 import { deleteLocation, saveLocation, type FormState } from "./actions";
-import { buttonClass, fieldClass, smallButtonClass } from "../ui";
+import {
+  buttonClass,
+  fieldClass,
+  selectClass,
+  selectStyle,
+  smallButtonClass,
+} from "../ui";
 import { downscaleImage } from "@/lib/downscale-image";
-import type { ScheduleLocation } from "@/lib/schedule";
+import {
+  LOCATION_VISIBILITIES,
+  VISIBILITY_LABEL,
+  type ScheduleLocation,
+} from "@/lib/schedule";
 import {
   Dialog,
   DialogContent,
@@ -259,15 +269,20 @@ export default function LocationForm({
             value={thumbnail.file ? "" : (thumbnail.url ?? "")}
           />
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="showInSchedule"
-              defaultChecked={location?.showInSchedule ?? true}
-              className="h-4 w-4 accent-navy"
-            />
-            Show on the public schedule
-          </label>
+          <Field label="Who sees this room" name="visibility" state={state}>
+            <select
+              name="visibility"
+              defaultValue={location?.visibility ?? "public"}
+              className={selectClass}
+              style={selectStyle}
+            >
+              {LOCATION_VISIBILITIES.map((v) => (
+                <option key={v} value={v}>
+                  {VISIBILITY_LABEL[v]}
+                </option>
+              ))}
+            </select>
+          </Field>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">

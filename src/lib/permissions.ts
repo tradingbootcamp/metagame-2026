@@ -75,13 +75,21 @@ export const PERMISSIONS = {
     label: "RSVP names",
     description: "RSVP names on a session page, not just the counts.",
   },
+  "schedule.volunteer_rooms": {
+    audience: "attendee",
+    group: "Schedule",
+    level: "view",
+    label: "Volunteer rooms",
+    description:
+      "Rooms marked volunteer-only, such as ops desks, alongside the public ones.",
+  },
   "schedule.manage": {
     audience: "team",
     group: "Schedule",
     level: "edit",
     label: "Edit schedule",
     description: "On the admin grid and over the API.",
-    implies: ["schedule.preview"],
+    implies: ["schedule.preview", "schedule.volunteer_rooms"],
   },
   "promo.manage": {
     audience: "team",
@@ -113,6 +121,13 @@ export const PERMISSIONS = {
     description:
       "Approve or reject proposals, add plans, run imports and connect Xero.",
     implies: ["budget.view"],
+  },
+  "emails.view": {
+    audience: "team",
+    group: "Emails",
+    level: "view",
+    label: "View sent emails",
+    description: "The announcements and other emails we've sent, as a catalog.",
   },
   "api_keys.self": {
     audience: "team",

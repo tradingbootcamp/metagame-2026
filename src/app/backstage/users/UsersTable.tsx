@@ -260,7 +260,12 @@ export default function UsersTable({
           </span>
         )}
       </p>
-      <div className="hidden overflow-x-auto rounded-xl border border-line bg-white shadow-sm md:block">
+      {/* overflow-x-auto also clips vertically, which would cut off the roles
+          menu when the list is only a row or two tall — so let the box
+          overflow while a menu is open. */}
+      <div
+        className={`hidden rounded-xl border border-line bg-white shadow-sm md:block ${openRoles ? "overflow-visible" : "overflow-x-auto"}`}
+      >
         <table className="w-full text-left text-sm">
           <thead className="text-xs tracking-wide text-ink/50 uppercase">
             <tr>

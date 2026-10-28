@@ -178,7 +178,6 @@ export default function GradeForm({
   notesFields,
   shepherdContact,
   phase,
-  blocked,
 }: {
   sessionId: string;
   /** The viewer's own grade, keyed as the form names its fields. */
@@ -191,8 +190,6 @@ export default function GradeForm({
   /** Rendered server-side above the notes: tier pills and host contact. */
   shepherdContact?: React.ReactNode;
   phase: string | null;
-  /** Why this viewer can't save, if they can't. */
-  blocked: string | null;
 }) {
   const [state, action, pending] = useActionState(
     submitGrades.bind(null, sessionId),
@@ -306,15 +303,13 @@ export default function GradeForm({
         )}
         <button
           type="submit"
-          disabled={pending || blocked !== null}
+          disabled={pending}
           className="rounded-lg bg-meeple px-5 py-2.5 font-roboto font-semibold text-white transition-colors hover:bg-meeple-dark disabled:opacity-60"
         >
           {pending ? "Saving…" : "Save"}
         </button>
         <p aria-live="polite" className="text-sm">
-          {blocked ? (
-            <span className="text-meeple">{blocked}</span>
-          ) : state.error ? (
+          {state.error ? (
             <span className="text-meeple">{state.error}</span>
           ) : state.savedAt ? (
             <span className="text-moss">Saved.</span>

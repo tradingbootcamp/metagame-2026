@@ -36,7 +36,7 @@ const room = (over: Partial<ScheduleLocation>): ScheduleLocation => ({
   campusLocation: null,
   description: "internal notes",
   displayOrder: 0,
-  showInSchedule: true,
+  visibility: "public",
   thumbnailUrl: null,
   imageUrl: null,
   ...over,
@@ -103,12 +103,12 @@ describe("publicSchedule", () => {
     expect(sessions[0].hosts).toEqual([{ name: "Someone" }]);
   });
 
-  it("shows marked rooms plus unmarked ones a published session uses", () => {
+  it("shows public rooms plus hidden ones a published session uses", () => {
     const { locations } = publicSchedule({
       locations: [
         room({ id: "shown" }),
-        room({ id: "hidden", showInSchedule: false }),
-        room({ id: "used", showInSchedule: false }),
+        room({ id: "hidden", visibility: "hidden" }),
+        room({ id: "used", visibility: "hidden" }),
       ],
       sessions: [
         session({ id: "a", locationId: "used" }),
@@ -117,6 +117,36 @@ describe("publicSchedule", () => {
     });
     expect(locations.map((l) => l.id)).toEqual(["shown", "used"]);
     expect(JSON.stringify(locations)).not.toContain("internal notes");
+  });
+
+  const levels = {
+    locations: [
+      room({ id: "open" }),
+      room({ id: "ops", visibility: "volunteer" }),
+      room({ id: "backstage", visibility: "hidden" }),
+    ],
+    sessions: [
+      session({ id: "a", slug: "a", locationId: "open" }),
+      session({ id: "b", slug: "b", locationId: "ops" }),
+      session({ id: "c", slug: "c", locationId: null }),
+    ],
+  };
+
+  it("keeps volunteer rooms and their sessions from the public", () => {
+    const { locations, sessions } = publicSchedule(levels);
+    expect(locations.map((l) => l.id)).toEqual(["open"]);
+    expect(sessions.map((s) => s.id)).toEqual(["a", "c"]);
+  });
+
+  it("gives volunteers the volunteer rooms too, but not the hidden one", () => {
+    const { locations, sessions } = publicSchedule(levels, "volunteer");
+    expect(locations.map((l) => l.id)).toEqual(["open", "ops"]);
+    expect(sessions.map((s) => s.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("gives the team every room, used or not", () => {
+    const { locations } = publicSchedule(levels, "team");
+    expect(locations.map((l) => l.id)).toEqual(["open", "ops", "backstage"]);
   });
 });
 

@@ -101,19 +101,19 @@ describe("parseSessionFields", () => {
 });
 
 describe("parseLocationFields", () => {
-  it("reads the checkbox and the boolean alike", () => {
+  it("reads each visibility level, defaulting to hidden", () => {
     expect(
-      parseLocationFields({ name: "Hall", showInSchedule: "on" }),
-    ).toMatchObject({ value: { showInSchedule: true, displayOrder: 100 } });
+      parseLocationFields({ name: "Hall", visibility: "public" }),
+    ).toMatchObject({ value: { visibility: "public", displayOrder: 100 } });
     expect(
-      parseLocationFields({ name: "Hall", showInSchedule: true, capacity: 40 }),
-    ).toMatchObject({ value: { showInSchedule: true, capacity: 40 } });
+      parseLocationFields({ name: "Hall", visibility: "volunteer" }),
+    ).toMatchObject({ value: { visibility: "volunteer" } });
     expect(parseLocationFields({ name: "Hall" })).toMatchObject({
-      value: { showInSchedule: false },
+      value: { visibility: "hidden" },
     });
   });
 
-  it("rejects a missing name and non-integers", () => {
+  it("rejects a missing name, non-integers and an unknown level", () => {
     expect(blamed(parseLocationFields({}))).toBe("name");
     expect(blamed(parseLocationFields({ name: "Hall", capacity: "big" }))).toBe(
       "capacity",
@@ -121,6 +121,9 @@ describe("parseLocationFields", () => {
     expect(
       blamed(parseLocationFields({ name: "Hall", displayOrder: "first" })),
     ).toBe("displayOrder");
+    expect(
+      blamed(parseLocationFields({ name: "Hall", visibility: "on" })),
+    ).toBe("visibility");
   });
 });
 

@@ -103,6 +103,7 @@ describe("describeSchema", () => {
       "megagame_interest",
       "session_dropins",
       "discord_status",
+      "location_visibility",
       "rubric_grade",
       "shepherd_match",
       "topic_area",

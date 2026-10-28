@@ -20,6 +20,7 @@ import {
   hostNames,
   isPlaced,
   movedTimes,
+  VISIBILITY_LABEL,
   type Attendance,
   type ScheduleLocation,
   type ScheduleSession,
@@ -333,7 +334,7 @@ export default function ScheduleTool({
                 <th className="px-4 py-2 font-medium">Name</th>
                 <th className="px-4 py-2 font-medium">Campus</th>
                 <th className="px-4 py-2 font-medium">Capacity</th>
-                <th className="px-4 py-2 font-medium">Public</th>
+                <th className="px-4 py-2 font-medium">Seen by</th>
                 <th className="px-4 py-2 font-medium" />
               </tr>
             </thead>
@@ -359,7 +360,7 @@ export default function ScheduleTool({
                     {l.capacity ?? "—"}
                   </td>
                   <td className="px-4 py-2">
-                    {l.showInSchedule ? "Shown" : "Hidden"}
+                    {VISIBILITY_LABEL[l.visibility]}
                   </td>
                   <td className="px-4 py-2 text-right">
                     <button
