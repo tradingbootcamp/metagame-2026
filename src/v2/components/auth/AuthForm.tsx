@@ -77,7 +77,7 @@ export default function AuthForm({
           {pending ? "Checking…" : "Continue"}
         </Button>
         <Messages state={state} />
-        <div className="flex gap-5">
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
           <button
             type="submit"
             name="intent"
@@ -96,6 +96,18 @@ export default function AuthForm({
           >
             Use a different email
           </button>
+          {mode === "signin" && (
+            <button
+              type="submit"
+              name="intent"
+              value="restart"
+              disabled={pending}
+              onClick={() => setByCode(false)}
+              className={LINK}
+            >
+              Sign in with a password instead
+            </button>
+          )}
         </div>
       </form>
     );
