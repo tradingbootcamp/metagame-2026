@@ -149,7 +149,7 @@ export async function authenticate(
         step: "email",
         email,
         error:
-          "Wrong email or password. No password yet? Sign in with a code instead.",
+          "Wrong email or password. If you never set a password, or forgot it, use the emailed code option below.",
       };
     }
     redirect(next);

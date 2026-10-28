@@ -38,7 +38,7 @@ export default function ToolLayout({
             </Link>
             {nav}
           </nav>
-          <SessionBar />
+          <SessionBar next={href} />
         </div>
       </header>
       <main className={`mx-auto w-full ${width} px-4 py-8`}>{children}</main>

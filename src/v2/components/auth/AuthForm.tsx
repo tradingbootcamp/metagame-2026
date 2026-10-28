@@ -57,8 +57,9 @@ export default function AuthForm({
         {hidden}
         <input type="hidden" name="email" value={state.email} />
         <p className="text-base text-ink">
-          We emailed a code to <strong>{state.email}</strong>. It works for 10
-          minutes.
+          We emailed a six-digit code to <strong>{state.email}</strong>. Enter
+          it below; it works for 10 minutes. Not there? Check spam, or send a
+          new one.
         </p>
         <PinInput
           name="code"
@@ -117,8 +118,8 @@ export default function AuthForm({
         {state.notice && <p className="text-sm text-ink/70">{state.notice}</p>}
         <p className="text-base text-ink">
           {state.replacing
-            ? "You're in. Want a new password? Set one here, or skip if you remember the old one."
-            : "You're in. Choose a password and next time you can sign in with it instead of a code."}
+            ? "You're signed in. Forgot your password? Set a new one here, or skip this if you remember it."
+            : "You're signed in. Optional: choose a password so next time you can skip the email code."}
         </p>
         <Input
           type="password"
@@ -170,22 +171,29 @@ export default function AuthForm({
     );
   }
 
+  // The two ways in, as one toggle. Spelled out because a code is also how
+  // you sign in with no password yet, and how you get past a forgotten one.
   const forgot = mode === "signin" && (
-    <button
-      type="button"
-      onClick={() => setByCode((v) => !v)}
-      className="self-start text-sm text-ink/55 underline-offset-2 hover:text-ink hover:underline"
-    >
-      {byCode ? "Back to password sign-in" : "Forgot your password?"}
-    </button>
+    <p className="self-start text-sm text-ink/55">
+      {byCode ? "Have a password? " : "No password, or forgot it? "}
+      <button
+        type="button"
+        onClick={() => setByCode((v) => !v)}
+        className="font-semibold text-ink/70 underline-offset-2 hover:text-ink hover:underline"
+      >
+        {byCode ? "Sign in with it instead" : "Email me a code instead"}
+      </button>
+    </p>
   );
 
   return (
     <form action={action} className={FORM}>
       {hidden}
-      {mode === "signin" && byCode && (
+      {mode === "signin" && (
         <p className="text-base text-ink">
-          Enter your email and we&apos;ll send you a code to sign in with.
+          {byCode
+            ? "We'll email a six-digit code to this address and sign you in with it. No password needed, and if you had one, you can set a new one after."
+            : "Sign in with your email and password."}
         </p>
       )}
       <Input
@@ -226,7 +234,7 @@ export default function AuthForm({
       <Messages state={state} />
       {mode === "signin" && (
         <Link href="/signup" className={`${LINK} self-start`}>
-          New here? Create an account
+          First time here? Create an account
         </Link>
       )}
       {mode === "signup" && (

@@ -20,7 +20,16 @@ export default async function LoginPage({
   if (await currentSession()) redirect(target);
 
   return (
-    <ContentPage eyebrow="Account" title="Sign in">
+    <ContentPage
+      eyebrow="Account"
+      title="Sign in"
+      intro={
+        <p>
+          Use your password, or have us email you a one-time code. The code also
+          works if you haven&apos;t set a password yet or forgot it.
+        </p>
+      }
+    >
       <AuthForm mode="signin" next={target} startByCode={by === "code"} />
     </ContentPage>
   );

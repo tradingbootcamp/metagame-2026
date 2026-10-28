@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   formToBody,
   GRADE_FORM_SESSION_KEYS,
@@ -40,9 +41,11 @@ import { explainDbError } from "@/lib/schedule-store";
 
 const COMMITTEE_PATH = "/backstage/speaker-committee";
 
+// Redirect rather than re-render: this request still carries the session
+// cookie, so a re-render would still read as signed in.
 export async function signOut(): Promise<void> {
   await signOutAccount();
-  revalidatePath(COMMITTEE_PATH);
+  redirect("/grade");
 }
 
 /** The account behind a committee name, or the error to show. */

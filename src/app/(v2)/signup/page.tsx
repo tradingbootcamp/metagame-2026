@@ -23,7 +23,12 @@ export default async function SignupPage({
     <ContentPage
       eyebrow="Account"
       title="Create an account"
-      intro={<p>We&apos;ll email you a code to confirm your address.</p>}
+      intro={
+        <p>
+          Enter your email and we&apos;ll send a six-digit code to confirm it.
+          That&apos;s the whole sign-up; you can add a password afterwards.
+        </p>
+      }
     >
       <AuthForm mode="signup" next={target} />
     </ContentPage>
