@@ -8,7 +8,7 @@ import {
   TABS,
 } from "./pipeline";
 import { durationMinutes } from "@/lib/rfp-fields";
-import type { Row } from "@/lib/rfp-pipeline";
+import { slotLinkable, type Row } from "@/lib/rfp-pipeline";
 
 const row = (over: Partial<Row>): Row => ({
   id: "00000000-0000-0000-0000-000000000000",
@@ -20,6 +20,7 @@ const row = (over: Partial<Row>): Row => ({
   startsAt: null,
   endsAt: null,
   locationId: null,
+  status: "draft",
   grader: null,
   graderId: null,
   graderIds: [],
@@ -205,6 +206,27 @@ describe("compare by scheduled", () => {
         ].sort((a, b) => compare(a, b, "scheduled")),
       ),
     ).toEqual(["early", "late", "none"]);
+  });
+});
+
+describe("slotLinkable", () => {
+  const placed = { placed: true, startsAt: "2026-06-12T17:00:00.000Z" };
+
+  it("links a placed published session", () => {
+    expect(slotLinkable(row({ ...placed, status: "published" }), true)).toBe(
+      true,
+    );
+  });
+
+  it("won't link a placed draft, which /schedule would 404", () => {
+    expect(slotLinkable(row({ ...placed, status: "draft" }), true)).toBe(false);
+  });
+
+  it("won't link anything unplaced, or while the schedule is gated", () => {
+    expect(slotLinkable(row({ status: "published" }), true)).toBe(false);
+    expect(slotLinkable(row({ ...placed, status: "published" }), false)).toBe(
+      false,
+    );
   });
 });
 

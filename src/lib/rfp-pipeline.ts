@@ -36,6 +36,11 @@ export type Row = {
   startsAt: string | null;
   endsAt: string | null;
   locationId: string | null;
+  /**
+   * Placing a proposal doesn't publish it, and /schedule/<slug> only resolves
+   * published sessions — so this decides whether the slot can be linked.
+   */
+  status: RfpSession["row"]["status"];
   /** The latest-assigned grader's committee name, as the Grader column shows. */
   grader: string | null;
   /** That grader's account, for the Grader picker. */
@@ -52,6 +57,15 @@ export type Row = {
   /** The Megagame integration label; null is undecided. */
   megagameIntegration: string | null;
 };
+
+/**
+ * Whether a row's slot can link to its session page. Placing a proposal from
+ * the committee board doesn't publish it, and /schedule/<slug> resolves out of
+ * publicSchedule(), which keeps only published sessions — so a placed draft
+ * would 404.
+ */
+export const slotLinkable = (row: Row, scheduleReachable: boolean) =>
+  scheduleReachable && row.placed && row.status === "published";
 
 /** A name worth showing: null when the account only has its email. */
 export const shownName = (name: string) => (name.includes("@") ? null : name);
@@ -80,6 +94,7 @@ export function toRow(s: RfpSession): Row {
     startsAt: s.row.startsAt?.toISOString() ?? null,
     endsAt: s.row.endsAt?.toISOString() ?? null,
     locationId: s.row.locationId,
+    status: s.row.status,
     grader: s.grader ? committeeLabel(s.grader) : null,
     graderId: s.grader?.userId ?? null,
     graderIds: s.grades.map((g) => g.grader.userId),

@@ -7,6 +7,7 @@ import {
   MEGAGAME_INTEGRATION_INFO,
   PIPELINE_COLORS,
   SHEPHERD_INFO,
+  slotLinkable,
   SPEAKER_TIER_INFO,
   type PipelineField,
   type Row,
@@ -137,10 +138,12 @@ export function SubmissionGroup({
     }
     const when = `${formatPacificDay(row.startsAt)} ${formatPacificTime(row.startsAt)}`;
     const room = row.locationId ? meta.rooms[row.locationId] : null;
+    const draft = row.status !== "published";
+    const linked = slotLinkable(row, meta.linkSessions);
     return cell(
       "Scheduled",
       <span className="min-w-0 text-sm">
-        {meta.linkSessions ? (
+        {linked ? (
           <Link
             href={`/schedule/${row.slug}`}
             className="block truncate text-navy hover:text-meeple hover:underline"
@@ -151,6 +154,7 @@ export function SubmissionGroup({
           <span className="block truncate text-ink/70">{when}</span>
         )}
         <span className="block truncate text-xs text-ink/50">
+          {draft && "Draft · "}
           {room ?? "No room"}
         </span>
       </span>,
