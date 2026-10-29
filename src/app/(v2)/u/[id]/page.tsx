@@ -4,12 +4,14 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { loadProfileView } from "./data";
 import { canSeeSchedule } from "../../schedule/data";
+import { currentSession } from "@/lib/auth";
 import { loadSchedule } from "@/lib/schedule-store";
 import {
   PUBLIC_AUDIENCE,
   userSessions,
   websiteLabel,
 } from "@/lib/user-profile";
+import AccountWall from "@/v2/components/AccountWall";
 import ContentPage from "@/v2/components/ContentPage";
 import UserSessions from "@/v2/components/schedule/UserSessions";
 
@@ -34,6 +36,17 @@ export async function generateMetadata(
 export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
   await connection();
   const { id } = await props.params;
+  // Before the lookup, deliberately: every signed-out visitor gets this same
+  // page whatever the id, so it says nothing about whose profiles exist.
+  if (!(await currentSession())) {
+    return (
+      <AccountWall
+        title="Profiles"
+        body="Attendee profiles are only visible to people with an account."
+        next={`/u/${id}`}
+      />
+    );
+  }
   const view = await loadProfileView(id);
   if (!view) notFound();
   const { profile, access } = view;
