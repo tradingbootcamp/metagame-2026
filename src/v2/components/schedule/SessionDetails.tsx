@@ -9,6 +9,7 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import { toolAccess } from "@/lib/admin-auth";
+import { editSessionAccess } from "@/lib/session-ownership";
 import { currentSession } from "@/lib/auth";
 import { airtableRfpLink, gradeLink } from "@/lib/rfp-links";
 import { gradingSummary } from "@/lib/rfp-sessions";
@@ -149,9 +150,11 @@ export default async function SessionDetails({ slug }: { slug: string }) {
     toolAccess("schedule.manage"),
   ]);
   const viewerId = account?.user.id ?? null;
-  const [rsvps, plans] = await Promise.all([
+  const [rsvps, plans, editor] = await Promise.all([
     loadSessionRsvps(session.id),
     viewerId ? loadViewerPlans(viewerId) : null,
+    // PublicSession carries host names but no ids, so ownership is its own read.
+    viewerId ? editSessionAccess(session.id) : null,
   ]);
 
   const tags = [
@@ -274,6 +277,22 @@ export default async function SessionDetails({ slug }: { slug: string }) {
           </p>
         )}
       </section>
+
+      {editor && (
+        <p className="mt-6 text-sm">
+          <Link
+            href={`/account/sessions/${session.id}`}
+            className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
+          >
+            Edit this session
+          </Link>
+          <span className="text-[#1b1530]/55">
+            {editor.via === "host"
+              ? " — you’re a host"
+              : " — you can edit any session"}
+          </span>
+        </p>
+      )}
 
       {admin && <AdminDetails sessionId={session.id} />}
     </>
