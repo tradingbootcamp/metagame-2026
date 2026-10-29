@@ -142,7 +142,7 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
   );
 }
 
-/** Callers must apply prelaunchGate() first. */
+/** Callers must gate on scheduleGate() first. */
 export default async function SessionDetails({ slug }: { slug: string }) {
   const [{ session, room }, account, admin] = await Promise.all([
     findSession(slug),

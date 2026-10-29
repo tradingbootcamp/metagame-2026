@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import HostSessionForm from "./HostSessionForm";
+import { currentSession } from "@/lib/auth";
+import AccountWall from "@/v2/components/AccountWall";
 import ContentPage from "@/v2/components/ContentPage";
 import { loadSchedule } from "@/lib/schedule-store";
 import { editSessionAccess } from "@/lib/session-ownership";
@@ -18,7 +20,18 @@ export default async function EditSessionPage(
 ) {
   await connection();
   const { id } = await props.params;
-  // A 404 either way: not yours is indistinguishable from not there.
+  // Before the lookup: the same page for every id, so a signed-out visitor
+  // learns nothing about which sessions exist.
+  if (!(await currentSession())) {
+    return (
+      <AccountWall
+        title="Your session"
+        body="Sign in to edit a session you're hosting."
+        next={`/account/sessions/${id}`}
+      />
+    );
+  }
+  // Still a 404 once signed in: not yours is indistinguishable from not there.
   const access = await editSessionAccess(id);
   if (!access) notFound();
 
