@@ -96,8 +96,14 @@ export default function SessionsPanel({
         rows={sessions.running}
         render={(s) => (
           <Row key={s.id} s={s} linkable={linkable}>
-            <span className="text-xs text-ink/50">
+            <span className="flex flex-wrap items-center gap-x-3 text-xs text-ink/50">
               {s.lead ? "Lead host" : "Co-host"}
+              <Link
+                href={`/account/sessions/${s.id}`}
+                className="underline underline-offset-2 hover:text-meeple"
+              >
+                Edit
+              </Link>
             </span>
           </Row>
         )}
