@@ -197,11 +197,9 @@ describe("budget import", () => {
       "2026-10-25",
     );
     expect(out.map((r) => r.id)).toEqual(["T001", "T002"]);
-    expect(out[0]).toMatchObject({
-      budgeted: 900,
-      status: "Proposed",
-      actual: undefined,
-    });
+    expect(out[0]).toMatchObject({ budgeted: 900, status: "Proposed" });
+    // A plan row has no spend of its own; toMatchObject can't say "absent".
+    expect(out[0].actual).toBeUndefined();
     expect(out[1].parent).toBe("T001");
   });
 
