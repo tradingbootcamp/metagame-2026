@@ -655,6 +655,10 @@ export default function Home() {
                 sponsors: SILVER_SPONSORS,
                 logo: "h-16 md:h-24",
                 row: "flex flex-wrap justify-center gap-x-12 gap-y-6",
+                // Equal-width cells so the logos' centres, not their inner
+                // edges, sit symmetric about the page centre: the wide Walrus
+                // wordmark otherwise reads as pulled toward the middle.
+                cell: "flex justify-center md:w-80",
               },
               {
                 label: "Patron",
@@ -663,7 +667,7 @@ export default function Home() {
                 // Two columns on phones; logos shrink to fit their column.
                 row: "grid w-full grid-cols-2 justify-items-center gap-x-6 gap-y-8 md:flex md:flex-wrap md:justify-center md:gap-x-12 md:gap-y-6",
               },
-            ].map(({ label, sponsors, logo, row }) => (
+            ].map(({ label, sponsors, logo, row, cell }) => (
               <div key={label} className="flex flex-col items-center gap-4">
                 <p className={`${EYEBROW} text-sm text-ink/50`}>{label}</p>
                 <div className={`items-center ${row}`}>
@@ -684,12 +688,14 @@ export default function Home() {
                         href={s.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="transition-opacity hover:opacity-75"
+                        className={`transition-opacity hover:opacity-75 ${cell ?? ""}`}
                       >
                         {img}
                       </a>
                     ) : (
-                      <span key={s.name}>{img}</span>
+                      <span key={s.name} className={cell}>
+                        {img}
+                      </span>
                     );
                   })}
                 </div>

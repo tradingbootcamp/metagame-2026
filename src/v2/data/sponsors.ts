@@ -39,13 +39,13 @@ export const SILVER_SPONSORS: Sponsor[] = [
     name: "d_model",
     url: "https://dmodel.ai",
     logo: dModel,
-    logoClass: "h-14 md:h-20",
+    logoClass: "h-12 md:h-[72px]",
   },
   {
     name: "Walrus Security",
     url: "https://walrusfi.com",
     logo: walrusfi,
-    logoClass: "h-14 md:h-20",
+    logoClass: "h-12 md:h-16",
   },
 ];
 
