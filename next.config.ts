@@ -11,6 +11,13 @@ import { RFP_FORM_URL } from "./src/v2/lib/links";
 validateEnv();
 
 const nextConfig: NextConfig = {
+  // Vercel skew protection keeps an old deployment serving its own assets and
+  // server functions to tabs that loaded it, instead of 404ing them once a
+  // newer deploy takes the domain. It only works if the build knows its own
+  // id, and our builds run in GitHub Actions (`vercel build` + `--prebuilt`),
+  // where Vercel's id isn't known yet — so the workflows mint one. Unset
+  // locally, which just means no `?dpl=` on asset URLs.
+  deploymentId: process.env.DEPLOYMENT_ID,
   outputFileTracingIncludes: {
     "/api/posters": ["./assets/posters/*.pdf"],
     // The sent-email catalog reads emails/ at request time. Keys are globs,
