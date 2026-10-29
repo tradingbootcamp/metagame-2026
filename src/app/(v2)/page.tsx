@@ -19,7 +19,6 @@ import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
 import TetrisDivider from "@/v2/components/dividers/tetris";
 import FaqItem from "@/v2/components/FaqItem";
 import Highlights2025 from "@/v2/components/Highlights2025";
-import KeyDates from "@/v2/components/KeyDates";
 import PersonCard from "@/v2/components/PersonCard";
 import SectionHeading from "@/v2/components/SectionHeading";
 import SignupForm from "@/v2/components/signup/SignupForm";
@@ -754,18 +753,6 @@ export default function Home() {
 
       <DiceDivider />
 
-      {/* key dates */}
-      <section id="key-dates" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <SectionHeading eyebrow="When is what?" title="Key dates" />
-          <div className="mt-10">
-            <KeyDates />
-          </div>
-        </div>
-      </section>
-
-      <MonopolyDivider />
-
       {/* stay in the loop */}
       <section
         id="stay-in-the-loop"
@@ -782,6 +769,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Below the last section: the Monopoly race runs round whatever sits
+          between the dice row and this one. */}
+      <MonopolyDivider />
     </>
   );
 }

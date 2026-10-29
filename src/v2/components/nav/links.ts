@@ -1,7 +1,6 @@
 import type { ComponentType } from "react";
 import {
   Award,
-  CalendarDays,
   CircleUserRound,
   HeartHandshake,
   History,
@@ -80,6 +79,5 @@ export const HOME_SECTIONS: readonly { id: string; icon: NavIcon }[] = [
   { id: "tickets", icon: Ticket },
   { id: "sponsors", icon: Award },
   { id: "faq", icon: MessageCircleQuestion },
-  { id: "key-dates", icon: CalendarDays },
   { id: "stay-in-the-loop", icon: Mail },
 ] as const;

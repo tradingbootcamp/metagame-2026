@@ -51,8 +51,8 @@ const nextConfig: NextConfig = {
       destination: "/backstage/speaker-committee",
       permanent: true,
     },
-    // Key dates used to be its own page.
-    { source: "/key-dates", destination: "/#key-dates", permanent: true },
+    // Key dates used to be its own page, then a home-page section; now gone.
+    { source: "/key-dates", destination: "/", permanent: true },
     // Short link to the session-proposal (RFP) Airtable form.
     { source: "/propose", destination: RFP_FORM_URL, permanent: false },
     // Short links into Standard checkout; /buy/<code> pre-applies a promo code.
