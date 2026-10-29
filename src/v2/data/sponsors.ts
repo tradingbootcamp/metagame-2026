@@ -7,6 +7,7 @@ import goodhartLabs from "../../../public/images/sponsors/goodhart-labs-logos/sv
 import manifund from "../../../public/images/sponsors/manifund_logo.png";
 import outsideTheAsylum from "../../../public/images/sponsors/outside_the_asylum.png";
 import rogueSignal from "../../../public/images/sponsors/rogue_signal/rogue_signal_horiz.svg";
+import walrusfi from "../../../public/images/sponsors/walrusfi_horiz.svg";
 import spire from "../../../public/images/sponsors/spire.svg";
 
 export type Sponsor = {
@@ -38,6 +39,12 @@ export const SILVER_SPONSORS: Sponsor[] = [
     name: "d_model",
     url: "https://dmodel.ai",
     logo: dModel,
+    logoClass: "h-14 md:h-20",
+  },
+  {
+    name: "Walrus Security",
+    url: "https://walrusfi.com",
+    logo: walrusfi,
     logoClass: "h-14 md:h-20",
   },
 ];
