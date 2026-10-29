@@ -10,6 +10,7 @@ import {
   TAG,
   TestTag,
 } from "../../tickets/parts";
+import { scheduleViewer } from "@/app/(v2)/schedule/data";
 import ToolSignIn from "@/components/ToolSignIn";
 import { getDb, schema } from "@/db";
 import { teamAccess } from "@/lib/access";
@@ -107,7 +108,15 @@ export default async function AdminUserProfilePage(
     explanation: explainPermissions(held),
   };
   const { accounts, byEmail } = await ticketAccounts(tickets);
-  const sessions = userSessions(user.id, schedule, plans, TEAM_AUDIENCE);
+  // Room visibility follows the viewer's schedule permissions here too, so a
+  // team tool doesn't become a way around them.
+  const sessions = userSessions(
+    user.id,
+    schedule,
+    plans,
+    TEAM_AUDIENCE,
+    await scheduleViewer(),
+  );
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">

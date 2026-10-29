@@ -5,11 +5,13 @@
 import {
   isPlaced,
   publicAccountName,
+  roomVisible,
   type Ages,
   type Category,
   type PublicLocation,
   type RsvpStatus,
   type ScheduleLocation,
+  type ScheduleViewer,
   type ScheduleSession,
   type Status,
   type ViewerPlans,
@@ -211,12 +213,20 @@ export function userSessions(
   },
   plans: ViewerPlans | null,
   audience: SessionAudience,
+  /** Defaults to the least a viewer can see, so a forgotten argument fails safe. */
+  viewer: ScheduleViewer = "public",
 ): UserSessionsView {
   const rsvps = audience.attending ? (plans?.rsvps ?? {}) : {};
+  // Room visibility is the schedule's rule, not the audience's: a session in
+  // a room this viewer can't see is as hidden here as it is on /schedule.
+  const rooms = new Set(
+    schedule.locations.filter((l) => roomVisible(l, viewer)).map((l) => l.id),
+  );
   const sessions: UserSession[] = [];
   for (const s of schedule.sessions) {
     if (!audience.drafts && !(s.status === "published" && isPlaced(s)))
       continue;
+    if (s.locationId !== null && !rooms.has(s.locationId)) continue;
     const hostIndex = s.hosts.findIndex((h) => h.userId === userId);
     const roles: UserSessionRole[] = [];
     if (hostIndex >= 0) roles.push("hosting");

@@ -287,3 +287,70 @@ describe("userSessions", () => {
     expect(sessions[0].hosts).toEqual([{ name: "Someone" }]);
   });
 });
+
+describe("userSessions room visibility", () => {
+  // The room the session sits in is team-only; the session itself is published.
+  const backstage = {
+    locations: [room({ id: "secret", visibility: "hidden" as const })],
+    sessions: [
+      session({ id: "s", slug: "s", locationId: "secret", hosts: [ada] }),
+    ],
+  };
+
+  it("hides a team-only room's session from an attendee's view", () => {
+    const { sessions, locations } = userSessions(
+      "u1",
+      backstage,
+      null,
+      PUBLIC_AUDIENCE,
+      "public",
+    );
+    expect(sessions).toEqual([]);
+    expect(locations).toEqual([]);
+  });
+
+  it("shows it to the team", () => {
+    const { sessions } = userSessions(
+      "u1",
+      backstage,
+      null,
+      TEAM_AUDIENCE,
+      "team",
+    );
+    expect(sessions.map((s) => s.id)).toEqual(["s"]);
+  });
+
+  it("shows a volunteer room to a volunteer but not an attendee", () => {
+    const ops = {
+      locations: [room({ id: "ops", visibility: "volunteer" as const })],
+      sessions: [
+        session({ id: "s", slug: "s", locationId: "ops", hosts: [ada] }),
+      ],
+    };
+    const seen = (viewer: "public" | "volunteer") =>
+      userSessions("u1", ops, null, PUBLIC_AUDIENCE, viewer).sessions.length;
+    expect(seen("public")).toBe(0);
+    expect(seen("volunteer")).toBe(1);
+  });
+
+  it("defaults to the attendee view when no viewer is given", () => {
+    const { sessions } = userSessions("u1", backstage, null, PUBLIC_AUDIENCE);
+    expect(sessions).toEqual([]);
+  });
+
+  it("keeps a session with no room at all", () => {
+    const { sessions } = userSessions(
+      "u1",
+      {
+        locations: [],
+        sessions: [
+          session({ id: "s", slug: "s", locationId: null, hosts: [ada] }),
+        ],
+      },
+      null,
+      PUBLIC_AUDIENCE,
+      "public",
+    );
+    expect(sessions.map((s) => s.id)).toEqual(["s"]);
+  });
+});

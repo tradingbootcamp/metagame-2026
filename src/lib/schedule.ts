@@ -439,7 +439,12 @@ export type PublicLocation = Pick<
 /** How far down the room visibility levels a viewer may see. */
 export type ScheduleViewer = "public" | "volunteer" | "team";
 
-function roomVisible(
+/**
+ * Whether this viewer may see a room at all — the one rule, exported so the
+ * profile pages decide it the same way the schedule does rather than growing
+ * their own copy.
+ */
+export function roomVisible(
   location: ScheduleLocation,
   viewer: ScheduleViewer,
 ): boolean {
