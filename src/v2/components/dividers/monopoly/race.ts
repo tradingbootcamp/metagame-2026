@@ -2,9 +2,10 @@
 // Monopoly row (the pieces). Pick a token and it goes orange, the other three
 // take a grey each; from then on a click on any die is your roll, three
 // phantom copies of that die roll for the greys beneath the dice row, and all
-// four pieces set off around the key-dates section, one glyph pitch a step.
-// Dice are on cooldown until the move lands. First piece back to the flag
-// ends it: confetti if it's yours, a shake if not, then everything resets.
+// four pieces set off around the chapters between the two rows, one glyph
+// pitch a step. Dice are on cooldown until the move lands. First piece back
+// to the flag ends it: confetti if it's yours, a shake if not, then
+// everything resets.
 import { useSyncExternalStore } from "react";
 
 // Greys for the three rivals, darkest first; phantom dice use the same.

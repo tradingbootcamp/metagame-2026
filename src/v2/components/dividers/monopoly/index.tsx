@@ -41,8 +41,8 @@ const RESET_MS = 900;
 
 // iron · hat · car · shoe — classic Monopoly tokens (Noun Project, Anna
 // Lupean, CC BY 3.0). Baked-in attribution stripped; credit lives on
-// /credits. Click a token and it's your piece in a race around the key dates
-// (race.ts): a click on any die above rolls for everyone.
+// /credits. Click a token and it's your piece in a race up round the dice row
+// and back (race.ts): a click on any die above rolls for everyone.
 export default function MonopolyDivider() {
   const race = useRace();
   const { collect } = useHatTrick();

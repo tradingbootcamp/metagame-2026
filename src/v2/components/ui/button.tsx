@@ -24,6 +24,10 @@ const buttonVariants = cva(
         // shadow grows and the face slides up-left on hover.
         raised:
           "border-2 border-cream/30 bg-navy text-cream shadow-[0_0_0_0_#fa8072] hover:-translate-x-[5px] hover:-translate-y-[5px] hover:border-cream/60 hover:shadow-[8px_8px_0_0_#fa8072] hover:after:-right-[7px] hover:after:-bottom-[7px]",
+        // Rulebook ticket: one ruled row of the join chapter's price list. The
+        // first child (the name) and third (a note) stack on the left; the
+        // second (the price) sits at the right across both rows.
+        tile: "grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 rounded-none border-b border-navy/15 px-2 py-4 text-left whitespace-normal text-navy hover:bg-tan/20 [&>:nth-child(2)]:col-start-2 [&>:nth-child(2)]:row-span-2 [&>:nth-child(2)]:row-start-1",
       },
       size: {
         sm: "px-4 py-[9px] text-sm",

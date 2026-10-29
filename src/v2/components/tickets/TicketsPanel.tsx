@@ -18,6 +18,7 @@ import {
 import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { withPromo, withUtm } from "@/lib/utm";
+import { cn } from "@/v2/lib/utils";
 import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import {
   subscribeCurrency,
@@ -25,20 +26,53 @@ import {
   getCurrencyServerSnapshot,
   setCurrency,
 } from "@/v2/lib/currency-store";
-import { HEADING } from "../styles";
+import { DISPLAY, HEADING } from "../styles";
 
-// Square ticket tiles: mono uppercase label over a big grotesk price, rendered
-// via the raised Button variant (bordered navy face with a salmon hard-shadow
-// that grows and slides up-left on hover). Layout only; the visual lives in the
-// variant.
-// The min height matches a three-line tile, so tiles stay even without the
-// row stretching them (it can't: the family tile's swag bubble adds height).
-const TILE =
-  "min-h-[112px] min-w-[210px] flex-col gap-1 px-7 py-4 max-[460px]:w-full";
-const TILE_LABEL =
-  "font-space-mono text-[13px] tracking-[0.18em] uppercase whitespace-nowrap text-cream/85";
-const TILE_NOTE =
-  "font-space-mono text-[11px] tracking-[0.08em] uppercase whitespace-nowrap text-cream/60";
+// Two looks for the same tiles. "raised": square tiles, mono uppercase label
+// over a big grotesk price, on the raised Button variant (bordered navy face
+// with a salmon hard-shadow that grows and slides up-left on hover). Their min
+// height matches a three-line tile, so tiles stay even without the row
+// stretching them (it can't: the family tile's swag bubble adds height).
+// "rulebook": the home page's join chapter, a price list on the page. Each
+// ticket is a ruled row (the "tile" Button variant) with its name and a
+// plain-words note on the left and a Bebas price on the right.
+const LOOKS = {
+  raised: {
+    variant: "raised",
+    row: "flex flex-wrap items-start gap-[18px] max-[460px]:*:w-full",
+    tile: "min-h-[112px] min-w-[210px] flex-col gap-1 px-7 py-4 max-[460px]:w-full",
+    main: "",
+    label:
+      "font-space-mono text-[13px] tracking-[0.18em] uppercase whitespace-nowrap text-cream/85",
+    price: `${HEADING} text-[30px] leading-none text-tan`,
+    strike: "text-[18px] font-bold text-cream/40 line-through",
+    note: "font-space-mono text-[11px] tracking-[0.08em] uppercase whitespace-nowrap text-cream/60",
+    // The bubble straddles the tile's bottom edge and follows its hover lift;
+    // the margin keeps it clear of whatever tile wraps in below.
+    swagRow: "mb-9",
+    swagTile: "",
+    swag: "absolute inset-x-0 -bottom-8 z-10 mx-auto w-[190px] -rotate-2 scroll-mt-24 rounded-2xl border-2 border-navy bg-meeple px-2.5 py-1.5 text-center font-space-mono text-[10px] leading-[1.25] font-bold tracking-[0.04em] text-cream uppercase shadow-[3px_3px_0_0_var(--color-navy)] transition-[translate,scale] duration-150 peer-hover:-translate-[5px] hover:scale-105",
+  },
+  rulebook: {
+    variant: "tile",
+    row: "grid w-full gap-x-10 border-t-2 border-navy sm:grid-cols-2",
+    // A row stretched to its neighbour's height (the family row, with its
+    // bubble) keeps its lines together at the top.
+    tile: "w-full content-start",
+    main: "bg-tan/25 hover:bg-tan/40",
+    label:
+      "font-space-mono text-xs font-bold tracking-[0.14em] uppercase text-meeple",
+    price: `${DISPLAY} text-[40px] leading-none text-navy`,
+    strike: "text-lg font-bold text-navy/35 line-through",
+    note: "text-[13.5px] font-normal text-ink/60",
+    // The bubble sits in its row, under the note, so the rules stay even:
+    // flat, with no hard shadow.
+    swagRow: "",
+    swagTile: "pb-14",
+    swag: "absolute bottom-4 left-2 z-10 max-w-[calc(100%-1rem)] -rotate-2 scroll-mt-24 rounded-2xl border-2 border-navy bg-meeple px-2.5 py-1 font-space-mono text-[10px] leading-[1.25] font-bold tracking-[0.04em] text-cream uppercase transition-transform duration-150 hover:scale-105",
+  },
+} as const;
+type Look = (typeof LOOKS)[keyof typeof LOOKS];
 
 // The tickets UI for the home page's tickets section: a currency toggle over the early-bird ticket (USD → Stripe Checkout;
 // BTC → the OpenNode BtcModal) and the pay-what-you-want supporter tile, both
@@ -56,6 +90,50 @@ const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
   e.currentTarget.href = withPromo(withUtm(href));
 };
 
+// One ticket: a checkout link (USD) or a button that opens a flow.
+function Tile({
+  look,
+  main = false,
+  href,
+  onClick,
+  id,
+  className,
+  children,
+}: {
+  look: Look;
+  main?: boolean;
+  href?: string;
+  onClick?: () => void;
+  id?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const cls = cn(look.tile, main && look.main, className);
+  return href ? (
+    <Button asChild variant={look.variant} className={cls}>
+      <a
+        href={href}
+        onClick={addUtm(href)}
+        onAuxClick={addUtm(href)}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {children}
+      </a>
+    </Button>
+  ) : (
+    <Button
+      type="button"
+      variant={look.variant}
+      id={id}
+      onClick={onClick}
+      className={cls}
+    >
+      {children}
+    </Button>
+  );
+}
+
 const HASH_MODALS = [
   "supporter",
   "day-pass",
@@ -71,6 +149,7 @@ export default function TicketsPanel({
   showHeading = true,
   align = "center",
   earlyBird,
+  look: lookName = "raised",
 }: {
   // Whether early-bird was live when the page rendered; the client re-checks its
   // own clock after hydration so a cached page still flips at the deadline.
@@ -80,7 +159,10 @@ export default function TicketsPanel({
   // The modal shows its own "Tickets" heading; the one-pager section supplies a
   // SectionHeading above the (now background-less) panel, so it hides this one.
   showHeading?: boolean;
+  look?: keyof typeof LOOKS;
 }) {
+  const look = LOOKS[lookName];
+  const rulebook = lookName === "rulebook";
   const start = align === "start";
   const earlyBirdActive = useSyncExternalStore(
     subscribeNever,
@@ -122,6 +204,7 @@ export default function TicketsPanel({
     getCurrencyServerSnapshot,
   );
   const isBtc = currency === "btc";
+  const money = (usd: number, btc: number) => (isBtc ? `₿${btc}` : `$${usd}`);
 
   return (
     <>
@@ -165,174 +248,166 @@ export default function TicketsPanel({
       </button>
 
       <div
-        className={`flex flex-wrap items-start gap-[18px] max-[460px]:*:w-full ${start ? "justify-start" : "justify-center"}`}
+        className={cn(
+          look.row,
+          !rulebook && (start ? "justify-start" : "justify-center"),
+        )}
       >
-        {standard &&
-          earlyBirdActive &&
-          (isBtc ? (
-            <Button
-              type="button"
-              variant="raised"
-              onClick={() => setBtcOpen("early-bird")}
-              className={TILE}
-            >
-              <span className={TILE_LABEL}>Early-bird</span>
-              <span className="flex items-baseline gap-2.5 leading-none">
-                <span className="text-[18px] font-bold text-cream/40 line-through">
-                  &#8383;{standard.prices.full.btc}
-                </span>
-                <span className={`${HEADING} text-[30px] text-tan`}>
-                  &#8383;{standard.prices.earlyBird.btc}
-                </span>
+        {standard && earlyBirdActive && (
+          <Tile
+            look={look}
+            main
+            href={isBtc ? undefined : EARLY_BIRD_HREF}
+            onClick={() => setBtcOpen("early-bird")}
+          >
+            <span className={look.label}>Early-bird</span>
+            <span className="flex items-baseline gap-2.5 leading-none">
+              <span className={look.strike}>
+                {money(standard.prices.full.usd, standard.prices.full.btc)}
               </span>
-              <span className={TILE_NOTE}>until {EARLY_BIRD_DEADLINE}</span>
-            </Button>
-          ) : (
-            <Button asChild variant="raised" className={TILE}>
-              <a
-                href={EARLY_BIRD_HREF}
-                onClick={addUtm(EARLY_BIRD_HREF)}
-                onAuxClick={addUtm(EARLY_BIRD_HREF)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <span className={TILE_LABEL}>Early-bird</span>
-                <span className="flex items-baseline gap-2.5 leading-none">
-                  <span className="text-[18px] font-bold text-cream/40 line-through">
-                    ${standard.prices.full.usd}
-                  </span>
-                  <span className={`${HEADING} text-[30px] text-tan`}>
-                    ${standard.prices.earlyBird.usd}
-                  </span>
-                </span>
-                <span className={TILE_NOTE}>until {EARLY_BIRD_DEADLINE}</span>
-              </a>
-            </Button>
-          ))}
+              <span className={look.price}>
+                {money(
+                  standard.prices.earlyBird.usd,
+                  standard.prices.earlyBird.btc,
+                )}
+              </span>
+            </span>
+            <span className={look.note}>
+              {rulebook
+                ? `Until ${EARLY_BIRD_DEADLINE}.`
+                : `until ${EARLY_BIRD_DEADLINE}`}
+            </span>
+          </Tile>
+        )}
         {/* Full price, no promo auto-applied: for after the deadline, or for
             anyone bringing their own code. */}
-        {standard &&
-          (isBtc ? (
-            <Button
-              type="button"
-              variant="raised"
-              onClick={() => setBtcOpen("standard")}
-              className={TILE}
-            >
-              <span className={TILE_LABEL}>Standard</span>
-              <span className={`${HEADING} text-[30px] leading-none text-tan`}>
-                &#8383;{standard.prices.full.btc}
-              </span>
-            </Button>
-          ) : (
-            <Button asChild variant="raised" className={TILE}>
-              <a
-                href={FULL_PRICE_HREF}
-                onClick={addUtm(FULL_PRICE_HREF)}
-                onAuxClick={addUtm(FULL_PRICE_HREF)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <span className={TILE_LABEL}>Standard</span>
-                <span
-                  className={`${HEADING} text-[30px] leading-none text-tan`}
-                >
-                  ${standard.prices.full.usd}
-                </span>
-              </a>
-            </Button>
-          ))}
-        <Button
-          type="button"
-          variant="raised"
+        {standard && (
+          <Tile
+            look={look}
+            main={!earlyBirdActive}
+            href={isBtc ? undefined : FULL_PRICE_HREF}
+            onClick={() => setBtcOpen("standard")}
+          >
+            <span className={look.label}>Standard</span>
+            <span className={look.price}>
+              {money(standard.prices.full.usd, standard.prices.full.btc)}
+            </span>
+            {rulebook && <span className={look.note}>The whole weekend.</span>}
+          </Tile>
+        )}
+        <Tile
+          look={look}
           id="supporter"
           onClick={() => setOpenModal("supporter")}
-          className={`${TILE} scroll-mt-24`}
+          className="scroll-mt-24"
         >
-          <span className={TILE_LABEL}>Supporter</span>
-          <span className={`${HEADING} text-[30px] leading-none text-tan`}>
-            {isBtc ? (
-              <>&#8383;{supporterTier.floor.btc}+</>
-            ) : (
-              <>${supporterTier.floor.usd}+</>
-            )}
+          <span className={look.label}>Supporter</span>
+          <span className={look.price}>
+            {money(supporterTier.floor.usd, supporterTier.floor.btc)}+
           </span>
-        </Button>
+          {rulebook && (
+            <span className={look.note}>
+              The whole weekend, plus you help make it happen.
+            </span>
+          )}
+        </Tile>
         {/* Day passes: USD → the modal's Stripe links, BTC → its OpenNode form. */}
-        <Button
-          type="button"
-          variant="raised"
+        <Tile
+          look={look}
           id="day-pass"
           onClick={() => setOpenModal("day-pass")}
-          // Narrower padding + a 32px line box so the three-price line fits the
-          // shared 210px tile at the same height as the others.
-          className={TILE.replace("px-7", "px-4")}
+          // Raised: narrower padding + a 32px line box so the three-price line
+          // fits the shared 210px tile at the same height as the others.
+          className={rulebook ? undefined : "px-4"}
         >
-          <span className={TILE_LABEL}>Day pass</span>
-          <span
-            className={`${HEADING} leading-[32px] text-tan ${isBtc ? "text-[15px]" : "text-[22px]"}`}
-          >
-            {isBtc
-              ? `\u20BF${dayPasses.map((p) => p.btc).join("/")}`
-              : dayPasses.map((p) => `$${p.usd}`).join("/")}
-          </span>
-          <span className={TILE_NOTE}>
-            {dayPasses.map((p) => p.date.long.slice(0, 3)).join(" · ")}
-          </span>
-        </Button>
+          <span className={look.label}>Day pass</span>
+          {rulebook ? (
+            <>
+              <span className={look.price}>
+                {isBtc
+                  ? `₿${Math.min(...dayPasses.map((p) => p.btc))}–${Math.max(...dayPasses.map((p) => p.btc))}`
+                  : `$${Math.min(...dayPasses.map((p) => p.usd))}–${Math.max(...dayPasses.map((p) => p.usd))}`}
+              </span>
+              <span className={look.note}>
+                {dayPasses
+                  .map(
+                    (p) => `${p.date.long.slice(0, 3)} ${money(p.usd, p.btc)}`,
+                  )
+                  .join(" · ")}
+              </span>
+            </>
+          ) : (
+            <>
+              <span
+                className={`${HEADING} leading-[32px] text-tan ${isBtc ? "text-[15px]" : "text-[22px]"}`}
+              >
+                {isBtc
+                  ? `₿${dayPasses.map((p) => p.btc).join("/")}`
+                  : dayPasses.map((p) => `$${p.usd}`).join("/")}
+              </span>
+              <span className={look.note}>
+                {dayPasses.map((p) => p.date.long.slice(0, 3)).join(" · ")}
+              </span>
+            </>
+          )}
+        </Tile>
         {/* The swag bubble is a sibling, not a child: a button can't nest in
-            the tile's button. It straddles the tile's bottom edge and follows
-            the tile's hover lift, and the margin keeps it clear of whatever
-            tile wraps in below. */}
-        <div className="relative mb-9 flex">
-          <Button
-            type="button"
-            variant="raised"
+            the tile's button. */}
+        <div className={cn("relative flex", look.swagRow)}>
+          <Tile
+            look={look}
             id="family-pack"
             onClick={() => setOpenModal("family-pack")}
-            // Narrower padding so the long label fits the shared 210px tile.
-            className={`peer ${TILE.replace("px-7", "px-4")}`}
+            // Raised: narrower padding so the long label fits the shared 210px
+            // tile.
+            className={cn("peer", look.swagTile, !rulebook && "px-4")}
           >
-            <span className={TILE_LABEL}>Family &amp; Friends</span>
+            <span className={look.label}>Family &amp; Friends</span>
             <span className="flex items-baseline gap-2.5 leading-none">
-              <span className="text-[18px] font-bold text-cream/40 line-through">
-                ${STANDARD_USD}
-              </span>
-              <span className={`${HEADING} text-[30px] text-tan`}>
-                ${FAMILY_PACK.usd}
-              </span>
+              <span className={look.strike}>${STANDARD_USD}</span>
+              <span className={look.price}>${FAMILY_PACK.usd}</span>
             </span>
-            <span className={TILE_NOTE}>
-              each · {FAMILY_PACK.min}–{FAMILY_PACK.max} tickets
+            <span className={look.note}>
+              {rulebook
+                ? `Each, in a bundle of ${FAMILY_PACK.min}–${FAMILY_PACK.max}.`
+                : `each · ${FAMILY_PACK.min}–${FAMILY_PACK.max} tickets`}
             </span>
-          </Button>
+          </Tile>
           <button
             type="button"
             id="friend-swag"
             onClick={() => setOpenModal("friend-swag")}
-            className="absolute inset-x-0 -bottom-8 z-10 mx-auto w-[190px] -rotate-2 scroll-mt-24 rounded-2xl border-2 border-navy bg-meeple px-2.5 py-1.5 text-center font-space-mono text-[10px] leading-[1.25] font-bold tracking-[0.04em] text-cream uppercase shadow-[3px_3px_0_0_var(--color-navy)] transition-[translate,scale] duration-150 peer-hover:-translate-[5px] hover:scale-105"
+            className={look.swag}
           >
             Plus special bring‑a‑friend reward swag
           </button>
         </div>
-        <Button
-          type="button"
-          variant="raised"
+        <Tile
+          look={look}
           id="discount-rate"
           onClick={() => setOpenModal("discount-rate")}
-          className={TILE}
         >
-          <span className={TILE_LABEL}>Student / Aid</span>
-          <span className={`${HEADING} text-[30px] leading-none text-tan`}>
-            50% off
-          </span>
-        </Button>
-        <Button asChild variant="raised" className={TILE}>
-          <VolunteerFormLink>
-            <span className={TILE_LABEL}>Volunteer</span>
-            <span className={`${HEADING} text-[30px] leading-none text-tan`}>
-              $0
+          <span className={look.label}>Student / Aid</span>
+          <span className={look.price}>50% off</span>
+          {rulebook && (
+            <span className={look.note}>
+              For students, nonprofit staff and anyone in need.
             </span>
+          )}
+        </Tile>
+        <Button
+          asChild
+          variant={look.variant}
+          className={cn(look.tile, rulebook && "whitespace-normal")}
+        >
+          <VolunteerFormLink>
+            <span className={look.label}>Volunteer</span>
+            <span className={look.price}>$0</span>
+            {rulebook && (
+              <span className={look.note}>
+                A limited supply, for volunteers.
+              </span>
+            )}
           </VolunteerFormLink>
         </Button>
       </div>

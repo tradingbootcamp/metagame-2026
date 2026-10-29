@@ -140,6 +140,7 @@ function Scene({
   record,
   onIntroDone,
   budget,
+  size,
 }: {
   phase: Phase;
   intro: boolean;
@@ -147,6 +148,7 @@ function Scene({
   record: boolean;
   onIntroDone: () => void;
   budget: RenderBudget;
+  size: number;
 }) {
   const [gap] = useState(readGap);
   const rowWidth = rowWidthFor(gap);
@@ -182,10 +184,7 @@ function Scene({
   // actual canvas — so RESTING_SIZE can grow the dice on roomy screens without
   // letting the row overflow a narrow one (it shrinks to fit instead). A no-op
   // at RESTING_SIZE 1 (the row is already ~91% of width); only binds when scaled up.
-  const targetRowPx = Math.min(
-    oldStagePx * 0.95 * RESTING_SIZE,
-    canvasWidthPx * 0.95,
-  );
+  const targetRowPx = Math.min(oldStagePx * 0.95 * size, canvasWidthPx * 0.95);
   const scale = Math.min(2.4, targetRowPx / (refRow * pxPerWorld));
 
   // Roll-in pose driver, built once at mount. Normal loads play back one of the
@@ -332,7 +331,9 @@ function initialPhase(): Phase {
   return "meta";
 }
 
-export default function Dice3D() {
+// `size` scales the resting row (RESTING_SIZE by default; the rulebook cover
+// uses a smaller one). It scales the whole group, so kept takes still land.
+export default function Dice3D({ size = RESTING_SIZE }: { size?: number }) {
   const [phase, setPhase] = useState<Phase>(initialPhase);
 
   // Roll-in runs only on the default animated start — a pinned ?phase= or
@@ -419,6 +420,7 @@ export default function Dice3D() {
           record={record}
           onIntroDone={() => setIntroOver(true)}
           budget={budget}
+          size={size}
         />
         <FrameDriver budget={budget} />
       </Canvas>

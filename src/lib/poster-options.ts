@@ -9,6 +9,9 @@ import {
 export const POSTER_ORIGIN = "https://metagame.games";
 export const GENERIC_AREA = "generic";
 export const GENERIC_PLACEMENT = "Generic poster";
+// The Generic poster link's slug, for the static /poster page, which can't wait
+// on the catalog. The generator still discovers it from the tracking links.
+export const GENERIC_POSTER_SLUG = "poster";
 export type PosterTracking = {
   qrUrl: string;
   placement: string;

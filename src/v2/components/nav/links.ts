@@ -1,7 +1,6 @@
 import type { ComponentType } from "react";
 import {
   Award,
-  CalendarDays,
   CircleUserRound,
   HeartHandshake,
   History,
@@ -10,6 +9,7 @@ import {
   MapPin,
   MessageCircleQuestion,
   Puzzle,
+  Shapes,
   ShieldCheck,
   Ticket,
   UserRound,
@@ -33,6 +33,7 @@ export type NavLink = {
 export const NAV_LINKS: readonly NavLink[] = [
   { id: "home", label: "Home", href: "/", icon: Mg2Die },
   { id: "tickets", label: "Tickets", href: "/#tickets", icon: Ticket },
+  { id: "sessions", label: "Sessions", href: "/sessions", icon: Shapes },
   { id: "last-year", label: "Last Year", href: "/last-year", icon: History },
   {
     id: "get-involved",
@@ -80,6 +81,5 @@ export const HOME_SECTIONS: readonly { id: string; icon: NavIcon }[] = [
   { id: "tickets", icon: Ticket },
   { id: "sponsors", icon: Award },
   { id: "faq", icon: MessageCircleQuestion },
-  { id: "key-dates", icon: CalendarDays },
   { id: "stay-in-the-loop", icon: Mail },
 ] as const;

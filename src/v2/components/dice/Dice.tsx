@@ -53,7 +53,15 @@ const DiceDevPanel =
     : null;
 
 // Owns its own stage box so the page drops <Dice /> in regardless of how the dice render.
-export default function Dice() {
+// `size` and `stage` (the stage box's height classes) let a page show a
+// smaller row than the old hero's.
+export default function Dice({
+  size,
+  stage = "h-[clamp(160px,20vh,220px)] md:h-[clamp(330px,38vh,440px)]",
+}: {
+  size?: number;
+  stage?: string;
+}) {
   // Bumping the key remounts Dice3D, which re-reads ?sim/?record at mount —
   // that's how the dev panel rerolls without a page reload.
   const [diceKey, remount] = useReducer((k: number) => k + 1, 0);
@@ -98,10 +106,7 @@ export default function Dice() {
   // overflow-x-clip hides the off-screen runway. META-447.
   return (
     <div className="relative flex w-screen flex-col items-center">
-      <div
-        ref={stageRef}
-        className="relative h-[clamp(160px,20vh,220px)] w-full md:h-[clamp(330px,38vh,440px)]"
-      >
+      <div ref={stageRef} className={`relative w-full ${stage}`}>
         {/* transparent + pointer-events-none, so the overrun neither hides nor
             blocks the content it overlaps */}
         {gpu && (
@@ -109,7 +114,7 @@ export default function Dice() {
             className="pointer-events-none absolute inset-x-0"
             style={{ top: -runwayPx, bottom: -runwayPx }}
           >
-            <Dice3D key={diceKey} />
+            <Dice3D key={diceKey} size={size} />
           </div>
         )}
         {gpu === false && <LogoDice className="mx-auto h-full max-w-[92vw]" />}
