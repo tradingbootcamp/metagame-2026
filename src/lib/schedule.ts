@@ -442,14 +442,13 @@ export type ScheduleViewer = "public" | "volunteer" | "team";
 function roomVisible(
   location: ScheduleLocation,
   viewer: ScheduleViewer,
-  used: ReadonlySet<string | null>,
 ): boolean {
-  if (viewer === "team" || location.visibility === "public") return true;
+  if (viewer === "team") return true;
+  if (location.visibility === "public") return true;
   if (location.visibility === "volunteer") return viewer === "volunteer";
-  // "hidden" is also every room nobody ever marked, so keep the old escape
-  // hatch: one holding a published session still shows, rather than the
-  // session going missing. A deliberate "volunteer" gets no such hatch.
-  return used.has(location.id);
+  // "hidden" means team only, with no exception for a room that happens to
+  // hold a published session — that exception made every such room public.
+  return false;
 }
 
 /**
@@ -468,8 +467,7 @@ export function publicSchedule(
   const placed = schedule.sessions
     .filter((s) => s.status === "published")
     .filter(isPlaced);
-  const used = new Set(placed.map((s) => s.locationId));
-  const rooms = schedule.locations.filter((l) => roomVisible(l, viewer, used));
+  const rooms = schedule.locations.filter((l) => roomVisible(l, viewer));
   const shown = new Set(rooms.map((l) => l.id));
   const sessions: PublicSession[] = placed
     .filter((s) => s.locationId === null || shown.has(s.locationId))

@@ -103,8 +103,8 @@ describe("publicSchedule", () => {
     expect(sessions[0].hosts).toEqual([{ name: "Someone" }]);
   });
 
-  it("shows public rooms plus hidden ones a published session uses", () => {
-    const { locations } = publicSchedule({
+  it("shows only public rooms, even one holding a published session", () => {
+    const { locations, sessions } = publicSchedule({
       locations: [
         room({ id: "shown" }),
         room({ id: "hidden", visibility: "hidden" }),
@@ -115,8 +115,22 @@ describe("publicSchedule", () => {
         session({ id: "b", locationId: "hidden", status: "draft" }),
       ],
     });
-    expect(locations.map((l) => l.id)).toEqual(["shown", "used"]);
+    expect(locations.map((l) => l.id)).toEqual(["shown"]);
+    // The session goes with the room it sat in, rather than the room being
+    // dragged into view to carry it.
+    expect(sessions.map((s) => s.id)).toEqual([]);
     expect(JSON.stringify(locations)).not.toContain("internal notes");
+  });
+
+  it("still shows a team-only room to the team", () => {
+    const { locations } = publicSchedule(
+      {
+        locations: [room({ id: "backstage", visibility: "hidden" })],
+        sessions: [session({ id: "a", locationId: "backstage" })],
+      },
+      "team",
+    );
+    expect(locations.map((l) => l.id)).toEqual(["backstage"]);
   });
 
   const levels = {
