@@ -1,6 +1,6 @@
 import { airtableConfig } from "@/lib/airtable-config";
 import { SPONSOR_FORM_URL } from "@/v2/lib/links";
-import type { FormDef } from "./engine";
+import type { Answers, FormDef } from "./engine";
 import { opts } from "./shared";
 
 // Sponsor interest, on the Interest Intake table the Airtable form wrote to,
@@ -68,9 +68,27 @@ export const sponsor: FormDef = {
           label: "Anything else?",
           help: "What you're hoping to get out of it, questions, or how you'd like us to follow up.",
         },
+        // Never shown: every row from this form is a sponsor lead. beforeWrite
+        // opens it and writes the tag the sponsor automations key off.
+        {
+          key: "interests",
+          field: "fldmLx6E4fpMxaVHw",
+          type: "choices",
+          label: "Type of interest",
+          options: opts("sponsoring"),
+          show: (a) => a.stamp === true,
+        },
       ],
     },
   ],
+  // The Airtable form used an automation to stamp "sponsoring" onto each row;
+  // record-created triggers can't tell a sponsor from an email signup on the
+  // same table, so the site writes the tag itself.
+  beforeWrite: (a: Answers) => ({
+    ...a,
+    stamp: true,
+    interests: ["sponsoring"],
+  }),
   done: {
     title: "We'll be in touch.",
     body: "Thanks for backing Metagame. Someone from the team will reach out soon.",
