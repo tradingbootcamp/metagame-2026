@@ -13,26 +13,32 @@ import type { Prefill } from "@/v2/forms/engine";
  */
 export async function accountPrefill(): Promise<Prefill | undefined> {
   if (!accountsConfigured()) return undefined;
-  const session = await currentSession();
-  if (!session) return undefined;
-  const { user } = session;
-  const [[profile], tickets] = await Promise.all([
-    getDb()
+  try {
+    const session = await currentSession();
+    if (!session) return undefined;
+    const { user } = session;
+    const [profile] = await getDb()
       .select({
         pronouns: schema.profiles.pronouns,
         discordHandle: schema.profiles.discordHandle,
       })
       .from(schema.profiles)
       .where(eq(schema.profiles.userId, user.id))
-      .limit(1),
-    ticketsForUser(user.id, emailKey(user.email)),
-  ]);
-  return {
-    name: user.name,
-    email: user.email,
-    discord: cleanDiscordHandle(
-      prefillDiscord(profile?.discordHandle, tickets, user.email),
-    ),
-    pronouns: profile?.pronouns ?? undefined,
-  };
+      .limit(1);
+    const tickets = profile?.discordHandle?.trim()
+      ? []
+      : await ticketsForUser(user.id, emailKey(user.email));
+    return {
+      name: user.name,
+      email: user.email,
+      discord: cleanDiscordHandle(
+        prefillDiscord(profile?.discordHandle, tickets, user.email),
+      ),
+      pronouns: profile?.pronouns ?? undefined,
+    };
+  } catch (err) {
+    // A blank form beats a broken page.
+    console.error("[form-prefill] account lookup failed", err);
+    return undefined;
+  }
 }

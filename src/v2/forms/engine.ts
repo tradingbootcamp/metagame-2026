@@ -1,3 +1,4 @@
+import { cleanDiscordHandle } from "@/lib/discord-handle";
 import type { GlyphName } from "@/v2/components/Glyph";
 
 // A journey: one of the site's Airtable forms remade as a page that walks
@@ -200,7 +201,7 @@ export const allQuestions = (def: FormDef) =>
 export function prefillAnswers(def: FormDef, from?: Prefill): Answers {
   const a: Answers = {};
   if (!from) return a;
-  const discord = from.discord?.trim().replace(/^@+/, "");
+  const discord = cleanDiscordHandle(from.discord);
   for (const q of allQuestions(def)) {
     if (!q.fill) continue;
     const v =
@@ -213,6 +214,15 @@ export function prefillAnswers(def: FormDef, from?: Prefill): Answers {
   }
   return a;
 }
+
+export const sameAnswer = (a: Answer, b: Answer) =>
+  a === b || JSON.stringify(a) === JSON.stringify(b);
+
+/** Same answer under every key either has, in any order. */
+export const sameAnswers = (a: Answers, b: Answers) =>
+  [...new Set([...Object.keys(a), ...Object.keys(b)])].every((k) =>
+    sameAnswer(a[k], b[k]),
+  );
 
 export const isEmpty = (v: Answer) =>
   v == null ||

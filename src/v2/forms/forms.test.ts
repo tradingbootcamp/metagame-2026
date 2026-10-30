@@ -9,6 +9,7 @@ import {
   cleanAnswers,
   optionBoxes,
   prefillAnswers,
+  sameAnswers,
   visibleItems,
   visibleSteps,
 } from "./engine";
@@ -376,5 +377,15 @@ describe("prefillAnswers", () => {
     for (const def of Object.values(FORMS))
       for (const q of allQuestions(def))
         if (q.fill) expect(["text", "email", "phone"], q.key).toContain(q.type);
+  });
+});
+
+describe("sameAnswers", () => {
+  it("ignores key order and treats a missing key as undefined", () => {
+    expect(
+      sameAnswers({ a: "x", b: ["1", "2"] }, { b: ["1", "2"], a: "x" }),
+    ).toBe(true);
+    expect(sameAnswers({ a: "x", b: undefined }, { a: "x" })).toBe(true);
+    expect(sameAnswers({ a: "x" }, { a: "x", b: "y" })).toBe(false);
   });
 });

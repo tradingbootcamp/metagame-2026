@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CircleAlert, RotateCcw } from "lucide-react";
 import { readUtm } from "@/lib/utm";
@@ -14,6 +14,8 @@ import {
   isQuestion,
   optionBoxes,
   prefillAnswers,
+  sameAnswer,
+  sameAnswers,
   visibleItems,
   visibleSteps,
   type Answer,
@@ -91,9 +93,9 @@ export default function Journey({
   prefill?: Prefill;
 }) {
   const def = FORMS[slug];
-  // The account's details, in place before anyone types. A saved draft
-  // replaces them once it loads.
-  const filled = prefillAnswers(def, prefill);
+  // The account's details, in place before anyone types. They win over a
+  // saved draft, which may be someone else's from this browser.
+  const filled = useMemo(() => prefillAnswers(def, prefill), [def, prefill]);
   const [answers, setAnswers] = useState<Answers>(filled);
   const [phase, setPhase] = useState<Phase>({ at: "step", index: 0 });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -119,7 +121,7 @@ export default function Journey({
           localStorage.getItem(draftKey(slug)) ?? "null",
         );
         if (saved?.answers && Object.keys(saved.answers).length) {
-          setAnswers(saved.answers);
+          setAnswers({ ...saved.answers, ...filled });
           setPhase({
             at: "step",
             index: typeof saved.step === "number" ? saved.step : 0,
@@ -128,9 +130,10 @@ export default function Journey({
       } catch {}
     }, 0);
     return () => clearTimeout(t);
-  }, [slug]);
+  }, [slug, filled]);
 
-  // Keep the draft as they go. Pictures are too big for storage.
+  // Keep the draft as they go. Pictures are too big for storage, and the
+  // account's own details stay out so they aren't left for the next visitor.
   const stepIndex = phase.at === "step" ? phase.index : null;
   useEffect(() => {
     if (phase.at === "done" || !Object.keys(answers).length) return;
@@ -138,17 +141,21 @@ export default function Journey({
       try {
         const kept = Object.fromEntries(
           Object.entries(answers).filter(
-            ([, v]) => !(v && typeof v === "object" && !Array.isArray(v)),
+            ([k, v]) =>
+              !(v && typeof v === "object" && !Array.isArray(v)) &&
+              !sameAnswer(v, filled[k]),
           ),
         );
-        localStorage.setItem(
-          draftKey(slug),
-          JSON.stringify({ answers: kept, step: stepIndex ?? 0 }),
-        );
+        if (!Object.keys(kept).length) localStorage.removeItem(draftKey(slug));
+        else
+          localStorage.setItem(
+            draftKey(slug),
+            JSON.stringify({ answers: kept, step: stepIndex ?? 0 }),
+          );
       } catch {}
     }, 300);
     return () => clearTimeout(t);
-  }, [answers, phase.at, stepIndex, slug]);
+  }, [answers, filled, phase.at, stepIndex, slug]);
 
   const go = (next: Phase, keep: Record<string, string> = {}) => {
     const order = (p: Phase) => (p.at === "step" ? p.index : 999);
@@ -262,9 +269,11 @@ export default function Journey({
 
   // Partway through: past the first step, or anything answered beyond what
   // the account filled in.
-  const underway =
-    phase.at === "step" &&
-    (index > 0 || JSON.stringify(answers) !== JSON.stringify(filled));
+  const edited = useMemo(
+    () => !sameAnswers(answers, filled),
+    [answers, filled],
+  );
+  const underway = phase.at === "step" && (index > 0 || edited);
   const view = phase.at === "step" ? `step-${step?.key}` : phase.at;
 
   return (
