@@ -17,8 +17,8 @@ export const sponsor: FormDef = {
   aside: "This should only take about a minute.",
   steps: [
     {
-      key: "you",
-      title: "Who are you?",
+      key: "details",
+      title: "A few details",
       items: [
         {
           key: "name",
@@ -46,12 +46,6 @@ export const sponsor: FormDef = {
           autoComplete: "email",
           row: "email",
         },
-      ],
-    },
-    {
-      key: "tier",
-      title: "What do you have in mind?",
-      items: [
         {
           key: "tier",
           field: "fldvRIark8ZyTFpNf",

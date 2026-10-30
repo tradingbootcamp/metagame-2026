@@ -313,7 +313,7 @@ export default function Journey({ slug }: { slug: string }) {
         </div>
       )}
 
-      {phase.at !== "done" && (
+      {phase.at !== "done" && steps.length > 1 && (
         <Track
           titles={steps.map((s) => s.title)}
           current={index}
