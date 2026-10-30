@@ -185,6 +185,14 @@ export const PERMISSIONS = {
     label: "Grade submissions",
     description: "The speaker committee's rubric at /grade.",
   },
+  "misc.dice_lab": {
+    audience: "team",
+    group: "Misc",
+    level: "view",
+    label: "Dice lab",
+    description:
+      "Arrange the hero dice and export them as PNG/SVG assets, at /backstage/dice-lab.",
+  },
   "roles.manage": {
     audience: "team",
     group: "Sensitive",
