@@ -428,7 +428,7 @@ export default function Journey({ slug }: { slug: string }) {
                       size={22}
                       className={sending ? "motion-safe:animate-spin" : ""}
                     />
-                    {sending ? "Sending…" : "Send it in"}
+                    {sending ? "Submitting…" : "Submit"}
                   </Button>
                 ) : (
                   <Button onClick={forward} size="lg" className="gap-2">
