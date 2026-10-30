@@ -111,6 +111,8 @@ export async function loadSchedule(): Promise<Schedule> {
       ages: s.ages,
       needs: s.needs,
       status: s.status,
+      rsvpIsCommitment: s.rsvpIsCommitment,
+      sponsored: s.sponsored,
       airtableRfpRecordId: s.airtableRfpRecordId,
       hosts: hostsBySession.get(s.id) ?? [],
       shepherd: shepherdBySession.get(s.id) ?? null,

@@ -24,6 +24,7 @@ export type AccountSessionRow = {
   rsvp: RsvpStatus | null;
   bookmarked: boolean;
   full: boolean;
+  commitment: boolean;
 };
 
 export type AccountSessions = {
@@ -78,6 +79,7 @@ export function accountSessions(
     full:
       s.maxCapacity !== null &&
       (goingCounts[s.id]?.going ?? 0) >= s.maxCapacity,
+    commitment: s.rsvpIsCommitment,
   });
   const sorted = [...sessions].sort(byTime);
   const published = sorted.filter((s) => s.status === "published");

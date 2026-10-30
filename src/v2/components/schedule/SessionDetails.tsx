@@ -160,6 +160,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
   const tags = [
     session.category ? CATEGORY_LABEL[session.category] : null,
     session.ages ? AGES_LABEL[session.ages] : null,
+    session.sponsored ? "Sponsor" : null,
   ].filter(Boolean) as string[];
   const cap = session.maxCapacity;
 
@@ -252,6 +253,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
         <SessionPlans
           sessionId={session.id}
           capacity={cap}
+          commitment={session.rsvpIsCommitment}
           rsvps={rsvps}
           plan={
             plans && {

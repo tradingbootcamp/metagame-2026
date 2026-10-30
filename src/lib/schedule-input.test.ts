@@ -187,6 +187,38 @@ describe("airtableRfpRecordId", () => {
   });
 });
 
+describe("session flags", () => {
+  const base = { title: "Chess" };
+  it("are off unless given, as an unticked checkbox sends nothing", () => {
+    expect(parseSessionFields(base)).toMatchObject({
+      ok: true,
+      value: { rsvpIsCommitment: false, sponsored: false },
+    });
+  });
+  it("take a ticked checkbox or a JSON boolean", () => {
+    expect(
+      parseSessionFields({ ...base, rsvpIsCommitment: "on", sponsored: true }),
+    ).toMatchObject({
+      ok: true,
+      value: { rsvpIsCommitment: true, sponsored: true },
+    });
+    expect(
+      parseSessionFields({ ...base, rsvpIsCommitment: false, sponsored: "" }),
+    ).toMatchObject({
+      ok: true,
+      value: { rsvpIsCommitment: false, sponsored: false },
+    });
+  });
+  it("reject anything else", () => {
+    expect(blamed(parseSessionFields({ ...base, sponsored: "yes" }))).toBe(
+      "sponsored",
+    );
+    expect(blamed(parseSessionFields({ ...base, rsvpIsCommitment: 1 }))).toBe(
+      "rsvpIsCommitment",
+    );
+  });
+});
+
 describe("shepherdUserId", () => {
   const base = { title: "Chess" };
   it("is left as stored when not mentioned", () => {

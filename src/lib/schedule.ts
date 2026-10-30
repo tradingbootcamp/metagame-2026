@@ -49,6 +49,9 @@ export type ScheduleSession = {
   ages: Ages | null;
   needs: string | null;
   status: Status;
+  /** An RSVP claims a limited spot people rely on, not just interest. */
+  rsvpIsCommitment: boolean;
+  sponsored: boolean;
   /** The Airtable RFP Submissions row this came from. */
   airtableRfpRecordId: string | null;
   /** Billing order, lead first. */
@@ -115,6 +118,30 @@ export function summarizeRsvps(
     going: going.length,
     waitlist: waitlist.length,
     names: showNames ? { going, waitlist } : null,
+  };
+}
+
+/**
+ * How the RSVP button reads, and what to confirm before it goes through:
+ * null for an interest-only session, which RSVPs in one click.
+ */
+export function rsvpPrompt(
+  commitment: boolean,
+  full: boolean,
+): { label: string; confirm: { title: string; body: string } | null } {
+  const label = full ? "Join waitlist" : commitment ? "Claim a spot" : "RSVP";
+  if (!commitment) return { label, confirm: null };
+  return {
+    label,
+    confirm: full
+      ? {
+          title: "Join the waitlist?",
+          body: "Spots are limited and people are relying on everyone who has one to show up. If one opens, you’ll be moved in automatically, so only join if you’ll be there — and leave the waitlist if your plans change.",
+        }
+      : {
+          title: "Claim a spot?",
+          body: "Spots are limited and people are relying on you to show up. Only claim one if you’ll be there — and cancel your RSVP if your plans change, so someone else can have it.",
+        },
   };
 }
 
@@ -615,6 +642,8 @@ export type PublicSession = Pick<
   | "locationId"
   | "maxCapacity"
   | "ages"
+  | "rsvpIsCommitment"
+  | "sponsored"
 > & { startsAt: string; endsAt: string; hosts: { name: string }[] };
 
 export type PublicLocation = Pick<
@@ -673,6 +702,8 @@ export function publicSchedule(
       locationId: s.locationId,
       maxCapacity: s.maxCapacity,
       ages: s.ages,
+      rsvpIsCommitment: s.rsvpIsCommitment,
+      sponsored: s.sponsored,
       hosts: s.hosts.map((h) => ({ name: publicAccountName(h) })),
     }));
   const locations = rooms.map((l) => ({

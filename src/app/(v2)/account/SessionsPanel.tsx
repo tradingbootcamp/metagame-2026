@@ -77,6 +77,7 @@ const plan = (s: AccountSessionRow, linkable: boolean) => (
       status={s.rsvp}
       bookmarked={s.bookmarked}
       full={s.full}
+      commitment={s.commitment}
     />
   </Row>
 );
