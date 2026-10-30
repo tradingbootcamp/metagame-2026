@@ -375,7 +375,6 @@ describe("prefillAnswers", () => {
   it("only fills typed-in questions", () => {
     for (const def of Object.values(FORMS))
       for (const q of allQuestions(def))
-        if (q.fill)
-          expect(["text", "email", "phone"], q.key).toContain(q.type);
+        if (q.fill) expect(["text", "email", "phone"], q.key).toContain(q.type);
   });
 });
