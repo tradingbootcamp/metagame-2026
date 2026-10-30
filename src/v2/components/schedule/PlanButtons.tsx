@@ -155,7 +155,9 @@ export default function PlanButtons({
           <DialogContent
             role="alertdialog"
             showCloseButton={false}
-            className="max-w-[440px] border-line bg-white px-6 py-5 text-ink"
+            // Above RouteModal (z-[100]), which hosts this on the session page.
+            overlayClassName="z-[110]"
+            className="z-[110] max-w-[440px] border-line bg-white px-6 py-5 text-ink"
           >
             <DialogTitle className="mb-2 font-grotesk text-xl font-bold text-navy">
               {prompt.confirm.title}
