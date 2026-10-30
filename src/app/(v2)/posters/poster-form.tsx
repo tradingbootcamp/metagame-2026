@@ -295,9 +295,20 @@ function PromoField({
   }
   return (
     <div className="relative">
-      <label htmlFor={id} className="block font-semibold">
-        Promo code <span className="font-normal">(optional)</span>
-      </label>
+      <div className="flex items-baseline justify-between gap-3">
+        <label htmlFor={id} className="block font-semibold">
+          Promo code <span className="font-normal">(optional)</span>
+        </label>
+        {/* The tool itself prompts sign-in or explains missing access. */}
+        <a
+          href="/backstage/promo"
+          target="_blank"
+          rel="noopener"
+          className="text-xs text-[#19345b]/60 underline-offset-2 hover:underline"
+        >
+          Make a code ↗
+        </a>
+      </div>
       <div className="relative">
         <input
           id={id}
