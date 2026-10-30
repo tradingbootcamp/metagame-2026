@@ -556,10 +556,9 @@ export default function UsersTable({
             <span className="font-bold text-salmon underline">
               permanently deletes
             </span>{" "}
-            <span className="font-semibold text-cream">{deleting?.email}</span>{" "}
-            and everything attached to it: their profile, sessions, and sign-in
-            methods. There is no undo. To keep the account but lock them out,
-            use Ban instead.
+            <span className="font-semibold text-cream">{deleting?.email}</span>.
+            This is irreversible. To keep the account but lock them out, use Ban
+            instead.
           </DialogDescription>
           <div className="flex justify-end gap-3">
             <Button
