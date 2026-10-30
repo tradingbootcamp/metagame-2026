@@ -50,6 +50,7 @@ it("uses the existing admin workflow's Generic poster placement", async () => {
     "poster",
     undefined,
     true,
+    "square",
   );
 });
 beforeEach(() => {
@@ -77,6 +78,7 @@ it("downloads without login and never accepts an arbitrary URL or slug", async (
     "berkeley",
     undefined,
     true,
+    "square",
   );
   const preview = await GET(
     request("area=area:Berkeley&design=d20&size=letter&preview=1"),
@@ -130,6 +132,7 @@ it.each([
     "berkeley",
     undefined,
     true,
+    "square",
   );
 });
 it("prints a live promo code with its discount and refuses others", async () => {
@@ -154,6 +157,7 @@ it("prints a live promo code with its discount and refuses others", async () => 
       discount: "$20",
     },
     true,
+    "square",
   );
   expect(checkPosterPromo).toHaveBeenCalledWith("POSTER20");
   vi.mocked(checkPosterPromo).mockResolvedValue({ ok: false });
@@ -205,5 +209,27 @@ it("prints a /buy/<code> link's own code and keeps it off the QR", async () => {
     "berkeley",
     { code: "ELYSIAN", discount: "$50" },
     false,
+    "square",
   );
+});
+it("passes a known QR style through and rejects unknown ones", async () => {
+  expect(
+    (await GET(request("area=area:Berkeley&design=d20&size=letter&qr=mg2")))
+      .status,
+  ).toBe(200);
+  expect(createPosterPdf).toHaveBeenCalledWith(
+    "d20",
+    "letter",
+    "berkeley",
+    undefined,
+    true,
+    "mg2",
+  );
+  for (const qr of ["sparkly", "", "toString", "logo"]) {
+    const response = await GET(
+      request(`area=area:Berkeley&design=d20&size=letter&qr=${qr}`),
+    );
+    expect(response.status).toBe(400);
+  }
+  expect(createPosterPdf).toHaveBeenCalledTimes(1);
 });

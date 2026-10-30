@@ -12,6 +12,8 @@ import {
 } from "pdf-lib";
 import QRCode from "qrcode";
 import { POSTER_ORIGIN } from "@/lib/poster-options";
+import { drawStyledQr } from "@/lib/poster-qr";
+import type { PosterQrStyle } from "@/lib/qr-styles";
 import {
   PROMO_PARAM,
   promoCode,
@@ -251,6 +253,35 @@ function drawPromo(
   });
 }
 
+function layout(design: PosterDesign, size: PosterSize) {
+  const template = templates[`${design}-${size}`];
+  const portrait = size === "letter" ? [612, 792] : [936, 1368];
+  const [width, height] =
+    design === "chess" ? [...portrait].reverse() : portrait;
+  const scale = Math.min(
+    (width - 2 * PRINT_MARGIN) / template.width,
+    (height - 2 * PRINT_MARGIN) / template.height,
+  );
+  return {
+    width,
+    height,
+    scale,
+    x: (width - template.width * scale) / 2,
+    y: (height - template.height * scale) / 2,
+  };
+}
+
+/** The printed QR box in output-page points, from the top-left. */
+export function posterQrBox(design: PosterDesign, size: PosterSize) {
+  const { qr, height } = templates[`${design}-${size}`];
+  const page = layout(design, size);
+  return {
+    x: page.x + qr.x * page.scale,
+    top: page.height - page.y - height * page.scale + qr.top * page.scale,
+    size: qr.size * page.scale,
+  };
+}
+
 /** The URL a poster's QR encodes: the short link, plus `?promo=` when a code is on it. */
 export function posterQrUrl(slug: string, promo = ""): string {
   const url = new URL(shortUrl(POSTER_ORIGIN, slug));
@@ -265,6 +296,7 @@ export async function createPosterPdf(
   promo?: PosterPromo,
   /** False when the link applies the code itself, so the QR stays plain. */
   promoOnQr = true,
+  qrStyle: PosterQrStyle = "square",
 ): Promise<Uint8Array> {
   if (validateSlug(slug) || (promo && promoCode(promo.code) !== promo.code))
     throw new Error("Invalid poster link");
@@ -283,11 +315,10 @@ export async function createPosterPdf(
     throw new Error("Poster artwork geometry changed; reverify QR placement");
   }
   source.registerFontkit(fontkit);
+  const fontFile = (weight: string) =>
+    readFile(path.join(ASSETS, "fonts", `SpaceGrotesk-${weight}.ttf`));
   const font = async (weight: string) =>
-    source.embedFont(
-      await readFile(path.join(ASSETS, "fonts", `SpaceGrotesk-${weight}.ttf`)),
-      { subset: true },
-    );
+    source.embedFont(await fontFile(weight), { subset: true });
   const bold = template.roll || promo ? await font("Bold") : null;
   if (template.roll && bold)
     await drawRoll(source, page, template.roll, await font("Medium"), bold);
@@ -310,39 +341,42 @@ export async function createPosterPdf(
     height: qr.size,
     color: rgb(1, 1, 1),
   });
-  const matrix = QRCode.create(
-    posterQrUrl(slug, promoOnQr ? promo?.code : ""),
-    {
-      errorCorrectionLevel: "M",
-    },
-  ).modules;
-  const moduleSize = qr.size / (matrix.size + 2 * QUIET_MODULES);
-  for (let row = 0; row < matrix.size; row++) {
-    for (let col = 0; col < matrix.size; col++) {
-      if (matrix.get(row, col))
-        page.drawRectangle({
-          x: qr.x + (col + QUIET_MODULES) * moduleSize,
-          y: y + (matrix.size - 1 + QUIET_MODULES - row) * moduleSize,
-          width: moduleSize,
-          height: moduleSize,
-          color: rgb(0, 0, 0),
-        });
+  const qrUrl = posterQrUrl(slug, promoOnQr ? promo?.code : "");
+  if (qrStyle !== "square")
+    drawStyledQr(page, {
+      url: qrUrl,
+      style: qrStyle,
+      x: qr.x,
+      top: qr.top,
+      size: qr.size,
+      quiet: QUIET_MODULES,
+      ink: rgb(0, 0, 0),
+      font: await fontFile("Bold"),
+    });
+  else {
+    const matrix = QRCode.create(qrUrl, { errorCorrectionLevel: "M" }).modules;
+    const moduleSize = qr.size / (matrix.size + 2 * QUIET_MODULES);
+    for (let row = 0; row < matrix.size; row++) {
+      for (let col = 0; col < matrix.size; col++) {
+        if (matrix.get(row, col))
+          page.drawRectangle({
+            x: qr.x + (col + QUIET_MODULES) * moduleSize,
+            y: y + (matrix.size - 1 + QUIET_MODULES - row) * moduleSize,
+            width: moduleSize,
+            height: moduleSize,
+            color: rgb(0, 0, 0),
+          });
+      }
     }
   }
   const output = await PDFDocument.create();
-  const portrait = size === "letter" ? [612, 792] : [936, 1368];
-  const [width, height] =
-    design === "chess" ? [...portrait].reverse() : portrait;
+  const { width, height, scale, x, y: bottom } = layout(design, size);
   const target = output.addPage([width, height]);
   await source.flush();
   const [artwork] = await output.embedPages([page]);
-  const scale = Math.min(
-    (width - 2 * PRINT_MARGIN) / template.width,
-    (height - 2 * PRINT_MARGIN) / template.height,
-  );
   target.drawPage(artwork, {
-    x: (width - template.width * scale) / 2,
-    y: (height - template.height * scale) / 2,
+    x,
+    y: bottom,
     width: template.width * scale,
     height: template.height * scale,
   });
