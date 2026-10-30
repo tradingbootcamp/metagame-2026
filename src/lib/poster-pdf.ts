@@ -229,7 +229,7 @@ function drawPromo(
   font: PDFFont,
 ) {
   const H = page.getHeight();
-  const value = `${line.prefix} code ${promo.code} for ${promo.discount} off`;
+  const value = `${line.prefix} code ${promo.code.toUpperCase()} for ${promo.discount} off`;
   const size = Math.min(
     line.size,
     (line.size * line.maxWidth) / font.widthOfTextAtSize(value, line.size),

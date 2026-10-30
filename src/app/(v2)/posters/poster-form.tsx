@@ -323,12 +323,14 @@ function PromoField({
           value={value}
           readOnly={locked}
           autoComplete="off"
+          autoCapitalize="characters"
           spellCheck={false}
           onFocus={() => setOpen(true)}
           onClick={() => setOpen(true)}
           onBlur={() => setOpen(false)}
           onChange={(event) => {
-            onChange(event.target.value.trim());
+            // Stripe matches codes in any case; posters print them in capitals.
+            onChange(event.target.value.trim().toUpperCase());
             setActive(-1);
             setOpen(true);
           }}
