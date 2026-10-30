@@ -253,15 +253,44 @@ export function defaultEnd(start: number): number {
   return Math.min(start + 30 - END_GAP_MINUTES, MIDNIGHT);
 }
 
-/** Where the end goes when the start moves: the length kept if it still ends by midnight. */
+/**
+ * Where the end goes when the start moves: the length kept, cut back to
+ * midnight if it would run past (`capped`).
+ */
 export function movedEnd(
   start: number | null,
   end: number | null,
   next: number,
-): number {
-  const moved =
-    start !== null && end !== null && end > start ? next + (end - start) : null;
-  return moved !== null && moved <= MIDNIGHT ? moved : defaultEnd(next);
+): { end: number; capped: boolean } {
+  if (start === null || end === null || end <= start)
+    return { end: defaultEnd(next), capped: false };
+  const moved = next + (end - start);
+  return { end: Math.min(moved, MIDNIGHT), capped: moved > MIDNIGHT };
+}
+
+/** The times cut back to end at midnight after the start, with the length they had if that cut anything. */
+export function capAtMidnight(times: { startsAt: Date; endsAt: Date }): {
+  startsAt: Date;
+  endsAt: Date;
+  cutFromMinutes: number | null;
+} {
+  const midnight = fromPacificWall(
+    wallAt(pacificDayKey(times.startsAt.toISOString()), MIDNIGHT),
+  )!;
+  if (times.endsAt <= midnight) return { ...times, cutFromMinutes: null };
+  return {
+    startsAt: times.startsAt,
+    endsAt: midnight,
+    cutFromMinutes:
+      (times.endsAt.getTime() - times.startsAt.getTime()) / 60_000,
+  };
+}
+
+/** "1h 30m", "45m", "2h". */
+export function formatLength(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return [h ? `${h}h` : "", m || !h ? `${m}m` : ""].filter(Boolean).join(" ");
 }
 
 /** A session's end in minutes past its start day's midnight; the next midnight is 1440. */

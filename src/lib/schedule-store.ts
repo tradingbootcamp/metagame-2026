@@ -272,12 +272,16 @@ export async function updateSessionAsHost(
   await promoteWaitlist(sessionId);
 }
 
-/** Moves a session to a room and start time, keeping its length; refuses a clash unless `allowOverlap`. */
+/**
+ * Moves a session to a room and start time, keeping its length unless `end`
+ * is given; refuses a clash unless `allowOverlap`.
+ */
 export async function moveSessionTo(
   id: string,
   start: Date,
   locationId: string | null,
   allowOverlap = false,
+  end?: Date,
 ): Promise<void> {
   const db = getDb();
   const [row] = await db
@@ -285,13 +289,16 @@ export async function moveSessionTo(
     .from(sessions)
     .where(eq(sessions.id, id));
   if (!row) throw new Error("That session no longer exists.");
-  const { startsAt, endsAt } = movedTimes(
-    {
-      startsAt: row.startsAt?.toISOString() ?? null,
-      endsAt: row.endsAt?.toISOString() ?? null,
-    },
-    start,
-  );
+  const { startsAt, endsAt } = end
+    ? { startsAt: start, endsAt: end }
+    : movedTimes(
+        {
+          startsAt: row.startsAt?.toISOString() ?? null,
+          endsAt: row.endsAt?.toISOString() ?? null,
+        },
+        start,
+      );
+  if (endsAt <= startsAt) throw new Error("End must be after start.");
   await assertSlotFree(id, startsAt, endsAt, locationId, allowOverlap);
   await db
     .update(sessions)

@@ -9,7 +9,7 @@ import {
   useTransition,
   startTransition,
 } from "react";
-import { XIcon } from "lucide-react";
+import { CircleAlertIcon, XIcon } from "lucide-react";
 import { deleteSession, saveSession, type FormState } from "./actions";
 import AttendancePanel from "./AttendancePanel";
 import ConfirmDialog from "./ConfirmDialog";
@@ -139,6 +139,8 @@ export default function SessionForm({
         ? defaultEnd(defaults.startMin)
         : null,
   );
+  // Set only when moving the start cut the end back to midnight.
+  const [shortened, setShortened] = useState(false);
 
   const dayOptions: { key: string; label: string }[] = EDITOR_DAYS.map((d) => ({
     key: d.key,
@@ -159,7 +161,10 @@ export default function SessionForm({
   // Moving the start keeps the duration, like a calendar drag.
   const pickStart = (next: number | null) => {
     setStart(next);
-    if (next !== null) setEnd(movedEnd(start, end, next));
+    if (next === null) return;
+    const moved = movedEnd(start, end, next);
+    setEnd(moved.end);
+    setShortened(moved.capped);
   };
 
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -369,9 +374,19 @@ export default function SessionForm({
                 onChange={(e) => {
                   const next = parseHHMM(e.target.value);
                   setEnd(next === 0 ? MIDNIGHT : next);
+                  setShortened(false);
                 }}
                 className={fieldClass}
               />
+              {shortened && (
+                <span
+                  role="status"
+                  className="mt-1 flex items-center gap-1 text-xs text-amber-700"
+                >
+                  <CircleAlertIcon aria-hidden className="size-3.5 shrink-0" />
+                  Shortened to end at midnight.
+                </span>
+              )}
             </Field>
             <input
               type="hidden"

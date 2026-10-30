@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDays,
+  capAtMidnight,
   clashDescription,
+  formatLength,
   defaultEnd,
   endMinutes,
   movedEnd,
@@ -172,9 +174,59 @@ describe("form end times", () => {
       expect(defaultEnd(start)).toBeGreaterThan(start);
   });
   it("keeps the length when the start moves, up to ending at midnight", () => {
-    expect(movedEnd(h(10), h(11), h(23))).toBe(h(24));
-    expect(movedEnd(h(10), h(11), h(23, 30))).toBe(h(23, 55));
-    expect(movedEnd(null, null, h(12))).toBe(h(12, 25));
+    expect(movedEnd(h(10), h(11), h(23))).toEqual({
+      end: h(24),
+      capped: false,
+    });
+    expect(movedEnd(h(10), h(11), h(22))).toEqual({
+      end: h(23),
+      capped: false,
+    });
+    expect(movedEnd(null, null, h(12))).toEqual({
+      end: h(12, 25),
+      capped: false,
+    });
+  });
+  it("caps a moved end at midnight and says so", () => {
+    expect(movedEnd(h(10), h(11), h(23, 30))).toEqual({
+      end: h(24),
+      capped: true,
+    });
+    expect(movedEnd(h(10), h(12), h(23, 59))).toEqual({
+      end: h(24),
+      capped: true,
+    });
+  });
+});
+
+describe("capAtMidnight", () => {
+  const pt = (wall: string) => fromPacificWall(wall)!;
+  it("cuts a run past midnight back to it, keeping the old length", () => {
+    const capped = capAtMidnight({
+      startsAt: pt("2026-11-07T23:00"),
+      endsAt: pt("2026-11-08T00:30"),
+    });
+    expect(capped.endsAt.toISOString()).toBe(
+      pt("2026-11-08T00:00").toISOString(),
+    );
+    expect(capped.cutFromMinutes).toBe(90);
+    expect(outsideHours(capped.startsAt, capped.endsAt)).toBeNull();
+  });
+  it("leaves times that end by midnight alone", () => {
+    const times = {
+      startsAt: pt("2026-11-07T22:00"),
+      endsAt: pt("2026-11-08T00:00"),
+    };
+    expect(capAtMidnight(times)).toEqual({ ...times, cutFromMinutes: null });
+  });
+});
+
+describe("formatLength", () => {
+  it("reads as hours and minutes", () => {
+    expect(formatLength(90)).toBe("1h 30m");
+    expect(formatLength(120)).toBe("2h");
+    expect(formatLength(45)).toBe("45m");
+    expect(formatLength(0)).toBe("0m");
   });
 });
 
