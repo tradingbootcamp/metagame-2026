@@ -686,6 +686,39 @@ export function publicSchedule(
   return { locations, sessions };
 }
 
+/**
+ * The ids of the sessions a viewer is in: hosting, shepherding, RSVP'd to
+ * (waitlist included) or bookmarked. Only ids from `sessions` come back, so
+ * plans on sessions the caller left out (drafts, hidden rooms) stay out.
+ */
+export function viewerSessionIds(
+  userId: string,
+  sessions: Pick<ScheduleSession, "id" | "hosts" | "shepherd">[],
+  plans: ViewerPlans,
+): string[] {
+  const marked = new Set(plans.bookmarks);
+  return sessions
+    .filter(
+      (s) =>
+        s.hosts.some((h) => h.userId === userId) ||
+        s.shepherd?.userId === userId ||
+        plans.rsvps[s.id] ||
+        marked.has(s.id),
+    )
+    .map((s) => s.id);
+}
+
+/** The days with only the given sessions left; tabs and time slots stay put. */
+export function onlySessions<D extends { sessions: { id: string }[] }>(
+  days: D[],
+  ids: ReadonlySet<string>,
+): D[] {
+  return days.map((d) => ({
+    ...d,
+    sessions: d.sessions.filter((s) => ids.has(s.id)),
+  }));
+}
+
 /** "my-session-title" from "My Session Title!", capped so slugs stay short. */
 export function slugify(text: string): string {
   return text
