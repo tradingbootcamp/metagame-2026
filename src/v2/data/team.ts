@@ -1,4 +1,5 @@
 import type { StaticImageData } from "next/image";
+import type { MegagameClass } from "@/lib/megagame-levels";
 import { HATS, type Hat } from "@/v2/hat-trick/hats";
 import ben from "../../../public/images/team/ben.jpg";
 import brendan from "../../../public/images/team/brendan.jpg";
@@ -31,6 +32,9 @@ export type Person = {
   contactKey?: string;
   // Hat Trick: hats hidden in this photo (see src/v2/hat-trick).
   hats?: Hat[];
+  // Megagame factions they've picked, as badges on their photo. We ask
+  // speakers; leave it out until they've chosen, never guess.
+  factions?: MegagameClass[];
 };
 
 export const TEAM: Person[] = [

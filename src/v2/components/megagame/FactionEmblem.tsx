@@ -43,7 +43,7 @@ const ROLL =
 const PULSE =
   "motion-safe:group-hover:animate-[mg-pulse_1.6s_ease-in-out_infinite] motion-safe:group-focus-visible:animate-[mg-pulse_1.6s_ease-in-out_infinite]";
 
-const sparkle = (x: number, y: number, s: number) =>
+export const sparkle = (x: number, y: number, s: number) =>
   `M${x} ${y - s}c${s * 0.12} ${s * 0.7} ${s * 0.3} ${s * 0.88} ${s} ${s}c${-s * 0.7} ${s * 0.12} ${-s * 0.88} ${s * 0.3} ${-s} ${s}c${-s * 0.12} ${-s * 0.7} ${-s * 0.3} ${-s * 0.88} ${-s} ${-s}c${s * 0.7} ${-s * 0.12} ${s * 0.88} ${-s * 0.3} ${s} ${-s}Z`;
 
 // [letter, x, y, size, rotation, colour]
@@ -141,6 +141,20 @@ const PIPS = (
   </g>
 );
 
+/** The pirates' die: an ivory top, a pale side and a gold side, navy pips. */
+export function Die({ className }: { className?: string }) {
+  return (
+    <g className={className}>
+      <g stroke={NAVY} strokeWidth="3.5" strokeLinejoin="round">
+        <path d="M100 42 136 60 100 78 64 60Z" fill={CREAM} />
+        <path d="M64 60 100 78V122L64 104Z" fill={P.pale} />
+        <path d="M100 78 136 60V104L100 122Z" fill={P.side} />
+      </g>
+      {PIPS}
+    </g>
+  );
+}
+
 function Pirate() {
   const c = FACTION_COLORS.pirate;
   return (
@@ -171,14 +185,7 @@ function Pirate() {
       </g>
       {/* Centred where the bones cross. */}
       <g transform="translate(0 24)">
-        <g className={ROLL}>
-          <g stroke={NAVY} strokeWidth="3.5" strokeLinejoin="round">
-            <path d="M100 42 136 60 100 78 64 60Z" fill={CREAM} />
-            <path d="M64 60 100 78V122L64 104Z" fill={P.pale} />
-            <path d="M100 78 136 60V104L100 122Z" fill={P.side} />
-          </g>
-          {PIPS}
-        </g>
+        <Die className={ROLL} />
       </g>
     </>
   );
