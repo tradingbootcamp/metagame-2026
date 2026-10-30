@@ -108,7 +108,7 @@ export default function ScheduleSearch<S extends SearchableSession>({
         <ul
           id={listId}
           role="listbox"
-          className="absolute top-full left-0 z-30 mt-1 max-h-80 w-full overflow-y-auto rounded-lg border border-line bg-white py-1 text-left shadow-lg"
+          className="absolute top-full left-0 z-50 mt-1 max-h-80 w-full overflow-y-auto rounded-lg border border-line bg-white py-1 text-left shadow-lg"
         >
           {hits.length === 0 && (
             <li className="px-3 py-2 text-sm text-ink/50">
@@ -136,17 +136,7 @@ export default function ScheduleSearch<S extends SearchableSession>({
                 <span
                   className={`block truncate text-xs ${i === active ? "text-white/75" : "text-ink/55"}`}
                 >
-                  {[
-                    hosts
-                      ? hit.via === "host"
-                        ? `host: ${hosts}`
-                        : hosts
-                      : null,
-                    when(s),
-                    room,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  {[hosts || null, when(s), room].filter(Boolean).join(" · ")}
                 </span>
               </li>
             );

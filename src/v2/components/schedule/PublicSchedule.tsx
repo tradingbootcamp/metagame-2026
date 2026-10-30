@@ -83,7 +83,7 @@ export default function PublicSchedule({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex justify-center">
+      <div className="flex">
         <ScheduleSearch
           sessions={days.flatMap((d) => d.sessions)}
           roomName={(s) => roomName(s.locationId)}
