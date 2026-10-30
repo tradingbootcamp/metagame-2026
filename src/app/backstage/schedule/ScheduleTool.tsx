@@ -12,6 +12,7 @@ import { addSample, clearSample, moveSession, type FormState } from "./actions";
 import LocationForm from "./LocationForm";
 import ScheduleGrid, { GrabHandle, type DropFn } from "./ScheduleGrid";
 import SessionForm, { type SessionDefaults } from "./SessionForm";
+import ScheduleSearch from "@/v2/components/schedule/ScheduleSearch";
 import { buttonClass, smallButtonClass } from "../ui";
 import {
   buildDays,
@@ -20,6 +21,7 @@ import {
   hostNames,
   isPlaced,
   movedTimes,
+  pacificDayKey,
   VISIBILITY_LABEL,
   type Attendance,
   type ScheduleLocation,
@@ -72,6 +74,7 @@ export default function ScheduleTool({
   canSeed: boolean;
 }) {
   const [editing, setEditing] = useState<Editing>(null);
+  const [dayIndex, setDayIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const close = useCallback(() => setEditing(null), []);
@@ -145,6 +148,16 @@ export default function ScheduleTool({
     setEditing({ kind: "session", session: null, defaults });
   const openLocation = (location: ScheduleLocation | null) =>
     setEditing({ kind: "location", location });
+  // A search pick: show its day on the grid, then open it for editing.
+  const jumpTo = (session: ScheduleSession) => {
+    if (isPlaced(session)) {
+      const i = days.findIndex(
+        (d) => d.key === pacificDayKey(session.startsAt),
+      );
+      if (i >= 0) setDayIndex(i);
+    }
+    openSession(session);
+  };
 
   return (
     <div className="space-y-10">
@@ -218,11 +231,20 @@ export default function ScheduleTool({
             </button>
           </div>
         )}
+        <div className="flex">
+          <ScheduleSearch
+            sessions={sessions}
+            roomName={(s) => roomName(s.locationId)}
+            onPick={jumpTo}
+          />
+        </div>
         <ScheduleGrid
           days={days}
           locations={locations}
           going={going}
           carrying={carrying}
+          dayIndex={dayIndex}
+          onDayChange={setDayIndex}
           onOpen={openSession}
           onCreate={createAt}
           onGrab={grab}

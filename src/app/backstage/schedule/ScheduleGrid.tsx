@@ -433,6 +433,8 @@ export default function ScheduleGrid({
   onCreate,
   onGrab,
   onDrop,
+  dayIndex: controlledDay,
+  onDayChange,
 }: {
   days: Day[];
   locations: ScheduleLocation[];
@@ -448,8 +450,13 @@ export default function ScheduleGrid({
   onCreate?: CreateFn;
   onGrab: GrabFn;
   onDrop: DropFn;
+  /** Controlled day tab, for a parent that needs to switch it (search). */
+  dayIndex?: number;
+  onDayChange?: (index: number) => void;
 }) {
-  const [dayIndex, setDayIndex] = useState(0);
+  const [ownDay, setOwnDay] = useState(0);
+  const dayIndex = controlledDay ?? ownDay;
+  const setDayIndex = onDayChange ?? setOwnDay;
   const [view, setView] = useState<View>("grid");
 
   const columns: Column[] = locations.map((l) => ({

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   type Day,
@@ -15,6 +16,7 @@ import {
   ViewToggle,
   type View,
 } from "./ScheduleViews";
+import ScheduleSearch from "./ScheduleSearch";
 
 type PublicDay = Day<PublicSession>;
 
@@ -47,6 +49,22 @@ export default function PublicSchedule({
 }) {
   const [dayIndex, setDayIndex] = useState(0);
   const [view, setView] = useState<View>("grid");
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Whichever session page is open, show its day underneath: a search pick,
+  // a shared link, or the back button all land on the right tab. State is
+  // adjusted during render on a path change rather than in an effect, so the
+  // first paint is already on the right day.
+  const [seenPath, setSeenPath] = useState(pathname);
+  if (pathname !== seenPath) {
+    setSeenPath(pathname);
+    const slug = decodeURIComponent(pathname.split("/")[2] ?? "");
+    const i = slug
+      ? days.findIndex((d) => d.sessions.some((s) => s.slug === slug))
+      : -1;
+    if (i >= 0) setDayIndex(i);
+  }
 
   // Phones start on the list; deferred so server and first client render match.
   useEffect(() => {
@@ -65,6 +83,13 @@ export default function PublicSchedule({
 
   return (
     <div className="flex flex-col gap-5">
+      <div className="flex justify-center">
+        <ScheduleSearch
+          sessions={days.flatMap((d) => d.sessions)}
+          roomName={(s) => roomName(s.locationId)}
+          onPick={(s) => router.push(href(s), { scroll: false })}
+        />
+      </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <DayTabs days={days} index={dayIndex} onSelect={setDayIndex} />
         <ViewToggle view={view} onSelect={setView} />
