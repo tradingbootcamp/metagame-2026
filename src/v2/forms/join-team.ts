@@ -21,8 +21,8 @@ export const joinTeam: FormDef = {
   aside: "This should only take about a minute.",
   steps: [
     {
-      key: "you",
-      title: "Who are you?",
+      key: "details",
+      title: "A few details",
       items: [
         {
           key: "name",
@@ -42,12 +42,6 @@ export const joinTeam: FormDef = {
           autoComplete: "email",
           row: "who",
         },
-      ],
-    },
-    {
-      key: "interest",
-      title: "What would you like to do?",
-      items: [
         {
           key: "interests",
           field: "fldmLx6E4fpMxaVHw",
