@@ -37,11 +37,14 @@ export async function POST(request: Request) {
 
   let saved;
   try {
-    saved = await upsertSession({
-      ...parsed.value,
-      hostIds: hosts.ids,
-      shepherdUserId: shepherd.id,
-    });
+    saved = await upsertSession(
+      {
+        ...parsed.value,
+        hostIds: hosts.ids,
+        shepherdUserId: shepherd.id,
+      },
+      { allowOverlap: true },
+    );
   } catch (err) {
     return failed(err);
   }

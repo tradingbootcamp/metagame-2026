@@ -1,6 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  startTransition,
+} from "react";
 import { XIcon } from "lucide-react";
 import { deleteSession, saveSession, type FormState } from "./actions";
 import AttendancePanel from "./AttendancePanel";
@@ -17,6 +24,7 @@ import {
 import {
   AGES,
   CATEGORIES,
+  clashDescription,
   EDITOR_DAYS,
   END_GAP_MINUTES,
   opensAt,
@@ -162,13 +170,13 @@ export default function SessionForm({
   const [deleting, startDelete] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState<FormState | null>(null);
+  const startRef = useRef<HTMLInputElement>(null);
+  const conflict = state !== dismissed ? state.conflict : undefined;
 
   useEffect(() => {
-    if (state.ok && !state.warning) onClose();
+    if (state.ok) onClose();
   }, [state, onClose]);
-
-  // A new session saved with a warning stays open; further saves edit it.
-  const savedId = session?.id ?? state.id;
 
   const generalError =
     state.error && !state.field ? state.error : (deleteError ?? null);
@@ -194,8 +202,18 @@ export default function SessionForm({
           {session ? "Edit this session." : "Add a session to the schedule."}
         </DialogDescription>
 
-        <form action={formAction} className="grid gap-4 sm:grid-cols-2">
-          {savedId && <input type="hidden" name="id" value={savedId} />}
+        <form
+          // Submitted by hand: a form `action` resets every field once it
+          // returns, which would wipe the form behind an overlap prompt.
+          onSubmit={(e) => {
+            e.preventDefault();
+            const submitter = (e.nativeEvent as SubmitEvent).submitter;
+            const data = new FormData(e.currentTarget, submitter);
+            startTransition(() => formAction(data));
+          }}
+          className="grid gap-4 sm:grid-cols-2"
+        >
+          {session && <input type="hidden" name="id" value={session.id} />}
 
           <Field
             label="Title"
@@ -267,6 +285,7 @@ export default function SessionForm({
             </Field>
             <Field label="Starts" name="startsAt" state={state}>
               <input
+                ref={startRef}
                 type="time"
                 step={300}
                 value={day && start !== null ? minutesToHHMM(start) : ""}
@@ -401,13 +420,34 @@ export default function SessionForm({
             />
           </Field>
 
-          {state.warning && (
-            <p
-              role="status"
-              className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:col-span-2"
+          {conflict && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center gap-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:col-span-2"
             >
-              {state.warning}
-            </p>
+              <span className="min-w-0 flex-1">
+                This overlaps {clashDescription(conflict)}.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setDismissed(state);
+                  startRef.current?.focus();
+                }}
+                className={smallButtonClass}
+              >
+                Edit time
+              </button>
+              <button
+                type="submit"
+                name="allowOverlap"
+                value="1"
+                disabled={pending}
+                className={smallButtonClass}
+              >
+                Save anyway
+              </button>
+            </div>
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2">
@@ -456,14 +496,14 @@ export default function SessionForm({
                 onClick={onClose}
                 className={smallButtonClass}
               >
-                {state.warning ? "Done" : "Cancel"}
+                Cancel
               </button>
               <button
                 type="submit"
                 disabled={pending}
                 className={`${buttonClass} w-auto`}
               >
-                {pending ? "Saving…" : savedId ? "Save" : "Create"}
+                {pending ? "Saving…" : session ? "Save" : "Create"}
               </button>
             </div>
           </div>

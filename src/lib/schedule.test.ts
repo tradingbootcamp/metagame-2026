@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDays,
+  clashDescription,
   EDITOR_DAYS,
   findClash,
   fromPacificWall,
@@ -235,10 +236,19 @@ describe("overlapLanes", () => {
   });
 });
 
-describe("overlapWarning", () => {
-  it("names the session and the room", () => {
-    expect(overlapWarning({ title: "Chess", room: "Eigen Hall" })).toBe(
-      'Saved, but this overlaps "Chess" in Eigen Hall.',
+describe("clashDescription", () => {
+  const clash = {
+    title: "Chess",
+    room: "Eigen Hall",
+    startsAt: fromPacificWall("2026-11-07T10:00")!.toISOString(),
+    endsAt: fromPacificWall("2026-11-07T10:55")!.toISOString(),
+  };
+  it("names the session, room and its times", () => {
+    expect(clashDescription(clash)).toBe(
+      '"Chess" in Eigen Hall (10:00 AM–10:55 AM)',
+    );
+    expect(overlapWarning(clash)).toBe(
+      'Saved, but this overlaps "Chess" in Eigen Hall (10:00 AM–10:55 AM).',
     );
   });
 });

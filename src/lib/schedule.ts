@@ -323,11 +323,21 @@ export function roomAllowsOverlap(visibility: LocationVisibility): boolean {
 }
 
 /** A session a save overlaps, in a room that forbids overlap. */
-export type RoomClash = { title: string; room: string };
+export type RoomClash = {
+  title: string;
+  room: string;
+  startsAt: string;
+  endsAt: string;
+};
 
-/** The non-blocking note a save that double-books a room comes back with. */
+/** '"Chess" in Eigen Hall (10:00 AM–10:55 AM)' */
+export function clashDescription(clash: RoomClash): string {
+  return `"${clash.title}" in ${clash.room} (${formatPacificTime(clash.startsAt)}–${formatPacificTime(clash.endsAt)})`;
+}
+
+/** The note an API save that double-books a room comes back with. */
 export function overlapWarning(clash: RoomClash): string {
-  return `Saved, but this overlaps "${clash.title}" in ${clash.room}.`;
+  return `Saved, but this overlaps ${clashDescription(clash)}.`;
 }
 
 /**

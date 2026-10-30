@@ -62,12 +62,15 @@ async function write(
 
   let saved;
   try {
-    saved = await upsertSession({
-      id: current.id,
-      ...parsed.value,
-      hostIds: hosts.ids,
-      shepherdUserId: shepherd.id,
-    });
+    saved = await upsertSession(
+      {
+        id: current.id,
+        ...parsed.value,
+        hostIds: hosts.ids,
+        shepherdUserId: shepherd.id,
+      },
+      { allowOverlap: true },
+    );
   } catch (err) {
     return failed(err);
   }

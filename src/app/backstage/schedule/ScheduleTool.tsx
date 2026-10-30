@@ -85,8 +85,22 @@ export default function ScheduleTool({
   // Picked up by its grip; stays held across scrolling and day tabs until a slot is clicked.
   const [held, setCarrying] = useState<ScheduleSession | null>(null);
   // A dropped session shows in its new slot while the move saves; a failed save snaps it back.
-  const [sessions, applyMove] = useOptimistic(saved, (all, move: Move) =>
+  const [optimistic, applyMove] = useOptimistic(saved, (all, move: Move) =>
     all.map((s) => (s.id === move.id ? { ...s, ...move } : s)),
+  );
+  // A drop onto an overlap, shown in place until it's kept or undone.
+  const [unconfirmed, setUnconfirmed] = useState<{
+    move: Move & { startsAt: string };
+    note: string;
+  } | null>(null);
+  const sessions = useMemo(
+    () =>
+      unconfirmed
+        ? optimistic.map((s) =>
+            s.id === unconfirmed.move.id ? { ...s, ...unconfirmed.move } : s,
+          )
+        : optimistic,
+    [optimistic, unconfirmed],
   );
 
   useEffect(() => {
@@ -129,21 +143,43 @@ export default function ScheduleTool({
 
   const grab = (session: ScheduleSession) =>
     setCarrying((held) => (held?.id === session.id ? null : session));
-  const drop: DropFn = (startsAt, locationId) => {
-    if (!carrying) return;
-    const id = carrying.id;
-    const times = movedTimes(carrying, startsAt);
-    setCarrying(null);
+  const overlapNote = (title: string, room: string | null) =>
+    `Overlaps "${title}" in ${room ?? "that room"}.`;
+  const saveMove = (move: Move & { startsAt: string }, allowOverlap: boolean) =>
     startTransition(async () => {
-      applyMove({
-        id,
-        startsAt: times.startsAt.toISOString(),
-        endsAt: times.endsAt.toISOString(),
-        locationId,
-      });
-      const result = await moveSession(id, startsAt.toISOString(), locationId);
+      applyMove(move);
+      const result = await moveSession(
+        move.id,
+        move.startsAt,
+        move.locationId,
+        allowOverlap,
+      );
       setError(result.error ?? null);
+      // The server saw a clash this page's data didn't.
+      if (result.conflict) {
+        const { title, room } = result.conflict;
+        setUnconfirmed({ move, note: overlapNote(title, room) });
+      }
     });
+  const drop: DropFn = (startsAt, locationId, clash) => {
+    if (!carrying) return;
+    const times = movedTimes(carrying, startsAt);
+    const move = {
+      id: carrying.id,
+      startsAt: times.startsAt.toISOString(),
+      endsAt: times.endsAt.toISOString(),
+      locationId,
+    };
+    setCarrying(null);
+    if (clash) {
+      setUnconfirmed({
+        move,
+        note: overlapNote(clash.title, roomName(locationId)),
+      });
+    } else {
+      setUnconfirmed(null);
+      saveMove(move, false);
+    }
   };
 
   const openSession = (session: ScheduleSession | null) =>
@@ -253,6 +289,7 @@ export default function ScheduleTool({
           onCreate={createAt}
           onGrab={grab}
           onDrop={drop}
+          confirmClash
         />
       </div>
 
@@ -411,6 +448,32 @@ export default function ScheduleTool({
         </div>
       </Section>
 
+      {unconfirmed && (
+        <div
+          role="alertdialog"
+          aria-label="Overlapping move"
+          className="fixed inset-x-0 bottom-6 z-50 mx-auto flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-lg"
+        >
+          <span>{unconfirmed.note}</span>
+          <button
+            type="button"
+            onClick={() => setUnconfirmed(null)}
+            className={smallButtonClass}
+          >
+            Undo
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setUnconfirmed(null);
+              saveMove(unconfirmed.move, true);
+            }}
+            className={smallButtonClass}
+          >
+            Keep it here
+          </button>
+        </div>
+      )}
       {editing?.kind === "session" && (
         <SessionForm
           key={editing.session?.id ?? "new"}
