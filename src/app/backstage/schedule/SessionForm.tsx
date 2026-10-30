@@ -3,6 +3,7 @@
 import {
   useActionState,
   useEffect,
+  useId,
   useRef,
   useState,
   useTransition,
@@ -181,7 +182,11 @@ export default function SessionForm({
     if (state.ok) onClose();
   }, [state, onClose]);
 
-  const { form, formRef, requestClose, confirm } = useUnsavedChanges(onClose);
+  const { form, formRef, requestClose, confirm } = useUnsavedChanges({
+    onClose,
+    pending,
+  });
+  const formId = useId();
 
   const generalError =
     state.error && !state.field ? state.error : (deleteError ?? null);
@@ -190,7 +195,7 @@ export default function SessionForm({
     <Dialog open onOpenChange={(open) => !open && requestClose()}>
       <DialogContent
         showCloseButton={false}
-        className="max-h-[92vh] max-w-[720px] overflow-y-auto border-line bg-white px-6 py-6 text-ink sm:px-8"
+        className="max-h-[92vh] max-w-[720px] scroll-pt-20 overflow-y-auto border-line bg-white px-6 py-6 text-ink sm:px-8"
       >
         <button
           type="button"
@@ -207,7 +212,67 @@ export default function SessionForm({
           {session ? "Edit this session." : "Add a session to the schedule."}
         </DialogDescription>
 
+        <div className="sticky -top-6 z-10 -mx-6 -mt-3 mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-white px-6 py-3 sm:-mx-8 sm:px-8">
+          <div className="flex items-center gap-2">
+            {session &&
+              (confirmDelete ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={() =>
+                      startDelete(async () => {
+                        const result = await deleteSession(session.id);
+                        if (result.error) setDeleteError(result.error);
+                        else onClose();
+                      })
+                    }
+                    className={`${smallButtonClass} border-meeple text-meeple hover:bg-meeple hover:text-white`}
+                  >
+                    {deleting ? "Deleting…" : "Yes, delete it"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className={smallButtonClass}
+                  >
+                    Keep
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
+                >
+                  Delete
+                </button>
+              ))}
+            {generalError && (
+              <span className="text-sm text-meeple">{generalError}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={requestClose}
+              className={smallButtonClass}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form={formId}
+              disabled={pending}
+              className={`${buttonClass} w-auto`}
+            >
+              {pending ? "Saving…" : session ? "Save" : "Create"}
+            </button>
+          </div>
+        </div>
+
         <form
+          id={formId}
           ref={formRef}
           // Submitted by hand: a form `action` resets every field once it
           // returns, which would wipe the form behind an overlap prompt.
@@ -218,64 +283,6 @@ export default function SessionForm({
           className="grid gap-4 sm:grid-cols-2"
         >
           {session && <input type="hidden" name="id" value={session.id} />}
-
-          <div className="sticky -top-6 z-10 -mx-6 -mt-3 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-white px-6 py-3 sm:col-span-2 sm:-mx-8 sm:px-8">
-            <div className="flex items-center gap-2">
-              {session &&
-                (confirmDelete ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={deleting}
-                      onClick={() =>
-                        startDelete(async () => {
-                          const result = await deleteSession(session.id);
-                          if (result.error) setDeleteError(result.error);
-                          else onClose();
-                        })
-                      }
-                      className={`${smallButtonClass} border-meeple text-meeple hover:bg-meeple hover:text-white`}
-                    >
-                      {deleting ? "Deleting…" : "Yes, delete it"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDelete(false)}
-                      className={smallButtonClass}
-                    >
-                      Keep
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
-                  >
-                    Delete
-                  </button>
-                ))}
-              {generalError && (
-                <span className="text-sm text-meeple">{generalError}</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={requestClose}
-                className={smallButtonClass}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={pending}
-                className={`${buttonClass} w-auto`}
-              >
-                {pending ? "Saving…" : session ? "Save" : "Create"}
-              </button>
-            </div>
-          </div>
 
           <Field
             label="Title"
@@ -494,7 +501,7 @@ export default function SessionForm({
               primary: true,
               disabled: pending,
               onClick: () => {
-                const data = new FormData(form.current!);
+                const data = new FormData(form!);
                 data.set("allowOverlap", "1");
                 setDismissed(state);
                 submit(data);
@@ -506,6 +513,7 @@ export default function SessionForm({
             <>This overlaps {clashDescription(state.conflict)}.</>
           )}
         </ConfirmDialog>
+        <UnsavedChangesDialog {...confirm} />
         {session && (
           <AttendancePanel
             session={session}
@@ -514,7 +522,6 @@ export default function SessionForm({
           />
         )}
       </DialogContent>
-      <UnsavedChangesDialog {...confirm} />
     </Dialog>
   );
 }

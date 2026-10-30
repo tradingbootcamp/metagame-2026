@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  startTransition,
   useActionState,
   useEffect,
   useRef,
@@ -178,10 +179,11 @@ export default function LocationForm({
     if (state.ok) onClose();
   }, [state, onClose]);
 
-  const { formRef, requestClose, confirm } = useUnsavedChanges(
+  const { formRef, requestClose, confirm } = useUnsavedChanges({
     onClose,
-    thumbnail.url !== (location?.thumbnailUrl ?? null),
-  );
+    pending,
+    extraDirty: thumbnail.url !== (location?.thumbnailUrl ?? null),
+  });
 
   const generalError =
     state.error && !state.field ? state.error : (deleteError ?? null);
@@ -209,10 +211,14 @@ export default function LocationForm({
 
         <form
           ref={formRef}
-          action={(fd) => {
+          // Submitted by hand: a form `action` resets every field once it
+          // returns, which would wipe the edits on a failed save.
+          onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
             if (thumbnail.file) fd.set("thumbnailFile", thumbnail.file);
             if (thumbnail.large) fd.set("imageFile", thumbnail.large);
-            formAction(fd);
+            startTransition(() => formAction(fd));
           }}
           className="grid gap-4"
         >
@@ -350,8 +356,8 @@ export default function LocationForm({
             </div>
           </div>
         </form>
+        <UnsavedChangesDialog {...confirm} />
       </DialogContent>
-      <UnsavedChangesDialog {...confirm} />
     </Dialog>
   );
 }
