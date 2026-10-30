@@ -128,6 +128,15 @@ export const CONFERENCE_DAYS = [
   { key: "2026-11-08", name: "Sunday", dateLabel: "Nov 8" },
 ] as const;
 
+/** The days the backstage editor offers: the conference plus setup and teardown. */
+export const EDITOR_DAYS = [
+  { key: "2026-11-05", name: "Thursday", dateLabel: "Nov 5" },
+  ...CONFERENCE_DAYS,
+  { key: "2026-11-09", name: "Monday", dateLabel: "Nov 9" },
+] as const;
+
+type DayLabel = { key: string; name: string; dateLabel: string };
+
 export const PACIFIC = "America/Los_Angeles";
 
 const wallFormat = new Intl.DateTimeFormat("en-US", {
@@ -233,11 +242,12 @@ export function minutesToHHMM(min: number): string {
   return `${pad(Math.floor(min / 60))}:${pad(min % 60)}`;
 }
 
-// Sessions start on the hour or half hour and end five minutes before the
-// next half hour, leaving a passing period.
+// Default lengths end five minutes before the half hour, leaving a passing
+// period. Any start and end is allowed; this only shapes the defaults.
 export const END_GAP_MINUTES = 5;
 
-// Schedule hours: from 10am (Friday 2pm) to midnight. Nothing runs outside them.
+// Where the grid starts by default (Friday 2pm, otherwise 10am). Not a limit:
+// the grid reaches earlier for an earlier session.
 const OPENS_AT = 10 * 60;
 const DAY_OPENS_AT: Record<string, number> = { "2026-11-06": 14 * 60 };
 const CLOSES_AT = 24 * 60;
@@ -246,30 +256,12 @@ export function opensAt(dayKey: string): number {
   return DAY_OPENS_AT[dayKey] ?? OPENS_AT;
 }
 
-export function startTimes(dayKey: string): number[] {
-  const out: number[] = [];
-  for (let m = opensAt(dayKey); m < CLOSES_AT; m += 30) out.push(m);
-  return out;
-}
-
-export function endTimes(dayKey: string): number[] {
-  return startTimes(dayKey).map((m) => m + 30 - END_GAP_MINUTES);
-}
-
 /** Why a session at these times falls outside schedule hours, or null. */
 export function outsideHours(
   startsAt: Date,
   endsAt: Date,
 ): { field: "startsAt" | "endsAt"; error: string } | null {
-  const iso = startsAt.toISOString();
-  const day = pacificDayKey(iso);
-  const start = pacificMinutes(iso);
-  if (start < opensAt(day)) {
-    return {
-      field: "startsAt",
-      error: `Sessions that day start at ${slotLabel(opensAt(day))} or later.`,
-    };
-  }
+  const start = pacificMinutes(startsAt.toISOString());
   const end = start + (endsAt.getTime() - startsAt.getTime()) / 60_000;
   if (end > CLOSES_AT)
     return { field: "endsAt", error: "Sessions end by midnight." };
@@ -325,12 +317,23 @@ export function movedTimes(
   return { startsAt: start, endsAt: new Date(start.getTime() + ms) };
 }
 
-/** The session already in that room at that time, if any. "No room" never clashes. */
+/** Volunteer shifts hand off with some overlap; a double-booked real room is a mistake. */
+export function roomAllowsOverlap(visibility: LocationVisibility): boolean {
+  return visibility === "volunteer";
+}
+
+/**
+ * The session already in that room at that time, if any. "No room" and
+ * rooms that allow overlap never clash.
+ */
 export function findClash<S extends ScheduleSession>(
   sessions: S[],
   move: { id: string; locationId: string | null; startsAt: Date; endsAt: Date },
+  locations: Pick<ScheduleLocation, "id" | "visibility">[],
 ): S | null {
   if (move.locationId === null) return null;
+  const room = locations.find((l) => l.id === move.locationId);
+  if (room && roomAllowsOverlap(room.visibility)) return null;
   return (
     sessions.find(
       (s) =>
@@ -357,6 +360,65 @@ export function cellSessions<S extends Timed & { locationId: string | null }>(
   );
 }
 
+/** Where a block sits across its column: lane `lane` of `lanes` side by side. */
+export type Lane = { lane: number; lanes: number };
+
+/**
+ * Side-by-side lanes for sessions that overlap in the same column, keyed by
+ * session id. Each run of overlapping sessions splits the column evenly.
+ */
+export function overlapLanes<
+  S extends Timed & { id: string; locationId: string | null },
+>(sessions: Placed<S>[]): Map<string, Lane> {
+  const out = new Map<string, Lane>();
+  const byColumn = new Map<string, Placed<S>[]>();
+  for (const s of sessions) {
+    const col = s.locationId ?? NO_ROOM;
+    byColumn.set(col, [...(byColumn.get(col) ?? []), s]);
+  }
+  for (const column of byColumn.values()) {
+    const sorted = column
+      .map((s) => ({
+        id: s.id,
+        start: Date.parse(s.startsAt),
+        end: Date.parse(s.endsAt),
+      }))
+      .sort((a, b) => a.start - b.start || b.end - a.end);
+    let run: string[] = [];
+    let laneEnds: number[] = [];
+    let runEnd = -Infinity;
+    const close = () => {
+      for (const id of run) out.get(id)!.lanes = laneEnds.length;
+      run = [];
+      laneEnds = [];
+    };
+    for (const s of sorted) {
+      if (s.start >= runEnd) close();
+      let lane = laneEnds.findIndex((end) => end <= s.start);
+      if (lane === -1) lane = laneEnds.length;
+      laneEnds[lane] = s.end;
+      out.set(s.id, { lane, lanes: 1 });
+      run.push(s.id);
+      runEnd = Math.max(runEnd, s.end);
+    }
+    close();
+  }
+  return out;
+}
+
+/** Inline left/right for a block in its lane, keeping the 2px gutter. */
+export function laneInset(lane: Lane | undefined): {
+  left?: string;
+  right?: string;
+} {
+  if (!lane || lane.lanes <= 1) return {};
+  const pct = 100 / lane.lanes;
+  return {
+    left: `calc(${lane.lane * pct}% + 2px)`,
+    right: `calc(${(lane.lanes - lane.lane - 1) * pct}% + 2px)`,
+  };
+}
+
 export type Day<S extends Timed = ScheduleSession> = {
   key: string;
   name: string;
@@ -379,11 +441,14 @@ function daySlots(dayKey: string, sessions: Placed<Timed>[]): number[] {
 }
 
 /**
- * Buckets placed sessions by Pacific day. The three conference days always
- * appear, in order; any other day a session lands on is appended after them
- * so nothing is hidden from the editor.
+ * Buckets placed sessions by Pacific day. `always` (the three conference
+ * days unless given) always appear; any other day a session lands on is
+ * added too so nothing is hidden. Days come out in date order.
  */
-export function buildDays<S extends Timed>(sessions: S[]): Day<S>[] {
+export function buildDays<S extends Timed>(
+  sessions: S[],
+  always: readonly DayLabel[] = CONFERENCE_DAYS,
+): Day<S>[] {
   const placed = sessions
     .filter((s): s is Placed<S> => isPlaced(s))
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
@@ -394,7 +459,7 @@ export function buildDays<S extends Timed>(sessions: S[]): Day<S>[] {
     byKey.set(key, [...(byKey.get(key) ?? []), s]);
   }
 
-  const days: Omit<Day<S>, "sessions" | "slots">[] = [...CONFERENCE_DAYS];
+  const days: DayLabel[] = [...always];
   for (const key of [...byKey.keys()].sort()) {
     if (days.some((d) => d.key === key)) continue;
     const iso = byKey.get(key)![0].startsAt;
@@ -412,6 +477,7 @@ export function buildDays<S extends Timed>(sessions: S[]): Day<S>[] {
     });
   }
 
+  days.sort((a, b) => a.key.localeCompare(b.key));
   return days.map((day) => {
     const sessions = byKey.get(day.key) ?? [];
     return { ...day, sessions, slots: daySlots(day.key, sessions) };

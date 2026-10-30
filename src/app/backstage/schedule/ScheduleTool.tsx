@@ -16,6 +16,7 @@ import ScheduleSearch from "@/v2/components/schedule/ScheduleSearch";
 import { buttonClass, smallButtonClass } from "../ui";
 import {
   buildDays,
+  EDITOR_DAYS,
   formatPacificDay,
   formatPacificTime,
   hostNames,
@@ -94,7 +95,7 @@ export default function ScheduleTool({
     return () => window.removeEventListener("keydown", onKey);
   }, [held]);
 
-  const days = useMemo(() => buildDays(sessions), [sessions]);
+  const days = useMemo(() => buildDays(sessions, EDITOR_DAYS), [sessions]);
   const carrying = held
     ? (sessions.find((s) => s.id === held.id) ?? null)
     : null;

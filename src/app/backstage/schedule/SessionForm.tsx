@@ -17,17 +17,14 @@ import {
 import {
   AGES,
   CATEGORIES,
-  CONFERENCE_DAYS,
+  EDITOR_DAYS,
   END_GAP_MINUTES,
-  endTimes,
   opensAt,
-  startTimes,
   STATUSES,
   formatPacificDay,
   minutesToHHMM,
   pacificDayKey,
   pacificMinutes,
-  slotLabel,
   type Attendance,
   type ScheduleLocation,
   type ScheduleSession,
@@ -83,19 +80,21 @@ export type SessionDefaults = {
 };
 
 const DEFAULT_START = 10 * 60;
-const shortest = (start: number) => start + 30 - END_GAP_MINUTES;
+const MIDNIGHT = 24 * 60;
+const shortest = (start: number) =>
+  Math.min(start + 30 - END_GAP_MINUTES, MIDNIGHT - 1);
+
+/** Minutes since midnight from an "HH:MM" time input, or null when cleared. */
+function parseHHMM(value: string): number | null {
+  const m = /^(\d{2}):(\d{2})/.exec(value);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
 
 /** "11/6" from "2026-11-06". */
 function monthSlashDay(key: string): string {
   const [, m, d] = key.split("-").map(Number);
   return `${m}/${d}`;
 }
-
-/** Keeps an off-grid saved time selectable rather than silently changing it. */
-const withCurrent = (options: number[], current: number | null) =>
-  current === null || options.includes(current)
-    ? options
-    : [...options, current].sort((a, b) => a - b);
 
 /** Create (no `session`) or edit a session, in a dialog on the cream admin page. */
 export default function SessionForm({
@@ -129,36 +128,31 @@ export default function SessionForm({
         : null,
   );
 
-  const dayOptions: { key: string; label: string }[] = CONFERENCE_DAYS.map(
-    (d) => ({ key: d.key, label: `${d.name} ${monthSlashDay(d.key)}` }),
-  );
+  const dayOptions: { key: string; label: string }[] = EDITOR_DAYS.map((d) => ({
+    key: d.key,
+    label: `${d.name} ${monthSlashDay(d.key)}`,
+  }));
   if (day && !dayOptions.some((d) => d.key === day) && session?.startsAt) {
     dayOptions.push({ key: day, label: formatPacificDay(session.startsAt) });
   }
 
   const pickDay = (key: string) => {
     setDay(key);
-    if (!key) return;
-    // A day that opens later pushes an earlier start up to its opening.
+    if (!key || start !== null) return;
     const first = Math.max(DEFAULT_START, opensAt(key));
-    if (start === null || start < opensAt(key)) {
-      setStart(first);
-      setEnd(shortest(first));
-    }
+    setStart(first);
+    setEnd(shortest(first));
   };
 
   // Moving the start keeps the duration, like a calendar drag.
-  const pickStart = (next: number) => {
+  const pickStart = (next: number | null) => {
+    setStart(next);
+    if (next === null) return;
     const moved =
       start !== null && end !== null && end > start
         ? next + (end - start)
         : null;
-    setStart(next);
-    setEnd(
-      moved !== null && day && moved <= endTimes(day).at(-1)!
-        ? moved
-        : shortest(next),
-    );
+    setEnd(moved !== null && moved < MIDNIGHT ? moved : shortest(next));
   };
 
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -269,45 +263,24 @@ export default function SessionForm({
               </select>
             </Field>
             <Field label="Starts" name="startsAt" state={state}>
-              <select
-                value={start ?? ""}
+              <input
+                type="time"
+                step={300}
+                value={day && start !== null ? minutesToHHMM(start) : ""}
                 disabled={!day}
-                onChange={(e) => pickStart(Number(e.target.value))}
-                className={selectClass}
-                style={selectStyle}
-              >
-                {day ? (
-                  withCurrent(startTimes(day), start).map((m) => (
-                    <option key={m} value={m}>
-                      {slotLabel(m)}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">—</option>
-                )}
-              </select>
+                onChange={(e) => pickStart(parseHHMM(e.target.value))}
+                className={fieldClass}
+              />
             </Field>
             <Field label="Ends" name="endsAt" state={state}>
-              <select
-                value={end ?? ""}
+              <input
+                type="time"
+                step={300}
+                value={day && end !== null ? minutesToHHMM(end) : ""}
                 disabled={!day}
-                onChange={(e) => setEnd(Number(e.target.value))}
-                className={selectClass}
-                style={selectStyle}
-              >
-                {day ? (
-                  withCurrent(
-                    endTimes(day).filter((m) => start === null || m > start),
-                    end,
-                  ).map((m) => (
-                    <option key={m} value={m}>
-                      {slotLabel(m)}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">—</option>
-                )}
-              </select>
+                onChange={(e) => setEnd(parseHHMM(e.target.value))}
+                className={fieldClass}
+              />
             </Field>
             <input
               type="hidden"

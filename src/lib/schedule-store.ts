@@ -20,6 +20,7 @@ import {
   fromPacificWall,
   movedTimes,
   outsideHours,
+  roomAllowsOverlap,
   summarizeRsvps,
   type Attendance,
   type RsvpStatus,
@@ -255,7 +256,7 @@ export async function moveSessionTo(
     .where(eq(sessions.id, id));
 }
 
-/** Throws when the times fall outside schedule hours or overlap another session in the room. */
+/** Throws when the times run past midnight or overlap another session in a room that forbids it. */
 export async function assertSlotFree(
   id: string | null,
   startsAt: Date,
@@ -265,7 +266,13 @@ export async function assertSlotFree(
   const outside = outsideHours(startsAt, endsAt);
   if (outside) throw new Error(outside.error);
   if (!locationId) return;
-  const [clash] = await getDb()
+  const db = getDb();
+  const [room] = await db
+    .select({ visibility: locations.visibility })
+    .from(locations)
+    .where(eq(locations.id, locationId));
+  if (room && roomAllowsOverlap(room.visibility)) return;
+  const [clash] = await db
     .select({ title: sessions.title })
     .from(sessions)
     .where(

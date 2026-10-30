@@ -10,15 +10,18 @@ import {
   fromPacificWall,
   heightPx,
   hostNames,
+  laneInset,
   minutesToHHMM,
   movedTimes,
   offsetPx,
   outsideHours,
+  overlapLanes,
   NO_ROOM,
   slotLabel,
   SLOT_MINUTES,
   SLOT_PX,
   type Day,
+  type Lane,
   type PlacedSession,
   type ScheduleLocation,
   type ScheduleSession,
@@ -79,6 +82,7 @@ export function GrabHandle({
 function SessionBlock({
   session,
   slotStart,
+  lane,
   going,
   carrying,
   muted,
@@ -87,6 +91,7 @@ function SessionBlock({
 }: {
   session: PlacedSession;
   slotStart: number;
+  lane: Lane | undefined;
   going: number;
   /** What's being moved, if anything; blocks let clicks through to the slots meanwhile. */
   carrying: ScheduleSession | null;
@@ -102,6 +107,7 @@ function SessionBlock({
       style={{
         top: offsetPx(session, slotStart),
         height: heightPx(session),
+        ...laneInset(lane),
         ...blockStyle(session),
       }}
       className={`absolute inset-x-0.5 z-10 overflow-hidden rounded-md border text-[#1b1530] transition-shadow hover:z-20 hover:shadow-[0_2px_10px_rgba(27,21,48,0.25)] ${
@@ -171,6 +177,7 @@ type Column = {
 function GridDay({
   day,
   columns,
+  locations,
   going,
   sessions,
   carrying,
@@ -183,6 +190,7 @@ function GridDay({
 }: {
   day: Day;
   columns: Column[];
+  locations: ScheduleLocation[];
   going: Record<string, number>;
   /** Every session, for overlap checks that cross midnight. */
   sessions: ScheduleSession[];
@@ -214,7 +222,11 @@ function GridDay({
       t: { startsAt: Date; endsAt: Date },
       locationId: string | null,
     ) => {
-      const clash = findClash(sessions, { id: carrying.id, locationId, ...t });
+      const clash = findClash(
+        sessions,
+        { id: carrying.id, locationId, ...t },
+        locations,
+      );
       if (clash) return `Overlaps ${clash.title}`;
       return outsideHours(t.startsAt, t.endsAt)?.error ?? null;
     };
@@ -224,6 +236,7 @@ function GridDay({
       blocked: clashFor(times, locationId),
     };
   };
+  const lanes = overlapLanes(day.sessions);
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
   return (
     <div
@@ -330,6 +343,7 @@ function GridDay({
                         key={s.id}
                         session={s}
                         slotStart={slotStart}
+                        lane={lanes.get(s.id)}
                         going={going[s.id] ?? 0}
                         carrying={carrying}
                         muted={muted?.(s) ?? false}
@@ -584,6 +598,7 @@ export default function ScheduleGrid({
           <GridDay
             day={day}
             columns={columns}
+            locations={locations}
             going={going}
             sessions={placed}
             carrying={carrying}

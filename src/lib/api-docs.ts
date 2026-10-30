@@ -63,7 +63,7 @@ const SESSION_FIELDS: Field[] = [
   {
     name: "startsAt",
     type: "string | null",
-    note: 'Pacific wall-clock time, "2026-11-06T14:00" (not UTC). Set both times or neither; they must fall within that day\'s program hours.',
+    note: 'Pacific wall-clock time, "2026-11-06T14:00" (not UTC). Set both times or neither; the session must end after it starts and by midnight that day.',
   },
   { name: "endsAt", type: "string | null", note: "As startsAt." },
   { name: "locationId", type: "string | null", note: "A location id." },

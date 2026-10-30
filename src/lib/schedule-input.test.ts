@@ -62,6 +62,27 @@ describe("parseSessionFields", () => {
     });
   });
 
+  it("takes any start time, early mornings and off-slot minutes included", () => {
+    for (const [startsAt, endsAt] of [
+      ["2026-11-07T09:00", "2026-11-07T13:15"],
+      ["2026-11-05T07:10", "2026-11-05T08:20"],
+      ["2026-11-09T12:00", "2026-11-09T23:59"],
+    ]) {
+      expect(parseSessionFields({ title: "Shift", startsAt, endsAt }).ok).toBe(
+        true,
+      );
+    }
+    expect(
+      blamed(
+        parseSessionFields({
+          title: "Shift",
+          startsAt: "2026-11-07T23:30",
+          endsAt: "2026-11-08T00:30",
+        }),
+      ),
+    ).toBe("endsAt");
+  });
+
   it("names the field at fault", () => {
     expect(parseSessionFields({})).toEqual({
       ok: false,
