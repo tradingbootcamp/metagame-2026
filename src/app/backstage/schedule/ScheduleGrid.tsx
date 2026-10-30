@@ -17,6 +17,7 @@ import {
   outsideHours,
   overlapLanes,
   NO_ROOM,
+  openingDayIndex,
   slotLabel,
   SLOT_MINUTES,
   SLOT_PX,
@@ -468,7 +469,7 @@ export default function ScheduleGrid({
   dayIndex?: number;
   onDayChange?: (index: number) => void;
 }) {
-  const [ownDay, setOwnDay] = useState(0);
+  const [ownDay, setOwnDay] = useState(() => openingDayIndex(days));
   const dayIndex = controlledDay ?? ownDay;
   const setDayIndex = onDayChange ?? setOwnDay;
   const [view, setView] = useState<View>("grid");

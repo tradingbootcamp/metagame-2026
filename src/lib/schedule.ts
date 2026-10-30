@@ -484,6 +484,14 @@ export function buildDays<S extends Timed>(
   });
 }
 
+/** The tab to open on: the conference's first day, even when an earlier day is shown. */
+export function openingDayIndex(days: { key: string }[]): number {
+  return Math.max(
+    0,
+    days.findIndex((d) => d.key === CONFERENCE_DAYS[0].key),
+  );
+}
+
 /** What the public schedule may show of a session: published only, hosts without emails. */
 export type PublicSession = Pick<
   ScheduleSession,

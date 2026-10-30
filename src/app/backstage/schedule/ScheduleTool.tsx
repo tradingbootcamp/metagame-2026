@@ -22,6 +22,7 @@ import {
   hostNames,
   isPlaced,
   movedTimes,
+  openingDayIndex,
   pacificDayKey,
   VISIBILITY_LABEL,
   type Attendance,
@@ -75,7 +76,9 @@ export default function ScheduleTool({
   canSeed: boolean;
 }) {
   const [editing, setEditing] = useState<Editing>(null);
-  const [dayIndex, setDayIndex] = useState(0);
+  const [dayIndex, setDayIndex] = useState(() =>
+    openingDayIndex(buildDays(saved, EDITOR_DAYS)),
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const close = useCallback(() => setEditing(null), []);

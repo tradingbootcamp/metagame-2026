@@ -5,6 +5,7 @@ import {
   findClash,
   fromPacificWall,
   movedTimes,
+  openingDayIndex,
   outsideHours,
   overlapLanes,
   type LocationVisibility,
@@ -197,6 +198,10 @@ describe("buildDays", () => {
       "Sunday",
       "Monday",
     ]);
+  });
+  it("opens on Friday even with an earlier day shown", () => {
+    expect(openingDayIndex(buildDays([], EDITOR_DAYS))).toBe(1);
+    expect(openingDayIndex(buildDays([]))).toBe(0);
   });
 });
 

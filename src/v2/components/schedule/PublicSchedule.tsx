@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
+  openingDayIndex,
   type Day,
   type PublicLocation,
   type PublicSession,
@@ -47,7 +48,7 @@ export default function PublicSchedule({
   days: PublicDay[];
   locations: PublicLocation[];
 }) {
-  const [dayIndex, setDayIndex] = useState(0);
+  const [dayIndex, setDayIndex] = useState(() => openingDayIndex(days));
   const [view, setView] = useState<View>("grid");
   const router = useRouter();
   const pathname = usePathname();
