@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildDays,
   clashDescription,
+  defaultEnd,
+  endMinutes,
+  movedEnd,
+  wallAt,
   EDITOR_DAYS,
   findClash,
   fromPacificWall,
@@ -143,6 +147,34 @@ describe("findClash", () => {
     );
     expect(findClash([existing], overlap, rooms("volunteer"))).toBeNull();
     expect(findClash([existing], overlap, rooms("hidden"))).toEqual(chess);
+  });
+});
+
+describe("form end times", () => {
+  const h = (hours: number, minutes = 0) => hours * 60 + minutes;
+  it("reads an end at the next midnight as 24:00", () => {
+    const start = fromPacificWall("2026-11-07T23:00")!.toISOString();
+    const end = fromPacificWall("2026-11-08T00:00")!.toISOString();
+    expect(endMinutes(start, end)).toBe(h(24));
+    expect(
+      endMinutes(start, fromPacificWall("2026-11-07T23:55")!.toISOString()),
+    ).toBe(h(23, 55));
+  });
+  it("writes 24:00 as the next day's 00:00", () => {
+    expect(wallAt("2026-11-07", h(14, 30))).toBe("2026-11-07T14:30");
+    expect(wallAt("2026-11-07", h(24))).toBe("2026-11-08T00:00");
+    expect(wallAt("2026-11-30", h(24))).toBe("2026-12-01T00:00");
+  });
+  it("gives any start before midnight a later default end", () => {
+    expect(defaultEnd(h(10))).toBe(h(10, 25));
+    expect(defaultEnd(h(23, 59))).toBe(h(24));
+    for (let start = 0; start < h(24); start += 7)
+      expect(defaultEnd(start)).toBeGreaterThan(start);
+  });
+  it("keeps the length when the start moves, up to ending at midnight", () => {
+    expect(movedEnd(h(10), h(11), h(23))).toBe(h(24));
+    expect(movedEnd(h(10), h(11), h(23, 30))).toBe(h(23, 55));
+    expect(movedEnd(null, null, h(12))).toBe(h(12, 25));
   });
 });
 

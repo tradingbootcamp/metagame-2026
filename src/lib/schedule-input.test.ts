@@ -5,6 +5,7 @@ import {
   parseSessionFields,
   type Parsed,
 } from "./schedule-input";
+import { endMinutes, wallAt } from "./schedule";
 
 /** The field an invalid parse blames, or null when it passed. */
 const blamed = (parsed: Parsed<unknown>) => (parsed.ok ? null : parsed.field);
@@ -81,6 +82,22 @@ describe("parseSessionFields", () => {
         }),
       ),
     ).toBe("endsAt");
+  });
+
+  it("round-trips a session ending at midnight through the form's values", () => {
+    const start = wallAt("2026-11-07", 23 * 60);
+    const end = wallAt("2026-11-07", 24 * 60);
+    expect(end).toBe("2026-11-08T00:00");
+    const parsed = parseSessionFields({
+      title: "Late",
+      startsAt: start,
+      endsAt: end,
+    });
+    if (!parsed.ok) throw new Error(parsed.error);
+    const { startsAt, endsAt } = parsed.value;
+    expect(endMinutes(startsAt!.toISOString(), endsAt!.toISOString())).toBe(
+      24 * 60,
+    );
   });
 
   it("names the field at fault", () => {
