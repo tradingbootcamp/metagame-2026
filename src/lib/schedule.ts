@@ -121,27 +121,127 @@ export function summarizeRsvps(
   };
 }
 
+/** What ties the viewer to a session besides a bookmark. */
+export type PlanRole = "host" | "shepherd" | RsvpStatus;
+
+/** Another session the viewer is already tied to at the same time. */
+export type PlanConflict = {
+  role: PlanRole;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  commitment: boolean;
+};
+
+/**
+ * The viewer's other published sessions that overlap `target`: ones they
+ * host, shepherd or have RSVP'd to. Back-to-back sessions don't overlap.
+ */
+export function planConflicts(
+  target: Pick<ScheduleSession, "id" | "startsAt" | "endsAt">,
+  sessions: ScheduleSession[],
+  viewerId: string,
+  rsvps: Record<string, RsvpStatus>,
+): PlanConflict[] {
+  if (!isPlaced(target)) return [];
+  const start = Date.parse(target.startsAt);
+  const end = Date.parse(target.endsAt);
+  const role = (s: ScheduleSession): PlanRole | null => {
+    if (s.hosts.some((h) => h.userId === viewerId)) return "host";
+    if (s.shepherd?.userId === viewerId) return "shepherd";
+    return rsvps[s.id] ?? null;
+  };
+  return sessions
+    .filter(isPlaced)
+    .filter(
+      (s) =>
+        s.id !== target.id &&
+        s.status === "published" &&
+        Date.parse(s.startsAt) < end &&
+        Date.parse(s.endsAt) > start,
+    )
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+    .flatMap((s) => {
+      const r = role(s);
+      return r
+        ? [
+            {
+              role: r,
+              title: s.title,
+              startsAt: s.startsAt,
+              endsAt: s.endsAt,
+              commitment: s.rsvpIsCommitment,
+            },
+          ]
+        : [];
+    });
+}
+
+const ROLE_PHRASE: Record<PlanRole, string> = {
+  host: "You’re hosting",
+  shepherd: "You’re shepherding",
+  going: "You’ve already RSVP’d to",
+  waitlist: "You’re on the waitlist for",
+};
+
+/** "You’re hosting “Chess” 2:00 PM–3:00 PM" */
+export function conflictLine(c: PlanConflict): string {
+  return `${ROLE_PHRASE[c.role]} “${c.title}” ${formatPacificTime(c.startsAt)}–${formatPacificTime(c.endsAt)}`;
+}
+
+export type RsvpConfirm = {
+  title: string;
+  /** What already has the viewer at that time, one line each. */
+  conflicts: string[];
+  body: string;
+  /** "urgent" when a clash involves a commitment session, either side. */
+  tone: "confirm" | "warning" | "urgent";
+};
+
 /**
  * How the RSVP button reads, and what to confirm before it goes through:
- * null for an interest-only session, which RSVPs in one click.
+ * null for an interest-only session with no clash, which RSVPs in one click.
  */
 export function rsvpPrompt(
   commitment: boolean,
   full: boolean,
-): { label: string; confirm: { title: string; body: string } | null } {
+  conflicts: PlanConflict[] = [],
+): { label: string; confirm: RsvpConfirm | null } {
   const label = full ? "Join waitlist" : commitment ? "Claim a spot" : "RSVP";
-  if (!commitment) return { label, confirm: null };
+  const stakes = !commitment
+    ? null
+    : full
+      ? "Spots are limited and people are relying on everyone who has one to show up. If one opens, you’ll be moved in automatically, so only join if you’ll be there — and leave the waitlist if your plans change."
+      : "Spots are limited and people are relying on you to show up. Only claim one if you’ll be there — and cancel your RSVP if your plans change, so someone else can have it.";
+  if (conflicts.length === 0) {
+    if (!stakes) return { label, confirm: null };
+    const title = full ? "Join the waitlist?" : "Claim a spot?";
+    return {
+      label,
+      confirm: { title, conflicts: [], body: stakes, tone: "confirm" },
+    };
+  }
+  const held = conflicts
+    .filter((c) => c.commitment && c.role !== "host" && c.role !== "shepherd")
+    .map((c) => `“${c.title}”`);
+  const heldNote =
+    held.length > 0
+      ? `People are counting on you at ${held.join(" and ")}. If you’re switching, give up your place there so someone else can have it.`
+      : null;
+  const body =
+    [stakes, heldNote].filter(Boolean).join(" ") ||
+    "You can’t be in two places at once, so only continue if your plans have changed.";
   return {
     label,
-    confirm: full
-      ? {
-          title: "Join the waitlist?",
-          body: "Spots are limited and people are relying on everyone who has one to show up. If one opens, you’ll be moved in automatically, so only join if you’ll be there — and leave the waitlist if your plans change.",
-        }
-      : {
-          title: "Claim a spot?",
-          body: "Spots are limited and people are relying on you to show up. Only claim one if you’ll be there — and cancel your RSVP if your plans change, so someone else can have it.",
-        },
+    confirm: {
+      title: `${label} anyway?`,
+      conflicts: conflicts.map(conflictLine),
+      body,
+      tone:
+        commitment || conflicts.some((c) => c.commitment)
+          ? "urgent"
+          : "warning",
+    },
   };
 }
 
