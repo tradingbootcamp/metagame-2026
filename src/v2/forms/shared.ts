@@ -13,6 +13,7 @@ export const basicFacts = (): Question[] => [
   {
     key: "legalName",
     field: "fldx0ZAFnlvro2cYE",
+    fill: "name",
     type: "text",
     label: "Full legal name",
     required: true,
@@ -30,6 +31,7 @@ export const basicFacts = (): Question[] => [
   {
     key: "pronouns",
     field: "fldjo23IzCU37RHdn",
+    fill: "pronouns",
     type: "text",
     label: "Pronouns",
     row: "pronouns",
@@ -37,6 +39,7 @@ export const basicFacts = (): Question[] => [
   {
     key: "email",
     field: "fldeUEx8CainGHRtC",
+    fill: "email",
     type: "email",
     label: "Email address",
     required: true,
@@ -55,6 +58,7 @@ export const basicFacts = (): Question[] => [
   {
     key: "discord",
     field: "fldOWbALma2y4KsWj",
+    fill: "discord",
     type: "text",
     label: "Discord handle",
     aside: `[join our Discord](${SOCIAL_LINKS.DISCORD})`,

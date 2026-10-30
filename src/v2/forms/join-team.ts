@@ -27,6 +27,7 @@ export const joinTeam: FormDef = {
         {
           key: "name",
           field: "fld42qY2zzbMKiZAC",
+          fill: "name",
           type: "text",
           label: "Your name",
           required: true,
@@ -36,6 +37,7 @@ export const joinTeam: FormDef = {
         {
           key: "email",
           field: "fld0okgOArTQTNUir",
+          fill: "email",
           type: "email",
           label: "Email",
           required: true,

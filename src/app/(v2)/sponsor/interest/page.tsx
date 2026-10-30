@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Journey from "@/v2/components/journey/Journey";
+import AccountJourney from "@/v2/components/journey/AccountJourney";
 
 export const metadata: Metadata = {
   title: "Sponsor interest — Metagame 2026",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function SponsorInterestPage() {
-  return <Journey slug="sponsor" />;
+  return <AccountJourney slug="sponsor" />;
 }

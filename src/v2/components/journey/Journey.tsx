@@ -13,12 +13,14 @@ import {
   isEmpty,
   isQuestion,
   optionBoxes,
+  prefillAnswers,
   visibleItems,
   visibleSteps,
   type Answer,
   type Answers,
   type Item,
   type Note,
+  type Prefill,
   type Step,
 } from "@/v2/forms/engine";
 import { TEAM_EMAIL } from "@/v2/lib/links";
@@ -80,9 +82,19 @@ const CONFETTI = [
 // Answers are kept in this browser as you go (pictures aside), so a refresh
 // picks up where you left off. The finished answers go to /api/forms/<slug>,
 // which writes them to the Airtable table the old form did.
-export default function Journey({ slug }: { slug: string }) {
+export default function Journey({
+  slug,
+  prefill,
+}: {
+  slug: string;
+  /** What the signed-in account knows; fills the questions that ask for it. */
+  prefill?: Prefill;
+}) {
   const def = FORMS[slug];
-  const [answers, setAnswers] = useState<Answers>({});
+  // The account's details, in place before anyone types. A saved draft
+  // replaces them once it loads.
+  const filled = prefillAnswers(def, prefill);
+  const [answers, setAnswers] = useState<Answers>(filled);
   const [phase, setPhase] = useState<Phase>({ at: "step", index: 0 });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
@@ -244,13 +256,15 @@ export default function Journey({ slug }: { slug: string }) {
     try {
       localStorage.removeItem(draftKey(slug));
     } catch {}
-    setAnswers({});
+    setAnswers(filled);
     go({ at: "step", index: 0 });
   };
 
-  // Partway through: anything answered, or past the first step.
+  // Partway through: past the first step, or anything answered beyond what
+  // the account filled in.
   const underway =
-    phase.at === "step" && (index > 0 || Object.keys(answers).length > 0);
+    phase.at === "step" &&
+    (index > 0 || JSON.stringify(answers) !== JSON.stringify(filled));
   const view = phase.at === "step" ? `step-${step?.key}` : phase.at;
 
   return (

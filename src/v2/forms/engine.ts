@@ -23,6 +23,20 @@ export type Answer =
   | undefined;
 export type Answers = Record<string, Answer>;
 
+/** What a signed-in account knows that a form might ask for. */
+export type Prefill = {
+  name?: string;
+  email?: string;
+  discord?: string;
+  pronouns?: string;
+};
+
+/**
+ * Which account detail fills a question before anyone types: a Prefill key,
+ * or the Discord handle written as a line of contact info ("Discord @name").
+ */
+export type FillKey = keyof Prefill | "discordContact";
+
 export type Option = {
   /** What's written to Airtable: the select option's exact name. */
   value: string;
@@ -69,6 +83,8 @@ type Common = {
   show?: (a: Answers) => boolean;
   /** Questions that share a row sit side by side on a wide screen. */
   row?: string;
+  /** Filled in from the signed-in account when the page opens. */
+  fill?: FillKey;
 };
 
 export type Question =
@@ -176,6 +192,27 @@ export const visibleQuestions = (def: FormDef, a: Answers) =>
 /** Every question in the form, asked or not. */
 export const allQuestions = (def: FormDef) =>
   def.steps.flatMap((s) => s.items.filter(isQuestion));
+
+/**
+ * The answers an account fills in before anyone types: every question with
+ * a `fill`, from what the account knows. Nothing when signed out.
+ */
+export function prefillAnswers(def: FormDef, from?: Prefill): Answers {
+  const a: Answers = {};
+  if (!from) return a;
+  const discord = from.discord?.trim().replace(/^@+/, "");
+  for (const q of allQuestions(def)) {
+    if (!q.fill) continue;
+    const v =
+      q.fill === "discordContact"
+        ? discord && `Discord @${discord}`
+        : q.fill === "discord"
+          ? discord
+          : from[q.fill]?.trim();
+    if (v) a[q.key] = v;
+  }
+  return a;
+}
 
 export const isEmpty = (v: Answer) =>
   v == null ||
