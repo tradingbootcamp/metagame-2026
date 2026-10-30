@@ -19,14 +19,15 @@ describe("poster PDF", () => {
       "https://metagame.games/go/berkeley?promo=POSTER20",
     );
     await expect(
-      createPosterPdf("d20", "letter", "berkeley", "bad code"),
+      createPosterPdf("d20", "letter", "berkeley", {
+        code: "bad code",
+        discount: "$20",
+      }),
     ).rejects.toThrow();
-    const bytes = await createPosterPdf(
-      "d20",
-      "letter",
-      "berkeley",
-      "POSTER20",
-    );
+    const bytes = await createPosterPdf("d20", "letter", "berkeley", {
+      code: "POSTER20",
+      discount: "$20",
+    });
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
   });
   for (const design of ["d20", "chess"] as PosterDesign[]) {

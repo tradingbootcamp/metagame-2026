@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useId,
   useRef,
   useState,
@@ -33,7 +34,13 @@ export default function PosterForm({
   const [design, setDesign] = useState("d20");
   const [size, setSize] = useState("letter");
   const [promo, setPromo] = useState("");
-  const promoBad = promo !== "" && promoCode(promo) !== promo;
+  // A /buy/<code> location applies its own code, which replaces any typed one.
+  const own =
+    options.find((option) => option.value === area)?.tracking?.promo ?? "";
+  const promoBad = !own && promo !== "" && promoCode(promo) !== promo;
+  const check = usePromoCheck(own || (promoBad ? "" : promo));
+  // Previews and downloads only carry a code Stripe will honor.
+  const live = check.state === "ok" ? check.code : "";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const selected = options.find((option) => option.value === area);
@@ -41,7 +48,7 @@ export default function PosterForm({
     area,
     design,
     size,
-    ...(promo ? { [PROMO_PARAM]: promo } : {}),
+    ...(live ? { [PROMO_PARAM]: live } : {}),
   }).toString();
   async function download(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -58,7 +65,7 @@ export default function PosterForm({
       const url = URL.createObjectURL(await response.blob());
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `metagame-${design}${promo ? `-${promo}` : ""}-${size}.pdf`;
+      anchor.download = `metagame-${design}${live ? `-${live}` : ""}-${size}.pdf`;
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
@@ -68,7 +75,6 @@ export default function PosterForm({
     }
   }
   const landscape = design === "chess";
-  const promoListId = useId();
   return (
     <form
       onSubmit={download}
@@ -85,7 +91,9 @@ export default function PosterForm({
             }`}
             style={{
               aspectRatio: landscape
-                ? "11 / 8.5"
+                ? size === "letter"
+                  ? "11 / 8.5"
+                  : "19 / 13"
                 : size === "letter"
                   ? "8.5 / 11"
                   : "13 / 19",
@@ -108,36 +116,36 @@ export default function PosterForm({
           value={area}
           fallback={initialArea}
           onChange={setArea}
-          promo={promo}
+          promo={own ? "" : live}
         />
-        <label className="block font-semibold">
-          Promo code <span className="font-normal">(optional)</span>
-          <input
-            aria-label="Promo code"
-            className={inputClass}
-            list={promos.length ? promoListId : undefined}
-            value={promo}
-            onChange={(event) => setPromo(event.target.value.trim())}
-            autoComplete="off"
-            spellCheck={false}
-          />
-          {promos.length > 0 && (
-            <datalist id={promoListId}>
-              {promos.map((choice) => (
-                <option key={choice.code} value={choice.code}>
-                  {choice.label}
-                </option>
-              ))}
-            </datalist>
-          )}
-          <p
-            className={`mt-2 text-xs font-normal ${promoBad ? "text-red-700" : "text-[#19345b]/60"}`}
-          >
-            {promoBad
-              ? "Codes use letters, numbers, dashes, and underscores only."
-              : "Auto-applies to checkouts after scanning the QR code."}
-          </p>
-        </label>
+        <PromoField
+          promos={promos}
+          value={own || promo}
+          locked={!!own}
+          onChange={setPromo}
+          hint={
+            promoBad
+              ? {
+                  bad: true,
+                  text: "Codes use letters, numbers, dashes, and underscores only.",
+                }
+              : check.state === "ok"
+                ? {
+                    bad: false,
+                    text: own
+                      ? `✓ ${check.discount} off. This location’s link applies ${own} itself.`
+                      : `✓ ${check.discount} off. Printed on the poster and auto-applied after scanning.`,
+                  }
+                : check.state === "bad"
+                  ? { bad: true, text: check.error }
+                  : check.state === "checking"
+                    ? { bad: false, text: "Checking code…" }
+                    : {
+                        bad: false,
+                        text: "Printed on the poster and auto-applied after scanning the QR code.",
+                      }
+          }
+        />
         <label className="block font-semibold">
           Design
           <select
@@ -173,7 +181,9 @@ export default function PosterForm({
           </p>
         )}
         <button
-          disabled={!selected?.available || busy || promoBad}
+          disabled={
+            !selected?.available || busy || ((own || promo) !== "" && !live)
+          }
           className="w-full rounded-lg bg-[#19345b] px-6 py-4 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           {busy ? "Preparing your PDF…" : "Download PDF"}
@@ -185,6 +195,171 @@ export default function PosterForm({
         </p>
       </div>
     </form>
+  );
+}
+
+type PromoCheck =
+  | { state: "idle" | "checking" }
+  | { state: "ok"; code: string; discount: string }
+  | { state: "bad"; error: string };
+
+function usePromoCheck(code: string): PromoCheck {
+  const [result, setResult] = useState<PromoCheck & { for?: string }>({
+    state: "idle",
+  });
+  useEffect(() => {
+    if (!code) return;
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/posters?${new URLSearchParams({ check: "1", [PROMO_PARAM]: code })}`,
+          { signal: controller.signal },
+        );
+        if (response.ok) {
+          const body = await response.json();
+          setResult({
+            state: "ok",
+            code: body.code,
+            discount: body.discount,
+            for: code,
+          });
+        } else
+          setResult({
+            state: "bad",
+            error:
+              response.status === 422
+                ? "✗ This code can’t be used on a poster."
+                : "Couldn’t check that code. Retype it to try again.",
+            for: code,
+          });
+      } catch {
+        if (controller.signal.aborted) return;
+        setResult({
+          state: "bad",
+          error: "Couldn’t check that code. Retype it to try again.",
+          for: code,
+        });
+      }
+    }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [code]);
+  if (!code) return { state: "idle" };
+  return result.for === code ? result : { state: "checking" };
+}
+
+function PromoField({
+  promos,
+  value,
+  locked,
+  onChange,
+  hint,
+}: {
+  promos: PromoChoice[];
+  value: string;
+  locked: boolean;
+  onChange: (value: string) => void;
+  hint: { bad: boolean; text: string };
+}) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const needle = value.toLowerCase();
+  const filtered = promos.filter(
+    (choice) =>
+      choice.code.toLowerCase().includes(needle) ||
+      choice.label.toLowerCase().includes(needle),
+  );
+  const listed = promos.length > 0 && !locked;
+  function choose(choice: PromoChoice) {
+    onChange(choice.code);
+    setOpen(false);
+  }
+  function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (!listed) return;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setOpen(true);
+      if (filtered.length === 0) return;
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      setActive((active + step + filtered.length) % filtered.length);
+    } else if (event.key === "Enter" && open && filtered[active]) {
+      event.preventDefault();
+      choose(filtered[active]);
+    } else if (event.key === "Escape") {
+      setOpen(false);
+    }
+  }
+  return (
+    <div className="relative">
+      <label htmlFor={id} className="block font-semibold">
+        Promo code <span className="font-normal">(optional)</span>
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          {...(listed && {
+            role: "combobox",
+            "aria-expanded": open,
+            "aria-controls": `${id}-list`,
+            "aria-autocomplete": "list" as const,
+          })}
+          className={`${inputClass} ${listed ? "pr-10" : ""} ${locked ? "bg-[#19345b]/5" : ""}`}
+          placeholder={listed ? "Pick a code or type one" : undefined}
+          value={value}
+          readOnly={locked}
+          autoComplete="off"
+          spellCheck={false}
+          onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onChange={(event) => {
+            onChange(event.target.value.trim());
+            setActive(-1);
+            setOpen(true);
+          }}
+          onKeyDown={onKeyDown}
+        />
+        {listed && (
+          <ChevronDown
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 right-3 mt-1 size-5 -translate-y-1/2 text-[#19345b]/50"
+          />
+        )}
+      </div>
+      {listed && open && filtered.length > 0 && (
+        <ul
+          id={`${id}-list`}
+          role="listbox"
+          onMouseDown={(event) => event.preventDefault()}
+          className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-[#19345b]/30 bg-white py-1 shadow-lg"
+        >
+          {filtered.map((choice, index) => (
+            <li
+              key={choice.code}
+              role="option"
+              aria-selected={choice.code === value}
+              onClick={() => choose(choice)}
+              onMouseEnter={() => setActive(index)}
+              className={`cursor-pointer px-3 py-2 text-sm ${
+                index === active ? "bg-[#19345b] text-white" : ""
+              }`}
+            >
+              <span className="font-mono font-semibold">{choice.code}</span>
+              <span className="opacity-70"> · {choice.label}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p
+        className={`mt-2 text-xs ${hint.bad ? "text-red-700" : "text-[#19345b]/60"}`}
+      >
+        {hint.text}
+      </p>
+    </div>
   );
 }
 

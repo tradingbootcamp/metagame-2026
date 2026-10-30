@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { loadPosterCatalog } from "@/lib/poster-catalog";
 import { GENERIC_AREA } from "@/lib/poster-options";
 import { toolAccess } from "@/lib/admin-auth";
-import { listStripeCodes } from "@/lib/promo-codes-stripe";
+import { listStripeCodes, standardProduct } from "@/lib/promo-codes-stripe";
+import { posterAccepts } from "@/lib/poster-promo";
 import PosterForm, { type PromoChoice } from "./poster-form";
 
 export const dynamic = "force-dynamic";
@@ -11,12 +12,22 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Live codes from /backstage/promo as typing suggestions for staff; empty for everyone else. */
+/** Live codes from /backstage/promo that posters accept, for staff; empty for everyone else. */
 async function promoChoices(): Promise<PromoChoice[]> {
   if (!(await toolAccess("promo.view"))) return [];
   try {
-    return (await listStripeCodes())
-      .filter((c) => c.active && (c.max == null || c.redeemed < c.max))
+    const [codes, standard] = await Promise.all([
+      listStripeCodes(),
+      standardProduct(),
+    ]);
+    return codes
+      .filter(
+        (c) =>
+          c.active &&
+          (c.max == null || c.redeemed < c.max) &&
+          c.discount &&
+          posterAccepts(c.discount, standard),
+      )
       .map((c) => ({ code: c.code, label: c.coupon }))
       .sort((a, b) => a.code.localeCompare(b.code));
   } catch {
@@ -40,7 +51,7 @@ export default async function PostersPage() {
     options = null;
   }
   return (
-    <main className="min-h-screen bg-[#fffaf0] px-6 py-16 text-[#19345b]">
+    <div className="px-6 pt-28 pb-16 text-[#19345b]">
       <div className="mx-auto max-w-5xl">
         <h1 className="mb-8 text-4xl font-bold">Posters</h1>
         {options ? (
@@ -56,6 +67,6 @@ export default async function PostersPage() {
           </p>
         )}
       </div>
-    </main>
+    </div>
   );
 }

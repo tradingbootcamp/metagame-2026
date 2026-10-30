@@ -1,9 +1,11 @@
 import { loadPosterCatalog } from "@/lib/poster-catalog";
-import { isPosterLink } from "@/lib/poster-options";
+import { isPosterLink, linkPromo } from "@/lib/poster-options";
 import { findTrackingLink, PROMO_PARAM, promoCode } from "@/lib/tracking-links";
 import { createPosterPdf } from "@/lib/poster-pdf";
+import { checkPosterPromo } from "@/lib/poster-promo";
 
 export const runtime = "nodejs";
+const REJECTED = "This code can’t be used on a poster.";
 const headers = {
   "Cache-Control": "no-store",
   "X-Robots-Tag": "noindex, nofollow",
@@ -17,6 +19,24 @@ export async function GET(request: Request) {
   const disposition = params.get("preview") === "1" ? "inline" : "attachment";
   const promoRaw = params.get(PROMO_PARAM) ?? "";
   const promo = promoCode(promoRaw);
+  if (params.get("check") === "1") {
+    if (!promo)
+      return Response.json(
+        { error: "Invalid code." },
+        { status: 400, headers },
+      );
+    try {
+      const result = await checkPosterPromo(promo);
+      return Response.json(
+        result.ok
+          ? { code: result.code, discount: result.discount }
+          : { error: REJECTED },
+        { status: result.ok ? 200 : 422, headers },
+      );
+    } catch {
+      return Response.json({ error: "Unavailable." }, { status: 503, headers });
+    }
+  }
   if (
     !area ||
     area.length > 200 ||
@@ -45,13 +65,26 @@ export async function GET(request: Request) {
         { status: 409, headers },
       );
     }
+    // A /buy/<code> link already applies its own code, so that's the one printed.
+    const own = linkPromo(link.destination);
+    const printed = own || promo;
+    const result = printed ? await checkPosterPromo(printed) : undefined;
+    if (result && !result.ok)
+      return Response.json({ error: REJECTED }, { status: 422, headers });
+    const redeemable = result && {
+      code: result.code,
+      discount: result.discount,
+    };
     const pdf = await createPosterPdf(
       design as "d20" | "chess",
       size as "letter" | "13x19",
       choice.slug,
-      promo,
+      redeemable,
+      !own,
     );
-    const name = [design, choice.slug, promo, size].filter(Boolean).join("-");
+    const name = [design, choice.slug, redeemable?.code, size]
+      .filter(Boolean)
+      .join("-");
     return new Response(new Uint8Array(pdf), {
       headers: {
         ...headers,
