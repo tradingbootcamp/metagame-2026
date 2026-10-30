@@ -32,6 +32,7 @@ import {
 } from "@/v2/components/styles";
 import TicketsPanel from "@/v2/components/tickets/TicketsPanel";
 import { Button } from "@/v2/components/ui/button";
+import { PartifulLogo } from "@/v2/components/tickets/PartifulInvite";
 import { CAROUSEL } from "@/v2/data/carousel";
 import {
   GOLD_SPONSORS,
@@ -568,16 +569,7 @@ export default function Home() {
                 Partiful. Have a game, product, or creation to share? Apply for
                 a booth.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild variant="default">
-                  <a
-                    href={NIGHT_PARTIFUL_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    RSVP &amp; invite friends
-                  </a>
-                </Button>
+              <div className="mt-6 flex flex-wrap justify-between gap-3">
                 <Button asChild variant="navy">
                   <a
                     href={NIGHT_MARKET_FORM_URL}
@@ -585,6 +577,16 @@ export default function Home() {
                     rel="noopener noreferrer"
                   >
                     Apply for a booth
+                  </a>
+                </Button>
+                <Button asChild variant="default">
+                  <a
+                    href={NIGHT_PARTIFUL_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <PartifulLogo />
+                    RSVP
                   </a>
                 </Button>
               </div>
