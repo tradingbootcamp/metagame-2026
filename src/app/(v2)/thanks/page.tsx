@@ -5,6 +5,7 @@ import { getStripe } from "@/lib/stripe";
 import { FAMILY_PACK } from "@/lib/family-pack";
 import ContentPage from "@/v2/components/ContentPage";
 import MailingListOptOut from "@/v2/components/tickets/MailingListOptOut";
+import PartifulInvite from "@/v2/components/tickets/PartifulInvite";
 import { Button } from "@/v2/components/ui/button";
 
 export const metadata: Metadata = {
@@ -59,6 +60,7 @@ export default async function ThanksPage({
       }
     >
       <div className="flex max-w-[640px] flex-col items-start gap-8">
+        <PartifulInvite />
         {buyer ? (
           <div className="flex flex-col items-start gap-2">
             <p className="text-base text-ink">

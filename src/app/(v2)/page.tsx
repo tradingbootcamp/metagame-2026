@@ -47,6 +47,7 @@ import {
   LIGHTHAVEN_URL,
   MEGAGAME_PROPOSAL_FORM_URL,
   NIGHT_MARKET_FORM_URL,
+  NIGHT_PARTIFUL_URL,
   RFP_FORM_URL,
   VOLUNTEER_FORM_PATH,
 } from "@/v2/lib/links";
@@ -563,17 +564,30 @@ export default function Home() {
                 This is open to the public on Friday evening (7:00–10:00pm).
               </p>
               <p className={PROSE}>
-                Have a game, product, or creation to share?
+                It&rsquo;s free &mdash; RSVP and invite your friends on
+                Partiful. Have a game, product, or creation to share? Apply for
+                a booth.
               </p>
-              <Button asChild variant="default" className="mt-6 w-fit">
-                <a
-                  href={NIGHT_MARKET_FORM_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Apply for a booth
-                </a>
-              </Button>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button asChild variant="default">
+                  <a
+                    href={NIGHT_PARTIFUL_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    RSVP &amp; invite friends
+                  </a>
+                </Button>
+                <Button asChild variant="navy">
+                  <a
+                    href={NIGHT_MARKET_FORM_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Apply for a booth
+                  </a>
+                </Button>
+              </div>
             </div>
             <figure className="w-full max-w-[560px]">
               <Image

@@ -5,6 +5,12 @@ import {
 } from "next/constants";
 import { buildErd } from "./scripts/build-erd.mjs";
 import { validateEnv } from "./src/env";
+import {
+  CON_PARTIFUL_PATH,
+  CON_PARTIFUL_URL,
+  NIGHT_PARTIFUL_PATH,
+  NIGHT_PARTIFUL_URL,
+} from "./src/v2/lib/links";
 
 // Warn (don't fail) on missing required env vars at build / dev start.
 validateEnv();
@@ -69,6 +75,17 @@ const nextConfig: NextConfig = {
     {
       source: "/buy/:promo",
       destination: "/api/checkout/stripe?tier=standard&promo=:promo",
+      permanent: false,
+    },
+    // Shareable short links to the Partiful RSVPs.
+    {
+      source: CON_PARTIFUL_PATH,
+      destination: CON_PARTIFUL_URL,
+      permanent: false,
+    },
+    {
+      source: NIGHT_PARTIFUL_PATH,
+      destination: NIGHT_PARTIFUL_URL,
       permanent: false,
     },
   ],
