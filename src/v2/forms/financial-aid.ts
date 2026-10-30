@@ -84,7 +84,7 @@ export const financialAid: FormDef = {
             {
               value: "50% off (ticket price: $212.50)",
               label: "$212.50 · 50% off",
-              hint: "If $325 wouldn't work but half price would. We'll likely accept most of these.",
+              hint: "If $325 wouldn't work but half price would.",
             },
             {
               value: "75% off ticket (ticket price: $106.25)",
