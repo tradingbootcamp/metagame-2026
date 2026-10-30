@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { isEarlyBirdActive } from "@/lib/early-bird";
+import { resolveStandardDiscounts } from "@/lib/referral-checkout";
 import { getStripe } from "@/lib/stripe";
 import {
   DAY_PASS_TIER,
@@ -85,9 +86,10 @@ function compUtm(promo: Stripe.PromotionCode): Utm {
 }
 
 /**
- * A `promo` on the link (/buy/CODE) is applied for the buyer, as is the tier's
- * own code during early-bird; Stripe then shows no code box. Otherwise — or on
- * the unlisted `code=own` link, or when the code isn't redeemable — the box is shown.
+ * A `promo` (typed in the buy modal or carried by a /buy/CODE link) and a
+ * referral `ref` resolve to the one bigger discount, locked in so Stripe shows
+ * no code box; the tier's own code counts as the promo during early-bird,
+ * except on the unlisted `code=own` link. With neither, the box is shown.
  */
 async function promoParams(
   stripe: Stripe,
@@ -98,37 +100,33 @@ async function promoParams(
     Stripe.Checkout.SessionCreateParams,
     "discounts" | "allow_promotion_codes"
   >;
+  metadata: Record<string, string>;
   utm: Utm;
 }> {
-  const box = { session: { allow_promotion_codes: true }, utm: {} };
   const linked = params.get("promo")?.trim();
   const earlyBird =
     params.get("code") !== "own" && isEarlyBirdActive()
       ? ticket.promoCode
       : undefined;
-  const code = linked || earlyBird;
-  if (!code) return box;
-  const {
-    data: [promo],
-  } = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
-  if (!promo) {
-    console.warn(
-      `[checkout/stripe] no active ${code} promotion code — showing the code box instead`,
-    );
-    return box;
-  }
+  const { session, metadata, promo, pick } = await resolveStandardDiscounts(
+    stripe,
+    { promo: linked || earlyBird, ref: params.get("ref") },
+    ticket.prices.full.usd,
+  );
   return {
-    session: { discounts: [{ promotion_code: promo.id }] },
-    utm: linked ? compUtm(promo) : {},
+    session,
+    metadata,
+    utm:
+      linked && promo && pick.applied === "promo" ? compUtm(promo.promo) : {},
   };
 }
 
 /**
- * GET /api/checkout/stripe?tier=standard[&code=own | &promo=<code>]
+ * GET /api/checkout/stripe?tier=standard[&code=own | &promo=<code>][&ref=<referral>]
  *   | ?tier=supporter&chip=<usd> | ?tier=day-pass&day=<friday|saturday|sunday>
  *   [&utm_source=…&utm_medium=…&utm_campaign=…&first_visit=…&posthog_id=…&posthog_session_id=…]
- * Creates a hosted Checkout Session and redirects to it. /buy and /buy/<code>
- * redirect here (next.config.ts).
+ * Creates a hosted Checkout Session and redirects to it. The buy modal
+ * (/#buy, where /buy, /buy/<code> and /invite/<ref> land) links here.
  */
 export async function GET(request: Request) {
   const stripe = getStripe();
@@ -158,6 +156,7 @@ export async function GET(request: Request) {
       ...promo?.session,
       metadata: {
         ...purchase.metadata,
+        ...promo?.metadata,
         ...(tagged ? {} : promo?.utm),
         ...utm,
       },

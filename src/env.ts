@@ -49,6 +49,12 @@ const ENV_SPEC: EnvSpec[] = [
       "Id of the hand-made 100%-off Stripe coupon: the default selection in /backstage/promo's coupon dropdown.",
   },
   {
+    name: "FAMILY_REFERRAL_COUPON_ID",
+    required: false,
+    description:
+      "Id of the hand-made Stripe coupon a referred friend gets on a Standard ticket ($50 off, to the Family & Friends price). Without it a referral is recorded but not discounted.",
+  },
+  {
     name: "RESEND_API_KEY",
     required: false,
     description:
@@ -165,6 +171,7 @@ export const env = {
   STRIPE_TEST_99_CODE: process.env.STRIPE_TEST_99_CODE,
   STRIPE_PROMO_KEY: process.env.STRIPE_PROMO_KEY,
   COMP_COUPON_ID: process.env.COMP_COUPON_ID,
+  FAMILY_REFERRAL_COUPON_ID: process.env.FAMILY_REFERRAL_COUPON_ID,
   DATABASE_URL: process.env.DATABASE_URL,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   RESEND_API_KEY: process.env.RESEND_API_KEY,

@@ -241,6 +241,10 @@ export async function POST(request: Request) {
       amountDiscount,
       receiptUrl: charge?.receipt_url ?? undefined,
       discordHandle: discord ?? undefined,
+      // The buy modal puts the referrer on the session whatever discount won.
+      notes: full.metadata?.referral_code
+        ? `Referred with code ${full.metadata.referral_code}.`
+        : undefined,
       utm: pickUtm((key) => full.metadata?.[key]),
       status,
       paymentMethod: "stripe",
@@ -249,7 +253,9 @@ export async function POST(request: Request) {
       test: !event.livemode || isTestCoupon,
     };
     await recordPurchase(purchase);
-    await recordTicket(purchase);
+    await recordTicket(purchase, {
+      referredBy: full.metadata?.referred_by || undefined,
+    });
     await capturePurchase(purchase);
 
     // Confirmation email once the money is settled (or none was owed): card

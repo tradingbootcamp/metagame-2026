@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import BtcModal from "@/v2/components/tickets/BtcModal";
+import BuyModal from "@/v2/components/tickets/BuyModal";
 import DayPassModal from "@/v2/components/tickets/DayPassModal";
 import DiscountRateModal from "@/v2/components/tickets/DiscountRateModal";
 import FamilyPackModal from "@/v2/components/tickets/FamilyPackModal";
@@ -48,7 +49,6 @@ const TILE_NOTE =
 const subscribeNever = () => () => {};
 
 const EARLY_BIRD_HREF = stripeCheckoutHref({ tier: "standard" });
-const FULL_PRICE_HREF = stripeCheckoutHref({ tier: "standard", code: "own" });
 
 // UTMs and any promo code live in localStorage, so they're added at click time
 // (not render) to keep the server-rendered href stable.
@@ -56,7 +56,10 @@ const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
   e.currentTarget.href = withPromo(withUtm(href));
 };
 
+// "buy" is the Standard ticket's code step; /buy, /buy/<code> and
+// /invite/<ref> all redirect to /#buy (next.config.ts).
 const HASH_MODALS = [
+  "buy",
   "supporter",
   "day-pass",
   "family-pack",
@@ -209,8 +212,8 @@ export default function TicketsPanel({
               </a>
             </Button>
           ))}
-        {/* Full price, no promo auto-applied: for after the deadline, or for
-            anyone bringing their own code. */}
+        {/* Full price: USD goes through the buy modal, where a referral or
+            discount code is entered before Stripe; BTC through its own modal. */}
         {standard &&
           (isBtc ? (
             <Button
@@ -225,21 +228,17 @@ export default function TicketsPanel({
               </span>
             </Button>
           ) : (
-            <Button asChild variant="raised" className={TILE}>
-              <a
-                href={FULL_PRICE_HREF}
-                onClick={addUtm(FULL_PRICE_HREF)}
-                onAuxClick={addUtm(FULL_PRICE_HREF)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <span className={TILE_LABEL}>Standard</span>
-                <span
-                  className={`${HEADING} text-[30px] leading-none text-tan`}
-                >
-                  ${standard.prices.full.usd}
-                </span>
-              </a>
+            <Button
+              type="button"
+              variant="raised"
+              id="buy"
+              onClick={() => setOpenModal("buy")}
+              className={`${TILE} scroll-mt-24`}
+            >
+              <span className={TILE_LABEL}>Standard</span>
+              <span className={`${HEADING} text-[30px] leading-none text-tan`}>
+                ${standard.prices.full.usd}
+              </span>
             </Button>
           ))}
         <Button
@@ -336,6 +335,7 @@ export default function TicketsPanel({
           </VolunteerFormLink>
         </Button>
       </div>
+      {openModal === "buy" && <BuyModal onClose={closeModal} />}
       {openModal === "supporter" && <SupporterModal onClose={closeModal} />}
       {openModal === "day-pass" && <DayPassModal onClose={closeModal} />}
       {openModal === "discount-rate" && (

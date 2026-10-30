@@ -169,6 +169,13 @@
       "when": 1793117301089,
       "tag": "0023_drop_show_in_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793303162219,
+      "tag": "0024_ticket_referrals",
+      "breakpoints": true
     }
   ]
 }

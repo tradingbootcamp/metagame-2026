@@ -20,6 +20,7 @@ import {
   loadSchedule,
   loadViewerPlans,
 } from "@/lib/schedule-store";
+import { mintReferralCodes, referralCounts } from "@/lib/referral-store";
 import { emailKey, ticketsForUser } from "@/lib/ticket-store";
 import { ticketView } from "@/lib/ticket-view";
 import { Button } from "@/v2/components/ui/button";
@@ -69,7 +70,12 @@ export default async function AccountPage({
     can("schedule.manage"),
     teamAccess().then((a) => a?.team ?? false),
   ]);
-  const tickets = rows.map((t) => ticketView(t, user.id, email));
+  // Referral codes are minted the first time their holder looks.
+  await mintReferralCodes(rows, user.id, email);
+  const referrals = await referralCounts(rows.map((t) => t.paymentId));
+  const tickets = rows.map((t) =>
+    ticketView(t, user.id, email, referrals.get(t.paymentId) ?? 0),
+  );
 
   return (
     // Same measure and top clearance as ContentPage, without its title block.

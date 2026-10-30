@@ -8,9 +8,11 @@ import {
   type ClaimState,
   type UnclaimState,
 } from "./actions";
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, LinkIcon } from "lucide-react";
 import { Button } from "@/v2/components/ui/button";
 import PinInput from "@/v2/components/auth/PinInput";
+import { FAMILY_PACK } from "@/lib/family-pack";
+import { inviteHref, normalizeReferralCode } from "@/lib/referral";
 import {
   TICKET_CODE_LENGTH,
   normalizeTicketCode,
@@ -51,6 +53,57 @@ function ShareCode({ code }: { code: string }) {
           className={`size-4 ${status === "failed" ? "text-meeple" : ""}`}
         />
       </button>
+    </span>
+  );
+}
+
+/** A small icon button that reports its copy state. */
+function CopyButton({
+  text,
+  label,
+  Icon,
+}: {
+  text: () => string;
+  label: string;
+  Icon: typeof CopyIcon;
+}) {
+  const { status, copy } = useCopy();
+  const Shown = status === "copied" ? CheckIcon : Icon;
+  return (
+    <button
+      type="button"
+      onClick={() => copy(text())}
+      aria-label={status === "copied" ? "Copied" : label}
+      title={status === "failed" ? "Couldn't copy" : label}
+      className="rounded p-1 text-navy/70 hover:bg-navy/10 hover:text-navy"
+    >
+      <Shown className={`size-4 ${status === "failed" ? "text-meeple" : ""}`} />
+    </button>
+  );
+}
+
+/**
+ * The ticket's referral code and invite link. A friend who buys with it pays
+ * the Family & Friends price, and both tickets count for the swag.
+ */
+function InviteCode({ code, referrals }: { code: string; referrals: number }) {
+  const href = inviteHref(normalizeReferralCode(code));
+  return (
+    <span className="flex basis-full flex-wrap items-center gap-x-1.5 gap-y-1 pt-1 text-sm text-ink/70">
+      Invite a friend:
+      <span className="font-mono text-ink">{code}</span>
+      <CopyButton text={() => code} label="Copy code" Icon={CopyIcon} />
+      <CopyButton
+        text={() => `${window.location.origin}${href}`}
+        label="Copy invite link"
+        Icon={LinkIcon}
+      />
+      <span className="text-ink/60">
+        They get a Standard ticket for ${FAMILY_PACK.usd}, and you both get the
+        bring-a-friend swag.
+        {referrals > 0 &&
+          ` ${referrals} ${referrals === 1 ? "friend has" : "friends have"} joined with it.`}
+      </span>
     </span>
   );
 }
@@ -96,6 +149,11 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                 >
                   {b.text}
                 </span>
+                {t.referred && (
+                  <span className="rounded bg-tan/30 px-1.5 py-0.5 text-xs font-semibold text-ink">
+                    Referred by a friend
+                  </span>
+                )}
                 {shareable(t) && !holdsOne && (
                   <Button
                     size="sm"
@@ -161,6 +219,9 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                       Cancel
                     </button>
                   </span>
+                )}
+                {t.referralCode && t.status === "paid" && (
+                  <InviteCode code={t.referralCode} referrals={t.referrals} />
                 )}
               </li>
             );

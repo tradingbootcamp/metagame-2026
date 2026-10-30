@@ -81,16 +81,39 @@ export function peopleMatch(people: TicketPeople, query: string): boolean {
   );
 }
 
-/** peopleMatch, or a match on the coupon code the buyer used. */
+/** peopleMatch, or a match on the coupon or referral code. */
 export function ticketMatch(
-  r: { t: { couponCode: string | null }; people: TicketPeople },
+  r: {
+    t: { couponCode: string | null; referralCode?: string | null };
+    people: TicketPeople;
+  },
   query: string,
 ): boolean {
   const q = query.trim().toLowerCase();
+  const code = (c: string | null | undefined) =>
+    c?.toLowerCase().replace(/-/g, "").includes(q.replace(/-/g, "")) ?? false;
   return (
     peopleMatch(r.people, q) ||
-    (r.t.couponCode?.toLowerCase().includes(q) ?? false)
+    code(r.t.couponCode) ||
+    (q.length > 0 && code(r.t.referralCode))
   );
+}
+
+/**
+ * Why a ticket gets the bring-a-friend swag, or null: it came in a Family &
+ * Friends pack, was bought with a referral, or referred someone. Derived, so
+ * a refunded referee drops off on its own.
+ */
+export function swagReason(t: {
+  tier: string;
+  referredBy: string | null;
+  referrals: number;
+}): string | null {
+  if (/family/i.test(t.tier)) return "Family & Friends pack";
+  if (t.referredBy !== null) return `Referred by ${t.referredBy}`;
+  if (t.referrals > 0)
+    return `Referred ${t.referrals} ${t.referrals === 1 ? "friend" : "friends"}`;
+  return null;
 }
 
 export type TicketRole = "bought" | "holds" | "claimed";

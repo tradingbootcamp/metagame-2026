@@ -55,15 +55,19 @@ const nextConfig: NextConfig = {
     { source: "/key-dates", destination: "/#key-dates", permanent: true },
     // Short link to the session-proposal (RFP) Airtable form.
     { source: "/propose", destination: RFP_FORM_URL, permanent: false },
-    // Short links into Standard checkout; /buy/<code> pre-applies a promo code.
+    // Short links into Standard checkout land on the buy modal (/#buy), which
+    // prefills the promo or referral code and still takes the other one, so a
+    // referred friend with a better comp code can use it. The modal links on
+    // to /api/checkout/stripe.
+    { source: "/buy", destination: "/#buy", permanent: false },
     {
-      source: "/buy",
-      destination: "/api/checkout/stripe?tier=standard",
+      source: "/buy/:promo",
+      destination: "/?promo=:promo#buy",
       permanent: false,
     },
     {
-      source: "/buy/:promo",
-      destination: "/api/checkout/stripe?tier=standard&promo=:promo",
+      source: "/invite/:ref",
+      destination: "/?ref=:ref#buy",
       permanent: false,
     },
   ],
