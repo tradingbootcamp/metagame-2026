@@ -17,11 +17,14 @@ import { can } from "./access";
 import { getAuth } from "./auth";
 import type { HostSessionFields } from "./schedule-input";
 import {
+  clashDescription,
   fromPacificWall,
   movedTimes,
   outsideHours,
+  roomAllowsOverlap,
   summarizeRsvps,
   type Attendance,
+  type RoomClash,
   type RsvpStatus,
   type ScheduleAccount,
   type ViewerPlans,
@@ -129,10 +132,26 @@ export type SessionInput = Omit<
   hostIds: string[];
 };
 
-/** Inserts or, with an id, replaces the session and its host list. */
-export async function upsertSession(input: SessionInput): Promise<string> {
+/**
+ * Inserts or, with an id, replaces the session and its host list. Refuses a
+ * clash in its room unless `allowOverlap`; a clash let through comes back.
+ */
+export async function upsertSession(
+  input: SessionInput,
+  { allowOverlap = false }: { allowOverlap?: boolean } = {},
+): Promise<{ id: string; clash: RoomClash | null }> {
   const db = getDb();
   const { id, hostIds, ...row } = input;
+  const clash =
+    row.startsAt && row.endsAt
+      ? await assertSlotFree(
+          id ?? null,
+          row.startsAt,
+          row.endsAt,
+          row.locationId,
+          allowOverlap,
+        )
+      : null;
   let sessionId: string;
   if (id) {
     const [updated] = await db
@@ -166,7 +185,7 @@ export async function upsertSession(input: SessionInput): Promise<string> {
   }
   // A raised capacity frees seats for the waitlist.
   if (id) await promoteWaitlist(sessionId);
-  return sessionId;
+  return { id: sessionId, clash };
 }
 
 /** The session's hosts as user ids, lead first. */
@@ -229,11 +248,12 @@ export async function updateSessionAsHost(
   await promoteWaitlist(sessionId);
 }
 
-/** Moves a session to a room and start time, keeping its length; refuses a clash in that room. */
+/** Moves a session to a room and start time, keeping its length; refuses a clash unless `allowOverlap`. */
 export async function moveSessionTo(
   id: string,
   start: Date,
   locationId: string | null,
+  allowOverlap = false,
 ): Promise<void> {
   const db = getDb();
   const [row] = await db
@@ -248,25 +268,58 @@ export async function moveSessionTo(
     },
     start,
   );
-  await assertSlotFree(id, startsAt, endsAt, locationId);
+  await assertSlotFree(id, startsAt, endsAt, locationId, allowOverlap);
   await db
     .update(sessions)
     .set({ startsAt, endsAt, locationId })
     .where(eq(sessions.id, id));
 }
 
-/** Throws when the times fall outside schedule hours or overlap another session in the room. */
+/** A save refused for double-booking a room; the caller may offer to override. */
+export class OverlapError extends Error {
+  constructor(readonly clash: RoomClash) {
+    super(`That overlaps ${clashDescription(clash)}.`);
+  }
+}
+
+/**
+ * Throws when the times run past midnight, or overlap another session in a
+ * room that forbids it unless `allowOverlap`. Returns the clash let through.
+ */
 export async function assertSlotFree(
   id: string | null,
   startsAt: Date,
   endsAt: Date,
   locationId: string | null,
-): Promise<void> {
+  allowOverlap = false,
+): Promise<RoomClash | null> {
   const outside = outsideHours(startsAt, endsAt);
   if (outside) throw new Error(outside.error);
-  if (!locationId) return;
-  const [clash] = await getDb()
-    .select({ title: sessions.title })
+  if (!locationId) return null;
+  const clash = await roomClash(id, startsAt, endsAt, locationId);
+  if (clash && !allowOverlap) throw new OverlapError(clash);
+  return clash;
+}
+
+/** Another session these times overlap in a room that forbids overlap, if any. */
+export async function roomClash(
+  id: string | null,
+  startsAt: Date,
+  endsAt: Date,
+  locationId: string,
+): Promise<RoomClash | null> {
+  const db = getDb();
+  const [room] = await db
+    .select({ name: locations.name, visibility: locations.visibility })
+    .from(locations)
+    .where(eq(locations.id, locationId));
+  if (!room || roomAllowsOverlap(room.visibility)) return null;
+  const [clash] = await db
+    .select({
+      title: sessions.title,
+      startsAt: sessions.startsAt,
+      endsAt: sessions.endsAt,
+    })
     .from(sessions)
     .where(
       and(
@@ -277,7 +330,13 @@ export async function assertSlotFree(
       ),
     )
     .limit(1);
-  if (clash) throw new Error(`That overlaps "${clash.title}" in that room.`);
+  if (!clash?.startsAt || !clash.endsAt) return null;
+  return {
+    title: clash.title,
+    room: room.name,
+    startsAt: clash.startsAt.toISOString(),
+    endsAt: clash.endsAt.toISOString(),
+  };
 }
 
 /** Accounts whose name or email contains the query. */

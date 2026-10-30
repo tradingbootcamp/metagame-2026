@@ -8,12 +8,15 @@ import {
   formatPacificTime,
   heightPx,
   hostNames,
+  laneInset,
   NO_ROOM,
   offsetPx,
+  overlapLanes,
   slotLabel,
   SLOT_PX,
   type Ages,
   type Category,
+  type Lane,
   type PublicLocation,
 } from "@/lib/schedule";
 import { AgeMark, BlockSummary, blockStyle } from "./SessionBits";
@@ -152,17 +155,20 @@ const BLOCK_LINK =
 function SessionBlock<S extends ViewSession>({
   session,
   slotStart,
+  lane,
   href,
   badge,
 }: {
   session: S;
   slotStart: number;
+  lane: Lane | undefined;
   href: (s: S) => string | null;
   badge?: (s: S) => ReactNode;
 }) {
   const style = {
     top: offsetPx(session, slotStart),
     height: heightPx(session),
+    ...laneInset(lane),
     ...blockStyle(session),
   };
   const title = `${session.title}${session.hosts.length ? " — " + hostNames(session) : ""}`;
@@ -204,6 +210,7 @@ export function GridDay<S extends ViewSession>({
   href: (s: S) => string | null;
   badge?: (s: S) => ReactNode;
 }) {
+  const lanes = overlapLanes(day.sessions);
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
   return (
     <div className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--col-w:104px] [--time-w:44px] sm:[--col-w:120px] sm:[--time-w:56px]">
@@ -261,6 +268,7 @@ export function GridDay<S extends ViewSession>({
                       key={s.id}
                       session={s}
                       slotStart={slotStart}
+                      lane={lanes.get(s.id)}
                       href={href}
                       badge={badge}
                     />

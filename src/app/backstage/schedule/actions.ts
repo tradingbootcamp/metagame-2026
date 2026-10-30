@@ -5,7 +5,7 @@ import { EXPIRED, requireAccess } from "@/lib/admin-auth";
 import { deleteImage } from "@/lib/blob";
 import { gradingSummary, type GradingSummary } from "@/lib/rfp-sessions";
 import { ImageUploadError, replaceRoomImages } from "@/lib/room-images";
-import { type ScheduleAccount } from "@/lib/schedule";
+import { type RoomClash, type ScheduleAccount } from "@/lib/schedule";
 import {
   parseLocationFields,
   parseSessionFields,
@@ -18,6 +18,7 @@ import {
   insertSample,
   locationImages,
   moveSessionTo,
+  OverlapError,
   removeLocation,
   removeSample,
   removeSession,
@@ -33,7 +34,12 @@ export type FormState = {
   error?: string;
   /** Field the error belongs to, when it's one field's fault. */
   field?: string;
+  /** Not saved: it would double-book this; resubmitting with allowOverlap saves anyway. */
+  conflict?: RoomClash;
 };
+
+const refused = (err: unknown): FormState =>
+  err instanceof OverlapError ? { conflict: err.clash } : explainDbError(err);
 
 const PATH = "/backstage/schedule";
 
@@ -75,13 +81,12 @@ export async function saveSession(
   ];
 
   try {
-    await upsertSession({
-      id: str(formData, "id") || undefined,
-      ...parsed.value,
-      hostIds,
-    });
+    await upsertSession(
+      { id: str(formData, "id") || undefined, ...parsed.value, hostIds },
+      { allowOverlap: str(formData, "allowOverlap") === "1" },
+    );
   } catch (err) {
-    return explainDbError(err);
+    return refused(err);
   }
   revalidatePath(PATH);
   return { ok: true };
@@ -92,14 +97,15 @@ export async function moveSession(
   id: string,
   startsAt: string,
   locationId: string | null,
+  allowOverlap = false,
 ): Promise<FormState> {
   if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
   const start = new Date(startsAt);
   if (Number.isNaN(start.getTime())) return { error: "That time is invalid." };
   try {
-    await moveSessionTo(id, start, locationId);
+    await moveSessionTo(id, start, locationId, allowOverlap);
   } catch (err) {
-    return explainDbError(err);
+    return refused(err);
   }
   revalidatePath(PATH);
   return { ok: true };

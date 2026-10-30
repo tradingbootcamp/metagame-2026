@@ -1,13 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { buttonClass, smallButtonClass } from "../ui";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/v2/components/ui/dialog";
+import ConfirmDialog from "./ConfirmDialog";
 
 function snapshot(form: HTMLFormElement): string {
   return JSON.stringify(
@@ -52,6 +46,7 @@ export function useUnsavedChanges(onClose: () => void, extraDirty = false) {
   }, []);
 
   return {
+    form,
     formRef,
     requestClose: () => (isDirty() ? setAsking(true) : onClose()),
     confirm: {
@@ -76,42 +71,17 @@ export function UnsavedChangesDialog({
   onSave,
 }: ReturnType<typeof useUnsavedChanges>["confirm"]) {
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onKeepEditing()}>
-      <DialogContent
-        showCloseButton={false}
-        className="max-w-[400px] border-line bg-white px-6 py-6 text-ink"
-      >
-        <DialogTitle className="font-bebas text-2xl tracking-wide text-navy">
-          Unsaved changes
-        </DialogTitle>
-        <DialogDescription className="mt-1 mb-5 text-sm text-ink/60">
-          Save your edits before closing?
-        </DialogDescription>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onKeepEditing}
-            className={smallButtonClass}
-            autoFocus
-          >
-            Keep editing
-          </button>
-          <button
-            type="button"
-            onClick={onDiscard}
-            className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
-          >
-            Discard
-          </button>
-          <button
-            type="button"
-            onClick={onSave}
-            className={`${buttonClass} w-auto`}
-          >
-            Save
-          </button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ConfirmDialog
+      open={open}
+      title="Unsaved changes"
+      onDismiss={onKeepEditing}
+      actions={[
+        { label: "Keep editing", onClick: onKeepEditing },
+        { label: "Discard", onClick: onDiscard },
+        { label: "Save", onClick: onSave, primary: true },
+      ]}
+    >
+      Save your edits before closing?
+    </ConfirmDialog>
   );
 }

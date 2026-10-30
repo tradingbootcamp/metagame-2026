@@ -12,18 +12,23 @@ import { addSample, clearSample, moveSession, type FormState } from "./actions";
 import LocationForm from "./LocationForm";
 import ScheduleGrid, { GrabHandle, type DropFn } from "./ScheduleGrid";
 import SessionForm, { type SessionDefaults } from "./SessionForm";
+import ConfirmDialog from "./ConfirmDialog";
 import ScheduleSearch from "@/v2/components/schedule/ScheduleSearch";
 import { buttonClass, smallButtonClass } from "../ui";
 import {
   buildDays,
+  clashDescription,
+  EDITOR_DAYS,
   formatPacificDay,
   formatPacificTime,
   hostNames,
   isPlaced,
   movedTimes,
+  openingDayIndex,
   pacificDayKey,
   VISIBILITY_LABEL,
   type Attendance,
+  type RoomClash,
   type ScheduleLocation,
   type ScheduleSession,
   type ViewerPlans,
@@ -74,15 +79,35 @@ export default function ScheduleTool({
   canSeed: boolean;
 }) {
   const [editing, setEditing] = useState<Editing>(null);
-  const [dayIndex, setDayIndex] = useState(0);
+  const [dayIndex, setDayIndex] = useState(() =>
+    openingDayIndex(buildDays(saved, EDITOR_DAYS)),
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const close = useCallback(() => setEditing(null), []);
   // Picked up by its grip; stays held across scrolling and day tabs until a slot is clicked.
   const [held, setCarrying] = useState<ScheduleSession | null>(null);
   // A dropped session shows in its new slot while the move saves; a failed save snaps it back.
-  const [sessions, applyMove] = useOptimistic(saved, (all, move: Move) =>
+  const [optimistic, applyMove] = useOptimistic(saved, (all, move: Move) =>
     all.map((s) => (s.id === move.id ? { ...s, ...move } : s)),
+  );
+  // A drop onto an overlap, shown in place until it's kept or undone. Kept
+  // after closing so the dialog's text stays put while it fades out.
+  const [unconfirmed, setUnconfirmed] = useState<{
+    move: Move & { startsAt: string };
+    clash: RoomClash;
+    open: boolean;
+  } | null>(null);
+  const closeUnconfirmed = () =>
+    setUnconfirmed((u) => u && { ...u, open: false });
+  const sessions = useMemo(
+    () =>
+      unconfirmed?.open
+        ? optimistic.map((s) =>
+            s.id === unconfirmed.move.id ? { ...s, ...unconfirmed.move } : s,
+          )
+        : optimistic,
+    [optimistic, unconfirmed],
   );
 
   useEffect(() => {
@@ -94,7 +119,7 @@ export default function ScheduleTool({
     return () => window.removeEventListener("keydown", onKey);
   }, [held]);
 
-  const days = useMemo(() => buildDays(sessions), [sessions]);
+  const days = useMemo(() => buildDays(sessions, EDITOR_DAYS), [sessions]);
   const carrying = held
     ? (sessions.find((s) => s.id === held.id) ?? null)
     : null;
@@ -125,21 +150,43 @@ export default function ScheduleTool({
 
   const grab = (session: ScheduleSession) =>
     setCarrying((held) => (held?.id === session.id ? null : session));
-  const drop: DropFn = (startsAt, locationId) => {
-    if (!carrying) return;
-    const id = carrying.id;
-    const times = movedTimes(carrying, startsAt);
-    setCarrying(null);
+  const saveMove = (move: Move & { startsAt: string }, allowOverlap: boolean) =>
     startTransition(async () => {
-      applyMove({
-        id,
-        startsAt: times.startsAt.toISOString(),
-        endsAt: times.endsAt.toISOString(),
-        locationId,
-      });
-      const result = await moveSession(id, startsAt.toISOString(), locationId);
+      applyMove(move);
+      const result = await moveSession(
+        move.id,
+        move.startsAt,
+        move.locationId,
+        allowOverlap,
+      );
       setError(result.error ?? null);
+      // The server saw a clash this page's data didn't.
+      if (result.conflict) {
+        setUnconfirmed({ move, clash: result.conflict, open: true });
+      }
     });
+  const drop: DropFn = (startsAt, locationId, clash) => {
+    if (!carrying) return;
+    const times = movedTimes(carrying, startsAt);
+    const move = {
+      id: carrying.id,
+      startsAt: times.startsAt.toISOString(),
+      endsAt: times.endsAt.toISOString(),
+      locationId,
+    };
+    setCarrying(null);
+    if (clash && isPlaced(clash)) {
+      const { title, startsAt, endsAt } = clash;
+      const room = roomName(locationId) ?? "that room";
+      setUnconfirmed({
+        move,
+        clash: { title, room, startsAt, endsAt },
+        open: true,
+      });
+    } else {
+      closeUnconfirmed();
+      saveMove(move, false);
+    }
   };
 
   const openSession = (session: ScheduleSession | null) =>
@@ -249,6 +296,7 @@ export default function ScheduleTool({
           onCreate={createAt}
           onGrab={grab}
           onDrop={drop}
+          confirmClash
         />
       </div>
 
@@ -407,6 +455,27 @@ export default function ScheduleTool({
         </div>
       </Section>
 
+      <ConfirmDialog
+        open={Boolean(unconfirmed?.open)}
+        title="Room conflict"
+        onDismiss={closeUnconfirmed}
+        actions={[
+          { label: "Undo", onClick: closeUnconfirmed },
+          {
+            label: "Keep it here",
+            primary: true,
+            onClick: () => {
+              if (!unconfirmed) return;
+              closeUnconfirmed();
+              saveMove(unconfirmed.move, true);
+            },
+          },
+        ]}
+      >
+        {unconfirmed && (
+          <>This overlaps {clashDescription(unconfirmed.clash)}.</>
+        )}
+      </ConfirmDialog>
       {editing?.kind === "session" && (
         <SessionForm
           key={editing.session?.id ?? "new"}

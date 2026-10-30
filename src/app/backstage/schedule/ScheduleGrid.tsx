@@ -10,15 +10,19 @@ import {
   fromPacificWall,
   heightPx,
   hostNames,
+  laneInset,
   minutesToHHMM,
   movedTimes,
   offsetPx,
   outsideHours,
+  overlapLanes,
   NO_ROOM,
+  openingDayIndex,
   slotLabel,
   SLOT_MINUTES,
   SLOT_PX,
   type Day,
+  type Lane,
   type PlacedSession,
   type ScheduleLocation,
   type ScheduleSession,
@@ -35,7 +39,12 @@ type View = "grid" | "list";
 type OpenFn = (s: ScheduleSession) => void;
 type CreateFn = (defaults: SessionDefaults) => void;
 type GrabFn = (s: ScheduleSession) => void;
-export type DropFn = (startsAt: Date, locationId: string | null) => void;
+/** `clash` is the session it would overlap, for a parent that confirms such drops. */
+export type DropFn = (
+  startsAt: Date,
+  locationId: string | null,
+  clash: ScheduleSession | null,
+) => void;
 
 /** The grip that picks a session up; the rest of the block still opens it. */
 export function GrabHandle({
@@ -79,6 +88,7 @@ export function GrabHandle({
 function SessionBlock({
   session,
   slotStart,
+  lane,
   going,
   carrying,
   muted,
@@ -87,6 +97,7 @@ function SessionBlock({
 }: {
   session: PlacedSession;
   slotStart: number;
+  lane: Lane | undefined;
   going: number;
   /** What's being moved, if anything; blocks let clicks through to the slots meanwhile. */
   carrying: ScheduleSession | null;
@@ -102,6 +113,7 @@ function SessionBlock({
       style={{
         top: offsetPx(session, slotStart),
         height: heightPx(session),
+        ...laneInset(lane),
         ...blockStyle(session),
       }}
       className={`absolute inset-x-0.5 z-10 overflow-hidden rounded-md border text-[#1b1530] transition-shadow hover:z-20 hover:shadow-[0_2px_10px_rgba(27,21,48,0.25)] ${
@@ -136,27 +148,34 @@ function SessionBlock({
   );
 }
 
-/** Where the carried session would land, red with the reason when it can't. */
+/** Where the carried session would land: red with the reason when it can't, amber when it would overlap. */
 function DropPreview({
   session,
   heightPx,
   blocked,
+  hint,
 }: {
   session: ScheduleSession;
   heightPx: number;
   blocked: string | null;
+  hint: string | null;
 }) {
   return (
     <div
       aria-hidden
-      style={{ height: heightPx, ...(blocked ? {} : blockStyle(session)) }}
+      style={{
+        height: heightPx,
+        ...(blocked || hint ? {} : blockStyle(session)),
+      }}
       className={`pointer-events-none absolute inset-x-0.5 top-0 z-20 overflow-hidden rounded-md border-2 border-dashed p-1.5 text-[13px] leading-tight font-semibold shadow-[0_2px_10px_rgba(27,21,48,0.25)] ${
         blocked
           ? "border-red-600 bg-red-100/90 text-red-800"
-          : "text-[#1b1530] opacity-85"
+          : hint
+            ? "border-amber-500 bg-amber-100/90 text-amber-900"
+            : "text-[#1b1530] opacity-85"
       }`}
     >
-      <span className="line-clamp-3">{blocked ?? session.title}</span>
+      <span className="line-clamp-3">{blocked ?? hint ?? session.title}</span>
     </div>
   );
 }
@@ -171,6 +190,7 @@ type Column = {
 function GridDay({
   day,
   columns,
+  locations,
   going,
   sessions,
   carrying,
@@ -180,9 +200,11 @@ function GridDay({
   onCreate,
   onGrab,
   onDrop,
+  confirmClash,
 }: {
   day: Day;
   columns: Column[];
+  locations: ScheduleLocation[];
   going: Record<string, number>;
   /** Every session, for overlap checks that cross midnight. */
   sessions: ScheduleSession[];
@@ -193,6 +215,7 @@ function GridDay({
   onCreate?: CreateFn;
   onGrab: GrabFn;
   onDrop: DropFn;
+  confirmClash?: boolean;
 }) {
   const [hover, setHover] = useState<{
     dayKey: string;
@@ -210,20 +233,23 @@ function GridDay({
           endsAt: new Date(start.getTime() + carryMinutes * 60_000),
         }
       : movedTimes(carrying, start);
-    const clashFor = (
-      t: { startsAt: Date; endsAt: Date },
-      locationId: string | null,
-    ) => {
-      const clash = findClash(sessions, { id: carrying.id, locationId, ...t });
-      if (clash) return `Overlaps ${clash.title}`;
-      return outsideHours(t.startsAt, t.endsAt)?.error ?? null;
-    };
+    const clash = findClash(
+      sessions,
+      { id: carrying.id, locationId, ...times },
+      locations,
+    );
+    const overlaps = clash && `Overlaps ${clash.title}`;
     return {
       ...times,
       locationId,
-      blocked: clashFor(times, locationId),
+      clash,
+      blocked:
+        outsideHours(times.startsAt, times.endsAt)?.error ??
+        (confirmClash ? null : overlaps),
+      hint: confirmClash ? overlaps : null,
     };
   };
+  const lanes = overlapLanes(day.sessions);
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
   return (
     <div
@@ -301,7 +327,8 @@ function GridDay({
                       onDrop={(e) => {
                         e.preventDefault();
                         const t = target(slotStart, col.id);
-                        if (t && !t.blocked) onDrop(t.startsAt, t.locationId);
+                        if (t && !t.blocked)
+                          onDrop(t.startsAt, t.locationId, t.clash);
                       }}
                       onClick={() => {
                         if (!carrying) {
@@ -313,7 +340,8 @@ function GridDay({
                           return;
                         }
                         const t = target(slotStart, col.id);
-                        if (t && !t.blocked) onDrop(t.startsAt, t.locationId);
+                        if (t && !t.blocked)
+                          onDrop(t.startsAt, t.locationId, t.clash);
                       }}
                       className={`absolute inset-0 transition-colors enabled:hover:bg-navy/[0.06] ${
                         !carrying
@@ -330,6 +358,7 @@ function GridDay({
                         key={s.id}
                         session={s}
                         slotStart={slotStart}
+                        lane={lanes.get(s.id)}
                         going={going[s.id] ?? 0}
                         carrying={carrying}
                         muted={muted?.(s) ?? false}
@@ -341,6 +370,7 @@ function GridDay({
                       <DropPreview
                         session={carrying}
                         blocked={hovered.blocked}
+                        hint={hovered.hint}
                         heightPx={Math.max(
                           SLOT_PX,
                           ((hovered.endsAt.getTime() -
@@ -433,6 +463,7 @@ export default function ScheduleGrid({
   onCreate,
   onGrab,
   onDrop,
+  confirmClash,
   dayIndex: controlledDay,
   onDayChange,
 }: {
@@ -450,11 +481,13 @@ export default function ScheduleGrid({
   onCreate?: CreateFn;
   onGrab: GrabFn;
   onDrop: DropFn;
+  /** Let drops onto an overlap through (with its clash) instead of refusing them. */
+  confirmClash?: boolean;
   /** Controlled day tab, for a parent that needs to switch it (search). */
   dayIndex?: number;
   onDayChange?: (index: number) => void;
 }) {
-  const [ownDay, setOwnDay] = useState(0);
+  const [ownDay, setOwnDay] = useState(() => openingDayIndex(days));
   const dayIndex = controlledDay ?? ownDay;
   const setDayIndex = onDayChange ?? setOwnDay;
   const [view, setView] = useState<View>("grid");
@@ -584,6 +617,7 @@ export default function ScheduleGrid({
           <GridDay
             day={day}
             columns={columns}
+            locations={locations}
             going={going}
             sessions={placed}
             carrying={carrying}
@@ -593,6 +627,7 @@ export default function ScheduleGrid({
             onCreate={onCreate}
             onGrab={onGrab}
             onDrop={onDrop}
+            confirmClash={confirmClash}
           />
         )
       ) : (

@@ -1,9 +1,17 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  startTransition,
+} from "react";
 import { XIcon } from "lucide-react";
 import { deleteSession, saveSession, type FormState } from "./actions";
 import AttendancePanel from "./AttendancePanel";
+import ConfirmDialog from "./ConfirmDialog";
 import HostPicker from "./HostPicker";
 import RfpPanel from "./RfpPanel";
 import ShepherdPicker from "./ShepherdPicker";
@@ -18,17 +26,15 @@ import {
 import {
   AGES,
   CATEGORIES,
-  CONFERENCE_DAYS,
+  clashDescription,
+  EDITOR_DAYS,
   END_GAP_MINUTES,
-  endTimes,
   opensAt,
-  startTimes,
   STATUSES,
   formatPacificDay,
   minutesToHHMM,
   pacificDayKey,
   pacificMinutes,
-  slotLabel,
   type Attendance,
   type ScheduleLocation,
   type ScheduleSession,
@@ -84,19 +90,21 @@ export type SessionDefaults = {
 };
 
 const DEFAULT_START = 10 * 60;
-const shortest = (start: number) => start + 30 - END_GAP_MINUTES;
+const MIDNIGHT = 24 * 60;
+const shortest = (start: number) =>
+  Math.min(start + 30 - END_GAP_MINUTES, MIDNIGHT - 1);
+
+/** Minutes since midnight from an "HH:MM" time input, or null when cleared. */
+function parseHHMM(value: string): number | null {
+  const m = /^(\d{2}):(\d{2})/.exec(value);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
 
 /** "11/6" from "2026-11-06". */
 function monthSlashDay(key: string): string {
   const [, m, d] = key.split("-").map(Number);
   return `${m}/${d}`;
 }
-
-/** Keeps an off-grid saved time selectable rather than silently changing it. */
-const withCurrent = (options: number[], current: number | null) =>
-  current === null || options.includes(current)
-    ? options
-    : [...options, current].sort((a, b) => a - b);
 
 /** Create (no `session`) or edit a session, in a dialog on the cream admin page. */
 export default function SessionForm({
@@ -130,36 +138,31 @@ export default function SessionForm({
         : null,
   );
 
-  const dayOptions: { key: string; label: string }[] = CONFERENCE_DAYS.map(
-    (d) => ({ key: d.key, label: `${d.name} ${monthSlashDay(d.key)}` }),
-  );
+  const dayOptions: { key: string; label: string }[] = EDITOR_DAYS.map((d) => ({
+    key: d.key,
+    label: `${d.name} ${monthSlashDay(d.key)}`,
+  }));
   if (day && !dayOptions.some((d) => d.key === day) && session?.startsAt) {
     dayOptions.push({ key: day, label: formatPacificDay(session.startsAt) });
   }
 
   const pickDay = (key: string) => {
     setDay(key);
-    if (!key) return;
-    // A day that opens later pushes an earlier start up to its opening.
+    if (!key || start !== null) return;
     const first = Math.max(DEFAULT_START, opensAt(key));
-    if (start === null || start < opensAt(key)) {
-      setStart(first);
-      setEnd(shortest(first));
-    }
+    setStart(first);
+    setEnd(shortest(first));
   };
 
   // Moving the start keeps the duration, like a calendar drag.
-  const pickStart = (next: number) => {
+  const pickStart = (next: number | null) => {
+    setStart(next);
+    if (next === null) return;
     const moved =
       start !== null && end !== null && end > start
         ? next + (end - start)
         : null;
-    setStart(next);
-    setEnd(
-      moved !== null && day && moved <= endTimes(day).at(-1)!
-        ? moved
-        : shortest(next),
-    );
+    setEnd(moved !== null && moved < MIDNIGHT ? moved : shortest(next));
   };
 
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -169,12 +172,16 @@ export default function SessionForm({
   const [deleting, startDelete] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState<FormState | null>(null);
+  const startRef = useRef<HTMLInputElement>(null);
+  const conflict = state !== dismissed ? state.conflict : undefined;
+  const submit = (data: FormData) => startTransition(() => formAction(data));
 
   useEffect(() => {
     if (state.ok) onClose();
   }, [state, onClose]);
 
-  const { formRef, requestClose, confirm } = useUnsavedChanges(onClose);
+  const { form, formRef, requestClose, confirm } = useUnsavedChanges(onClose);
 
   const generalError =
     state.error && !state.field ? state.error : (deleteError ?? null);
@@ -202,10 +209,73 @@ export default function SessionForm({
 
         <form
           ref={formRef}
-          action={formAction}
+          // Submitted by hand: a form `action` resets every field once it
+          // returns, which would wipe the form behind an overlap prompt.
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit(new FormData(e.currentTarget));
+          }}
           className="grid gap-4 sm:grid-cols-2"
         >
           {session && <input type="hidden" name="id" value={session.id} />}
+
+          <div className="sticky -top-6 z-10 -mx-6 -mt-3 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-white px-6 py-3 sm:col-span-2 sm:-mx-8 sm:px-8">
+            <div className="flex items-center gap-2">
+              {session &&
+                (confirmDelete ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={deleting}
+                      onClick={() =>
+                        startDelete(async () => {
+                          const result = await deleteSession(session.id);
+                          if (result.error) setDeleteError(result.error);
+                          else onClose();
+                        })
+                      }
+                      className={`${smallButtonClass} border-meeple text-meeple hover:bg-meeple hover:text-white`}
+                    >
+                      {deleting ? "Deleting…" : "Yes, delete it"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(false)}
+                      className={smallButtonClass}
+                    >
+                      Keep
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(true)}
+                    className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
+                  >
+                    Delete
+                  </button>
+                ))}
+              {generalError && (
+                <span className="text-sm text-meeple">{generalError}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={requestClose}
+                className={smallButtonClass}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={pending}
+                className={`${buttonClass} w-auto`}
+              >
+                {pending ? "Saving…" : session ? "Save" : "Create"}
+              </button>
+            </div>
+          </div>
 
           <Field
             label="Title"
@@ -276,45 +346,25 @@ export default function SessionForm({
               </select>
             </Field>
             <Field label="Starts" name="startsAt" state={state}>
-              <select
-                value={start ?? ""}
+              <input
+                ref={startRef}
+                type="time"
+                step={300}
+                value={day && start !== null ? minutesToHHMM(start) : ""}
                 disabled={!day}
-                onChange={(e) => pickStart(Number(e.target.value))}
-                className={selectClass}
-                style={selectStyle}
-              >
-                {day ? (
-                  withCurrent(startTimes(day), start).map((m) => (
-                    <option key={m} value={m}>
-                      {slotLabel(m)}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">—</option>
-                )}
-              </select>
+                onChange={(e) => pickStart(parseHHMM(e.target.value))}
+                className={fieldClass}
+              />
             </Field>
             <Field label="Ends" name="endsAt" state={state}>
-              <select
-                value={end ?? ""}
+              <input
+                type="time"
+                step={300}
+                value={day && end !== null ? minutesToHHMM(end) : ""}
                 disabled={!day}
-                onChange={(e) => setEnd(Number(e.target.value))}
-                className={selectClass}
-                style={selectStyle}
-              >
-                {day ? (
-                  withCurrent(
-                    endTimes(day).filter((m) => start === null || m > start),
-                    end,
-                  ).map((m) => (
-                    <option key={m} value={m}>
-                      {slotLabel(m)}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">—</option>
-                )}
-              </select>
+                onChange={(e) => setEnd(parseHHMM(e.target.value))}
+                className={fieldClass}
+              />
             </Field>
             <input
               type="hidden"
@@ -431,65 +481,31 @@ export default function SessionForm({
               className={fieldClass}
             />
           </Field>
-
-          <div className="sticky -bottom-6 z-10 -mx-6 flex flex-wrap items-center justify-between gap-3 border-t border-line bg-white px-6 py-3 sm:col-span-2 sm:-mx-8 sm:px-8">
-            <div className="flex items-center gap-2">
-              {session &&
-                (confirmDelete ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={deleting}
-                      onClick={() =>
-                        startDelete(async () => {
-                          const result = await deleteSession(session.id);
-                          if (result.error) setDeleteError(result.error);
-                          else onClose();
-                        })
-                      }
-                      className={`${smallButtonClass} border-meeple text-meeple hover:bg-meeple hover:text-white`}
-                    >
-                      {deleting ? "Deleting…" : "Yes, delete it"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDelete(false)}
-                      className={smallButtonClass}
-                    >
-                      Keep
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
-                  >
-                    Delete
-                  </button>
-                ))}
-              {generalError && (
-                <span className="text-sm text-meeple">{generalError}</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={requestClose}
-                className={smallButtonClass}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={pending}
-                className={`${buttonClass} w-auto`}
-              >
-                {pending ? "Saving…" : session ? "Save" : "Create"}
-              </button>
-            </div>
-          </div>
         </form>
+        <ConfirmDialog
+          open={Boolean(conflict)}
+          title="Room conflict"
+          onDismiss={() => setDismissed(state)}
+          onClosed={() => startRef.current?.focus()}
+          actions={[
+            { label: "Edit time", onClick: () => setDismissed(state) },
+            {
+              label: "Save anyway",
+              primary: true,
+              disabled: pending,
+              onClick: () => {
+                const data = new FormData(form.current!);
+                data.set("allowOverlap", "1");
+                setDismissed(state);
+                submit(data);
+              },
+            },
+          ]}
+        >
+          {state.conflict && (
+            <>This overlaps {clashDescription(state.conflict)}.</>
+          )}
+        </ConfirmDialog>
         {session && (
           <AttendancePanel
             session={session}

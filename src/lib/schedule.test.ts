@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDays,
+  clashDescription,
+  EDITOR_DAYS,
   findClash,
   fromPacificWall,
   movedTimes,
+  openingDayIndex,
   outsideHours,
+  overlapLanes,
+  overlapWarning,
+  type LocationVisibility,
   type ScheduleSession,
 } from "./schedule";
 
@@ -49,6 +55,11 @@ describe("movedTimes", () => {
   });
 });
 
+const rooms = (visibility: LocationVisibility = "public") => [
+  { id: "room1", visibility },
+  { id: "room2", visibility: "public" as const },
+];
+
 describe("findClash", () => {
   const existing = session({
     id: "a",
@@ -70,6 +81,7 @@ describe("findClash", () => {
       findClash(
         [existing],
         move("2026-11-07T17:30:00.000Z", "2026-11-07T18:25:00.000Z"),
+        rooms(),
       ),
     ).toBe(existing);
   });
@@ -79,6 +91,7 @@ describe("findClash", () => {
       findClash(
         [existing],
         move("2026-11-07T17:55:00.000Z", "2026-11-07T18:25:00.000Z"),
+        rooms(),
       ),
     ).toBeNull();
   });
@@ -89,11 +102,17 @@ describe("findClash", () => {
       "2026-11-07T17:55:00.000Z",
     ] as const;
     expect(
-      findClash([existing], move(...times, { locationId: "room2" })),
+      findClash([existing], move(...times, { locationId: "room2" }), rooms()),
     ).toBeNull();
-    expect(findClash([existing], move(...times, { id: "a" }))).toBeNull();
     expect(
-      findClash([session({ id: "c", locationId: "room1" })], move(...times)),
+      findClash([existing], move(...times, { id: "a" }), rooms()),
+    ).toBeNull();
+    expect(
+      findClash(
+        [session({ id: "c", locationId: "room1" })],
+        move(...times),
+        rooms(),
+      ),
     ).toBeNull();
   });
 
@@ -105,30 +124,35 @@ describe("findClash", () => {
         move("2026-11-07T17:00:00.000Z", "2026-11-07T17:55:00.000Z", {
           locationId: null,
         }),
+        rooms(),
       ),
     ).toBeNull();
+  });
+
+  it("lets volunteer shifts overlap but not hidden-room sessions", () => {
+    const overlap = move(
+      "2026-11-07T17:30:00.000Z",
+      "2026-11-07T18:25:00.000Z",
+    );
+    expect(findClash([existing], overlap, rooms("volunteer"))).toBeNull();
+    expect(findClash([existing], overlap, rooms("hidden"))).toBe(existing);
   });
 });
 
 describe("outsideHours", () => {
   const pt = (wall: string) => fromPacificWall(wall)!;
-  it("allows a session inside the day's hours", () => {
+  it("allows any start and end within the day", () => {
     expect(
       outsideHours(pt("2026-11-07T10:00"), pt("2026-11-07T10:55")),
     ).toBeNull();
     expect(
       outsideHours(pt("2026-11-07T23:00"), pt("2026-11-08T00:00")),
     ).toBeNull();
-  });
-  it("refuses starting before opening, which is later on Friday", () => {
     expect(
-      outsideHours(pt("2026-11-07T09:30"), pt("2026-11-07T10:25"))?.field,
-    ).toBe("startsAt");
+      outsideHours(pt("2026-11-07T09:00"), pt("2026-11-07T13:15")),
+    ).toBeNull();
     expect(
-      outsideHours(pt("2026-11-06T13:30"), pt("2026-11-06T14:25"))?.field,
-    ).toBe("startsAt");
-    expect(
-      outsideHours(pt("2026-11-06T14:00"), pt("2026-11-06T14:55")),
+      outsideHours(pt("2026-11-06T07:10"), pt("2026-11-06T08:20")),
     ).toBeNull();
   });
   it("refuses running past midnight", () => {
@@ -153,5 +177,78 @@ describe("buildDays", () => {
     });
     const sat = buildDays([early]).find((d) => d.key === "2026-11-07")!;
     expect(sat.slots[0]).toBe(8 * 60);
+  });
+  it("puts an extra day in date order", () => {
+    const thu = session({
+      id: "t",
+      startsAt: fromPacificWall("2026-11-05T09:00")!.toISOString(),
+      endsAt: fromPacificWall("2026-11-05T13:00")!.toISOString(),
+    });
+    expect(buildDays([thu]).map((d) => d.key)).toEqual([
+      "2026-11-05",
+      "2026-11-06",
+      "2026-11-07",
+      "2026-11-08",
+    ]);
+    expect(buildDays([]).map((d) => d.key)).toHaveLength(3);
+  });
+  it("gives the editor Thursday through Monday", () => {
+    expect(buildDays([], EDITOR_DAYS).map((d) => d.name)).toEqual([
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+      "Monday",
+    ]);
+  });
+  it("opens on Friday even with an earlier day shown", () => {
+    expect(openingDayIndex(buildDays([], EDITOR_DAYS))).toBe(1);
+    expect(openingDayIndex(buildDays([]))).toBe(0);
+  });
+});
+
+describe("overlapLanes", () => {
+  const shift = (id: string, from: string, to: string, locationId = "r") => ({
+    id,
+    locationId,
+    startsAt: fromPacificWall(`2026-11-07T${from}`)!.toISOString(),
+    endsAt: fromPacificWall(`2026-11-07T${to}`)!.toISOString(),
+  });
+  it("splits overlapping sessions in a column and leaves the rest whole", () => {
+    const lanes = overlapLanes([
+      shift("a", "09:00", "13:15"),
+      shift("b", "13:00", "17:00"),
+      shift("c", "17:00", "18:00"),
+      shift("d", "09:00", "10:00", "other"),
+    ]);
+    expect(lanes.get("a")).toEqual({ lane: 0, lanes: 2 });
+    expect(lanes.get("b")).toEqual({ lane: 1, lanes: 2 });
+    expect(lanes.get("c")).toEqual({ lane: 0, lanes: 1 });
+    expect(lanes.get("d")).toEqual({ lane: 0, lanes: 1 });
+  });
+  it("reuses a lane once it frees up", () => {
+    const lanes = overlapLanes([
+      shift("a", "09:00", "12:00"),
+      shift("b", "10:00", "11:00"),
+      shift("c", "11:00", "13:00"),
+    ]);
+    expect(lanes.get("c")).toEqual({ lane: 1, lanes: 2 });
+  });
+});
+
+describe("clashDescription", () => {
+  const clash = {
+    title: "Chess",
+    room: "Eigen Hall",
+    startsAt: fromPacificWall("2026-11-07T10:00")!.toISOString(),
+    endsAt: fromPacificWall("2026-11-07T10:55")!.toISOString(),
+  };
+  it("names the session, room and its times", () => {
+    expect(clashDescription(clash)).toBe(
+      '"Chess" in Eigen Hall (10:00 AM–10:55 AM)',
+    );
+    expect(overlapWarning(clash)).toBe(
+      'Saved, but this overlaps "Chess" in Eigen Hall (10:00 AM–10:55 AM).',
+    );
   });
 });
