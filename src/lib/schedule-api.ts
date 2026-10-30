@@ -11,6 +11,7 @@ import {
 } from "./schedule";
 import { type Invalid, type Raw } from "./schedule-input";
 import {
+  BoardRoomError,
   ensureAccount,
   explainDbError,
   findAccount,
@@ -21,6 +22,7 @@ export { authorize, error, json, readBody } from "./admin-api";
 
 /** `explainDbError` as a response: a constraint is the caller's fault. */
 export function failed(err: unknown): Response {
+  if (err instanceof BoardRoomError) return error(err.message, 400, err.field);
   const { field, error: message } = explainDbError(err);
   if (field) return error(message, 400, field);
   // Anything else may be raw SQL; keep it in the logs.

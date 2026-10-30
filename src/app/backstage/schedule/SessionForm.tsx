@@ -29,6 +29,7 @@ import {
   EDITOR_DAYS,
   END_GAP_MINUTES,
   opensAt,
+  roomTakesSessions,
   STATUSES,
   formatPacificDay,
   minutesToHHMM,
@@ -135,6 +136,12 @@ export default function SessionForm({
       : defaults
         ? shortest(defaults.startMin)
         : null,
+  );
+
+  // A bulletin-board room holds no sessions, so it isn't offered — except as
+  // the room a session is already in, which the select has to be able to show.
+  const roomOptions = locations.filter(
+    (l) => roomTakesSessions(l.layout) || l.id === session?.locationId,
   );
 
   const dayOptions: { key: string; label: string }[] = EDITOR_DAYS.map((d) => ({
@@ -328,7 +335,7 @@ export default function SessionForm({
               style={selectStyle}
             >
               <option value="">No room yet</option>
-              {locations.map((l) => (
+              {roomOptions.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
                   {l.capacity ? ` · 👤 ${l.capacity}` : ""}

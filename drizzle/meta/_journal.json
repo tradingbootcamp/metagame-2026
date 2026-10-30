@@ -176,6 +176,20 @@
       "when": 1793303005909,
       "tag": "0024_shallow_namora",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793396484815,
+      "tag": "0025_unconference_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793396494798,
+      "tag": "0026_unconference_post_attendee",
+      "breakpoints": true
     }
   ]
 }

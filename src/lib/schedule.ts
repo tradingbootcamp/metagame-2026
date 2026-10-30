@@ -7,17 +7,25 @@ export const CATEGORIES = ["talk", "workshop", "game", "other"] as const;
 export const AGES = ["all", "kids", "adults"] as const;
 export const STATUSES = ["draft", "published"] as const;
 export const LOCATION_VISIBILITIES = ["public", "volunteer", "hidden"] as const;
+export const LOCATION_LAYOUTS = ["grid", "board"] as const;
 
 export type Category = (typeof CATEGORIES)[number];
 export type Ages = (typeof AGES)[number];
 export type Status = (typeof STATUSES)[number];
 export type LocationVisibility = (typeof LOCATION_VISIBILITIES)[number];
+export type LocationLayout = (typeof LOCATION_LAYOUTS)[number];
 
 /** Who a room is for, as the backstage room list and form say it. */
 export const VISIBILITY_LABEL: Record<LocationVisibility, string> = {
   public: "Everyone",
   volunteer: "Volunteers and team",
   hidden: "Team only",
+};
+
+/** How a room's column is drawn, as the backstage room form says it. */
+export const LAYOUT_LABEL: Record<LocationLayout, string> = {
+  grid: "Time grid",
+  board: "Bulletin board",
 };
 
 export type ScheduleLocation = {
@@ -28,6 +36,8 @@ export type ScheduleLocation = {
   description: string | null;
   displayOrder: number;
   visibility: LocationVisibility;
+  /** How the room's column is drawn; "board" is the unconference bulletin board. */
+  layout: LocationLayout;
   /** Public Vercel Blob URL, already thumbnail-sized. */
   thumbnailUrl: string | null;
   /** Public Vercel Blob URL, about 1600px, for detail views. */
@@ -317,6 +327,19 @@ export function movedTimes(
   return { startsAt: start, endsAt: new Date(start.getTime() + ms) };
 }
 
+/**
+ * A board room is a bulletin board, not a time column: grid view draws one
+ * full-height surface for it and no per-slot cells, so a session placed there
+ * would be listed and searchable but drawn nowhere. The pairing is refused
+ * instead, in the form, on the backstage grid and in the store.
+ */
+export function roomTakesSessions(layout: LocationLayout): boolean {
+  return layout !== "board";
+}
+
+export const BOARD_ROOM_REFUSAL =
+  "That room is a bulletin board, so it holds no sessions.";
+
 /** Volunteer shifts hand off with some overlap; a double-booked real room is a mistake. */
 export function roomAllowsOverlap(visibility: LocationVisibility): boolean {
   return visibility === "volunteer";
@@ -525,7 +548,13 @@ export type PublicSession = Pick<
 
 export type PublicLocation = Pick<
   ScheduleLocation,
-  "id" | "name" | "capacity" | "campusLocation" | "thumbnailUrl" | "imageUrl"
+  | "id"
+  | "name"
+  | "capacity"
+  | "campusLocation"
+  | "layout"
+  | "thumbnailUrl"
+  | "imageUrl"
 >;
 
 /** How far down the room visibility levels a viewer may see. */
@@ -586,6 +615,7 @@ export function publicSchedule(
     name: l.name,
     capacity: l.capacity,
     campusLocation: l.campusLocation,
+    layout: l.layout,
     thumbnailUrl: l.thumbnailUrl,
     imageUrl: l.imageUrl,
   }));

@@ -18,7 +18,13 @@ import {
   SHEPHERD_MATCH_LABELS,
   TOPIC_AREA_LABELS,
 } from "./rfp-labels";
-import { AGES, CATEGORIES, LOCATION_VISIBILITIES, STATUSES } from "./schedule";
+import {
+  AGES,
+  CATEGORIES,
+  LOCATION_LAYOUTS,
+  LOCATION_VISIBILITIES,
+  STATUSES,
+} from "./schedule";
 import { PERMISSIONS, type Permission } from "./permissions";
 
 export type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -112,6 +118,11 @@ const LOCATION_FIELDS: Field[] = [
     type: oneOf(LOCATION_VISIBILITIES),
     note: 'Default "hidden" (team only).',
   },
+  {
+    name: "layout",
+    type: oneOf(LOCATION_LAYOUTS),
+    note: 'Default "grid"; "board" draws the unconference bulletin board.',
+  },
 ];
 
 const GRADER_FIELDS: Field[] = [
@@ -171,7 +182,7 @@ export const TYPES: { name: string; shape: string }[] = [
   },
   {
     name: "Location",
-    shape: `{ id, name, capacity: number | null, campusLocation, description, displayOrder: number, visibility: ${oneOf(LOCATION_VISIBILITIES)}, thumbnailUrl, imageUrl }`,
+    shape: `{ id, name, capacity: number | null, campusLocation, description, displayOrder: number, visibility: ${oneOf(LOCATION_VISIBILITIES)}, layout: ${oneOf(LOCATION_LAYOUTS)}, thumbnailUrl, imageUrl }`,
   },
   {
     name: "Session",

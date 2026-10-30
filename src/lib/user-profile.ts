@@ -259,6 +259,7 @@ export function userSessions(
       name: l.name,
       capacity: l.capacity,
       campusLocation: l.campusLocation,
+      layout: l.layout,
       thumbnailUrl: l.thumbnailUrl,
       imageUrl: l.imageUrl,
     }));

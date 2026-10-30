@@ -146,6 +146,20 @@ describe("parseLocationFields", () => {
     expect(
       blamed(parseLocationFields({ name: "Hall", visibility: "on" })),
     ).toBe("visibility");
+    expect(blamed(parseLocationFields({ name: "Hall", layout: "cork" }))).toBe(
+      "layout",
+    );
+  });
+
+  // A save replaces the whole row, so a form that drops `layout` turns the
+  // unconference board back into an ordinary time grid.
+  it("keeps the board layout, defaulting to the time grid", () => {
+    expect(
+      parseLocationFields({ name: "Park", layout: "board" }),
+    ).toMatchObject({ value: { layout: "board" } });
+    expect(parseLocationFields({ name: "Hall" })).toMatchObject({
+      value: { layout: "grid" },
+    });
   });
 });
 

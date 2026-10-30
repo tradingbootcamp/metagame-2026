@@ -4,6 +4,7 @@ import { useState } from "react";
 import { GripVerticalIcon } from "lucide-react";
 import { FaListUl, FaThLarge } from "react-icons/fa";
 import {
+  BOARD_ROOM_REFUSAL,
   cellSessions,
   findClash,
   formatPacificTime,
@@ -16,6 +17,7 @@ import {
   offsetPx,
   outsideHours,
   overlapLanes,
+  roomTakesSessions,
   NO_ROOM,
   openingDayIndex,
   slotLabel,
@@ -222,6 +224,11 @@ function GridDay({
     slotStart: number;
     colId: string;
   } | null>(null);
+  // A bulletin-board room holds no sessions: nothing drops in its column, and
+  // a click there opens the form with no room rather than with that one.
+  const isBoard = (colId: string) =>
+    colId !== NO_ROOM &&
+    locations.some((l) => l.id === colId && !roomTakesSessions(l.layout));
   const target = (slotStart: number, colId: string) => {
     if (!carrying) return null;
     const start = fromPacificWall(`${day.key}T${minutesToHHMM(slotStart)}`);
@@ -239,11 +246,13 @@ function GridDay({
       locations,
     );
     const overlaps = clash && `Overlaps ${clash.title}`;
+    const board = isBoard(colId) ? BOARD_ROOM_REFUSAL : null;
     return {
       ...times,
       locationId,
       clash,
       blocked:
+        board ??
         outsideHours(times.startsAt, times.endsAt)?.error ??
         (confirmClash ? null : overlaps),
       hint: confirmClash ? overlaps : null,
@@ -335,7 +344,10 @@ function GridDay({
                           onCreate?.({
                             day: day.key,
                             startMin: slotStart,
-                            locationId: col.id === NO_ROOM ? null : col.id,
+                            locationId:
+                              col.id === NO_ROOM || isBoard(col.id)
+                                ? null
+                                : col.id,
                           });
                           return;
                         }

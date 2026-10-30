@@ -10,6 +10,7 @@ import {
   outsideHours,
   overlapLanes,
   overlapWarning,
+  roomTakesSessions,
   type LocationVisibility,
   type ScheduleSession,
 } from "./schedule";
@@ -250,5 +251,15 @@ describe("clashDescription", () => {
     expect(overlapWarning(clash)).toBe(
       'Saved, but this overlaps "Chess" in Eigen Hall (10:00 AM–10:55 AM).',
     );
+  });
+});
+
+describe("roomTakesSessions", () => {
+  // A board room's column is one full-height surface with no per-slot cells,
+  // so a session placed in one is listed and searchable but drawn nowhere in
+  // grid view. The form, the backstage grid and the store all read this rule.
+  it("refuses a board room and allows a grid one", () => {
+    expect(roomTakesSessions("board")).toBe(false);
+    expect(roomTakesSessions("grid")).toBe(true);
   });
 });

@@ -3,8 +3,14 @@ import { connection } from "next/server";
 import { can } from "@/lib/access";
 import { toolAccess } from "@/lib/admin-auth";
 import { currentSession } from "@/lib/auth";
-import { publicSchedule, type ScheduleViewer } from "@/lib/schedule";
+import {
+  publicSchedule,
+  type PublicLocation,
+  type ScheduleViewer,
+} from "@/lib/schedule";
 import { loadSchedule } from "@/lib/schedule-store";
+import { boardNote, type BoardData } from "@/lib/unconference";
+import { listNotesIn } from "@/lib/unconference-store";
 
 // Pre-launch gate: canSeeSchedule() for links, scheduleGate() for the page
 // itself. Remove at launch.
@@ -38,3 +44,38 @@ export const scheduleViewer = cache(async (): Promise<ScheduleViewer> => {
 export const loadPublicSchedule = cache(async () =>
   publicSchedule(await loadRawSchedule(), await scheduleViewer()),
 );
+
+/** The rooms drawn as bulletin boards, as much as this viewer may see. */
+export const boardRooms = cache(async (): Promise<PublicLocation[]> => {
+  const { locations } = await loadPublicSchedule();
+  return locations.filter((l) => l.layout === "board");
+});
+
+/**
+ * The unconference notes and what the viewer may do with them, or null when
+ * no room this viewer can see is a board.
+ *
+ * Loaded here rather than in the board component because PublicSchedule is a
+ * client component, and because this is the one place that already knows
+ * which rooms survived the visibility filter — so notes pinned in a room the
+ * viewer can't see are never read, let alone sent.
+ */
+export const loadBoard = cache(async (): Promise<BoardData | null> => {
+  const rooms = await boardRooms();
+  if (rooms.length === 0) return null;
+  const [notes, session, post, team] = await Promise.all([
+    listNotesIn(rooms.map((r) => r.id)),
+    currentSession(),
+    can("unconference.post"),
+    can("schedule.manage"),
+  ]);
+  const viewerId = session?.user.id ?? null;
+  return {
+    // Mapped, not sent as read: the client needs the author's name and
+    // whether the note is its own, never an account id.
+    notes: notes.map((note) => boardNote(note, viewerId)),
+    signedIn: !!session,
+    canPost: !!post && !session?.user.banned,
+    isTeam: !!team,
+  };
+});

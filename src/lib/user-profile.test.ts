@@ -185,6 +185,7 @@ const room = (over: Partial<ScheduleLocation>): ScheduleLocation => ({
   description: "internal notes",
   displayOrder: 0,
   visibility: "public",
+  layout: "grid",
   thumbnailUrl: null,
   imageUrl: null,
   ...over,

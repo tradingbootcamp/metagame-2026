@@ -17,11 +17,13 @@ import { can } from "./access";
 import { getAuth } from "./auth";
 import type { HostSessionFields } from "./schedule-input";
 import {
+  BOARD_ROOM_REFUSAL,
   clashDescription,
   fromPacificWall,
   movedTimes,
   outsideHours,
   roomAllowsOverlap,
+  roomTakesSessions,
   summarizeRsvps,
   type Attendance,
   type RoomClash,
@@ -93,6 +95,7 @@ export async function loadSchedule(): Promise<Schedule> {
       description: l.description,
       displayOrder: l.displayOrder,
       visibility: l.visibility,
+      layout: l.layout,
       thumbnailUrl: l.thumbnailUrl,
       imageUrl: l.imageUrl,
     })),
@@ -136,12 +139,33 @@ export type SessionInput = Omit<
  * Inserts or, with an id, replaces the session and its host list. Refuses a
  * clash in its room unless `allowOverlap`; a clash let through comes back.
  */
+/** A save refused because the room is a bulletin board, not a time column. */
+export class BoardRoomError extends Error {
+  readonly field = "locationId";
+  constructor() {
+    super(BOARD_ROOM_REFUSAL);
+  }
+}
+
+/** Throws when the room is drawn as a bulletin board, which holds no sessions. */
+export async function assertRoomTakesSessions(
+  locationId: string | null,
+): Promise<void> {
+  if (!locationId) return;
+  const [room] = await getDb()
+    .select({ layout: locations.layout })
+    .from(locations)
+    .where(eq(locations.id, locationId));
+  if (room && !roomTakesSessions(room.layout)) throw new BoardRoomError();
+}
+
 export async function upsertSession(
   input: SessionInput,
   { allowOverlap = false }: { allowOverlap?: boolean } = {},
 ): Promise<{ id: string; clash: RoomClash | null }> {
   const db = getDb();
   const { id, hostIds, ...row } = input;
+  await assertRoomTakesSessions(row.locationId);
   const clash =
     row.startsAt && row.endsAt
       ? await assertSlotFree(
@@ -256,6 +280,7 @@ export async function moveSessionTo(
   allowOverlap = false,
 ): Promise<void> {
   const db = getDb();
+  await assertRoomTakesSessions(locationId);
   const [row] = await db
     .select({ startsAt: sessions.startsAt, endsAt: sessions.endsAt })
     .from(sessions)
@@ -725,12 +750,27 @@ const CONSTRAINT_MESSAGES: Record<string, { field?: string; error: string }> = {
     field: "capacity",
     error: "Capacity must be at least 1.",
   },
+  unconference_notes_body_length: {
+    field: "body",
+    error: "A note needs some text, and under 1000 characters of it.",
+  },
+  unconference_notes_x_fraction: {
+    field: "position",
+    error: "That spot is off the board.",
+  },
+  unconference_notes_y_fraction: {
+    field: "position",
+    error: "That spot is off the board.",
+  },
 };
 
-export function explainDbError(err: unknown): {
-  field?: string;
-  error: string;
-} {
+/**
+ * The message for a constraint this error names, or null. Split out for the
+ * attendee-facing writes, which must not relay a driver message of their own.
+ */
+export function constraintMessage(
+  err: unknown,
+): { field?: string; error: string } | null {
   for (
     let e: unknown = err;
     e && typeof e === "object";
@@ -741,7 +781,18 @@ export function explainDbError(err: unknown): {
       return CONSTRAINT_MESSAGES[constraint];
     }
   }
-  return { error: err instanceof Error ? err.message : String(err) };
+  return null;
+}
+
+export function explainDbError(err: unknown): {
+  field?: string;
+  error: string;
+} {
+  return (
+    constraintMessage(err) ?? {
+      error: err instanceof Error ? err.message : String(err),
+    }
+  );
 }
 
 // Sample data for an empty development database: the 2025 rooms and a

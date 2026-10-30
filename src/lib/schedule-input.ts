@@ -5,6 +5,7 @@
 import {
   AGES,
   CATEGORIES,
+  LOCATION_LAYOUTS,
   LOCATION_VISIBILITIES,
   STATUSES,
   fromPacificWall,
@@ -275,6 +276,15 @@ export function parseLocationFields(raw: Raw): Parsed<LocationFields> {
       error: `One of ${LOCATION_VISIBILITIES.join(", ")}.`,
     };
   }
+  const layoutRaw = str(raw, "layout");
+  const layout = oneOf(layoutRaw, LOCATION_LAYOUTS);
+  if (layoutRaw && !layout) {
+    return {
+      ok: false,
+      field: "layout",
+      error: `One of ${LOCATION_LAYOUTS.join(", ")}.`,
+    };
+  }
   return {
     ok: true,
     value: {
@@ -284,6 +294,7 @@ export function parseLocationFields(raw: Raw): Parsed<LocationFields> {
       description: optional(raw, "description"),
       displayOrder,
       visibility: visibility ?? "hidden",
+      layout: layout ?? "grid",
     },
   };
 }

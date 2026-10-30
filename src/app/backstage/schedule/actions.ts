@@ -12,6 +12,7 @@ import {
   type Raw,
 } from "@/lib/schedule-input";
 import {
+  BoardRoomError,
   cancelRsvp,
   ensureAccount,
   explainDbError,
@@ -38,8 +39,13 @@ export type FormState = {
   conflict?: RoomClash;
 };
 
-const refused = (err: unknown): FormState =>
-  err instanceof OverlapError ? { conflict: err.clash } : explainDbError(err);
+const refused = (err: unknown): FormState => {
+  if (err instanceof OverlapError) return { conflict: err.clash };
+  if (err instanceof BoardRoomError) {
+    return { field: err.field, error: err.message };
+  }
+  return explainDbError(err);
+};
 
 const PATH = "/backstage/schedule";
 

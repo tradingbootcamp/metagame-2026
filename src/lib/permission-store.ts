@@ -36,7 +36,7 @@ type Builtin = {
 const BUILTIN: Record<string, Builtin> = {
   [ATTENDEE_ROLE]: {
     auto: "has a ticket",
-    defaults: ["schedule.rsvps"],
+    defaults: ["schedule.rsvps", "unconference.post"],
     holds: hasClaimedTicket,
   },
   [HOST_ROLE]: {
