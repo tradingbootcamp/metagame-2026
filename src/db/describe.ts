@@ -57,6 +57,13 @@ const TABLE_GROUPS: Record<string, string[]> = {
   Schedule: ["locations", "sessions", "session_hosts", "rsvps", "bookmarks"],
   Grading: ["session_grades", "session_grade_space_options"],
   Budget: ["xero_connections", "budget_import_runs", "budget_ignored_lines"],
+  Team: [
+    "team_areas",
+    "team_people",
+    "team_roles",
+    "team_role_people",
+    "team_tasks",
+  ],
 };
 
 // What each table is for, in one line. Reviewed alongside the columns.
@@ -100,6 +107,16 @@ const TABLE_NOTES: Record<string, string> = {
     'One row per Claude call from /backstage/budget: kind "import" (Xero lines proposed into the sheet) or "request" (the Ask Claude box). Holds the outcome counts, the model and its token counts for cost tracking, and the error if it failed.',
   budget_ignored_lines:
     "Xero bank lines the team chose not to import, keyed by the Xero line id so later imports skip them; reason and ignored_by record why and who.",
+  team_areas:
+    "The teams on the team board (/backstage/team): Meta, Ops, Marketing, Volunteers and so on, in display order.",
+  team_people:
+    "Everyone on the team board, staff or volunteer, by unique name. user_id links the person to their account (set null if the account goes), which is how the board shows someone what they're in charge of.",
+  team_roles:
+    "Jobs someone has to hold, from the All Hands list of roles to fill. lead_id answers for the role until someone holds it; needed is how many people it takes (0 for anyone who wants to help); due is the deadline as written and due_on the next date. status is active, done or dropped; open versus filled comes from team_role_people.",
+  team_role_people:
+    "Who holds a role (stake assigned) or has offered to take it (interested). One row per role and person.",
+  team_tasks:
+    "To-dos with one owner (null until someone takes it): the weekly goals and the steps of a role. status is todo, doing, done or dropped.",
 };
 
 function columnName(column: PgColumn): string {

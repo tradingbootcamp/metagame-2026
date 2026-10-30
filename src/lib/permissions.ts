@@ -54,6 +54,23 @@ export const PERMISSIONS = {
     description:
       "Anyone's /u profile page, including the ones not shown to other attendees.",
   },
+  "team.view": {
+    audience: "team",
+    group: "Team",
+    level: "view",
+    label: "View the team board",
+    description:
+      "Everyone on the team, volunteers included, with their roles and tasks and the roles still open. A person linked to the account can also offer to take a role.",
+  },
+  "team.manage": {
+    audience: "team",
+    group: "Team",
+    level: "edit",
+    label: "Manage the team board",
+    description:
+      "Add people, roles and tasks, assign them, and import the All Hands list of roles to fill.",
+    implies: ["team.view"],
+  },
   "tickets.view": {
     audience: "team",
     group: "Tickets",

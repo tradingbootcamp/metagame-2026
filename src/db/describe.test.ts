@@ -31,6 +31,11 @@ describe("describeSchema", () => {
       "session_grades",
       "session_hosts",
       "sessions",
+      "team_areas",
+      "team_people",
+      "team_role_people",
+      "team_roles",
+      "team_tasks",
       "tickets",
       "user",
       "user_permission_grants",
@@ -67,6 +72,7 @@ describe("describeSchema", () => {
       "session_grades",
       "session_hosts",
       "sessions",
+      "team_people",
       "tickets",
       "tickets",
       "user_permission_grants",
@@ -154,6 +160,7 @@ describe("describeSchema", () => {
       "Schedule",
       "Grading",
       "Budget",
+      "Team",
     ]);
     expect(info.groups.flatMap((g) => g.tables.map((t) => t.name))).toEqual([
       "user",
@@ -177,6 +184,11 @@ describe("describeSchema", () => {
       "xero_connections",
       "budget_import_runs",
       "budget_ignored_lines",
+      "team_areas",
+      "team_people",
+      "team_roles",
+      "team_role_people",
+      "team_tasks",
     ]);
   });
 });

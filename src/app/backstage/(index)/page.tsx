@@ -11,6 +11,7 @@ import {
   TicketIcon,
   UserIcon,
   UsersIcon,
+  UsersRoundIcon,
   WalletIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -28,6 +29,14 @@ const TOOLS: {
   icon: LucideIcon;
   perm: Permission | Permission[];
 }[] = [
+  {
+    href: "/backstage/team",
+    icon: UsersRoundIcon,
+    name: "Team",
+    blurb:
+      "Everyone on the team, volunteers included: who holds which role, their tasks, and the roles that still need people.",
+    perm: "team.view",
+  },
   {
     href: "/backstage/links",
     icon: LinkIcon,
