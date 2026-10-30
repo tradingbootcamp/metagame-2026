@@ -569,7 +569,7 @@ export default function Home() {
                 Partiful. Have a game, product, or creation to share? Apply for
                 a booth.
               </p>
-              <div className="mt-6 flex flex-wrap justify-between gap-3">
+              <div className="mt-6 flex flex-wrap gap-3">
                 <Button asChild variant="navy">
                   <a
                     href={NIGHT_MARKET_FORM_URL}
@@ -579,7 +579,7 @@ export default function Home() {
                     Apply for a booth
                   </a>
                 </Button>
-                <Button asChild variant="default">
+                <Button asChild variant="default" className="pl-3">
                   <a
                     href={NIGHT_PARTIFUL_URL}
                     target="_blank"

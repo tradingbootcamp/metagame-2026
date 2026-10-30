@@ -21,7 +21,7 @@ const EVENTS = [
   },
   {
     name: "Night Market",
-    subtitle: "Friday 7–10pm · free and open to the public",
+    subtitle: "Friday 7–10pm · open to the public",
     href: NIGHT_PARTIFUL_URL,
     sharePath: NIGHT_PARTIFUL_PATH,
     variant: "navy",
@@ -46,7 +46,7 @@ export default function PartifulInvite() {
       <p className="font-grotesk text-xl font-bold text-navy">
         RSVP on Partiful and invite your friends!
       </p>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+      <div className="flex flex-col gap-4">
         {EVENTS.map((event) => (
           <PartifulRow key={event.sharePath} {...event} />
         ))}
@@ -73,7 +73,7 @@ function PartifulRow({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-stretch gap-2">
-        <Button asChild variant={variant}>
+        <Button asChild variant={variant} className="pl-3">
           <a href={href} target="_blank" rel="noopener noreferrer">
             <PartifulLogo />
             {name}
