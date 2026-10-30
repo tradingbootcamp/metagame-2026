@@ -5,7 +5,7 @@ import { EXPIRED, requireAccess } from "@/lib/admin-auth";
 import { deleteImage } from "@/lib/blob";
 import { gradingSummary, type GradingSummary } from "@/lib/rfp-sessions";
 import { ImageUploadError, replaceRoomImages } from "@/lib/room-images";
-import { type ScheduleAccount } from "@/lib/schedule";
+import { overlapWarning, type ScheduleAccount } from "@/lib/schedule";
 import {
   parseLocationFields,
   parseSessionFields,
@@ -33,6 +33,10 @@ export type FormState = {
   error?: string;
   /** Field the error belongs to, when it's one field's fault. */
   field?: string;
+  /** Saved, but worth a second look; the form stays open to show it. */
+  warning?: string;
+  /** The saved session's id, so a form left open edits rather than re-creates it. */
+  id?: string;
 };
 
 const PATH = "/backstage/schedule";
@@ -74,8 +78,9 @@ export async function saveSession(
     ...new Set(formData.getAll("hostId").map(String).filter(Boolean)),
   ];
 
+  let saved;
   try {
-    await upsertSession({
+    saved = await upsertSession({
       id: str(formData, "id") || undefined,
       ...parsed.value,
       hostIds,
@@ -84,7 +89,11 @@ export async function saveSession(
     return explainDbError(err);
   }
   revalidatePath(PATH);
-  return { ok: true };
+  return {
+    ok: true,
+    id: saved.id,
+    warning: saved.clash ? overlapWarning(saved.clash) : undefined,
+  };
 }
 
 /** Drops a session on the grid: new room and start, same length. */

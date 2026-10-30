@@ -9,6 +9,7 @@ import {
   resolveShepherd,
   sessionBySlug,
 } from "@/lib/schedule-api";
+import { overlapWarning } from "@/lib/schedule";
 import { parseSessionFields } from "@/lib/schedule-input";
 import { sessionIdBySlug, upsertSession } from "@/lib/schedule-store";
 
@@ -34,8 +35,9 @@ export async function POST(request: Request) {
     return error("Another session has that slug.", 409, "slug");
   }
 
+  let saved;
   try {
-    await upsertSession({
+    saved = await upsertSession({
       ...parsed.value,
       hostIds: hosts.ids,
       shepherdUserId: shepherd.id,
@@ -44,5 +46,11 @@ export async function POST(request: Request) {
     return failed(err);
   }
   done();
-  return json({ session: await sessionBySlug(parsed.value.slug) }, 201);
+  return json(
+    {
+      session: await sessionBySlug(parsed.value.slug),
+      warnings: saved.clash ? [overlapWarning(saved.clash)] : [],
+    },
+    201,
+  );
 }

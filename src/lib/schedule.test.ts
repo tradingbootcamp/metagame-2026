@@ -8,6 +8,7 @@ import {
   openingDayIndex,
   outsideHours,
   overlapLanes,
+  overlapWarning,
   type LocationVisibility,
   type ScheduleSession,
 } from "./schedule";
@@ -231,5 +232,13 @@ describe("overlapLanes", () => {
       shift("c", "11:00", "13:00"),
     ]);
     expect(lanes.get("c")).toEqual({ lane: 1, lanes: 2 });
+  });
+});
+
+describe("overlapWarning", () => {
+  it("names the session and the room", () => {
+    expect(overlapWarning({ title: "Chess", room: "Eigen Hall" })).toBe(
+      'Saved, but this overlaps "Chess" in Eigen Hall.',
+    );
   });
 });

@@ -164,8 +164,11 @@ export default function SessionForm({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (state.ok) onClose();
+    if (state.ok && !state.warning) onClose();
   }, [state, onClose]);
+
+  // A new session saved with a warning stays open; further saves edit it.
+  const savedId = session?.id ?? state.id;
 
   const generalError =
     state.error && !state.field ? state.error : (deleteError ?? null);
@@ -192,7 +195,7 @@ export default function SessionForm({
         </DialogDescription>
 
         <form action={formAction} className="grid gap-4 sm:grid-cols-2">
-          {session && <input type="hidden" name="id" value={session.id} />}
+          {savedId && <input type="hidden" name="id" value={savedId} />}
 
           <Field
             label="Title"
@@ -398,6 +401,15 @@ export default function SessionForm({
             />
           </Field>
 
+          {state.warning && (
+            <p
+              role="status"
+              className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:col-span-2"
+            >
+              {state.warning}
+            </p>
+          )}
+
           <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2">
             <div className="flex items-center gap-2">
               {session &&
@@ -444,14 +456,14 @@ export default function SessionForm({
                 onClick={onClose}
                 className={smallButtonClass}
               >
-                Cancel
+                {state.warning ? "Done" : "Cancel"}
               </button>
               <button
                 type="submit"
                 disabled={pending}
                 className={`${buttonClass} w-auto`}
               >
-                {pending ? "Saving…" : session ? "Save" : "Create"}
+                {pending ? "Saving…" : savedId ? "Save" : "Create"}
               </button>
             </div>
           </div>

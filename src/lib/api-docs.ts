@@ -66,7 +66,11 @@ const SESSION_FIELDS: Field[] = [
     note: 'Pacific wall-clock time, "2026-11-06T14:00" (not UTC). Set both times or neither; the session must end after it starts and by midnight that day.',
   },
   { name: "endsAt", type: "string | null", note: "As startsAt." },
-  { name: "locationId", type: "string | null", note: "A location id." },
+  {
+    name: "locationId",
+    type: "string | null",
+    note: "A location id. Overlapping another session there still saves, but adds a warning to the response's `warnings` (rooms with volunteer visibility are exempt).",
+  },
   { name: "maxCapacity", type: "integer | null" },
   { name: "minCapacity", type: "integer | null" },
   { name: "ages", type: oneOf(AGES) },
@@ -212,7 +216,7 @@ export const API_AREAS: Area[] = [
         permission: "schedule.manage",
         summary: "Creates a session. 409 if the slug is taken.",
         body: SESSION_FIELDS,
-        response: "201 { session: Session }",
+        response: "201 { session: Session, warnings: string[] }",
       },
       {
         method: "PUT",
@@ -221,7 +225,7 @@ export const API_AREAS: Area[] = [
         summary:
           "Replaces the session: fields left out are cleared, as the form would.",
         body: SESSION_FIELDS,
-        response: "{ session: Session }",
+        response: "{ session: Session, warnings: string[] }",
       },
       {
         method: "PATCH",
@@ -230,7 +234,7 @@ export const API_AREAS: Area[] = [
         summary:
           "Changes only the fields given (title is then optional); hosts or shepherd left out are kept.",
         body: SESSION_FIELDS,
-        response: "{ session: Session }",
+        response: "{ session: Session, warnings: string[] }",
       },
       {
         method: "DELETE",

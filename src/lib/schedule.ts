@@ -322,6 +322,14 @@ export function roomAllowsOverlap(visibility: LocationVisibility): boolean {
   return visibility === "volunteer";
 }
 
+/** A session a save overlaps, in a room that forbids overlap. */
+export type RoomClash = { title: string; room: string };
+
+/** The non-blocking note a save that double-books a room comes back with. */
+export function overlapWarning(clash: RoomClash): string {
+  return `Saved, but this overlaps "${clash.title}" in ${clash.room}.`;
+}
+
 /**
  * The session already in that room at that time, if any. "No room" and
  * rooms that allow overlap never clash.

@@ -23,6 +23,7 @@ import {
   roomAllowsOverlap,
   summarizeRsvps,
   type Attendance,
+  type RoomClash,
   type RsvpStatus,
   type ScheduleAccount,
   type ViewerPlans,
@@ -130,8 +131,14 @@ export type SessionInput = Omit<
   hostIds: string[];
 };
 
-/** Inserts or, with an id, replaces the session and its host list. */
-export async function upsertSession(input: SessionInput): Promise<string> {
+/**
+ * Inserts or, with an id, replaces the session and its host list. A clash in
+ * its room doesn't stop the save (unlike a grid move); it comes back so the
+ * caller can warn.
+ */
+export async function upsertSession(
+  input: SessionInput,
+): Promise<{ id: string; clash: RoomClash | null }> {
   const db = getDb();
   const { id, hostIds, ...row } = input;
   let sessionId: string;
@@ -167,7 +174,11 @@ export async function upsertSession(input: SessionInput): Promise<string> {
   }
   // A raised capacity frees seats for the waitlist.
   if (id) await promoteWaitlist(sessionId);
-  return sessionId;
+  const clash =
+    row.startsAt && row.endsAt && row.locationId
+      ? await roomClash(sessionId, row.startsAt, row.endsAt, row.locationId)
+      : null;
+  return { id: sessionId, clash };
 }
 
 /** The session's hosts as user ids, lead first. */
@@ -266,12 +277,23 @@ export async function assertSlotFree(
   const outside = outsideHours(startsAt, endsAt);
   if (outside) throw new Error(outside.error);
   if (!locationId) return;
+  const clash = await roomClash(id, startsAt, endsAt, locationId);
+  if (clash) throw new Error(`That overlaps "${clash.title}" in that room.`);
+}
+
+/** Another session these times overlap in a room that forbids overlap, if any. */
+export async function roomClash(
+  id: string | null,
+  startsAt: Date,
+  endsAt: Date,
+  locationId: string,
+): Promise<RoomClash | null> {
   const db = getDb();
   const [room] = await db
-    .select({ visibility: locations.visibility })
+    .select({ name: locations.name, visibility: locations.visibility })
     .from(locations)
     .where(eq(locations.id, locationId));
-  if (room && roomAllowsOverlap(room.visibility)) return;
+  if (!room || roomAllowsOverlap(room.visibility)) return null;
   const [clash] = await db
     .select({ title: sessions.title })
     .from(sessions)
@@ -284,7 +306,7 @@ export async function assertSlotFree(
       ),
     )
     .limit(1);
-  if (clash) throw new Error(`That overlaps "${clash.title}" in that room.`);
+  return clash ? { title: clash.title, room: room.name } : null;
 }
 
 /** Accounts whose name or email contains the query. */
