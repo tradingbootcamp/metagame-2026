@@ -11,6 +11,7 @@ import {
 import { XIcon } from "lucide-react";
 import { deleteSession, saveSession, type FormState } from "./actions";
 import AttendancePanel from "./AttendancePanel";
+import ConfirmDialog from "./ConfirmDialog";
 import HostPicker from "./HostPicker";
 import RfpPanel from "./RfpPanel";
 import ShepherdPicker from "./ShepherdPicker";
@@ -173,6 +174,8 @@ export default function SessionForm({
   const [dismissed, setDismissed] = useState<FormState | null>(null);
   const startRef = useRef<HTMLInputElement>(null);
   const conflict = state !== dismissed ? state.conflict : undefined;
+  const formRef = useRef<HTMLFormElement>(null);
+  const submit = (data: FormData) => startTransition(() => formAction(data));
 
   useEffect(() => {
     if (state.ok) onClose();
@@ -203,13 +206,12 @@ export default function SessionForm({
         </DialogDescription>
 
         <form
+          ref={formRef}
           // Submitted by hand: a form `action` resets every field once it
           // returns, which would wipe the form behind an overlap prompt.
           onSubmit={(e) => {
             e.preventDefault();
-            const submitter = (e.nativeEvent as SubmitEvent).submitter;
-            const data = new FormData(e.currentTarget, submitter);
-            startTransition(() => formAction(data));
+            submit(new FormData(e.currentTarget));
           }}
           className="grid gap-4 sm:grid-cols-2"
         >
@@ -420,36 +422,6 @@ export default function SessionForm({
             />
           </Field>
 
-          {conflict && (
-            <div
-              role="alert"
-              className="flex flex-wrap items-center gap-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:col-span-2"
-            >
-              <span className="min-w-0 flex-1">
-                This overlaps {clashDescription(conflict)}.
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setDismissed(state);
-                  startRef.current?.focus();
-                }}
-                className={smallButtonClass}
-              >
-                Edit time
-              </button>
-              <button
-                type="submit"
-                name="allowOverlap"
-                value="1"
-                disabled={pending}
-                className={smallButtonClass}
-              >
-                Save anyway
-              </button>
-            </div>
-          )}
-
           <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2">
             <div className="flex items-center gap-2">
               {session &&
@@ -508,6 +480,30 @@ export default function SessionForm({
             </div>
           </div>
         </form>
+        <ConfirmDialog
+          open={Boolean(conflict)}
+          title="Room conflict"
+          onDismiss={() => setDismissed(state)}
+          onClosed={() => startRef.current?.focus()}
+          actions={[
+            { label: "Edit time", onClick: () => setDismissed(state) },
+            {
+              label: "Save anyway",
+              primary: true,
+              disabled: pending,
+              onClick: () => {
+                const data = new FormData(formRef.current!);
+                data.set("allowOverlap", "1");
+                setDismissed(state);
+                submit(data);
+              },
+            },
+          ]}
+        >
+          {state.conflict && (
+            <>This overlaps {clashDescription(state.conflict)}.</>
+          )}
+        </ConfirmDialog>
         {session && (
           <AttendancePanel
             session={session}

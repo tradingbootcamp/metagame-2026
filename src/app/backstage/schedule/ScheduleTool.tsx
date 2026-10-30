@@ -12,10 +12,12 @@ import { addSample, clearSample, moveSession, type FormState } from "./actions";
 import LocationForm from "./LocationForm";
 import ScheduleGrid, { GrabHandle, type DropFn } from "./ScheduleGrid";
 import SessionForm, { type SessionDefaults } from "./SessionForm";
+import ConfirmDialog from "./ConfirmDialog";
 import ScheduleSearch from "@/v2/components/schedule/ScheduleSearch";
 import { buttonClass, smallButtonClass } from "../ui";
 import {
   buildDays,
+  clashDescription,
   EDITOR_DAYS,
   formatPacificDay,
   formatPacificTime,
@@ -26,6 +28,7 @@ import {
   pacificDayKey,
   VISIBILITY_LABEL,
   type Attendance,
+  type RoomClash,
   type ScheduleLocation,
   type ScheduleSession,
   type ViewerPlans,
@@ -88,14 +91,18 @@ export default function ScheduleTool({
   const [optimistic, applyMove] = useOptimistic(saved, (all, move: Move) =>
     all.map((s) => (s.id === move.id ? { ...s, ...move } : s)),
   );
-  // A drop onto an overlap, shown in place until it's kept or undone.
+  // A drop onto an overlap, shown in place until it's kept or undone. Kept
+  // after closing so the dialog's text stays put while it fades out.
   const [unconfirmed, setUnconfirmed] = useState<{
     move: Move & { startsAt: string };
-    note: string;
+    clash: RoomClash;
+    open: boolean;
   } | null>(null);
+  const closeUnconfirmed = () =>
+    setUnconfirmed((u) => u && { ...u, open: false });
   const sessions = useMemo(
     () =>
-      unconfirmed
+      unconfirmed?.open
         ? optimistic.map((s) =>
             s.id === unconfirmed.move.id ? { ...s, ...unconfirmed.move } : s,
           )
@@ -143,8 +150,6 @@ export default function ScheduleTool({
 
   const grab = (session: ScheduleSession) =>
     setCarrying((held) => (held?.id === session.id ? null : session));
-  const overlapNote = (title: string, room: string | null) =>
-    `Overlaps "${title}" in ${room ?? "that room"}.`;
   const saveMove = (move: Move & { startsAt: string }, allowOverlap: boolean) =>
     startTransition(async () => {
       applyMove(move);
@@ -157,8 +162,7 @@ export default function ScheduleTool({
       setError(result.error ?? null);
       // The server saw a clash this page's data didn't.
       if (result.conflict) {
-        const { title, room } = result.conflict;
-        setUnconfirmed({ move, note: overlapNote(title, room) });
+        setUnconfirmed({ move, clash: result.conflict, open: true });
       }
     });
   const drop: DropFn = (startsAt, locationId, clash) => {
@@ -171,13 +175,16 @@ export default function ScheduleTool({
       locationId,
     };
     setCarrying(null);
-    if (clash) {
+    if (clash && isPlaced(clash)) {
+      const { title, startsAt, endsAt } = clash;
+      const room = roomName(locationId) ?? "that room";
       setUnconfirmed({
         move,
-        note: overlapNote(clash.title, roomName(locationId)),
+        clash: { title, room, startsAt, endsAt },
+        open: true,
       });
     } else {
-      setUnconfirmed(null);
+      closeUnconfirmed();
       saveMove(move, false);
     }
   };
@@ -448,32 +455,27 @@ export default function ScheduleTool({
         </div>
       </Section>
 
-      {unconfirmed && (
-        <div
-          role="alertdialog"
-          aria-label="Overlapping move"
-          className="fixed inset-x-0 bottom-6 z-50 mx-auto flex w-fit max-w-[calc(100%-2rem)] flex-wrap items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-lg"
-        >
-          <span>{unconfirmed.note}</span>
-          <button
-            type="button"
-            onClick={() => setUnconfirmed(null)}
-            className={smallButtonClass}
-          >
-            Undo
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setUnconfirmed(null);
+      <ConfirmDialog
+        open={Boolean(unconfirmed?.open)}
+        title="Room conflict"
+        onDismiss={closeUnconfirmed}
+        actions={[
+          { label: "Undo", onClick: closeUnconfirmed },
+          {
+            label: "Keep it here",
+            primary: true,
+            onClick: () => {
+              if (!unconfirmed) return;
+              closeUnconfirmed();
               saveMove(unconfirmed.move, true);
-            }}
-            className={smallButtonClass}
-          >
-            Keep it here
-          </button>
-        </div>
-      )}
+            },
+          },
+        ]}
+      >
+        {unconfirmed && (
+          <>This overlaps {clashDescription(unconfirmed.clash)}.</>
+        )}
+      </ConfirmDialog>
       {editing?.kind === "session" && (
         <SessionForm
           key={editing.session?.id ?? "new"}
