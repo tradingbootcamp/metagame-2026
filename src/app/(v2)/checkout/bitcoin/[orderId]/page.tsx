@@ -122,7 +122,9 @@ export default function BitcoinCheckoutPage() {
               Your Metagame 2026 ticket is confirmed. We&rsquo;ll follow up by
               email with the details.
             </p>
-            <PartifulInvite />
+            <div className="mt-3">
+              <PartifulInvite />
+            </div>
           </div>
         )}
 

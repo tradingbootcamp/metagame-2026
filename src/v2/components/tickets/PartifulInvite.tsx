@@ -42,7 +42,7 @@ export function PartifulLogo() {
 
 export default function PartifulInvite() {
   return (
-    <div className="flex w-full flex-col gap-5 rounded-2xl border-[1.5px] border-navy/15 bg-white/60 p-6">
+    <div className="flex flex-col gap-4">
       <p className="font-grotesk text-xl font-bold text-navy">
         RSVP on Partiful and invite your friends!
       </p>
