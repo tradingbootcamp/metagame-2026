@@ -3,6 +3,7 @@ import { isPosterLink, linkPromo } from "@/lib/poster-options";
 import { findTrackingLink, PROMO_PARAM, promoCode } from "@/lib/tracking-links";
 import { createPosterPdf } from "@/lib/poster-pdf";
 import { checkPosterPromo } from "@/lib/poster-promo";
+import { isPosterQrStyle } from "@/lib/qr-styles";
 
 export const runtime = "nodejs";
 const REJECTED = "This code can’t be used on a poster.";
@@ -19,6 +20,7 @@ export async function GET(request: Request) {
   const disposition = params.get("preview") === "1" ? "inline" : "attachment";
   const promoRaw = params.get(PROMO_PARAM) ?? "";
   const promo = promoCode(promoRaw);
+  const qrStyle = params.get("qr") ?? "square";
   if (params.get("check") === "1") {
     if (!promo)
       return Response.json(
@@ -42,6 +44,7 @@ export async function GET(request: Request) {
     area.length > 200 ||
     !["d20", "chess"].includes(design ?? "") ||
     !["letter", "13x19"].includes(size ?? "") ||
+    !isPosterQrStyle(qrStyle) ||
     promo !== promoRaw.trim()
   ) {
     return Response.json(
@@ -81,6 +84,7 @@ export async function GET(request: Request) {
       choice.slug,
       redeemable,
       !own,
+      qrStyle,
     );
     const name = [design, choice.slug, redeemable?.code, size]
       .filter(Boolean)

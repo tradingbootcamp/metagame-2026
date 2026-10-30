@@ -5,15 +5,27 @@ import {
   useId,
   useRef,
   useState,
+  useSyncExternalStore,
   type FormEvent,
   type KeyboardEvent,
   type MouseEvent,
 } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, QrCode } from "lucide-react";
 import type { PosterOption, PosterTracking } from "@/lib/poster-options";
+import {
+  isPosterQrStyle,
+  POSTER_QR_STYLE_KEYS,
+  POSTER_QR_STYLES,
+  posterQrLogo,
+  type PosterQrStyle,
+} from "@/lib/qr-styles";
 import { PROMO_PARAM, promoCode } from "@/lib/tracking-links";
+import Mg2Die from "@/v2/components/nav/Mg2Die";
+import { LogoDie } from "@/v2/components/nav/LogoDice";
 
 export type PromoChoice = { code: string; label: string };
+/** A style's modules as SVG path data in module units, and its logo clearing. */
+export type QrPreview = { d: string; size: number; clear: number };
 
 const inputClass =
   "mt-2 w-full rounded-lg border border-[#19345b]/30 bg-white p-3 text-base";
@@ -22,17 +34,20 @@ export default function PosterForm({
   options,
   initialArea,
   promos,
+  qrPreviews,
 }: {
   options: PosterOption[];
   initialArea: string;
   /** Suggested codes for staff with promo.view; empty for everyone else. */
   promos: PromoChoice[];
+  qrPreviews: Record<PosterQrStyle, QrPreview>;
 }) {
   const [area, setArea] = useState(
     options.some((option) => option.value === initialArea) ? initialArea : "",
   );
   const [design, setDesign] = useState("d20");
   const [size, setSize] = useState("letter");
+  const [qr, setQr] = useQrStyle();
   const [promo, setPromo] = useState("");
   // A /buy/<code> location applies its own code, which replaces any typed one.
   const own =
@@ -49,6 +64,7 @@ export default function PosterForm({
     design,
     size,
     ...(live ? { [PROMO_PARAM]: live } : {}),
+    ...(qr === "square" ? {} : { qr }),
   }).toString();
   async function download(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -158,6 +174,7 @@ export default function PosterForm({
             <option value="chess">Landscape · Chess</option>
           </select>
         </label>
+        <QrStylePicker value={qr} onChange={setQr} previews={qrPreviews} />
         <label className="block font-semibold">
           Paper size
           <select
@@ -539,5 +556,175 @@ function TrackingSummary({
       <dt>Tracking</dt>
       <dd className="font-mono">{tags}</dd>
     </dl>
+  );
+}
+
+const QR_STYLE_KEY = "posters-qr-style";
+
+// The last style picked, remembered per browser as a convenience; the server
+// render and hydration always see the default.
+let pickedQrStyle: PosterQrStyle | null = null;
+const qrStyleListeners = new Set<() => void>();
+
+function savedQrStyle(): PosterQrStyle {
+  if (pickedQrStyle) return pickedQrStyle;
+  try {
+    const saved = window.localStorage.getItem(QR_STYLE_KEY) ?? "";
+    if (isPosterQrStyle(saved)) return saved;
+  } catch {}
+  return "square";
+}
+
+function useQrStyle() {
+  const style = useSyncExternalStore(
+    (listener) => {
+      qrStyleListeners.add(listener);
+      return () => qrStyleListeners.delete(listener);
+    },
+    savedQrStyle,
+    () => "square" as const,
+  );
+  function choose(next: PosterQrStyle) {
+    pickedQrStyle = next;
+    try {
+      window.localStorage.setItem(QR_STYLE_KEY, next);
+    } catch {}
+    qrStyleListeners.forEach((listener) => listener());
+  }
+  return [style, choose] as const;
+}
+
+function QrSample({
+  style,
+  preview,
+  className,
+}: {
+  style: PosterQrStyle;
+  preview: QrPreview;
+  className?: string;
+}) {
+  const logo = posterQrLogo(style);
+  const span = preview.size + 2;
+  const room = `${((preview.clear - 1.2) / span) * 100}%`;
+  return (
+    <span className={`relative block bg-white ${className ?? ""}`}>
+      <svg viewBox={`-1 -1 ${span} ${span}`} className="block size-full">
+        <path d={preview.d} fill="#000" />
+      </svg>
+      {logo && (
+        <span
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-black"
+          style={{ width: room, height: room }}
+        >
+          {logo === "mg2" ? (
+            <Mg2Die className="size-full" />
+          ) : (
+            <LogoDie className="size-full" />
+          )}
+        </span>
+      )}
+    </span>
+  );
+}
+
+const ARROW_STEPS: Record<string, number> = {
+  ArrowRight: 1,
+  ArrowDown: 1,
+  ArrowLeft: -1,
+  ArrowUp: -1,
+};
+
+function QrStylePicker({
+  value,
+  onChange,
+  previews,
+}: {
+  value: PosterQrStyle;
+  onChange: (style: PosterQrStyle) => void;
+  previews: Record<PosterQrStyle, QrPreview>;
+}) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const radios = useRef<(HTMLButtonElement | null)[]>([]);
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const step = ARROW_STEPS[event.key];
+    if (event.key === "Escape") {
+      setOpen(false);
+      document.getElementById(`${id}-toggle`)?.focus();
+      return;
+    }
+    if (!step) return;
+    event.preventDefault();
+    const keys = POSTER_QR_STYLE_KEYS;
+    const next = keys[(keys.indexOf(value) + step + keys.length) % keys.length];
+    onChange(next);
+    radios.current[keys.indexOf(next)]?.focus();
+  }
+  return (
+    <div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          id={`${id}-toggle`}
+          aria-expanded={open}
+          aria-controls={`${id}-panel`}
+          aria-label="QR code style"
+          onClick={() => setOpen(!open)}
+          className={`flex size-11 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+            open
+              ? "border-[#19345b] bg-[#19345b] text-white"
+              : "border-[#19345b]/30 bg-white text-[#19345b] hover:border-[#19345b]/60"
+          }`}
+        >
+          <QrCode aria-hidden className="size-6" />
+        </button>
+        <p className="text-sm">
+          <span className="font-semibold">QR style</span>{" "}
+          <span className="text-[#19345b]/70">
+            · {POSTER_QR_STYLES[value].label}
+          </span>
+        </p>
+      </div>
+      {open && (
+        <div
+          id={`${id}-panel`}
+          role="radiogroup"
+          aria-label="QR code style"
+          onKeyDown={onKeyDown}
+          className="mt-3 grid grid-cols-3 gap-2 rounded-lg border border-[#19345b]/20 bg-white p-2"
+        >
+          {POSTER_QR_STYLE_KEYS.map((style, index) => {
+            const checked = style === value;
+            return (
+              <button
+                key={style}
+                ref={(el) => {
+                  radios.current[index] = el;
+                }}
+                type="button"
+                role="radio"
+                aria-checked={checked}
+                tabIndex={checked ? 0 : -1}
+                onClick={() => onChange(style)}
+                className={`flex min-w-0 flex-col items-center gap-1 rounded-md border p-1.5 text-xs transition-colors ${
+                  checked
+                    ? "border-[#19345b] bg-[#19345b]/10 font-semibold ring-1 ring-[#19345b]"
+                    : "border-transparent hover:bg-[#19345b]/5"
+                }`}
+              >
+                <QrSample
+                  style={style}
+                  preview={previews[style]}
+                  className="size-14"
+                />
+                <span className="w-full text-center leading-tight">
+                  {POSTER_QR_STYLES[style].label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
