@@ -24,7 +24,7 @@ import {
   hostNames,
   isPlaced,
   movedTimes,
-  openingDayIndex,
+  openingDayKey,
   pacificDayKey,
   VISIBILITY_LABEL,
   type Attendance,
@@ -79,8 +79,8 @@ export default function ScheduleTool({
   canSeed: boolean;
 }) {
   const [editing, setEditing] = useState<Editing>(null);
-  const [dayIndex, setDayIndex] = useState(() =>
-    openingDayIndex(buildDays(saved, EDITOR_DAYS)),
+  const [dayKey, setDayKey] = useState(() =>
+    openingDayKey(buildDays(saved, EDITOR_DAYS)),
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -175,14 +175,8 @@ export default function ScheduleTool({
       locationId,
     };
     setCarrying(null);
-    if (clash && isPlaced(clash)) {
-      const { title, startsAt, endsAt } = clash;
-      const room = roomName(locationId) ?? "that room";
-      setUnconfirmed({
-        move,
-        clash: { title, room, startsAt, endsAt },
-        open: true,
-      });
+    if (clash) {
+      setUnconfirmed({ move, clash, open: true });
     } else {
       closeUnconfirmed();
       saveMove(move, false);
@@ -197,12 +191,7 @@ export default function ScheduleTool({
     setEditing({ kind: "location", location });
   // A search pick: show its day on the grid, then open it for editing.
   const jumpTo = (session: ScheduleSession) => {
-    if (isPlaced(session)) {
-      const i = days.findIndex(
-        (d) => d.key === pacificDayKey(session.startsAt),
-      );
-      if (i >= 0) setDayIndex(i);
-    }
+    if (isPlaced(session)) setDayKey(pacificDayKey(session.startsAt));
     openSession(session);
   };
 
@@ -290,8 +279,8 @@ export default function ScheduleTool({
           locations={locations}
           going={going}
           carrying={carrying}
-          dayIndex={dayIndex}
-          onDayChange={setDayIndex}
+          dayKey={dayKey}
+          onDayChange={setDayKey}
           onOpen={openSession}
           onCreate={createAt}
           onGrab={grab}

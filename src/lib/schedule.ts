@@ -246,11 +246,45 @@ export function minutesToHHMM(min: number): string {
 // period. Any start and end is allowed; this only shapes the defaults.
 export const END_GAP_MINUTES = 5;
 
+const MIDNIGHT = 24 * 60;
+
+/** The default end for a start: the shortest slot, capped at midnight. */
+export function defaultEnd(start: number): number {
+  return Math.min(start + 30 - END_GAP_MINUTES, MIDNIGHT);
+}
+
+/** Where the end goes when the start moves: the length kept if it still ends by midnight. */
+export function movedEnd(
+  start: number | null,
+  end: number | null,
+  next: number,
+): number {
+  const moved =
+    start !== null && end !== null && end > start ? next + (end - start) : null;
+  return moved !== null && moved <= MIDNIGHT ? moved : defaultEnd(next);
+}
+
+/** A session's end in minutes past its start day's midnight; the next midnight is 1440. */
+export function endMinutes(startsAt: string, endsAt: string): number {
+  const min = pacificMinutes(endsAt);
+  return min === 0 && pacificDayKey(endsAt) !== pacificDayKey(startsAt)
+    ? MIDNIGHT
+    : min;
+}
+
+/** The wall time `minutes` past midnight on `dayKey`, 1440 being the next day's 00:00. */
+export function wallAt(dayKey: string, minutes: number): string {
+  if (minutes < MIDNIGHT) return `${dayKey}T${minutesToHHMM(minutes)}`;
+  const [y, m, d] = dayKey.split("-").map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+  return `${next}T${minutesToHHMM(minutes - MIDNIGHT)}`;
+}
+
 // Where the grid starts by default (Friday 2pm, otherwise 10am). Not a limit:
 // the grid reaches earlier for an earlier session.
 const OPENS_AT = 10 * 60;
 const DAY_OPENS_AT: Record<string, number> = { "2026-11-06": 14 * 60 };
-const CLOSES_AT = 24 * 60;
+const CLOSES_AT = MIDNIGHT;
 
 export function opensAt(dayKey: string): number {
   return DAY_OPENS_AT[dayKey] ?? OPENS_AT;
@@ -340,28 +374,43 @@ export function overlapWarning(clash: RoomClash): string {
   return `Saved, but this overlaps ${clashDescription(clash)}.`;
 }
 
+/** The clash shape both the conflict dialog and the API warning read. */
+export function toRoomClash(
+  other: { title: string; startsAt: string | Date; endsAt: string | Date },
+  room: string,
+): RoomClash {
+  const iso = (t: string | Date) =>
+    typeof t === "string" ? t : t.toISOString();
+  return {
+    title: other.title,
+    room,
+    startsAt: iso(other.startsAt),
+    endsAt: iso(other.endsAt),
+  };
+}
+
 /**
  * The session already in that room at that time, if any. "No room" and
  * rooms that allow overlap never clash.
  */
-export function findClash<S extends ScheduleSession>(
-  sessions: S[],
+export function findClash(
+  sessions: ScheduleSession[],
   move: { id: string; locationId: string | null; startsAt: Date; endsAt: Date },
-  locations: Pick<ScheduleLocation, "id" | "visibility">[],
-): S | null {
+  locations: Pick<ScheduleLocation, "id" | "name" | "visibility">[],
+): RoomClash | null {
   if (move.locationId === null) return null;
   const room = locations.find((l) => l.id === move.locationId);
-  if (room && roomAllowsOverlap(room.visibility)) return null;
-  return (
-    sessions.find(
+  if (!room || roomAllowsOverlap(room.visibility)) return null;
+  const other = sessions
+    .filter(isPlaced)
+    .find(
       (s) =>
         s.id !== move.id &&
         s.locationId === move.locationId &&
-        isPlaced(s) &&
         Date.parse(s.startsAt) < move.endsAt.getTime() &&
         Date.parse(s.endsAt) > move.startsAt.getTime(),
-    ) ?? null
-  );
+    );
+  return other ? toRoomClash(other, room.name) : null;
 }
 
 /** Grid column id for placed sessions with no room. */
@@ -392,7 +441,9 @@ export function overlapLanes<
   const byColumn = new Map<string, Placed<S>[]>();
   for (const s of sessions) {
     const col = s.locationId ?? NO_ROOM;
-    byColumn.set(col, [...(byColumn.get(col) ?? []), s]);
+    const list = byColumn.get(col);
+    if (list) list.push(s);
+    else byColumn.set(col, [s]);
   }
   for (const column of byColumn.values()) {
     const sorted = column
@@ -503,10 +554,24 @@ export function buildDays<S extends Timed>(
 }
 
 /** The tab to open on: the conference's first day, even when an earlier day is shown. */
-export function openingDayIndex(days: { key: string }[]): number {
-  return Math.max(
-    0,
-    days.findIndex((d) => d.key === CONFERENCE_DAYS[0].key),
+export function openingDayKey(days: { key: string }[]): string {
+  const first = CONFERENCE_DAYS[0].key;
+  return days.some((d) => d.key === first) ? first : (days[0]?.key ?? first);
+}
+
+/**
+ * The tab selected by key, or the opening day once that day is gone. Tabs are
+ * picked by key, not position, because a session saved on an earlier day adds
+ * a tab in front.
+ */
+export function selectedDay<D extends { key: string }>(
+  days: D[],
+  key: string,
+): D {
+  return (
+    days.find((d) => d.key === key) ??
+    days.find((d) => d.key === openingDayKey(days)) ??
+    days[0]
   );
 }
 

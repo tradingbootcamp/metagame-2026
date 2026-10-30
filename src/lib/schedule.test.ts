@@ -6,7 +6,8 @@ import {
   findClash,
   fromPacificWall,
   movedTimes,
-  openingDayIndex,
+  openingDayKey,
+  selectedDay,
   outsideHours,
   overlapLanes,
   overlapWarning,
@@ -56,8 +57,8 @@ describe("movedTimes", () => {
 });
 
 const rooms = (visibility: LocationVisibility = "public") => [
-  { id: "room1", visibility },
-  { id: "room2", visibility: "public" as const },
+  { id: "room1", name: "Eigen Hall", visibility },
+  { id: "room2", name: "Annex", visibility: "public" as const },
 ];
 
 describe("findClash", () => {
@@ -68,6 +69,12 @@ describe("findClash", () => {
     startsAt: "2026-11-07T17:00:00.000Z",
     endsAt: "2026-11-07T17:55:00.000Z",
   });
+  const chess = {
+    title: "Chess",
+    room: "Eigen Hall",
+    startsAt: "2026-11-07T17:00:00.000Z",
+    endsAt: "2026-11-07T17:55:00.000Z",
+  };
   const move = (startsAt: string, endsAt: string, over = {}) => ({
     id: "b",
     locationId: "room1",
@@ -83,7 +90,7 @@ describe("findClash", () => {
         move("2026-11-07T17:30:00.000Z", "2026-11-07T18:25:00.000Z"),
         rooms(),
       ),
-    ).toBe(existing);
+    ).toEqual(chess);
   });
 
   it("allows back-to-back sessions", () => {
@@ -135,7 +142,7 @@ describe("findClash", () => {
       "2026-11-07T18:25:00.000Z",
     );
     expect(findClash([existing], overlap, rooms("volunteer"))).toBeNull();
-    expect(findClash([existing], overlap, rooms("hidden"))).toBe(existing);
+    expect(findClash([existing], overlap, rooms("hidden"))).toEqual(chess);
   });
 });
 
@@ -202,8 +209,25 @@ describe("buildDays", () => {
     ]);
   });
   it("opens on Friday even with an earlier day shown", () => {
-    expect(openingDayIndex(buildDays([], EDITOR_DAYS))).toBe(1);
-    expect(openingDayIndex(buildDays([]))).toBe(0);
+    expect(openingDayKey(buildDays([], EDITOR_DAYS))).toBe("2026-11-06");
+    expect(openingDayKey(buildDays([]))).toBe("2026-11-06");
+  });
+  it("keeps the selected tab when a session lands on an earlier day", () => {
+    const before = buildDays([], EDITOR_DAYS);
+    expect(selectedDay(before, "2026-11-07").name).toBe("Saturday");
+    const early = session({
+      id: "early",
+      startsAt: fromPacificWall("2026-11-03T10:00")!.toISOString(),
+      endsAt: fromPacificWall("2026-11-03T11:00")!.toISOString(),
+    });
+    const after = buildDays([early], EDITOR_DAYS);
+    expect(after[0].key).toBe("2026-11-03");
+    expect(selectedDay(after, "2026-11-07").name).toBe("Saturday");
+  });
+  it("falls back to the opening day when the selected day is gone", () => {
+    expect(selectedDay(buildDays([], EDITOR_DAYS), "2026-11-03").key).toBe(
+      "2026-11-06",
+    );
   });
 });
 

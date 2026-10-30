@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { FaListUl, FaThLarge } from "react-icons/fa";
 import {
   cellSessions,
@@ -85,12 +85,12 @@ export const toggleButton = (active: boolean, i: number) =>
 
 export function DayTabs({
   days,
-  index,
+  selected,
   onSelect,
 }: {
   days: { key: string; name: string; dateLabel: string }[];
-  index: number;
-  onSelect: (i: number) => void;
+  selected: string;
+  onSelect: (key: string) => void;
 }) {
   return (
     <div role="tablist" aria-label="Conference day" className={TOGGLE}>
@@ -99,9 +99,9 @@ export function DayTabs({
           key={d.key}
           type="button"
           role="tab"
-          aria-selected={i === index}
-          onClick={() => onSelect(i)}
-          className={`px-4 py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors sm:px-6 sm:text-xl ${toggleButton(i === index, i)}`}
+          aria-selected={d.key === selected}
+          onClick={() => onSelect(d.key)}
+          className={`px-4 py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors sm:px-6 sm:text-xl ${toggleButton(d.key === selected, i)}`}
         >
           {d.name}
           <span className="ml-1.5 inline-block text-sm whitespace-nowrap opacity-70">
@@ -210,7 +210,7 @@ export function GridDay<S extends ViewSession>({
   href: (s: S) => string | null;
   badge?: (s: S) => ReactNode;
 }) {
-  const lanes = overlapLanes(day.sessions);
+  const lanes = useMemo(() => overlapLanes(day.sessions), [day.sessions]);
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
   return (
     <div className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--col-w:104px] [--time-w:44px] sm:[--col-w:120px] sm:[--time-w:56px]">

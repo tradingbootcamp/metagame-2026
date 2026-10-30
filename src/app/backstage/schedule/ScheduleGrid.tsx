@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { GripVerticalIcon } from "lucide-react";
 import { FaListUl, FaThLarge } from "react-icons/fa";
 import {
@@ -17,13 +17,15 @@ import {
   outsideHours,
   overlapLanes,
   NO_ROOM,
-  openingDayIndex,
+  openingDayKey,
+  selectedDay,
   slotLabel,
   SLOT_MINUTES,
   SLOT_PX,
   type Day,
   type Lane,
   type PlacedSession,
+  type RoomClash,
   type ScheduleLocation,
   type ScheduleSession,
 } from "@/lib/schedule";
@@ -39,11 +41,11 @@ type View = "grid" | "list";
 type OpenFn = (s: ScheduleSession) => void;
 type CreateFn = (defaults: SessionDefaults) => void;
 type GrabFn = (s: ScheduleSession) => void;
-/** `clash` is the session it would overlap, for a parent that confirms such drops. */
+/** `clash` is what it would overlap, for a parent that confirms such drops. */
 export type DropFn = (
   startsAt: Date,
   locationId: string | null,
-  clash: ScheduleSession | null,
+  clash: RoomClash | null,
 ) => void;
 
 /** The grip that picks a session up; the rest of the block still opens it. */
@@ -249,7 +251,7 @@ function GridDay({
       hint: confirmClash ? overlaps : null,
     };
   };
-  const lanes = overlapLanes(day.sessions);
+  const lanes = useMemo(() => overlapLanes(day.sessions), [day.sessions]);
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
   return (
     <div
@@ -464,7 +466,7 @@ export default function ScheduleGrid({
   onGrab,
   onDrop,
   confirmClash,
-  dayIndex: controlledDay,
+  dayKey: controlledDay,
   onDayChange,
 }: {
   days: Day[];
@@ -484,12 +486,11 @@ export default function ScheduleGrid({
   /** Let drops onto an overlap through (with its clash) instead of refusing them. */
   confirmClash?: boolean;
   /** Controlled day tab, for a parent that needs to switch it (search). */
-  dayIndex?: number;
-  onDayChange?: (index: number) => void;
+  dayKey?: string;
+  onDayChange?: (key: string) => void;
 }) {
-  const [ownDay, setOwnDay] = useState(() => openingDayIndex(days));
-  const dayIndex = controlledDay ?? ownDay;
-  const setDayIndex = onDayChange ?? setOwnDay;
+  const [ownDay, setOwnDay] = useState(() => openingDayKey(days));
+  const setDayKey = onDayChange ?? setOwnDay;
   const [view, setView] = useState<View>("grid");
 
   const columns: Column[] = locations.map((l) => ({
@@ -516,7 +517,7 @@ export default function ScheduleGrid({
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
 
-  const day = days[Math.min(dayIndex, days.length - 1)];
+  const day = selectedDay(days, controlledDay ?? ownDay);
   const placed = days.flatMap((d) => d.sessions);
 
   return (
@@ -528,14 +529,14 @@ export default function ScheduleGrid({
           className="inline-flex overflow-hidden rounded-lg border border-line bg-white"
         >
           {days.map((d, i) => {
-            const active = i === dayIndex;
+            const active = d.key === day.key;
             return (
               <button
                 key={d.key}
                 type="button"
                 role="tab"
                 aria-selected={active}
-                onClick={() => setDayIndex(i)}
+                onClick={() => setDayKey(d.key)}
                 className={`px-3 py-2 text-sm font-semibold transition-colors sm:px-4 ${
                   active ? "bg-navy text-white" : "text-ink/70 hover:bg-ink/5"
                 } ${i > 0 ? "border-l border-line" : ""}`}

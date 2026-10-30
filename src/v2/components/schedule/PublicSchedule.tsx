@@ -3,7 +3,8 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  openingDayIndex,
+  openingDayKey,
+  selectedDay,
   type Day,
   type PublicLocation,
   type PublicSession,
@@ -48,7 +49,7 @@ export default function PublicSchedule({
   days: PublicDay[];
   locations: PublicLocation[];
 }) {
-  const [dayIndex, setDayIndex] = useState(() => openingDayIndex(days));
+  const [dayKey, setDayKey] = useState(() => openingDayKey(days));
   const [view, setView] = useState<View>("grid");
   const router = useRouter();
   const pathname = usePathname();
@@ -61,10 +62,10 @@ export default function PublicSchedule({
   if (pathname !== seenPath) {
     setSeenPath(pathname);
     const slug = decodeURIComponent(pathname.split("/")[2] ?? "");
-    const i = slug
-      ? days.findIndex((d) => d.sessions.some((s) => s.slug === slug))
-      : -1;
-    if (i >= 0) setDayIndex(i);
+    const found = slug
+      ? days.find((d) => d.sessions.some((s) => s.slug === slug))
+      : undefined;
+    if (found) setDayKey(found.key);
   }
 
   // Phones start on the list; deferred so server and first client render match.
@@ -80,7 +81,7 @@ export default function PublicSchedule({
   );
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
-  const day = days[Math.min(dayIndex, days.length - 1)];
+  const day = selectedDay(days, dayKey);
 
   return (
     <div className="flex flex-col gap-5">
@@ -92,7 +93,7 @@ export default function PublicSchedule({
         />
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <DayTabs days={days} index={dayIndex} onSelect={setDayIndex} />
+        <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
         <ViewToggle view={view} onSelect={setView} />
       </div>
 

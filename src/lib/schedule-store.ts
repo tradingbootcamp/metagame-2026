@@ -23,6 +23,7 @@ import {
   outsideHours,
   roomAllowsOverlap,
   summarizeRsvps,
+  toRoomClash,
   type Attendance,
   type RoomClash,
   type RsvpStatus,
@@ -135,6 +136,8 @@ export type SessionInput = Omit<
 /**
  * Inserts or, with an id, replaces the session and its host list. Refuses a
  * clash in its room unless `allowOverlap`; a clash let through comes back.
+ * Only a change of time or room is checked, so editing the rest of a session
+ * that already overlaps doesn't ask again.
  */
 export async function upsertSession(
   input: SessionInput,
@@ -143,7 +146,7 @@ export async function upsertSession(
   const db = getDb();
   const { id, hostIds, ...row } = input;
   const clash =
-    row.startsAt && row.endsAt
+    row.startsAt && row.endsAt && (await placementChanged(id, row))
       ? await assertSlotFree(
           id ?? null,
           row.startsAt,
@@ -186,6 +189,27 @@ export async function upsertSession(
   // A raised capacity frees seats for the waitlist.
   if (id) await promoteWaitlist(sessionId);
   return { id: sessionId, clash };
+}
+
+async function placementChanged(
+  id: string | undefined,
+  next: Pick<SessionInput, "startsAt" | "endsAt" | "locationId">,
+): Promise<boolean> {
+  if (!id) return true;
+  const [stored] = await getDb()
+    .select({
+      startsAt: sessions.startsAt,
+      endsAt: sessions.endsAt,
+      locationId: sessions.locationId,
+    })
+    .from(sessions)
+    .where(eq(sessions.id, id));
+  return (
+    !stored ||
+    stored.locationId !== next.locationId ||
+    stored.startsAt?.getTime() !== next.startsAt?.getTime() ||
+    stored.endsAt?.getTime() !== next.endsAt?.getTime()
+  );
 }
 
 /** The session's hosts as user ids, lead first. */
@@ -308,35 +332,32 @@ export async function roomClash(
   endsAt: Date,
   locationId: string,
 ): Promise<RoomClash | null> {
-  const db = getDb();
-  const [room] = await db
-    .select({ name: locations.name, visibility: locations.visibility })
-    .from(locations)
-    .where(eq(locations.id, locationId));
-  if (!room || roomAllowsOverlap(room.visibility)) return null;
-  const [clash] = await db
+  const [row] = await getDb()
     .select({
+      room: locations.name,
+      visibility: locations.visibility,
       title: sessions.title,
       startsAt: sessions.startsAt,
       endsAt: sessions.endsAt,
     })
-    .from(sessions)
-    .where(
+    .from(locations)
+    .leftJoin(
+      sessions,
       and(
-        eq(sessions.locationId, locationId),
+        eq(sessions.locationId, locations.id),
         id ? ne(sessions.id, id) : undefined,
         lt(sessions.startsAt, endsAt),
         gt(sessions.endsAt, startsAt),
       ),
     )
+    .where(eq(locations.id, locationId))
     .limit(1);
-  if (!clash?.startsAt || !clash.endsAt) return null;
-  return {
-    title: clash.title,
-    room: room.name,
-    startsAt: clash.startsAt.toISOString(),
-    endsAt: clash.endsAt.toISOString(),
-  };
+  if (!row || roomAllowsOverlap(row.visibility)) return null;
+  if (!row.title || !row.startsAt || !row.endsAt) return null;
+  return toRoomClash(
+    { title: row.title, startsAt: row.startsAt, endsAt: row.endsAt },
+    row.room,
+  );
 }
 
 /** Accounts whose name or email contains the query. */
