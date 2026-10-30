@@ -23,6 +23,7 @@ export const nightMarket: FormDef = {
         {
           key: "name",
           field: "fldL1ROlMbKNrn8zX",
+          fill: "name",
           type: "text",
           label: "Your name",
           required: true,
@@ -32,6 +33,7 @@ export const nightMarket: FormDef = {
         {
           key: "email",
           field: "fldt7pBJ2JaaRInLL",
+          fill: "email",
           type: "email",
           label: "Email",
           required: true,
