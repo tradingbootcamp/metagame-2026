@@ -105,27 +105,27 @@ export default function PublicSchedule({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex">
+      <div className="flex items-center gap-3">
         <ScheduleSearch
           sessions={days.flatMap((d) => d.sessions)}
           roomName={(s) => roomName(s.locationId)}
           onPick={(s) => router.push(href(s), { scroll: false })}
         />
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
-        <ViewToggle view={view} onSelect={setView} />
         {mine && (
           <button
             type="button"
             aria-pressed={onlyMine}
             onClick={() => setOnlyMine((on) => !on)}
-            className={`${TOGGLE} items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(onlyMine, 0)}`}
+            className={`${TOGGLE} ml-auto shrink-0 items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(onlyMine, 0)}`}
           >
             <FaStar size={12} />
             My sessions
           </button>
         )}
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
+        <ViewToggle view={view} onSelect={setView} />
       </div>
 
       <CategoryLegend />
