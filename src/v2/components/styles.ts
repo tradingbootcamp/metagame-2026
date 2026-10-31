@@ -21,3 +21,6 @@ export const SECTION = `${SECTION_ANCHOR} py-8`;
 // own classes are the dark default; these win via tailwind-merge.
 export const FIELD_LIGHT =
   "border-navy/20 bg-white text-ink placeholder:text-ink/40 focus:border-meeple";
+
+// The display face (Bebas Neue): big titles, clock readouts, toggles.
+export const DISPLAY = "font-[family-name:var(--font-bebas)] font-normal";
