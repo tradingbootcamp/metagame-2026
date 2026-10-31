@@ -51,6 +51,7 @@ export default function ScheduleMoments({
       styleFor={blockStyle}
       onOpen={onOpen}
       now={now}
+      hideQuiet
     />
   );
 }

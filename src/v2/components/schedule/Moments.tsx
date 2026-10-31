@@ -50,6 +50,8 @@ type Props<S extends MomentSession> = {
   /** The current moment, when it's on the board: the board follows it until
    * the viewer moves the clock, and offers a way back. */
   now?: Moment | null;
+  /** Leave out rooms with nothing on at the moment shown. */
+  hideQuiet?: boolean;
 };
 
 // How far the clock moves per tick of playback, and how often it ticks.
@@ -163,6 +165,7 @@ function Board<S extends MomentSession>({
   legend,
   startAt,
   now,
+  hideQuiet = false,
   spans,
 }: Props<S> & { spans: Span<S>[] }) {
   const { reducer, atEnd } = useMemo(
@@ -372,8 +375,18 @@ function Board<S extends MomentSession>({
         </ul>
       )}
 
+      {hideQuiet && !running.length && (
+        <p className="mt-4 font-space-mono text-[11px] tracking-[0.12em] text-ink/35 uppercase">
+          Nothing on at this time
+        </p>
+      )}
       <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
-        {locations.map((loc) => {
+        {(hideQuiet
+          ? locations.filter((loc) =>
+              running.some((x) => x.s.locationId === loc.id),
+            )
+          : locations
+        ).map((loc) => {
           const here = running.filter((x) => x.s.locationId === loc.id);
           return (
             <li
