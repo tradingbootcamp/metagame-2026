@@ -8,6 +8,8 @@ import {
   checkForm,
   cleanAnswers,
   optionBoxes,
+  prefillAnswers,
+  sameAnswers,
   visibleItems,
   visibleSteps,
 } from "./engine";
@@ -332,5 +334,58 @@ describe("megagame", () => {
     expect(
       Object.keys(airtableFields(def, { ...you, attended: true })),
     ).not.toContain("undefined");
+  });
+});
+
+describe("prefillAnswers", () => {
+  const account = {
+    name: "Alex Example",
+    email: "alex@example.com",
+    discord: "@alex_plays",
+    pronouns: "they/them",
+  };
+
+  it("fills nothing when signed out", () => {
+    for (const def of Object.values(FORMS))
+      expect(prefillAnswers(def, undefined)).toEqual({});
+  });
+
+  it("fills the volunteer application's basic facts", () => {
+    expect(prefillAnswers(FORMS.volunteer, account)).toEqual({
+      legalName: "Alex Example",
+      email: "alex@example.com",
+      discord: "alex_plays",
+      pronouns: "they/them",
+    });
+  });
+
+  it("writes the Discord handle as contact info on the Megagame form", () => {
+    expect(prefillAnswers(FORMS.megagame, account)).toEqual({
+      name: "Alex Example",
+      email: "alex@example.com",
+      otherContact: "Discord @alex_plays",
+    });
+  });
+
+  it("skips what the account doesn't have", () => {
+    expect(
+      prefillAnswers(FORMS.propose, { name: "Alex Example", discord: " " }),
+    ).toEqual({ name: "Alex Example" });
+  });
+
+  it("only fills typed-in questions", () => {
+    for (const def of Object.values(FORMS))
+      for (const q of allQuestions(def))
+        if (q.fill) expect(["text", "email", "phone"], q.key).toContain(q.type);
+  });
+});
+
+describe("sameAnswers", () => {
+  it("ignores key order and treats a missing key as undefined", () => {
+    expect(
+      sameAnswers({ a: "x", b: ["1", "2"] }, { b: ["1", "2"], a: "x" }),
+    ).toBe(true);
+    expect(sameAnswers({ a: "x", b: undefined }, { a: "x" })).toBe(true);
+    expect(sameAnswers({ a: "x" }, { a: "x", b: "y" })).toBe(false);
   });
 });

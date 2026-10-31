@@ -3,8 +3,10 @@ import {
   buildDays,
   cellSessions,
   NO_ROOM,
+  onlySessions,
   publicSchedule,
   summarizeRsvps,
+  viewerSessionIds,
   type ScheduleLocation,
   type ScheduleSession,
 } from "./schedule";
@@ -23,6 +25,8 @@ const session = (over: Partial<ScheduleSession>): ScheduleSession => ({
   ages: null,
   needs: "a projector",
   status: "published",
+  rsvpIsCommitment: false,
+  sponsored: false,
   airtableRfpRecordId: "rec1",
   hosts: [{ userId: "u1", name: "Ada", email: "ada@example.com" }],
   shepherd: { userId: "u9", name: "Grace", email: "grace@example.com" },
@@ -88,6 +92,17 @@ describe("publicSchedule", () => {
     expect(json).not.toContain("Grace");
     expect(json).not.toContain("u9");
     expect(sessions[0].hosts).toEqual([{ name: "Ada" }]);
+  });
+
+  it("carries the commitment and sponsor flags", () => {
+    const { sessions } = publicSchedule({
+      locations: [],
+      sessions: [session({ rsvpIsCommitment: true, sponsored: true })],
+    });
+    expect(sessions[0]).toMatchObject({
+      rsvpIsCommitment: true,
+      sponsored: true,
+    });
   });
 
   it("does not show a nameless host's email as their name", () => {
@@ -182,5 +197,66 @@ describe("cellSessions", () => {
       cellSessions(saturday.sessions, col, 600).map((s) => s.id);
     expect(ids("r")).toEqual(["in-r"]);
     expect(ids(NO_ROOM)).toEqual(["no-room"]);
+  });
+});
+
+describe("viewerSessionIds", () => {
+  const sessions = [
+    session({ id: "hosting" }),
+    session({
+      id: "cohost",
+      hosts: [
+        { userId: "u2", name: "Bo", email: "bo@example.com" },
+        { userId: "u1", name: "Ada", email: "ada@example.com" },
+      ],
+    }),
+    session({
+      id: "shepherding",
+      hosts: [],
+      shepherd: { userId: "u1", name: "Ada", email: "ada@example.com" },
+    }),
+    session({ id: "going", hosts: [], shepherd: null }),
+    session({ id: "waitlist", hosts: [], shepherd: null }),
+    session({ id: "bookmarked", hosts: [], shepherd: null }),
+    session({ id: "other", hosts: [], shepherd: null }),
+  ];
+  const plans = {
+    rsvps: { going: "going", waitlist: "waitlist", gone: "going" } as const,
+    bookmarks: ["bookmarked", "gone"],
+  };
+
+  it("takes hosting, shepherding, RSVPs and bookmarks", () => {
+    expect(viewerSessionIds("u1", sessions, plans)).toEqual([
+      "hosting",
+      "cohost",
+      "shepherding",
+      "going",
+      "waitlist",
+      "bookmarked",
+    ]);
+  });
+
+  it("only returns sessions it was given", () => {
+    expect(viewerSessionIds("u3", sessions, plans)).not.toContain("gone");
+  });
+
+  it("is empty for someone with no plans", () => {
+    expect(
+      viewerSessionIds("u3", sessions, { rsvps: {}, bookmarks: [] }),
+    ).toEqual([]);
+  });
+});
+
+describe("onlySessions", () => {
+  it("keeps every day and its slots, with only the given sessions", () => {
+    const days = buildDays([
+      session({ id: "a", startsAt: "2026-11-07T18:00:00.000Z" }),
+      session({ id: "b", startsAt: "2026-11-07T19:00:00.000Z" }),
+      session({ id: "c", startsAt: "2026-11-08T18:00:00.000Z" }),
+    ]);
+    const kept = onlySessions(days, new Set(["b"]));
+    expect(kept.map((d) => d.key)).toEqual(days.map((d) => d.key));
+    expect(kept.map((d) => d.slots)).toEqual(days.map((d) => d.slots));
+    expect(kept.flatMap((d) => d.sessions.map((s) => s.id))).toEqual(["b"]);
   });
 });

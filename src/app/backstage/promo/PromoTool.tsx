@@ -14,6 +14,9 @@ import { PURPOSES, type MintResult } from "@/lib/promo-codes";
 import type { Coupon, StripeCode } from "@/lib/promo-codes-stripe";
 import type { PromoMode } from "@/lib/stripe-promo";
 
+// New codes start at $80 off, not a free ticket.
+const DEFAULT_AMOUNT_OFF = 80;
+
 const CUSTOM = "__custom__";
 // Coupons are made by hand in the dashboard (the key is Coupons: Read only).
 const STRIPE_ACCOUNT = "acct_1QeQd1CtO443EG3n";
@@ -48,7 +51,15 @@ export default function PromoTool({
   const [listsError, setListsError] = useState<string | null>(null);
 
   const stripeReady = !couponError && coupons.length > 0;
-  const defaultCoupon = coupons.find((c) => c.isDefault) ?? coupons[0];
+  const defaultCoupon =
+    coupons.find(
+      (c) =>
+        c.kind === "amount" &&
+        c.amountOff === DEFAULT_AMOUNT_OFF &&
+        c.currency === "usd",
+    ) ??
+    coupons.find((c) => c.isDefault) ??
+    coupons[0];
 
   const err = (field: string) =>
     state.field === field ? (state.error ?? null) : null;

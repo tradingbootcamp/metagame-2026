@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { buildDays, isPlaced, type PublicLocation } from "@/lib/schedule";
+import {
+  buildDays,
+  isPlaced,
+  openingDayKey,
+  selectedDay,
+  type PublicLocation,
+} from "@/lib/schedule";
 import {
   ROLE_LABELS,
   withRole,
@@ -145,12 +151,10 @@ export default function UserSessions({
   const placed = sessions.filter(isPlaced);
   const unscheduled = sessions.filter((s) => !isPlaced(s));
   const days = buildDays(placed);
-  const firstFilled = Math.max(
-    0,
-    days.findIndex((d) => d.sessions.length > 0),
-  );
+  const firstFilled =
+    days.find((d) => d.sessions.length > 0)?.key ?? openingDayKey(days);
   const [view, setView] = useState<View>("list");
-  const [dayIndex, setDayIndex] = useState(firstFilled);
+  const [dayKey, setDayKey] = useState(firstFilled);
 
   const href = (s: UserSession) =>
     linkable && s.status === "published"
@@ -165,7 +169,7 @@ export default function UserSessions({
 
   if (sessions.length === 0) return <EmptyPanel>{emptyLabel}</EmptyPanel>;
 
-  const day = days[Math.min(dayIndex, days.length - 1)];
+  const day = selectedDay(days, dayKey);
 
   return (
     <div className="flex flex-col gap-5">
@@ -176,7 +180,7 @@ export default function UserSessions({
           labels={{ grid: "Schedule" }}
         />
         {view === "grid" && (
-          <DayTabs days={days} index={dayIndex} onSelect={setDayIndex} />
+          <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
         )}
       </div>
 

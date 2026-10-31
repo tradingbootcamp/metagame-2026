@@ -104,12 +104,15 @@ export async function moveSession(
   startsAt: string,
   locationId: string | null,
   allowOverlap = false,
+  endsAt?: string,
 ): Promise<FormState> {
   if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
   const start = new Date(startsAt);
-  if (Number.isNaN(start.getTime())) return { error: "That time is invalid." };
+  const end = endsAt === undefined ? undefined : new Date(endsAt);
+  if (Number.isNaN(start.getTime()) || (end && Number.isNaN(end.getTime())))
+    return { error: "That time is invalid." };
   try {
-    await moveSessionTo(id, start, locationId, allowOverlap);
+    await moveSessionTo(id, start, locationId, allowOverlap, end);
   } catch (err) {
     return refused(err);
   }

@@ -18,14 +18,16 @@ import { buttonClass, smallButtonClass } from "../ui";
 import {
   buildDays,
   clashDescription,
+  formatLength,
   EDITOR_DAYS,
   formatPacificDay,
   formatPacificTime,
   hostNames,
   isPlaced,
   movedTimes,
-  openingDayIndex,
+  openingDayKey,
   pacificDayKey,
+  planConflicts,
   VISIBILITY_LABEL,
   type Attendance,
   type RoomClash,
@@ -64,6 +66,8 @@ function Section({
 }
 
 type Move = Pick<ScheduleSession, "id" | "startsAt" | "endsAt" | "locationId">;
+/** `cut`: the end was cut back to midnight, so the server takes it rather than keeping the length. */
+type Drop = Move & { startsAt: string; cut: boolean };
 
 export default function ScheduleTool({
   sessions: saved,
@@ -79,8 +83,8 @@ export default function ScheduleTool({
   canSeed: boolean;
 }) {
   const [editing, setEditing] = useState<Editing>(null);
-  const [dayIndex, setDayIndex] = useState(() =>
-    openingDayIndex(buildDays(saved, EDITOR_DAYS)),
+  const [dayKey, setDayKey] = useState(() =>
+    openingDayKey(buildDays(saved, EDITOR_DAYS)),
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -91,11 +95,13 @@ export default function ScheduleTool({
   const [optimistic, applyMove] = useOptimistic(saved, (all, move: Move) =>
     all.map((s) => (s.id === move.id ? { ...s, ...move } : s)),
   );
-  // A drop onto an overlap, shown in place until it's kept or undone. Kept
-  // after closing so the dialog's text stays put while it fades out.
+  // A drop onto an overlap or cut at midnight, shown in place until it's kept
+  // or undone; the cut is asked about first, then the clash. Kept after
+  // closing so the dialog's text stays put while it fades out.
   const [unconfirmed, setUnconfirmed] = useState<{
-    move: Move & { startsAt: string };
-    clash: RoomClash;
+    move: Drop;
+    clash: RoomClash | null;
+    cut: { fromMinutes: number; toMinutes: number } | null;
     open: boolean;
   } | null>(null);
   const closeUnconfirmed = () =>
@@ -103,9 +109,11 @@ export default function ScheduleTool({
   const sessions = useMemo(
     () =>
       unconfirmed?.open
-        ? optimistic.map((s) =>
-            s.id === unconfirmed.move.id ? { ...s, ...unconfirmed.move } : s,
-          )
+        ? optimistic.map((s) => {
+            if (s.id !== unconfirmed.move.id) return s;
+            const { startsAt, endsAt, locationId } = unconfirmed.move;
+            return { ...s, startsAt, endsAt, locationId };
+          })
         : optimistic,
     [optimistic, unconfirmed],
   );
@@ -150,37 +158,42 @@ export default function ScheduleTool({
 
   const grab = (session: ScheduleSession) =>
     setCarrying((held) => (held?.id === session.id ? null : session));
-  const saveMove = (move: Move & { startsAt: string }, allowOverlap: boolean) =>
+  const saveMove = (move: Drop, allowOverlap: boolean) =>
     startTransition(async () => {
-      applyMove(move);
+      const { cut, ...times } = move;
+      applyMove(times);
       const result = await moveSession(
         move.id,
         move.startsAt,
         move.locationId,
         allowOverlap,
+        cut && move.endsAt ? move.endsAt : undefined,
       );
       setError(result.error ?? null);
       // The server saw a clash this page's data didn't.
       if (result.conflict) {
-        setUnconfirmed({ move, clash: result.conflict, open: true });
+        setUnconfirmed({ move, clash: result.conflict, cut: null, open: true });
       }
     });
-  const drop: DropFn = (startsAt, locationId, clash) => {
+  const drop: DropFn = (startsAt, locationId, clash, cut) => {
     if (!carrying) return;
-    const times = movedTimes(carrying, startsAt);
+    const endsAt = cut?.endsAt ?? movedTimes(carrying, startsAt).endsAt;
     const move = {
       id: carrying.id,
-      startsAt: times.startsAt.toISOString(),
-      endsAt: times.endsAt.toISOString(),
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
       locationId,
+      cut: cut !== null,
     };
     setCarrying(null);
-    if (clash && isPlaced(clash)) {
-      const { title, startsAt, endsAt } = clash;
-      const room = roomName(locationId) ?? "that room";
+    if (clash || cut) {
       setUnconfirmed({
         move,
-        clash: { title, room, startsAt, endsAt },
+        clash,
+        cut: cut && {
+          fromMinutes: cut.fromMinutes,
+          toMinutes: (endsAt.getTime() - startsAt.getTime()) / 60_000,
+        },
         open: true,
       });
     } else {
@@ -197,12 +210,7 @@ export default function ScheduleTool({
     setEditing({ kind: "location", location });
   // A search pick: show its day on the grid, then open it for editing.
   const jumpTo = (session: ScheduleSession) => {
-    if (isPlaced(session)) {
-      const i = days.findIndex(
-        (d) => d.key === pacificDayKey(session.startsAt),
-      );
-      if (i >= 0) setDayIndex(i);
-    }
+    if (isPlaced(session)) setDayKey(pacificDayKey(session.startsAt));
     openSession(session);
   };
 
@@ -290,8 +298,8 @@ export default function ScheduleTool({
           locations={locations}
           going={going}
           carrying={carrying}
-          dayIndex={dayIndex}
-          onDayChange={setDayIndex}
+          dayKey={dayKey}
+          onDayChange={setDayKey}
           onOpen={openSession}
           onCreate={createAt}
           onGrab={grab}
@@ -456,7 +464,38 @@ export default function ScheduleTool({
       </Section>
 
       <ConfirmDialog
-        open={Boolean(unconfirmed?.open)}
+        open={Boolean(unconfirmed?.open && unconfirmed.cut)}
+        title="Shortened at midnight"
+        onDismiss={closeUnconfirmed}
+        actions={[
+          { label: "Cancel", onClick: closeUnconfirmed },
+          {
+            label: "Accept",
+            primary: true,
+            onClick: () => {
+              if (!unconfirmed) return;
+              if (unconfirmed.clash) {
+                setUnconfirmed({ ...unconfirmed, cut: null });
+              } else {
+                closeUnconfirmed();
+                saveMove(unconfirmed.move, false);
+              }
+            },
+          },
+        ]}
+      >
+        {unconfirmed?.cut && (
+          <>
+            The schedule ends at midnight, so this will end at 12:00 AM (
+            {formatLength(unconfirmed.cut.fromMinutes)} →{" "}
+            {formatLength(unconfirmed.cut.toMinutes)}).
+          </>
+        )}
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={Boolean(
+          unconfirmed?.open && !unconfirmed.cut && unconfirmed.clash,
+        )}
         title="Room conflict"
         onDismiss={closeUnconfirmed}
         actions={[
@@ -472,7 +511,7 @@ export default function ScheduleTool({
           },
         ]}
       >
-        {unconfirmed && (
+        {unconfirmed?.clash && (
           <>This overlaps {clashDescription(unconfirmed.clash)}.</>
         )}
       </ConfirmDialog>
@@ -484,6 +523,11 @@ export default function ScheduleTool({
           locations={locations}
           attendance={openNow ? attendance[openNow.id] : undefined}
           viewer={viewer}
+          conflicts={
+            openNow && viewer
+              ? planConflicts(openNow, sessions, viewer.userId, viewer.rsvps)
+              : []
+          }
           onClose={close}
         />
       )}

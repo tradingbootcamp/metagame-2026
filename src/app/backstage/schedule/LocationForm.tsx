@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  startTransition,
   useActionState,
   useEffect,
   useRef,
@@ -17,6 +18,7 @@ import {
   smallButtonClass,
 } from "../ui";
 import { downscaleImage } from "@/lib/downscale-image";
+import { UnsavedChangesDialog, useUnsavedChanges } from "./UnsavedChanges";
 import {
   LAYOUT_LABEL,
   LOCATION_LAYOUTS,
@@ -179,18 +181,24 @@ export default function LocationForm({
     if (state.ok) onClose();
   }, [state, onClose]);
 
+  const { formRef, requestClose, confirm } = useUnsavedChanges({
+    onClose,
+    pending,
+    extraDirty: thumbnail.url !== (location?.thumbnailUrl ?? null),
+  });
+
   const generalError =
     state.error && !state.field ? state.error : (deleteError ?? null);
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && requestClose()}>
       <DialogContent
         showCloseButton={false}
         className="max-w-[480px] border-line bg-white px-6 py-6 text-ink sm:px-8"
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={requestClose}
           aria-label="Close"
           className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-md text-ink/40 transition-colors hover:text-ink"
         >
@@ -204,10 +212,15 @@ export default function LocationForm({
         </DialogDescription>
 
         <form
-          action={(fd) => {
+          ref={formRef}
+          // Submitted by hand: a form `action` resets every field once it
+          // returns, which would wipe the edits on a failed save.
+          onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
             if (thumbnail.file) fd.set("thumbnailFile", thumbnail.file);
             if (thumbnail.large) fd.set("imageFile", thumbnail.large);
-            formAction(fd);
+            startTransition(() => formAction(fd));
           }}
           className="grid gap-4"
         >
@@ -347,7 +360,7 @@ export default function LocationForm({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={requestClose}
                 className={smallButtonClass}
               >
                 Cancel
@@ -362,6 +375,7 @@ export default function LocationForm({
             </div>
           </div>
         </form>
+        <UnsavedChangesDialog {...confirm} />
       </DialogContent>
     </Dialog>
   );

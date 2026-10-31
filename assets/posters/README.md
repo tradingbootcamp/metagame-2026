@@ -16,3 +16,7 @@ Effective resolution is 288 dpi of the source page scaled to about 275 dpi after
 Run the regular tests with `pnpm test`. With Poppler's `pdftoppm` on PATH, run `POSTER_RENDER_CHECK=1 pnpm exec vitest run src/lib/poster-pdf.test.ts` (PowerShell: set `$env:POSTER_RENDER_CHECK='1'` first). The render check writes review PDFs and PNGs under ignored `tmp/poster-verification/`, checks exact page dimensions, decodes the new code, checks for a second surviving QR, and checks the white print margins. Visually inspect all four PNGs as well. Tests use the verified Berkeley slug; they do not create or change tracking records.
 
 Verified 2026-10-22 against the four current files: every output decodes to the Berkeley short URL, no second code survives (including at half resolution), and the margins are pure white.
+
+## Overlays
+
+The generator repaints two things over the artwork. The dice line becomes "… for 5×$ [d20] = **$100** off your ticket", drawn in Space Grotesk (`fonts/`, OFL) around the die cut from the artwork (`overlays/die-*.png`). A promo code line goes over the sign's tagline on d20 and under METAGAME.GAMES on chess. Boxes and baselines live with each template in `poster-pdf.ts`.
