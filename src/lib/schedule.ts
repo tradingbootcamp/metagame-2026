@@ -125,9 +125,9 @@ export function summarizeRsvps(
  * How the RSVP button reads, and what to confirm before it goes through:
  * null for an interest-only session, which RSVPs in one click.
  */
-const COMMITMENT_TITLE = "This session is counting on you";
+const COMMITMENT_TITLE = "RSVPing here is a commitment";
 const COMMITMENT_STAKES =
-  "RSVPs to this session are a firmer commitment than attending a talk — there are a limited number of spots and they’ll be counting on you to attend.";
+  "RSVPs here are a firmer commitment than attending a talk — there are a limited number of spots and they’ll be counting on you to attend.";
 
 export function rsvpPrompt(
   commitment: boolean,
