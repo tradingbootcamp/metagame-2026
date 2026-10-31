@@ -5,15 +5,34 @@ import {
   useId,
   useRef,
   useState,
+  useSyncExternalStore,
+  useMemo,
   type FormEvent,
   type KeyboardEvent,
   type MouseEvent,
 } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, QrCode } from "lucide-react";
 import type { PosterOption, PosterTracking } from "@/lib/poster-options";
+import {
+  DEFAULT_POSTER_QR,
+  LOGO_PAD,
+  logoClearing,
+  posterQrQuery,
+  qrShapes,
+  QR_CORNERS,
+  QR_DOTS,
+  QR_LOGOS,
+  QR_PARAMS,
+  type PosterQr,
+} from "@/lib/qr-styles";
+import { toSvgPath } from "@/lib/vector-path";
 import { PROMO_PARAM, promoCode } from "@/lib/tracking-links";
+import Mg2Die from "@/v2/components/nav/Mg2Die";
+import { LogoDie } from "@/v2/components/nav/LogoDice";
 
 export type PromoChoice = { code: string; label: string };
+/** A sample code's modules, row-major as "0"/"1", for style previews. */
+export type QrSampleMatrix = { size: number; bits: string };
 
 const inputClass =
   "mt-2 w-full rounded-lg border border-[#19345b]/30 bg-white p-3 text-base";
@@ -22,17 +41,20 @@ export default function PosterForm({
   options,
   initialArea,
   promos,
+  qrSamples,
 }: {
   options: PosterOption[];
   initialArea: string;
   /** Suggested codes for staff with promo.view; empty for everyone else. */
   promos: PromoChoice[];
+  qrSamples: Record<"M" | "H", QrSampleMatrix>;
 }) {
   const [area, setArea] = useState(
     options.some((option) => option.value === initialArea) ? initialArea : "",
   );
   const [design, setDesign] = useState("d20");
   const [size, setSize] = useState("letter");
+  const [qr, setQr] = useQrStyle();
   const [promo, setPromo] = useState("");
   // A /buy/<code> location applies its own code, which replaces any typed one.
   const own =
@@ -49,13 +71,19 @@ export default function PosterForm({
     design,
     size,
     ...(live ? { [PROMO_PARAM]: live } : {}),
+    ...posterQrQuery(qr),
   }).toString();
   async function download(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    await save("pdf");
+  }
+  async function save(format: "pdf" | "svg") {
     setError("");
     setBusy(true);
     try {
-      const response = await fetch(`/api/posters?${query}`);
+      const response = await fetch(
+        `/api/posters?${query}${format === "svg" ? "&format=svg" : ""}`,
+      );
       if (!response.ok)
         throw new Error(
           response.status === 409
@@ -65,7 +93,10 @@ export default function PosterForm({
       const url = URL.createObjectURL(await response.blob());
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `metagame-${design}${live ? `-${live}` : ""}-${size}.pdf`;
+      anchor.download =
+        format === "svg"
+          ? `metagame-qr${live ? `-${live}` : ""}.svg`
+          : `metagame-${design}${live ? `-${live}` : ""}-${size}.pdf`;
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
@@ -158,6 +189,7 @@ export default function PosterForm({
             <option value="chess">Landscape · Chess</option>
           </select>
         </label>
+        <QrStylePicker value={qr} onChange={setQr} samples={qrSamples} />
         <label className="block font-semibold">
           Paper size
           <select
@@ -186,7 +218,17 @@ export default function PosterForm({
           }
           className="w-full rounded-lg bg-[#19345b] px-6 py-4 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {busy ? "Preparing your PDF…" : "Download PDF"}
+          {busy ? "Preparing…" : "Download PDF"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void save("svg")}
+          disabled={
+            !selected?.available || busy || ((own || promo) !== "" && !live)
+          }
+          className="-mt-3 w-full rounded-lg border border-[#19345b] px-6 py-2.5 text-sm font-semibold text-[#19345b] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Download QR only (SVG)
         </button>
         <p className="text-sm" aria-live="polite">
           {selected?.available
@@ -539,5 +581,250 @@ function TrackingSummary({
       <dt>Tracking</dt>
       <dd className="font-mono">{tags}</dd>
     </dl>
+  );
+}
+
+const QR_STYLE_KEY = "posters-qr-style";
+const QR_KEYS = ["dots", "corners", "logo"] as const;
+const QR_CHOICES = { dots: QR_DOTS, corners: QR_CORNERS, logo: QR_LOGOS };
+const QR_ROWS = { dots: "Dots", corners: "Corners", logo: "Centre logo" };
+
+const qrText = (qr: PosterQr) => QR_KEYS.map((key) => qr[key]).join(".");
+function qrFromText(text: string): PosterQr {
+  const parts = text.split(".");
+  const qr = { ...DEFAULT_POSTER_QR };
+  QR_KEYS.forEach((key, i) => {
+    if (Object.hasOwn(QR_CHOICES[key], parts[i] ?? ""))
+      (qr as Record<string, string>)[key] = parts[i];
+  });
+  return qr;
+}
+
+// The last choice, remembered per browser as a convenience; the server render
+// and hydration always see the default.
+let pickedQr: string | null = null;
+const qrListeners = new Set<() => void>();
+const plainQrText = qrText(DEFAULT_POSTER_QR);
+
+function savedQr(): string {
+  if (pickedQr) return pickedQr;
+  try {
+    return qrText(qrFromText(window.localStorage.getItem(QR_STYLE_KEY) ?? ""));
+  } catch {
+    return plainQrText;
+  }
+}
+
+function useQrStyle() {
+  const text = useSyncExternalStore(
+    (listener) => {
+      qrListeners.add(listener);
+      return () => qrListeners.delete(listener);
+    },
+    savedQr,
+    () => plainQrText,
+  );
+  const qr = useMemo(() => qrFromText(text), [text]);
+  function choose(next: PosterQr) {
+    pickedQr = qrText(next);
+    try {
+      window.localStorage.setItem(QR_STYLE_KEY, pickedQr);
+    } catch {}
+    qrListeners.forEach((listener) => listener());
+  }
+  return [qr, choose] as const;
+}
+
+function QrSample({
+  qr,
+  samples,
+  className,
+}: {
+  qr: PosterQr;
+  samples: Record<"M" | "H", QrSampleMatrix>;
+  className?: string;
+}) {
+  const logo = qr.logo === "none" ? null : qr.logo;
+  const { size, bits } = samples[logo ? "H" : "M"];
+  const clear = logo ? logoClearing(size) : 0;
+  const d = useMemo(
+    () =>
+      toSvgPath(
+        qrShapes(
+          { size, get: (row, col) => bits[row * size + col] === "1" },
+          qr,
+          clear,
+        ),
+      ),
+    [size, bits, qr, clear],
+  );
+  const span = size + 2;
+  const room = `${((clear - 2 * LOGO_PAD) / span) * 100}%`;
+  return (
+    <span className={`relative block bg-white ${className ?? ""}`}>
+      <svg viewBox={`-1 -1 ${span} ${span}`} className="block size-full">
+        <path d={d} fill="#000" />
+      </svg>
+      {logo && (
+        <span
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-black"
+          style={{ width: room, height: room }}
+        >
+          {logo === "mg2" ? (
+            <Mg2Die className="size-full" />
+          ) : (
+            <LogoDie className="size-full" />
+          )}
+        </span>
+      )}
+    </span>
+  );
+}
+
+const ARROW_STEPS: Record<string, number> = {
+  ArrowRight: 1,
+  ArrowDown: 1,
+  ArrowLeft: -1,
+  ArrowUp: -1,
+};
+
+function QrStylePicker({
+  value,
+  onChange,
+  samples,
+}: {
+  value: PosterQr;
+  onChange: (qr: PosterQr) => void;
+  samples: Record<"M" | "H", QrSampleMatrix>;
+}) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const summary = QR_KEYS.map((key) =>
+    key === "logo" && value.logo === "none"
+      ? "no logo"
+      : `${QR_CHOICES[key][value[key] as never]["label"] as string}`,
+  ).join(" · ");
+  return (
+    <div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          id={`${id}-toggle`}
+          aria-expanded={open}
+          aria-controls={`${id}-panel`}
+          aria-label="QR code style"
+          onClick={() => setOpen(!open)}
+          className={`flex size-11 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+            open
+              ? "border-[#19345b] bg-[#19345b] text-white"
+              : "border-[#19345b]/30 bg-white text-[#19345b] hover:border-[#19345b]/60"
+          }`}
+        >
+          <QrCode aria-hidden className="size-6" />
+        </button>
+        <p className="min-w-0 text-sm">
+          <span className="font-semibold">QR style</span>{" "}
+          <span className="text-[#19345b]/70">· {summary}</span>
+        </p>
+      </div>
+      {open && (
+        <div
+          id={`${id}-panel`}
+          onKeyDown={(event) => {
+            if (event.key !== "Escape") return;
+            setOpen(false);
+            document.getElementById(`${id}-toggle`)?.focus();
+          }}
+          className="mt-3 grid gap-3 rounded-lg border border-[#19345b]/20 bg-white p-3"
+        >
+          <div className="flex items-center gap-3">
+            <QrSample
+              qr={value}
+              samples={samples}
+              className="size-24 shrink-0 rounded border border-[#19345b]/10 p-1"
+            />
+            <p className="text-xs text-[#19345b]/70">
+              Preview of the QR printed on your poster. Every option shown here
+              passed our scan tests.
+            </p>
+          </div>
+          {QR_KEYS.map((key) => (
+            <QrOptionRow
+              key={key}
+              field={key}
+              value={value}
+              onChange={onChange}
+              samples={samples}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QrOptionRow({
+  field,
+  value,
+  onChange,
+  samples,
+}: {
+  field: (typeof QR_KEYS)[number];
+  value: PosterQr;
+  onChange: (qr: PosterQr) => void;
+  samples: Record<"M" | "H", QrSampleMatrix>;
+}) {
+  const radios = useRef<(HTMLButtonElement | null)[]>([]);
+  const options = Object.entries(QR_CHOICES[field]).map(([key, { label }]) => {
+    const qr = { ...value, [field]: key } as PosterQr;
+    return { key, label, qr };
+  });
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const step = ARROW_STEPS[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const at = options.findIndex((option) => option.key === value[field]);
+    const next = options[(at + step + options.length) % options.length];
+    onChange(next.qr);
+    radios.current[options.indexOf(next)]?.focus();
+  }
+  return (
+    <div>
+      <p id={`qr-row-${field}`} className="mb-1 text-xs font-semibold">
+        {QR_ROWS[field]}
+      </p>
+      <div
+        role="radiogroup"
+        aria-labelledby={`qr-row-${field}`}
+        data-param={QR_PARAMS[field]}
+        onKeyDown={onKeyDown}
+        className="grid grid-cols-4 gap-1.5"
+      >
+        {options.map((option, index) => {
+          const checked = option.key === value[field];
+          return (
+            <button
+              key={option.key}
+              ref={(el) => {
+                radios.current[index] = el;
+              }}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              tabIndex={checked ? 0 : -1}
+              onClick={() => onChange(option.qr)}
+              className={`flex min-w-0 flex-col items-center gap-1 rounded-md border p-1 text-[11px] leading-tight transition-colors ${
+                checked
+                  ? "border-[#19345b] bg-[#19345b]/10 font-semibold ring-1 ring-[#19345b]"
+                  : "border-transparent hover:bg-[#19345b]/5"
+              }`}
+            >
+              <QrSample qr={option.qr} samples={samples} className="size-11" />
+              <span className="w-full text-center">{option.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

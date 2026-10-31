@@ -3,8 +3,12 @@ import { connection } from "next/server";
 import { can } from "@/lib/access";
 import { toolAccess } from "@/lib/admin-auth";
 import { currentSession } from "@/lib/auth";
-import { publicSchedule, type ScheduleViewer } from "@/lib/schedule";
-import { loadSchedule } from "@/lib/schedule-store";
+import {
+  publicSchedule,
+  viewerSessionIds,
+  type ScheduleViewer,
+} from "@/lib/schedule";
+import { loadSchedule, loadViewerPlans } from "@/lib/schedule-store";
 
 // Pre-launch gate: canSeeSchedule() for links, scheduleGate() for the page
 // itself. Remove at launch.
@@ -38,3 +42,20 @@ export const scheduleViewer = cache(async (): Promise<ScheduleViewer> => {
 export const loadPublicSchedule = cache(async () =>
   publicSchedule(await loadRawSchedule(), await scheduleViewer()),
 );
+
+/** The public sessions the signed-in viewer is in; null when signed out. */
+export const loadMySessionIds = cache(async (): Promise<string[] | null> => {
+  const account = await currentSession();
+  if (!account) return null;
+  const [raw, { sessions }, plans] = await Promise.all([
+    loadRawSchedule(),
+    loadPublicSchedule(),
+    loadViewerPlans(account.user.id),
+  ]);
+  const shown = new Set(sessions.map((s) => s.id));
+  return viewerSessionIds(
+    account.user.id,
+    raw.sessions.filter((s) => shown.has(s.id)),
+    plans,
+  );
+});

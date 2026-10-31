@@ -23,6 +23,7 @@ const link = {
   active: true,
   template: false,
 } as TrackingLink;
+const plain = { dots: "square", corners: "square", logo: "none" };
 const request = (query = "area=area:Berkeley&design=d20&size=letter") =>
   new Request(`http://localhost/api/posters?${query}`);
 it("uses the existing admin workflow's Generic poster placement", async () => {
@@ -50,6 +51,7 @@ it("uses the existing admin workflow's Generic poster placement", async () => {
     "poster",
     undefined,
     true,
+    plain,
   );
 });
 beforeEach(() => {
@@ -77,6 +79,7 @@ it("downloads without login and never accepts an arbitrary URL or slug", async (
     "berkeley",
     undefined,
     true,
+    plain,
   );
   const preview = await GET(
     request("area=area:Berkeley&design=d20&size=letter&preview=1"),
@@ -130,6 +133,7 @@ it.each([
     "berkeley",
     undefined,
     true,
+    plain,
   );
 });
 it("prints a live promo code with its discount and refuses others", async () => {
@@ -154,6 +158,7 @@ it("prints a live promo code with its discount and refuses others", async () => 
       discount: "$20",
     },
     true,
+    plain,
   );
   expect(checkPosterPromo).toHaveBeenCalledWith("POSTER20");
   vi.mocked(checkPosterPromo).mockResolvedValue({ ok: false });
@@ -205,5 +210,37 @@ it("prints a /buy/<code> link's own code and keeps it off the QR", async () => {
     "berkeley",
     { code: "ELYSIAN", discount: "$50" },
     false,
+    plain,
   );
+});
+it("passes QR choices through and rejects unknown ones", async () => {
+  expect(
+    (
+      await GET(
+        request(
+          "area=area:Berkeley&design=d20&size=letter&qrDots=dots&qrCorners=dice&qrLogo=mg2",
+        ),
+      )
+    ).status,
+  ).toBe(200);
+  expect(createPosterPdf).toHaveBeenCalledWith(
+    "d20",
+    "letter",
+    "berkeley",
+    undefined,
+    true,
+    { dots: "dots", corners: "dice", logo: "mg2" },
+  );
+  for (const qr of [
+    "qrDots=sparkly",
+    "qrDots=",
+    "qrCorners=toString",
+    "qrLogo=logo",
+  ]) {
+    const response = await GET(
+      request(`area=area:Berkeley&design=d20&size=letter&${qr}`),
+    );
+    expect(response.status).toBe(400);
+  }
+  expect(createPosterPdf).toHaveBeenCalledTimes(1);
 });

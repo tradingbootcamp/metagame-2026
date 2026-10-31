@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Journey from "@/v2/components/journey/Journey";
+import AccountJourney from "@/v2/components/journey/AccountJourney";
 
 export const metadata: Metadata = {
   title: "Financial aid — Metagame 2026",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function FinancialAidPage() {
-  return <Journey slug="financial-aid" />;
+  return <AccountJourney slug="financial-aid" />;
 }

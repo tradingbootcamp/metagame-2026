@@ -7,10 +7,56 @@ import { PNG } from "pngjs";
 import jsQR from "jsqr";
 import {
   createPosterPdf,
+  posterQrBox,
   posterQrUrl,
   type PosterDesign,
   type PosterSize,
 } from "./poster-pdf";
+import {
+  QR_CORNERS,
+  QR_DOTS,
+  QR_LOGOS,
+  type QrCorners,
+  type QrDots,
+  type QrLogo,
+} from "./qr-styles";
+
+const renderCheck = process.env.POSTER_RENDER_CHECK === "1";
+const directory = path.resolve("tmp/poster-verification");
+
+// jsQR is brittle with styled modules: on the whole page its finder search
+// can lock onto artwork, and on a tight crop its block thresholds can miss.
+// Phone scanners are far more forgiving, so either read counts.
+async function decodeAt(pdf: string, dpi: number, design: PosterDesign) {
+  const prefix = pdf.replace(/\.pdf$/, `-${dpi}`);
+  const render = async (crop: string[]) => {
+    execFileSync("pdftoppm", [
+      ...["-r", `${dpi}`, "-png", "-singlefile", ...crop],
+      ...[pdf, prefix],
+    ]);
+    return PNG.sync.read(await readFile(`${prefix}.png`));
+  };
+  const page = await render([]);
+  const box = posterQrBox(design, "letter");
+  const px = (pt: number) => `${Math.round((pt * dpi) / 72)}`;
+  const crop = await render([
+    ...["-x", px(box.x - 6), "-y", px(box.top - 6)],
+    ...["-W", px(box.size + 12), "-H", px(box.size + 12)],
+  ]);
+  // A white surround stands in for the quiet zone the crop cut off.
+  const pad = crop.width >> 1;
+  const width = crop.width + 2 * pad;
+  const padded = new Uint8ClampedArray(width * width * 4).fill(255);
+  for (let row = 0; row < crop.height; row++)
+    padded.set(
+      crop.data.subarray(row * crop.width * 4, (row + 1) * crop.width * 4),
+      ((row + pad) * width + pad) * 4,
+    );
+  return [
+    jsQR(new Uint8ClampedArray(page.data), page.width, page.height)?.data,
+    jsQR(padded, width, width)?.data,
+  ];
+}
 
 describe("poster PDF", () => {
   it("encodes a promo code on the short link", async () => {
@@ -90,4 +136,49 @@ describe("poster PDF", () => {
       }, 30_000);
     }
   }
+});
+
+describe("styled poster QR", () => {
+  const combos = (Object.keys(QR_DOTS) as QrDots[]).flatMap((dots) =>
+    (Object.keys(QR_CORNERS) as QrCorners[]).flatMap((corners) =>
+      (Object.keys(QR_LOGOS) as QrLogo[]).map((logo) => ({
+        dots,
+        corners,
+        logo,
+      })),
+    ),
+  );
+  for (const qr of combos)
+    for (const design of ["d20", "chess"] as PosterDesign[]) {
+      const name = `${qr.dots}-${qr.corners}-${qr.logo}`;
+      it(`renders ${name} on ${design}`, async () => {
+        for (const size of ["letter", "13x19"] as PosterSize[])
+          for (const promo of [undefined, "POSTER20"]) {
+            const bytes = await createPosterPdf(
+              design,
+              size,
+              "berkeley",
+              promo ? { code: promo, discount: "$20" } : undefined,
+              true,
+              qr,
+            );
+            expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+            if (!renderCheck || size !== "letter") continue;
+            await mkdir(directory, { recursive: true });
+            const pdf = path.join(
+              directory,
+              `qr-${name}-${design}${promo ? "-promo" : ""}.pdf`,
+            );
+            await writeFile(pdf, bytes);
+            const url = posterQrUrl("berkeley", promo);
+            // 75 dpi is a stricter check than any phone at arm's length; jsQR
+            // misses some valid codes there that phone decoders read.
+            for (const dpi of [150]) {
+              const reads = await decodeAt(pdf, dpi, design);
+              expect(reads).toContain(url);
+              for (const read of reads) if (read) expect(read).toBe(url);
+            }
+          }
+      }, 60_000);
+    }
 });

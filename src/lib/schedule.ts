@@ -376,6 +376,20 @@ export function offsetPx(session: Placed<Timed>, slotStart: number): number {
   return Math.max(0, pacificMinutes(session.startsAt) - slotStart) * PX_PER_MIN;
 }
 
+/** Pixels down the day grid for the current Pacific time, or null if `now` isn't on `dayKey` or is outside the grid's hours. */
+export function nowLinePx(
+  dayKey: string,
+  firstSlot: number,
+  now: Date,
+): number | null {
+  const iso = now.toISOString();
+  if (pacificDayKey(iso) !== dayKey) return null;
+  const minutes =
+    pacificMinutes(iso) +
+    (now.getUTCSeconds() + now.getUTCMilliseconds() / 1000) / 60;
+  return minutes < firstSlot ? null : (minutes - firstSlot) * PX_PER_MIN;
+}
+
 export function heightPx(session: Placed<Timed>): number {
   const dur = pacificMinutes(session.endsAt) - pacificMinutes(session.startsAt);
   return Math.max(SLOT_PX, dur * PX_PER_MIN);
@@ -714,6 +728,39 @@ export function publicSchedule(
     imageUrl: l.imageUrl,
   }));
   return { locations, sessions };
+}
+
+/**
+ * The ids of the sessions a viewer is in: hosting, shepherding, RSVP'd to
+ * (waitlist included) or bookmarked. Only ids from `sessions` come back, so
+ * plans on sessions the caller left out (drafts, hidden rooms) stay out.
+ */
+export function viewerSessionIds(
+  userId: string,
+  sessions: Pick<ScheduleSession, "id" | "hosts" | "shepherd">[],
+  plans: ViewerPlans,
+): string[] {
+  const marked = new Set(plans.bookmarks);
+  return sessions
+    .filter(
+      (s) =>
+        s.hosts.some((h) => h.userId === userId) ||
+        s.shepherd?.userId === userId ||
+        plans.rsvps[s.id] ||
+        marked.has(s.id),
+    )
+    .map((s) => s.id);
+}
+
+/** The days with only the given sessions left; tabs and time slots stay put. */
+export function onlySessions<D extends { sessions: { id: string }[] }>(
+  days: D[],
+  ids: ReadonlySet<string>,
+): D[] {
+  return days.map((d) => ({
+    ...d,
+    sessions: d.sessions.filter((s) => ids.has(s.id)),
+  }));
 }
 
 /** "my-session-title" from "My Session Title!", capped so slugs stay short. */
