@@ -350,6 +350,20 @@ export function offsetPx(session: Placed<Timed>, slotStart: number): number {
   return Math.max(0, pacificMinutes(session.startsAt) - slotStart) * PX_PER_MIN;
 }
 
+/** Pixels down the day grid for the current Pacific time, or null if `now` isn't on `dayKey` or is outside the grid's hours. */
+export function nowLinePx(
+  dayKey: string,
+  firstSlot: number,
+  now: Date,
+): number | null {
+  const iso = now.toISOString();
+  if (pacificDayKey(iso) !== dayKey) return null;
+  const minutes =
+    pacificMinutes(iso) +
+    (now.getUTCSeconds() + now.getUTCMilliseconds() / 1000) / 60;
+  return minutes < firstSlot ? null : (minutes - firstSlot) * PX_PER_MIN;
+}
+
 export function heightPx(session: Placed<Timed>): number {
   const dur = pacificMinutes(session.endsAt) - pacificMinutes(session.startsAt);
   return Math.max(SLOT_PX, dur * PX_PER_MIN);

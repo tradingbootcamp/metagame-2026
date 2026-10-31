@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { FaListUl, FaThLarge } from "react-icons/fa";
 import {
   cellSessions,
@@ -10,6 +10,7 @@ import {
   hostNames,
   laneInset,
   NO_ROOM,
+  nowLinePx,
   offsetPx,
   overlapLanes,
   slotLabel,
@@ -198,6 +199,20 @@ function SessionBlock<S extends ViewSession>({
   );
 }
 
+/** The current time, ticking each minute; null until mounted so the server render matches. */
+const NOW_TICK_MS = 5_000;
+
+function useNow(): Date | null {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    tick();
+    const id = setInterval(tick, NOW_TICK_MS);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
 /** One day as a room-by-time grid, the way the printed schedule reads. */
 export function GridDay<S extends ViewSession>({
   day,
@@ -212,6 +227,8 @@ export function GridDay<S extends ViewSession>({
 }) {
   const lanes = useMemo(() => overlapLanes(day.sessions), [day.sessions]);
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
+  const now = useNow();
+  const nowTop = now ? nowLinePx(day.key, day.slots[0], now) : null;
   return (
     <div className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--col-w:104px] [--time-w:44px] sm:[--col-w:120px] sm:[--time-w:56px]">
       <div className="min-w-fit">
@@ -248,7 +265,17 @@ export function GridDay<S extends ViewSession>({
           ))}
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: gridCols }}>
+        <div
+          className="relative grid"
+          style={{ gridTemplateColumns: gridCols }}
+        >
+          {nowTop !== null && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute right-0 left-0 z-[25] h-0.5 bg-red-600 transition-[top] ease-linear"
+              style={{ top: nowTop, transitionDuration: `${NOW_TICK_MS}ms` }}
+            />
+          )}
           {day.slots.map((slotStart) => (
             <div key={slotStart} className="contents">
               <div
