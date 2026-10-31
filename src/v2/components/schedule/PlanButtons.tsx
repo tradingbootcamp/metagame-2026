@@ -193,17 +193,19 @@ export default function PlanButtons({
               )}
               {prompt.confirm.title}
             </DialogTitle>
-            {prompt.confirm.conflicts.length > 0 && (
-              <ul
-                className={`mb-3 flex flex-col gap-1 rounded-md border-l-4 px-3 py-2 text-sm font-semibold text-ink ${tone.list}`}
-              >
-                {prompt.confirm.conflicts.map((line, i) => (
-                  <li key={i}>{line}</li>
-                ))}
-              </ul>
-            )}
-            <DialogDescription className="text-sm text-ink/80">
-              {prompt.confirm.body}
+            <DialogDescription asChild>
+              <div className="flex flex-col gap-3 text-sm text-ink/80">
+                {prompt.confirm.conflicts.length > 0 && (
+                  <ul
+                    className={`flex flex-col gap-1 rounded-md border-l-4 px-3 py-2 font-semibold text-ink ${tone.list}`}
+                  >
+                    {prompt.confirm.conflicts.map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+                {prompt.confirm.body && <p>{prompt.confirm.body}</p>}
+              </div>
             </DialogDescription>
             <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
               <button

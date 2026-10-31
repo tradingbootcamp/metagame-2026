@@ -236,8 +236,9 @@ export function rsvpPrompt(
   const running = conflicts.some(
     (c) => c.role === "host" || c.role === "shepherd",
   );
+  // A waitlist place holds no spot, so only "going" is counted on.
   const held = conflicts.filter(
-    (c) => c.commitment && c.role !== "host" && c.role !== "shepherd",
+    (c) => c.commitment && c.role === "going",
   ).length;
   const yours = held > 1 ? "your existing RSVPs" : "your existing RSVP";
   const stakesNote =
