@@ -18,6 +18,7 @@ Date: 2026-10-28. Reviewed by three agents and revised; decisions below were set
 ## 1. Scope
 
 In scope for this feature cycle:
+
 1. `/backstage/megagame`: verification tool for staff and designated volunteers. Open a quest by typed label code or by scanning its QR; see the checker; confirm completion for a set of players.
 2. Level-up action with soft checks and a "Yes, I'm sure" override.
 3. `/backstage/megagame/dashboard`: level and completion distribution, and change over time with bucket sizes from 5m to 1d.
@@ -28,6 +29,7 @@ Out of scope for this cycle, with room left in the model: session reward trackin
 ## 2. Access
 
 Two permission keys in a new "Megagame" group, both level edit, audience team:
+
 - `megagame.verify`: the verification tool, level-ups, and the dashboard. The "Megagame volunteer" role holds this. Anyone who can record confirmations may look at the dashboard.
 - `megagame.manage` (implies `megagame.verify`): quest import and editing, voiding anyone's records, editing requirements.
 
@@ -38,7 +40,9 @@ Effect on existing code: two catalog entries and one `TOOLS` entry. Roles grid a
 ## 3. Identification
 
 ### 3.1 Players
+
 A player is a `user` row. Lookup paths in the tool, in order of expected use:
+
 1. Typed code via `PinInput` (6 chars, Crockford, ticket normalizer).
 2. Name search (own action gated on `megagame.verify`; returns name, pronouns, photo thumbnail; never creates accounts).
 3. In-page QR scanner (jsQR, dynamic import, a few frames per second), later phase.
@@ -52,7 +56,9 @@ The in-progress player list is kept in the URL query string so a reload, tab swi
 Players without an account cannot be recorded; volunteers send them to `/login`. Players without a claimed ticket are shown with a warning, not blocked (staff, speakers and comps may not have claimed tickets).
 
 ### 3.2 Quests
+
 `quests.code` is the label code: 6 Crockford characters (fixed length so `PinInput` works), generated or chosen at import. Printed as text and as a QR encoding `https://<site>/q/<code>`.
+
 - Viewer with `megagame.verify`: redirect to `/backstage/megagame/q/<code>`.
 - Signed-out volunteer: `/login?next=/q/<code>` works today via `safeNextPath`.
 - Anyone else: redirect to their own account page (`/account`; signed-out viewers go through `/login?next=/account`). Nothing about the quest is shown.
@@ -116,6 +122,7 @@ Level derivation (pure, in `megagame-rules.ts`): a player's current level in a c
 Requirements (soft checks) are a constant table in `megagame-rules.ts` in cycle one, keyed by (class, level): minimum completions in that class, plus a warning when a level is skipped. Shipping with the table empty is allowed. A UI-editable table is the follow-up if redeploying to tune proves too slow.
 
 Concurrency and retries, given no transactions:
+
 - Confirm: insert the `confirmations` row with its requested players (`on conflict do nothing`). If it already exists and is voided, return "voided" and insert nothing. Otherwise (new or a retry) run `insert ... on conflict do nothing returning` for all requested players at once, targeting the partial index. The result is built from the completion rows carrying this confirmation id: present means recorded, absent means already completed elsewhere. A crash between the two statements is repaired by the retry, since the second statement is idempotent.
 - Level-up: `insert ... on conflict do nothing returning` on the event id and on the partial unique index; check evaluation before the insert is not atomic, which is acceptable for soft checks.
 - Undo: voids the confirmation and its completions by confirmation id (`db.batch()` for the two updates). A retry of the original confirm after undo returns "voided", it does not re-insert.
@@ -125,6 +132,7 @@ Code layout: `src/db/schema/megagame.ts`; `src/lib/megagame-rules.ts` (pure: cod
 ## 5. Flows
 
 ### 5.1 Verify a quest
+
 1. Home: quest code `PinInput` (autofocus), the current player list (from the URL), recent confirmations by this volunteer with Undo, link to level-up. Phones: a Scan button when the scanner phase has landed.
 2. Quest page (`/backstage/megagame/q/<code>`): title, class, lock window, active flag. Checker:
    - `answer`: a field to type what the players said, showing match / no match with a normalizer (case, whitespace, punctuation, accents). A "Reveal answers" tap shows the accepted list, so answers are not on screen by default at a crowded desk. The volunteer decides; the field is a helper and feeds `quest_attempts`.
@@ -134,21 +142,25 @@ Code layout: `src/db/schema/megagame.ts`; `src/lib/megagame-rules.ts` (pure: cod
 5. Undo: the volunteer who made a confirmation may void it with a reason; `megagame.manage` holders may void any confirmation, or one player's completion out of a group, from the quest or player page. Every void is logged.
 
 ### 5.2 Level up
+
 1. Pick player (same lookup), pick class; see current level per class; pick the new level (default current + 1).
 2. The action lists failing checks in words ("Has 1 wizard quest; level 2 asks for 3", "Skips level 2"). With failures the button reads "Record anyway" and needs a "Yes, I'm sure" checkbox plus optional reason. No setting makes checks hard; zeroing the constant table turns them off.
 3. Optional photo of the record card: browser-side downscale, Blob upload, `card_photo_url`. Never required.
 
 ### 5.3 Management
+
 Cycle one: a CSV paste importer (code, title, class, kind, answers, evidence, hint, min/max level) and a read-only quest table with per-quest QR download, gated on `megagame.manage`. An inline editor only if staff need it during the con.
 
 ## 6. Dashboard
 
 Gated on `megagame.verify`. Tables first, inline SVG bars for the few charts that matter, no charting dependency. Last phase, so it cannot block the tool.
+
 1. Levels: class x level grid of players at each current level; denominator is claimed ticket holders, labeled as such (there is no check-in data).
 2. Quests: completions per quest, per class, distinct players with at least one completion, completions per volunteer.
 3. Over time: completions and level-ups per class per bucket, bucket sizes 5m, 15m, 30m, 1h, 3h, 6h, 1d, range presets (last 2h, today, whole con). Computed with `date_bin` over a whitelist of intervals, filtered to non-voided. A cumulative view gives the level distribution as of each bucket end.
 4. Recent overrides and voids.
 5. CSV export of the three event tables.
+
 Page refreshes every 60 s.
 
 ## 7. Future data sources (placeholders only)
