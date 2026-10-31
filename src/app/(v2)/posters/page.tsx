@@ -5,14 +5,10 @@ import { toolAccess } from "@/lib/admin-auth";
 import { listStripeCodes, standardProduct } from "@/lib/promo-codes-stripe";
 import { posterAccepts } from "@/lib/poster-promo";
 import QRCode from "qrcode";
-import {
-  logoClearing,
-  POSTER_QR_STYLE_KEYS,
-  posterQrLogo,
-  qrShapes,
-} from "@/lib/qr-styles";
-import { toSvgPath } from "@/lib/vector-path";
-import PosterForm, { type PromoChoice, type QrPreview } from "./poster-form";
+import PosterForm, {
+  type PromoChoice,
+  type QrSampleMatrix,
+} from "./poster-form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -43,23 +39,15 @@ async function promoChoices(): Promise<PromoChoice[]> {
   }
 }
 
-/** Each style drawn on a sample link, by the same geometry the PDF uses. */
-function qrPreviews() {
-  return Object.fromEntries(
-    POSTER_QR_STYLE_KEYS.map((style) => {
-      const logo = posterQrLogo(style);
-      const { modules } = QRCode.create("https://metagame.games/go/poster", {
-        errorCorrectionLevel: logo ? "H" : "M",
-      });
-      const clear = logo ? logoClearing(modules.size) : 0;
-      const preview: QrPreview = {
-        d: toSvgPath(qrShapes(modules, style, clear)),
-        size: modules.size,
-        clear,
-      };
-      return [style, preview];
-    }),
-  ) as Record<(typeof POSTER_QR_STYLE_KEYS)[number], QrPreview>;
+/** A sample link's modules at levels M and H, for the QR style previews. */
+function qrSamples(): Record<"M" | "H", QrSampleMatrix> {
+  const sample = (level: "M" | "H") => {
+    const { modules } = QRCode.create("https://metagame.games/go/poster", {
+      errorCorrectionLevel: level,
+    });
+    return { size: modules.size, bits: Array.from(modules.data).join("") };
+  };
+  return { M: sample("M"), H: sample("H") };
 }
 
 export default async function PostersPage() {
@@ -86,7 +74,7 @@ export default async function PostersPage() {
             options={options}
             initialArea={GENERIC_AREA}
             promos={promos}
-            qrPreviews={qrPreviews()}
+            qrSamples={qrSamples()}
           />
         ) : (
           <p role="alert" className="rounded-xl border border-current p-6">

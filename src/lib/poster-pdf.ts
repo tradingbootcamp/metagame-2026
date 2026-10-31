@@ -12,8 +12,8 @@ import {
 } from "pdf-lib";
 import QRCode from "qrcode";
 import { POSTER_ORIGIN } from "@/lib/poster-options";
-import { drawStyledQr } from "@/lib/poster-qr";
-import type { PosterQrStyle } from "@/lib/qr-styles";
+import { drawStyledQr, styledQrSvg } from "@/lib/poster-qr";
+import { DEFAULT_POSTER_QR, isPlainQr, type PosterQr } from "@/lib/qr-styles";
 import {
   PROMO_PARAM,
   promoCode,
@@ -289,6 +289,22 @@ export function posterQrUrl(slug: string, promo = ""): string {
   return url.toString();
 }
 
+/** Just the poster's QR, as an SVG, for printing or placing elsewhere. */
+export async function createPosterQrSvg(
+  slug: string,
+  promo: string,
+  qrStyle: PosterQr,
+): Promise<string> {
+  if (validateSlug(slug) || promoCode(promo) !== promo)
+    throw new Error("Invalid poster link");
+  return styledQrSvg({
+    url: posterQrUrl(slug, promo),
+    qr: qrStyle,
+    ink: rgb(0, 0, 0),
+    font: await readFile(path.join(ASSETS, "fonts", "SpaceGrotesk-Bold.ttf")),
+  });
+}
+
 export async function createPosterPdf(
   design: PosterDesign,
   size: PosterSize,
@@ -296,7 +312,7 @@ export async function createPosterPdf(
   promo?: PosterPromo,
   /** False when the link applies the code itself, so the QR stays plain. */
   promoOnQr = true,
-  qrStyle: PosterQrStyle = "square",
+  qrStyle: PosterQr = DEFAULT_POSTER_QR,
 ): Promise<Uint8Array> {
   if (validateSlug(slug) || (promo && promoCode(promo.code) !== promo.code))
     throw new Error("Invalid poster link");
@@ -342,10 +358,10 @@ export async function createPosterPdf(
     color: rgb(1, 1, 1),
   });
   const qrUrl = posterQrUrl(slug, promoOnQr ? promo?.code : "");
-  if (qrStyle !== "square")
+  if (!isPlainQr(qrStyle))
     drawStyledQr(page, {
       url: qrUrl,
-      style: qrStyle,
+      qr: qrStyle,
       x: qr.x,
       top: qr.top,
       size: qr.size,

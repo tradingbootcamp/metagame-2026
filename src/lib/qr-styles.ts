@@ -42,60 +42,91 @@ export const LINK_QR_STYLES = {
   logo: { ...SHAPES.dots, label: "Logo", image: "/images/logo_square.png" },
 } as const;
 
-export type QrLogo = "mg2" | "die";
+// Posters pick dots, corners and a centre logo independently, and draw them
+// as vectors with `qrShapes` (PDF and previews alike).
+export const QR_DOTS = {
+  square: { label: "Square", type: "square" },
+  dots: { label: "Dots", type: "dots" },
+  blobby: { label: "Blobby", type: "extra-rounded" },
+  classy: { label: "Classy", type: "classy-rounded" },
+} as const;
+// A rounded frame needs a round centre: square centres in rounded frames
+// failed jsQR's finder check on most 150 dpi poster renders.
+export const QR_CORNERS = {
+  square: { label: "Square" },
+  rounded: { label: "Rounded" },
+  dice: { label: "Dice" },
+} as const;
+export const QR_LOGOS = {
+  none: { label: "None" },
+  mg2: { label: "MG2 die" },
+  die: { label: "MG die, color" },
+} as const;
+export type QrDots = keyof typeof QR_DOTS;
+export type QrCorners = keyof typeof QR_CORNERS;
+export type QrLogo = keyof typeof QR_LOGOS;
+export type PosterQr = { dots: QrDots; corners: QrCorners; logo: QrLogo };
+export const DEFAULT_POSTER_QR: PosterQr = {
+  dots: "square",
+  corners: "square",
+  logo: "none",
+};
+export const QR_PARAMS = {
+  dots: "qrDots",
+  corners: "qrCorners",
+  logo: "qrLogo",
+} as const;
+const CHOICES = { dots: QR_DOTS, corners: QR_CORNERS, logo: QR_LOGOS };
 
-/**
- * The poster catalog, drawn as vectors by `qrShapes` (PDF and previews alike).
- * "rounded" is left off: its square eye centres inside rounded frames failed
- * jsQR's finder check on most 150 dpi poster renders ("dice" is the same
- * modules with round centres).
- */
-export const POSTER_QR_STYLES = {
-  square: SHAPES.square,
-  dots: SHAPES.dots,
-  blobby: SHAPES.blobby,
-  classy: SHAPES.classy,
-  mg2: { ...SHAPES.dots, label: "MG2 die", logo: "mg2" },
-  die: { ...SHAPES.dots, label: "MG die, color", logo: "die" },
-  // Finders as dice showing 1. A five-pip face broke the 1:1:3:1:1 finder
-  // ratio and decoded nowhere.
-  dice: { ...SHAPES.rounded, label: "Dice corners", eyeDot: "dot" },
-} as const satisfies Record<string, Shape & { logo?: QrLogo }>;
-export type PosterQrStyle = keyof typeof POSTER_QR_STYLES;
-export const POSTER_QR_STYLE_KEYS = Object.keys(
-  POSTER_QR_STYLES,
-) as PosterQrStyle[];
-export const isPosterQrStyle = (value: string): value is PosterQrStyle =>
-  Object.hasOwn(POSTER_QR_STYLES, value);
-export const posterQrLogo = (style: PosterQrStyle): QrLogo | undefined =>
-  "logo" in POSTER_QR_STYLES[style]
-    ? (POSTER_QR_STYLES[style] as { logo: QrLogo }).logo
-    : undefined;
+export const isPlainQr = (qr: PosterQr) =>
+  qr.dots === "square" && qr.corners === "square" && qr.logo === "none";
+
+/** The QR choice in `params`, or null if any part is unknown. */
+export function parsePosterQr(params: URLSearchParams): PosterQr | null {
+  const qr = { ...DEFAULT_POSTER_QR };
+  for (const key of Object.keys(QR_PARAMS) as (keyof PosterQr)[]) {
+    const value = params.get(QR_PARAMS[key]);
+    if (value === null) continue;
+    if (!Object.hasOwn(CHOICES[key], value)) return null;
+    (qr as Record<string, string>)[key] = value;
+  }
+  return qr;
+}
+
+/** Query entries for `qr`, leaving defaults out. */
+export function posterQrQuery(qr: PosterQr): Record<string, string> {
+  return Object.fromEntries(
+    (Object.keys(QR_PARAMS) as (keyof PosterQr)[])
+      .filter((key) => qr[key] !== DEFAULT_POSTER_QR[key])
+      .map((key) => [QR_PARAMS[key], qr[key]]),
+  );
+}
 
 // Logo codes clear a centred, odd-sized block of modules, so it's symmetric
 // about the centre module, at roughly this share of the width. Level H
-// recovers ~30% of codewords; this clears ~5% of the modules.
-const LOGO_SHARE = 0.22;
+// recovers ~30% of codewords.
+export const LOGO_SHARE = 0.26;
+/** White kept between the cleared block's edge and the logo, in modules. */
+export const LOGO_PAD = 0.4;
 
 export type QrMatrix = { size: number; get(row: number, col: number): unknown };
 
-export function logoClearing(size: number): number {
-  const n = Math.round(size * LOGO_SHARE);
+export function logoClearing(size: number, share = LOGO_SHARE): number {
+  const n = Math.round(size * share);
   return n % 2 ? n : n + 1;
 }
+
+/** Faces (top-left, top-right, bottom-left) and pip radius of dice corners. */
+export const DICE = { faces: [2, 2, 6], pip: 0.38 };
 
 /**
  * Filled outlines for a QR code in module units (top-left of the symbol at
  * 0,0, y down, no quiet zone), matching qr-code-styling's figures. Everything
- * winds the same way so a nonzero fill unions it. `clear` blanks a centred
- * block of that many modules for a logo.
+ * winds the same way so a nonzero fill unions it (die pips wind the other way
+ * to cut holes). `clear` blanks a centred block of that many modules.
  */
-export function qrShapes(
-  matrix: QrMatrix,
-  style: PosterQrStyle,
-  clear = 0,
-): Cmd[] {
-  const { dots, eye, eyeDot } = POSTER_QR_STYLES[style];
+export function qrShapes(matrix: QrMatrix, qr: PosterQr, clear = 0): Cmd[] {
+  const dots = QR_DOTS[qr.dots].type;
   const count = matrix.size;
   const lo = (count - clear) / 2;
   const hi = (count + clear) / 2;
@@ -114,16 +145,27 @@ export function qrShapes(
     for (let c = 0; c < count; c++)
       if (visible(r, c))
         out.push(...dot(dots, c, r, (dx, dy) => visible(r + dy, c + dx)));
-  for (const [col, row] of [
+  const corners = [
     [0, 0],
     [count - 7, 0],
     [0, count - 7],
-  ]) {
+  ];
+  corners.forEach(([col, row], i) => {
     out.push(
-      ...eyeFrame(eye, col, row),
-      ...eyeCenter(eyeDot, col + 2, row + 2),
+      ...eyeFrame(
+        qr.corners === "square" ? "square" : "extra-rounded",
+        col,
+        row,
+      ),
+      ...(qr.corners === "dice"
+        ? dieFace(DICE.faces[i], DICE.pip, col + 2, row + 2)
+        : eyeCenter(
+            qr.corners === "square" ? "square" : "dot",
+            col + 2,
+            row + 2,
+          )),
     );
-  }
+  });
   return out;
 }
 
@@ -138,20 +180,6 @@ const sideRounded = (x: number, y: number, a: number) =>
       ["L", x, y + 1],
       ["L", x + 0.5, y + 1],
       ...arc(x + 0.5, y + 1, 0.5, 0, x + 0.5, y),
-      ["Z"],
-    ],
-    a,
-    x,
-    y,
-  );
-const cornerRounded = (x: number, y: number, a: number) =>
-  turned(
-    [
-      ["M", x, y],
-      ["L", x, y + 1],
-      ["L", x + 1, y + 1],
-      ["L", x + 1, y + 0.5],
-      ...arc(x + 1, y + 0.5, 0.5, 0, x + 0.5, y),
       ["Z"],
     ],
     a,
@@ -189,7 +217,7 @@ const cornersRounded = (x: number, y: number, a: number) =>
 
 const Q = Math.PI / 2;
 
-type PosterDot = (typeof POSTER_QR_STYLES)[PosterQrStyle]["dots"];
+type PosterDot = (typeof QR_DOTS)[QrDots]["type"];
 
 function dot(
   type: PosterDot,
@@ -215,9 +243,7 @@ function dot(
   if (n === 2) {
     const a =
       left && top ? Q : top && right ? Math.PI : right && bottom ? -Q : 0;
-    return type === "extra-rounded"
-      ? cornerExtraRounded(x, y, a)
-      : cornerRounded(x, y, a);
+    return cornerExtraRounded(x, y, a);
   }
   const a = top ? Q : right ? Math.PI : bottom ? -Q : 0;
   return sideRounded(x, y, a);
@@ -255,6 +281,63 @@ function eyeFrame(type: EyeType, x: number, y: number): Cmd[] {
     ["L", x + 1, y + 2.5],
     ...arc(x + 1, y + 2.5, 1.5, 1, x + 2.5, y + 1),
     ["Z"],
+  ];
+}
+
+// Pip centres on the 3×3 face, spread a little past the usual quarters so
+// a six's columns of three stay apart.
+const LO = 0.7;
+const MID = 1.5;
+const HI = 2.3;
+const FACES: Record<number, [number, number][]> = {
+  1: [[MID, MID]],
+  2: [
+    [LO, LO],
+    [HI, HI],
+  ],
+  3: [
+    [LO, LO],
+    [MID, MID],
+    [HI, HI],
+  ],
+  4: [
+    [LO, LO],
+    [HI, LO],
+    [LO, HI],
+    [HI, HI],
+  ],
+  5: [
+    [LO, LO],
+    [HI, LO],
+    [MID, MID],
+    [LO, HI],
+    [HI, HI],
+  ],
+  6: [
+    [LO, LO],
+    [LO, MID],
+    [LO, HI],
+    [HI, LO],
+    [HI, MID],
+    [HI, HI],
+  ],
+};
+
+/** A solid rounded 3×3 die with its pips as holes (wound the other way). */
+function dieFace(face: number, pip: number, x: number, y: number): Cmd[] {
+  const r = 0.6;
+  return [
+    ["M", x, y + r],
+    ["L", x, y + 3 - r],
+    ...arc(x, y + 3 - r, r, 0, x + r, y + 3),
+    ["L", x + 3 - r, y + 3],
+    ...arc(x + 3 - r, y + 3, r, 0, x + 3, y + 3 - r),
+    ["L", x + 3, y + r],
+    ...arc(x + 3, y + r, r, 0, x + 3 - r, y),
+    ["L", x + r, y],
+    ...arc(x + r, y, r, 0, x, y + r),
+    ["Z"],
+    ...FACES[face].flatMap(([cx, cy]) => circle(x + cx, y + cy, pip, true)),
   ];
 }
 

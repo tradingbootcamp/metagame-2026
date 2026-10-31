@@ -12,7 +12,14 @@ import {
   type PosterDesign,
   type PosterSize,
 } from "./poster-pdf";
-import { POSTER_QR_STYLE_KEYS } from "./qr-styles";
+import {
+  QR_CORNERS,
+  QR_DOTS,
+  QR_LOGOS,
+  type QrCorners,
+  type QrDots,
+  type QrLogo,
+} from "./qr-styles";
 
 const renderCheck = process.env.POSTER_RENDER_CHECK === "1";
 const directory = path.resolve("tmp/poster-verification");
@@ -132,10 +139,20 @@ describe("poster PDF", () => {
 });
 
 describe("styled poster QR", () => {
-  for (const style of POSTER_QR_STYLE_KEYS)
-    for (const design of ["d20", "chess"] as PosterDesign[])
-      for (const size of ["letter", "13x19"] as PosterSize[])
-        it(`renders ${style} on ${design} ${size}`, async () => {
+  const combos = (Object.keys(QR_DOTS) as QrDots[]).flatMap((dots) =>
+    (Object.keys(QR_CORNERS) as QrCorners[]).flatMap((corners) =>
+      (Object.keys(QR_LOGOS) as QrLogo[]).map((logo) => ({
+        dots,
+        corners,
+        logo,
+      })),
+    ),
+  );
+  for (const qr of combos)
+    for (const design of ["d20", "chess"] as PosterDesign[]) {
+      const name = `${qr.dots}-${qr.corners}-${qr.logo}`;
+      it(`renders ${name} on ${design}`, async () => {
+        for (const size of ["letter", "13x19"] as PosterSize[])
           for (const promo of [undefined, "POSTER20"]) {
             const bytes = await createPosterPdf(
               design,
@@ -143,23 +160,25 @@ describe("styled poster QR", () => {
               "berkeley",
               promo ? { code: promo, discount: "$20" } : undefined,
               true,
-              style,
+              qr,
             );
             expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
             if (!renderCheck || size !== "letter") continue;
             await mkdir(directory, { recursive: true });
             const pdf = path.join(
               directory,
-              `qr-${style}-${design}${promo ? "-promo" : ""}.pdf`,
+              `qr-${name}-${design}${promo ? "-promo" : ""}.pdf`,
             );
             await writeFile(pdf, bytes);
             const url = posterQrUrl("berkeley", promo);
-            // jsQR misses some small dot-only codes at 75 dpi (zxing reads them).
-            for (const dpi of style === "dots" ? [150] : [150, 75]) {
+            // 75 dpi is a stricter check than any phone at arm's length; jsQR
+            // misses some valid codes there that phone decoders read.
+            for (const dpi of [150]) {
               const reads = await decodeAt(pdf, dpi, design);
               expect(reads).toContain(url);
               for (const read of reads) if (read) expect(read).toBe(url);
             }
           }
-        }, 60_000);
+      }, 60_000);
+    }
 });

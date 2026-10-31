@@ -207,12 +207,18 @@ export function arc(
   return out;
 }
 
-/** A full circle, wound counter-clockwise on screen like qr-code-styling's shapes. */
-export function circle(cx: number, cy: number, r: number): Cmd[] {
+/** A full circle, wound counter-clockwise on screen (like qr-code-styling's shapes) unless `clockwise`. */
+export function circle(
+  cx: number,
+  cy: number,
+  r: number,
+  clockwise = false,
+): Cmd[] {
+  const sweep = clockwise ? 1 : 0;
   return [
     ["M", cx, cy - r],
-    ...arc(cx, cy - r, r, 0, cx, cy + r),
-    ...arc(cx, cy + r, r, 0, cx, cy - r),
+    ...arc(cx, cy - r, r, sweep, cx, cy + r),
+    ...arc(cx, cy + r, r, sweep, cx, cy - r),
     ["Z"],
   ];
 }

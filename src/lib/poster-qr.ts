@@ -25,10 +25,10 @@ import {
 } from "pdf-lib";
 import QRCode from "qrcode";
 import {
+  LOGO_PAD,
   logoClearing,
-  posterQrLogo,
   qrShapes,
-  type PosterQrStyle,
+  type PosterQr,
   type QrLogo,
 } from "@/lib/qr-styles";
 import {
@@ -37,6 +37,7 @@ import {
   multiply,
   parsePath,
   parseTransform,
+  toSvgPath,
   transform,
   type Cmd,
   type Matrix,
@@ -204,11 +205,8 @@ function drawLayer(page: PDFPage, layer: Layer, m: Matrix) {
   );
 }
 
-// White kept between the cleared block's edge and the logo, in modules.
-const LOGO_PAD = 0.6;
-
 /**
- * Draws a styled QR (not `square`, which poster-pdf keeps as plain modules)
+ * Draws a styled QR (not the plain default, which poster-pdf keeps as square modules)
  * into a box whose top-left is (x, top) in top-down page points. `quiet` is
  * the module count of white inside the box on each side.
  */
@@ -216,7 +214,7 @@ export function drawStyledQr(
   page: PDFPage,
   options: {
     url: string;
-    style: Exclude<PosterQrStyle, "square">;
+    qr: PosterQr;
     x: number;
     top: number;
     size: number;
@@ -225,7 +223,7 @@ export function drawStyledQr(
     font: Uint8Array;
   },
 ) {
-  const logo = posterQrLogo(options.style);
+  const logo = options.qr.logo === "none" ? null : options.qr.logo;
   const matrix = QRCode.create(options.url, {
     errorCorrectionLevel: logo ? "H" : "M",
   }).modules;
@@ -239,25 +237,17 @@ export function drawStyledQr(
   const clear = logo ? logoClearing(count) : 0;
   drawLayer(
     page,
-    { cmds: qrShapes(matrix, options.style, clear), fill: options.ink },
+    { cmds: qrShapes(matrix, options.qr, clear), fill: options.ink },
     toPdf,
   );
   if (logo) drawLogo(page, logo, options, count, clear, toPdf);
 }
 
-function drawLogo(
-  page: PDFPage,
-  kind: QrLogo,
-  options: { ink: RGB; font: Uint8Array },
-  count: number,
-  clear: number,
-  toPdf: Matrix,
-) {
-  const logo = kind === "mg2" ? mg2Logo(options.ink, options.font) : dieLogo();
+function fitLogo(logo: Logo, count: number, clear: number): Matrix {
   const room = clear - 2 * LOGO_PAD;
   const k = room / Math.max(logo.box.width, logo.box.height);
   const cx = count / 2;
-  const fit: Matrix = [
+  return [
     k,
     0,
     0,
@@ -265,6 +255,64 @@ function drawLogo(
     cx - k * (logo.box.x + logo.box.width / 2),
     cx - k * (logo.box.y + logo.box.height / 2),
   ];
-  const m = multiply(toPdf, fit);
+}
+
+const svgColor = (c: RGB) =>
+  `#${[c.red, c.green, c.blue]
+    .map((v) =>
+      Math.round(v * 255)
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+
+/** The same QR as `drawStyledQr`, as a standalone SVG with a 4-module quiet zone. */
+export function styledQrSvg(options: {
+  url: string;
+  qr: PosterQr;
+  ink: RGB;
+  font: Uint8Array;
+}): string {
+  const kind = options.qr.logo === "none" ? null : options.qr.logo;
+  const matrix = QRCode.create(options.url, {
+    errorCorrectionLevel: kind ? "H" : "M",
+  }).modules;
+  const count = matrix.size;
+  const clear = kind ? logoClearing(count) : 0;
+  const paths = [
+    `<path d="${toSvgPath(qrShapes(matrix, options.qr, clear))}" fill="${svgColor(options.ink)}"/>`,
+  ];
+  if (kind) {
+    const logo =
+      kind === "mg2" ? mg2Logo(options.ink, options.font) : dieLogo();
+    const fit = fitLogo(logo, count, clear);
+    const scale = Math.hypot(fit[0], fit[1]);
+    for (const layer of logo.layers)
+      paths.push(
+        `<path d="${toSvgPath(transform(layer.cmds, fit))}" fill="${
+          layer.fill ? svgColor(layer.fill) : "none"
+        }"${layer.evenOdd ? ' fill-rule="evenodd"' : ""}${
+          layer.stroke
+            ? ` stroke="${svgColor(layer.stroke.color)}" stroke-width="${
+                layer.stroke.width * scale
+              }" stroke-linecap="round" stroke-linejoin="round"`
+            : ""
+        }/>`,
+      );
+  }
+  const span = count + 8;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${span} ${span}" width="${span * 16}" height="${span * 16}"><rect x="-4" y="-4" width="${span}" height="${span}" fill="#fff"/>${paths.join("")}</svg>`;
+}
+
+function drawLogo(
+  page: PDFPage,
+  kind: Exclude<QrLogo, "none">,
+  options: { ink: RGB; font: Uint8Array },
+  count: number,
+  clear: number,
+  toPdf: Matrix,
+) {
+  const logo = kind === "mg2" ? mg2Logo(options.ink, options.font) : dieLogo();
+  const m = multiply(toPdf, fitLogo(logo, count, clear));
   for (const layer of logo.layers) drawLayer(page, layer, m);
 }
