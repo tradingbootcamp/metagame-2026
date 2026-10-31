@@ -78,10 +78,10 @@ export default function PublicSchedule({
     if (found) setDayKey(found.key);
   }
 
-  // Phones start on the list; deferred so server and first client render match.
+  // Phones start on moments; deferred so server and first client render match.
   useEffect(() => {
     if (!window.matchMedia("(max-width: 767px)").matches) return;
-    const t = setTimeout(() => setView("list"), 0);
+    const t = setTimeout(() => setView("moments"), 0);
     return () => clearTimeout(t);
   }, []);
 
