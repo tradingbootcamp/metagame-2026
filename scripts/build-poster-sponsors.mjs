@@ -31,7 +31,11 @@ for (const [name, variant] of Object.entries(variants)) {
   const { width, height, scale, chess } = variant;
   const w = width / scale;
   const h = chess ? 78 : 84;
-  const top = (height / scale - h) / 2;
+  // Taller boxes (13x19) spread the rows and grow the logos to fill the height.
+  const f = Math.max(1, height / scale / h);
+  const top = (height / scale - h * f) / 2;
+  const y = (v) => v * f;
+  const g = Math.min(f, 1.3);
   const gold = w * 0.59;
   const label = (text, x, y, size, spacing = 1) =>
     `<text x="${x}" y="${y}" text-anchor="middle" font-family="Space Mono, monospace" font-weight="bold" font-size="${size}" letter-spacing="${spacing}" fill="#17335a">${text}</text>`;
@@ -41,12 +45,12 @@ for (const [name, variant] of Object.entries(variants)) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
     <rect width="${width}" height="${height}" fill="${chess ? "#fdf9ee" : "#fefaf1"}"/>
     <g transform="scale(${scale}) translate(0 ${top})">
-      ${label("THANK YOU TO OUR SPONSORS", w / 2, 7, chess ? 5.4 : 6.2, chess ? 1 : 1.5)}
-      ${logo("rogue", gold * 0.26, 32, chess ? 76 : 102, chess ? 23 : 25)}
-      ${logo("goodhart", gold * 0.74, 32, chess ? 76 : 102, chess ? 23 : 25)}
-      ${logo("dmodel", gold + (w - gold) * 0.25, 32, chess ? 40 : 60, chess ? 13 : 16)}
-      ${logo("walrus", gold + (w - gold) * 0.75, 32, chess ? 40 : 60, chess ? 13 : 16)}
-      ${["arbor", "francisco", "manifund", "asylum", "spire"].map((key, i) => logo(key, patronWidth * (i + 0.5), chess ? 62 : 67, patronWidth - (chess ? 7 : 12), (chess ? 16 : 18) * (key === "spire" ? 1.4 : 1))).join("")}
+      ${label("THANK YOU TO OUR SPONSORS", w / 2, y(7), chess ? 5.4 : 6.2, chess ? 1 : 1.5)}
+      ${logo("rogue", gold * 0.26, y(32), (chess ? 76 : 102) * g, (chess ? 23 : 25) * f)}
+      ${logo("goodhart", gold * 0.74, y(32), (chess ? 76 : 102) * g, (chess ? 23 : 25) * f)}
+      ${logo("dmodel", gold + (w - gold) * 0.25, y(32), (chess ? 40 : 60) * g, (chess ? 13 : 16) * f)}
+      ${logo("walrus", gold + (w - gold) * 0.75, y(32), (chess ? 40 : 60) * g, (chess ? 13 : 16) * f)}
+      ${["arbor", "francisco", "manifund", "asylum", "spire"].map((key, i) => logo(key, patronWidth * (i + 0.5), y(chess ? 62 : 67), patronWidth - (chess ? 7 : 12), (chess ? 16 : 18) * f * (key === "spire" ? 1.4 : 1))).join("")}
     </g>
   </svg>`;
   const page = await browser.newPage({
