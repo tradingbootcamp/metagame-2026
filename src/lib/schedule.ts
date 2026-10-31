@@ -198,6 +198,13 @@ export type RsvpConfirm = {
   tone: "confirm" | "warning" | "urgent";
 };
 
+const COMMITMENT_TITLE = "This session is counting on you";
+const COMMITMENT_STAKES = {
+  open: "Unlike most sessions, an RSVP here isn’t just interest. Spots are limited and the host is planning around exactly who claims one, so only claim a spot if you’ll definitely be there — and cancel if your plans change so someone else can have it.",
+  waitlist:
+    "Unlike most sessions, an RSVP here isn’t just interest. The host is planning around exactly who shows up, and if a spot opens you’ll be moved in automatically — so only join the waitlist if you’ll definitely be there.",
+};
+
 /**
  * How the RSVP button reads, and what to confirm before it goes through:
  * null for an interest-only session with no clash, which RSVPs in one click.
@@ -211,14 +218,18 @@ export function rsvpPrompt(
   const stakes = !commitment
     ? null
     : full
-      ? "Spots are limited and people are relying on everyone who has one to show up. If one opens, you’ll be moved in automatically, so only join if you’ll be there — and leave the waitlist if your plans change."
-      : "Spots are limited and people are relying on you to show up. Only claim one if you’ll be there — and cancel your RSVP if your plans change, so someone else can have it.";
+      ? COMMITMENT_STAKES.waitlist
+      : COMMITMENT_STAKES.open;
   if (conflicts.length === 0) {
     if (!stakes) return { label, confirm: null };
-    const title = full ? "Join the waitlist?" : "Claim a spot?";
     return {
       label,
-      confirm: { title, conflicts: [], body: stakes, tone: "confirm" },
+      confirm: {
+        title: COMMITMENT_TITLE,
+        conflicts: [],
+        body: stakes,
+        tone: "confirm",
+      },
     };
   }
   const held = conflicts
@@ -228,15 +239,15 @@ export function rsvpPrompt(
     held.length > 0
       ? `People are counting on you at ${held.join(" and ")}. If you’re switching, give up your place there so someone else can have it.`
       : null;
-  const body =
-    [stakes, heldNote].filter(Boolean).join(" ") ||
-    "You can’t be in two places at once, so only continue if your plans have changed.";
+  const overlap = stakes
+    ? "This session overlaps the time above, and it’s one that’s counting on you."
+    : "This session overlaps the time above. Only continue if you’re changing plans.";
   return {
     label,
     confirm: {
-      title: `${label} anyway?`,
+      title: "You’re already busy at this time",
       conflicts: conflicts.map(conflictLine),
-      body,
+      body: [overlap, stakes, heldNote].filter(Boolean).join(" "),
       tone:
         commitment || conflicts.some((c) => c.commitment)
           ? "urgent"

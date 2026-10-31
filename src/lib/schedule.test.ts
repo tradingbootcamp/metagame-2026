@@ -378,7 +378,7 @@ describe("rsvpPrompt", () => {
   it("asks before claiming a spot in a commitment session", () => {
     const open = rsvpPrompt(true, false);
     expect(open.label).toBe("Claim a spot");
-    expect(open.confirm?.body).toMatch(/relying on you/);
+    expect(open.confirm?.body).toMatch(/isn’t just interest/);
   });
 
   it("asks before joining a commitment session's waitlist too", () => {
@@ -399,7 +399,7 @@ describe("rsvpPrompt", () => {
   it("warns about a clash before an interest-only RSVP", () => {
     const out = rsvpPrompt(false, false, [clash({ role: "host" })]);
     expect(out.confirm).toMatchObject({
-      title: "RSVP anyway?",
+      title: "You’re already busy at this time",
       conflicts: ["You’re hosting “Chess” 1:00 PM–2:00 PM PT"],
       tone: "warning",
     });
@@ -410,12 +410,14 @@ describe("rsvpPrompt", () => {
       clash({ role: "shepherd", title: "Go" }),
       clash({ role: "waitlist" }),
     ]);
-    expect(out.confirm?.title).toBe("Claim a spot anyway?");
+    expect(out.confirm?.title).toBe("You’re already busy at this time");
     expect(out.confirm?.conflicts).toEqual([
       "You’re shepherding “Go” 1:00 PM–2:00 PM PT",
       "You’re on the waitlist for “Chess” 1:00 PM–2:00 PM PT",
     ]);
-    expect(out.confirm?.body).toMatch(/relying on you to show up/);
+    expect(out.confirm?.body).toMatch(
+      /overlaps the time above, and it’s one that’s counting on you/,
+    );
     expect(out.confirm?.tone).toBe("urgent");
   });
 
