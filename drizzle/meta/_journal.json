@@ -183,6 +183,20 @@
       "when": 1793403467237,
       "tag": "0025_session_commitment_sponsor",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793420933530,
+      "tag": "0026_unconference_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793420938157,
+      "tag": "0027_unconference_post_attendee",
+      "breakpoints": true
     }
   ]
 }

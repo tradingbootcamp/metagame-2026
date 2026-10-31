@@ -299,6 +299,10 @@ const ROOMS = [
   ["d1", "1D1", 6, "Building D, 1st floor", 100, "hidden"],
   ["gyroscope", "Gyroscope", 30, "Building E, 2nd floor", 100, "volunteer", false],
   ["other", "Other", null, null, 100, "hidden", false],
+  // Appended, not slotted in by display_order: uuid(k + 1) below would move
+  // every later room's id. The bulletin board, where anyone with a ticket
+  // pitches something.
+  ["unconference", "Unconference Park", null, "Outdoors, between B and E", 7, "public", false, "board"],
 ];
 const locations = Object.fromEntries(
   ROOMS.map(
@@ -311,6 +315,7 @@ const locations = Object.fromEntries(
         display_order,
         visibility = "public",
         synced = true,
+        layout = "grid",
       ],
       k,
     ) => [
@@ -322,6 +327,7 @@ const locations = Object.fromEntries(
         campus_location,
         display_order,
         visibility,
+        layout,
         airtable_record_id: synced
           ? `recSEEDLOC${String(k + 1).padStart(7, "0")}`
           : null,
@@ -340,6 +346,29 @@ for (const { id, name } of await sql.query(
   room.id = id;
   reusedRooms.add(room);
 }
+// Pitches on the bulletin board. created_at is spelled out because the board
+// paints the OLDEST note on top, so the stack is only worth looking at when
+// the times differ. x/y are fractions of the board.
+// prettier-ignore
+const NOTES = [
+  [1801, "attendee", "butter", 0, 0, 6, 10, "Anyone up for a 3-hour game of Diplomacy? I'll bring the map and the grudges."],
+  [1802, "host", "rose", 0.5, 0, 6, 11, "Lightning talks, 5 min each, no slides. Sign up underneath this one."],
+  [1803, "attendee", "sky", 1, 0, 6, 14, "Prediction market on who wins the megagame. I have whiteboard markers."],
+  [1804, "newcomer", "mint", 0, 0.2, 6, 17, "First Metagame — would love a walking tour of campus from someone who knows it."],
+  [1805, "team", "tangerine", 0.5, 0.2, 7, 9, "Teaching Hanabi to anyone who hasn't played. Repeatedly. All weekend."],
+  [1806, "attendee", "lilac", 1, 0.35, 7, 13, "Does anyone want to co-run a Werewolf game at 10pm? Need a second moderator."],
+].map(([n, who, color, x, y, day, hour, body]) => ({
+  id: uuid(n),
+  location_id: locations.unconference.id,
+  author_user_id: users[who].id,
+  body,
+  color,
+  x,
+  y,
+  created_at: at(day, hour),
+  updated_at: at(day, hour),
+}));
+
 const slugify = (title) =>
   `seed-${title
     .toLowerCase()
@@ -951,6 +980,11 @@ for (const table of ["session_hosts"]) {
     SEED_UUID,
   ]);
 }
+await sql.query(
+  `delete from unconference_notes where id::text like $1
+   and not (id::text = any($2::text[]))`,
+  [SEED_UUID, pgArray(NOTES.map((n) => n.id))],
+);
 await sql.query(`delete from session_grades where id::text like $1`, [
   SEED_UUID,
 ]);
@@ -1078,6 +1112,7 @@ counts.locations = await upsert(
   ["id"],
   rooms.filter((l) => !reusedRooms.has(l)),
 );
+counts.unconference_notes = await upsert("unconference_notes", ["id"], NOTES);
 counts.sessions = await upsert("sessions", ["id"], sessions);
 counts.session_hosts = await upsert(
   "session_hosts",

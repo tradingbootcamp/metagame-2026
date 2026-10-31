@@ -20,6 +20,8 @@ import {
 import { downscaleImage } from "@/lib/downscale-image";
 import { UnsavedChangesDialog, useUnsavedChanges } from "./UnsavedChanges";
 import {
+  LAYOUT_LABEL,
+  LOCATION_LAYOUTS,
   LOCATION_VISIBILITIES,
   VISIBILITY_LABEL,
   type ScheduleLocation,
@@ -292,6 +294,23 @@ export default function LocationForm({
               {LOCATION_VISIBILITIES.map((v) => (
                 <option key={v} value={v}>
                   {VISIBILITY_LABEL[v]}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          {/* A save replaces the whole row, so this has to be submitted even
+              when untouched or a board would drop back to the time grid. */}
+          <Field label="How its column is drawn" name="layout" state={state}>
+            <select
+              name="layout"
+              defaultValue={location?.layout ?? "grid"}
+              className={selectClass}
+              style={selectStyle}
+            >
+              {LOCATION_LAYOUTS.map((l) => (
+                <option key={l} value={l}>
+                  {LAYOUT_LABEL[l]}
                 </option>
               ))}
             </select>
