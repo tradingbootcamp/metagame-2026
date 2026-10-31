@@ -81,14 +81,7 @@ const CHOICES = { dots: QR_DOTS, corners: QR_CORNERS, logo: QR_LOGOS };
 export const isPlainQr = (qr: PosterQr) =>
   qr.dots === "square" && qr.corners === "square" && qr.logo === "none";
 
-/** Combinations that failed the poster scan matrix, with why. */
-export function qrBlocked(qr: PosterQr): string | null {
-  if (qr.logo !== "none" && (qr.dots === "blobby" || qr.dots === "classy"))
-    return "Too hard to scan with a logo; pick square or dots";
-  return null;
-}
-
-/** The QR choice in `params`, or null if any part is unknown or blocked. */
+/** The QR choice in `params`, or null if any part is unknown. */
 export function parsePosterQr(params: URLSearchParams): PosterQr | null {
   const qr = { ...DEFAULT_POSTER_QR };
   for (const key of Object.keys(QR_PARAMS) as (keyof PosterQr)[]) {
@@ -97,7 +90,7 @@ export function parsePosterQr(params: URLSearchParams): PosterQr | null {
     if (!Object.hasOwn(CHOICES[key], value)) return null;
     (qr as Record<string, string>)[key] = value;
   }
-  return qrBlocked(qr) ? null : qr;
+  return qr;
 }
 
 /** Query entries for `qr`, leaving defaults out. */
@@ -124,7 +117,7 @@ export function logoClearing(size: number, share = LOGO_SHARE): number {
 }
 
 /** Faces (top-left, top-right, bottom-left) and pip radius of dice corners. */
-export const DICE = { faces: [2, 4, 2], pip: 0.38 };
+export const DICE = { faces: [2, 2, 6], pip: 0.38 };
 
 /**
  * Filled outlines for a QR code in module units (top-left of the symbol at

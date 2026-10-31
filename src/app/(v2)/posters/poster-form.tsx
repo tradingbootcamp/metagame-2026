@@ -18,7 +18,6 @@ import {
   LOGO_PAD,
   logoClearing,
   posterQrQuery,
-  qrBlocked,
   qrShapes,
   QR_CORNERS,
   QR_DOTS,
@@ -76,10 +75,15 @@ export default function PosterForm({
   }).toString();
   async function download(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    await save("pdf");
+  }
+  async function save(format: "pdf" | "svg") {
     setError("");
     setBusy(true);
     try {
-      const response = await fetch(`/api/posters?${query}`);
+      const response = await fetch(
+        `/api/posters?${query}${format === "svg" ? "&format=svg" : ""}`,
+      );
       if (!response.ok)
         throw new Error(
           response.status === 409
@@ -89,7 +93,10 @@ export default function PosterForm({
       const url = URL.createObjectURL(await response.blob());
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `metagame-${design}${live ? `-${live}` : ""}-${size}.pdf`;
+      anchor.download =
+        format === "svg"
+          ? `metagame-qr${live ? `-${live}` : ""}.svg`
+          : `metagame-${design}${live ? `-${live}` : ""}-${size}.pdf`;
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
@@ -211,7 +218,17 @@ export default function PosterForm({
           }
           className="w-full rounded-lg bg-[#19345b] px-6 py-4 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {busy ? "Preparing your PDF…" : "Download PDF"}
+          {busy ? "Preparing…" : "Download PDF"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void save("svg")}
+          disabled={
+            !selected?.available || busy || ((own || promo) !== "" && !live)
+          }
+          className="-mt-3 w-full rounded-lg border border-[#19345b] px-6 py-2.5 text-sm font-semibold text-[#19345b] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Download QR only (SVG)
         </button>
         <p className="text-sm" aria-live="polite">
           {selected?.available
@@ -580,7 +597,7 @@ function qrFromText(text: string): PosterQr {
     if (Object.hasOwn(QR_CHOICES[key], parts[i] ?? ""))
       (qr as Record<string, string>)[key] = parts[i];
   });
-  return qrBlocked(qr) ? DEFAULT_POSTER_QR : qr;
+  return qr;
 }
 
 // The last choice, remembered per browser as a convenience; the server render
@@ -760,15 +777,14 @@ function QrOptionRow({
   const radios = useRef<(HTMLButtonElement | null)[]>([]);
   const options = Object.entries(QR_CHOICES[field]).map(([key, { label }]) => {
     const qr = { ...value, [field]: key } as PosterQr;
-    return { key, label, qr, blocked: qrBlocked(qr) };
+    return { key, label, qr };
   });
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const step = ARROW_STEPS[event.key];
     if (!step) return;
     event.preventDefault();
-    const usable = options.filter((option) => !option.blocked);
-    const at = usable.findIndex((option) => option.key === value[field]);
-    const next = usable[(at + step + usable.length) % usable.length];
+    const at = options.findIndex((option) => option.key === value[field]);
+    const next = options[(at + step + options.length) % options.length];
     onChange(next.qr);
     radios.current[options.indexOf(next)]?.focus();
   }
@@ -795,16 +811,12 @@ function QrOptionRow({
               type="button"
               role="radio"
               aria-checked={checked}
-              aria-disabled={!!option.blocked}
-              title={option.blocked ?? undefined}
               tabIndex={checked ? 0 : -1}
-              onClick={() => !option.blocked && onChange(option.qr)}
+              onClick={() => onChange(option.qr)}
               className={`flex min-w-0 flex-col items-center gap-1 rounded-md border p-1 text-[11px] leading-tight transition-colors ${
                 checked
                   ? "border-[#19345b] bg-[#19345b]/10 font-semibold ring-1 ring-[#19345b]"
-                  : option.blocked
-                    ? "cursor-not-allowed border-transparent opacity-35"
-                    : "border-transparent hover:bg-[#19345b]/5"
+                  : "border-transparent hover:bg-[#19345b]/5"
               }`}
             >
               <QrSample qr={option.qr} samples={samples} className="size-11" />

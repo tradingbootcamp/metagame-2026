@@ -12,7 +12,7 @@ import {
 } from "pdf-lib";
 import QRCode from "qrcode";
 import { POSTER_ORIGIN } from "@/lib/poster-options";
-import { drawStyledQr } from "@/lib/poster-qr";
+import { drawStyledQr, styledQrSvg } from "@/lib/poster-qr";
 import { DEFAULT_POSTER_QR, isPlainQr, type PosterQr } from "@/lib/qr-styles";
 import {
   PROMO_PARAM,
@@ -287,6 +287,22 @@ export function posterQrUrl(slug: string, promo = ""): string {
   const url = new URL(shortUrl(POSTER_ORIGIN, slug));
   if (promo) url.searchParams.set(PROMO_PARAM, promo);
   return url.toString();
+}
+
+/** Just the poster's QR, as an SVG, for printing or placing elsewhere. */
+export async function createPosterQrSvg(
+  slug: string,
+  promo: string,
+  qrStyle: PosterQr,
+): Promise<string> {
+  if (validateSlug(slug) || promoCode(promo) !== promo)
+    throw new Error("Invalid poster link");
+  return styledQrSvg({
+    url: posterQrUrl(slug, promo),
+    qr: qrStyle,
+    ink: rgb(0, 0, 0),
+    font: await readFile(path.join(ASSETS, "fonts", "SpaceGrotesk-Bold.ttf")),
+  });
 }
 
 export async function createPosterPdf(

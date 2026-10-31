@@ -16,7 +16,6 @@ import {
   QR_CORNERS,
   QR_DOTS,
   QR_LOGOS,
-  qrBlocked,
   type QrCorners,
   type QrDots,
   type QrLogo,
@@ -164,7 +163,7 @@ describe("styled poster QR", () => {
               qr,
             );
             expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
-            if (!renderCheck || size !== "letter" || qrBlocked(qr)) continue;
+            if (!renderCheck || size !== "letter") continue;
             await mkdir(directory, { recursive: true });
             const pdf = path.join(
               directory,

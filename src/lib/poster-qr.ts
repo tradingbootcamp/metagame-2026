@@ -37,6 +37,7 @@ import {
   multiply,
   parsePath,
   parseTransform,
+  toSvgPath,
   transform,
   type Cmd,
   type Matrix,
@@ -242,6 +243,67 @@ export function drawStyledQr(
   if (logo) drawLogo(page, logo, options, count, clear, toPdf);
 }
 
+function fitLogo(logo: Logo, count: number, clear: number): Matrix {
+  const room = clear - 2 * LOGO_PAD;
+  const k = room / Math.max(logo.box.width, logo.box.height);
+  const cx = count / 2;
+  return [
+    k,
+    0,
+    0,
+    k,
+    cx - k * (logo.box.x + logo.box.width / 2),
+    cx - k * (logo.box.y + logo.box.height / 2),
+  ];
+}
+
+const svgColor = (c: RGB) =>
+  `#${[c.red, c.green, c.blue]
+    .map((v) =>
+      Math.round(v * 255)
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+
+/** The same QR as `drawStyledQr`, as a standalone SVG with a 4-module quiet zone. */
+export function styledQrSvg(options: {
+  url: string;
+  qr: PosterQr;
+  ink: RGB;
+  font: Uint8Array;
+}): string {
+  const kind = options.qr.logo === "none" ? null : options.qr.logo;
+  const matrix = QRCode.create(options.url, {
+    errorCorrectionLevel: kind ? "H" : "M",
+  }).modules;
+  const count = matrix.size;
+  const clear = kind ? logoClearing(count) : 0;
+  const paths = [
+    `<path d="${toSvgPath(qrShapes(matrix, options.qr, clear))}" fill="${svgColor(options.ink)}"/>`,
+  ];
+  if (kind) {
+    const logo =
+      kind === "mg2" ? mg2Logo(options.ink, options.font) : dieLogo();
+    const fit = fitLogo(logo, count, clear);
+    const scale = Math.hypot(fit[0], fit[1]);
+    for (const layer of logo.layers)
+      paths.push(
+        `<path d="${toSvgPath(transform(layer.cmds, fit))}" fill="${
+          layer.fill ? svgColor(layer.fill) : "none"
+        }"${layer.evenOdd ? ' fill-rule="evenodd"' : ""}${
+          layer.stroke
+            ? ` stroke="${svgColor(layer.stroke.color)}" stroke-width="${
+                layer.stroke.width * scale
+              }" stroke-linecap="round" stroke-linejoin="round"`
+            : ""
+        }/>`,
+      );
+  }
+  const span = count + 8;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${span} ${span}" width="${span * 16}" height="${span * 16}"><rect x="-4" y="-4" width="${span}" height="${span}" fill="#fff"/>${paths.join("")}</svg>`;
+}
+
 function drawLogo(
   page: PDFPage,
   kind: Exclude<QrLogo, "none">,
@@ -251,17 +313,6 @@ function drawLogo(
   toPdf: Matrix,
 ) {
   const logo = kind === "mg2" ? mg2Logo(options.ink, options.font) : dieLogo();
-  const room = clear - 2 * LOGO_PAD;
-  const k = room / Math.max(logo.box.width, logo.box.height);
-  const cx = count / 2;
-  const fit: Matrix = [
-    k,
-    0,
-    0,
-    k,
-    cx - k * (logo.box.x + logo.box.width / 2),
-    cx - k * (logo.box.y + logo.box.height / 2),
-  ];
-  const m = multiply(toPdf, fit);
+  const m = multiply(toPdf, fitLogo(logo, count, clear));
   for (const layer of logo.layers) drawLayer(page, layer, m);
 }
