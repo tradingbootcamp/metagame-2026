@@ -25,10 +25,10 @@ import {
 } from "pdf-lib";
 import QRCode from "qrcode";
 import {
+  LOGO_PAD,
   logoClearing,
-  posterQrLogo,
   qrShapes,
-  type PosterQrStyle,
+  type PosterQr,
   type QrLogo,
 } from "@/lib/qr-styles";
 import {
@@ -204,11 +204,8 @@ function drawLayer(page: PDFPage, layer: Layer, m: Matrix) {
   );
 }
 
-// White kept between the cleared block's edge and the logo, in modules.
-const LOGO_PAD = 0.6;
-
 /**
- * Draws a styled QR (not `square`, which poster-pdf keeps as plain modules)
+ * Draws a styled QR (not the plain default, which poster-pdf keeps as square modules)
  * into a box whose top-left is (x, top) in top-down page points. `quiet` is
  * the module count of white inside the box on each side.
  */
@@ -216,7 +213,7 @@ export function drawStyledQr(
   page: PDFPage,
   options: {
     url: string;
-    style: Exclude<PosterQrStyle, "square">;
+    qr: PosterQr;
     x: number;
     top: number;
     size: number;
@@ -225,7 +222,7 @@ export function drawStyledQr(
     font: Uint8Array;
   },
 ) {
-  const logo = posterQrLogo(options.style);
+  const logo = options.qr.logo === "none" ? null : options.qr.logo;
   const matrix = QRCode.create(options.url, {
     errorCorrectionLevel: logo ? "H" : "M",
   }).modules;
@@ -239,7 +236,7 @@ export function drawStyledQr(
   const clear = logo ? logoClearing(count) : 0;
   drawLayer(
     page,
-    { cmds: qrShapes(matrix, options.style, clear), fill: options.ink },
+    { cmds: qrShapes(matrix, options.qr, clear), fill: options.ink },
     toPdf,
   );
   if (logo) drawLogo(page, logo, options, count, clear, toPdf);
@@ -247,7 +244,7 @@ export function drawStyledQr(
 
 function drawLogo(
   page: PDFPage,
-  kind: QrLogo,
+  kind: Exclude<QrLogo, "none">,
   options: { ink: RGB; font: Uint8Array },
   count: number,
   clear: number,

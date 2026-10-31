@@ -13,7 +13,7 @@ import {
 import QRCode from "qrcode";
 import { POSTER_ORIGIN } from "@/lib/poster-options";
 import { drawStyledQr } from "@/lib/poster-qr";
-import type { PosterQrStyle } from "@/lib/qr-styles";
+import { DEFAULT_POSTER_QR, isPlainQr, type PosterQr } from "@/lib/qr-styles";
 import {
   PROMO_PARAM,
   promoCode,
@@ -296,7 +296,7 @@ export async function createPosterPdf(
   promo?: PosterPromo,
   /** False when the link applies the code itself, so the QR stays plain. */
   promoOnQr = true,
-  qrStyle: PosterQrStyle = "square",
+  qrStyle: PosterQr = DEFAULT_POSTER_QR,
 ): Promise<Uint8Array> {
   if (validateSlug(slug) || (promo && promoCode(promo.code) !== promo.code))
     throw new Error("Invalid poster link");
@@ -342,10 +342,10 @@ export async function createPosterPdf(
     color: rgb(1, 1, 1),
   });
   const qrUrl = posterQrUrl(slug, promoOnQr ? promo?.code : "");
-  if (qrStyle !== "square")
+  if (!isPlainQr(qrStyle))
     drawStyledQr(page, {
       url: qrUrl,
-      style: qrStyle,
+      qr: qrStyle,
       x: qr.x,
       top: qr.top,
       size: qr.size,
