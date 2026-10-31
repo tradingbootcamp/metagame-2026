@@ -370,6 +370,11 @@ describe("nowLinePx", () => {
       75 * 2,
     );
   });
+  it("moves within a minute, not just on the minute", () => {
+    expect(nowLinePx(friday, 14 * 60, new Date("2026-11-06T23:15:30Z"))).toBe(
+      75.5 * 2,
+    );
+  });
   it("is null on another day", () => {
     expect(
       nowLinePx("2026-11-07", 10 * 60, new Date("2026-11-06T23:15:00Z")),

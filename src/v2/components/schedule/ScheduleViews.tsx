@@ -200,12 +200,14 @@ function SessionBlock<S extends ViewSession>({
 }
 
 /** The current time, ticking each minute; null until mounted so the server render matches. */
+const NOW_TICK_MS = 5_000;
+
 function useNow(): Date | null {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     const tick = () => setNow(new Date());
     tick();
-    const id = setInterval(tick, 60_000);
+    const id = setInterval(tick, NOW_TICK_MS);
     return () => clearInterval(id);
   }, []);
   return now;
@@ -270,8 +272,8 @@ export function GridDay<S extends ViewSession>({
           {nowTop !== null && (
             <div
               aria-hidden
-              className="pointer-events-none absolute right-0 left-0 z-[25] h-0.5 bg-red-600"
-              style={{ top: nowTop }}
+              className="pointer-events-none absolute right-0 left-0 z-[25] h-0.5 bg-red-600 transition-[top] ease-linear"
+              style={{ top: nowTop, transitionDuration: `${NOW_TICK_MS}ms` }}
             />
           )}
           {day.slots.map((slotStart) => (

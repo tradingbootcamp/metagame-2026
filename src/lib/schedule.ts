@@ -358,7 +358,9 @@ export function nowLinePx(
 ): number | null {
   const iso = now.toISOString();
   if (pacificDayKey(iso) !== dayKey) return null;
-  const minutes = pacificMinutes(iso);
+  const minutes =
+    pacificMinutes(iso) +
+    (now.getUTCSeconds() + now.getUTCMilliseconds() / 1000) / 60;
   return minutes < firstSlot ? null : (minutes - firstSlot) * PX_PER_MIN;
 }
 
