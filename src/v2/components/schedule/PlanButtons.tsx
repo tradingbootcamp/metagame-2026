@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { StarIcon, TriangleAlertIcon } from "lucide-react";
+import { toast } from "sonner";
 import {
   bookmark,
   rsvpTo,
@@ -74,7 +75,6 @@ export default function PlanButtons({
     props: fromProps,
   });
   const plan = state.shown;
-  const [error, setError] = useState<string | null>(null);
   const latest = useRef<Record<Field, number>>({ status: 0, bookmarked: 0 });
   const rsvpSaving = useRef(false);
   const [confirming, setConfirming] = useState(false);
@@ -93,9 +93,10 @@ export default function PlanButtons({
     field: F,
     next: Plan[F],
     action: () => Promise<PlanResult>,
+    done: string,
   ) {
     const seq = ++latest.current[field];
-    setError(null);
+    const toastId = `plan-${sessionId}-${field}`;
     setState((s) => ({ ...s, shown: { ...s.shown, [field]: next } }));
     let result: PlanResult;
     try {
@@ -110,7 +111,7 @@ export default function PlanButtons({
           ...s,
           shown: { ...s.shown, [field]: s.confirmed[field] },
         }));
-        setError(result.error);
+        toast.error(result.error, { id: toastId });
       }
       return;
     }
@@ -122,7 +123,15 @@ export default function PlanButtons({
         shown: isLatest ? { ...s.shown, [field]: value } : s.shown,
       }));
     }
-    if (isLatest) onSettled?.(result);
+    if (isLatest) {
+      toast.success(
+        field === "status" && result.status === "waitlist"
+          ? "It’s full, so you’re on the waitlist."
+          : done,
+        { id: toastId },
+      );
+      onSettled?.(result);
+    }
   }
 
   // RSVP and Cancel swap places, so a double-click would undo itself.
@@ -130,8 +139,15 @@ export default function PlanButtons({
     if (rsvpSaving.current) return;
     rsvpSaving.current = true;
     try {
-      await run("status", next, () =>
-        next ? rsvpTo(sessionId) : unRsvp(sessionId),
+      await run(
+        "status",
+        next,
+        () => (next ? rsvpTo(sessionId) : unRsvp(sessionId)),
+        next
+          ? "You’re going."
+          : plan.status === "waitlist"
+            ? "You’ve left the waitlist."
+            : "RSVP cancelled.",
       );
     } finally {
       rsvpSaving.current = false;
@@ -162,8 +178,11 @@ export default function PlanButtons({
       <button
         type="button"
         onClick={() =>
-          run("bookmarked", !plan.bookmarked, () =>
-            bookmark(sessionId, !plan.bookmarked),
+          run(
+            "bookmarked",
+            !plan.bookmarked,
+            () => bookmark(sessionId, !plan.bookmarked),
+            plan.bookmarked ? "Bookmark removed." : "Bookmarked.",
           )
         }
         aria-pressed={plan.bookmarked}
@@ -175,7 +194,6 @@ export default function PlanButtons({
         />
         {plan.bookmarked ? "Bookmarked" : "Bookmark"}
       </button>
-      {error && <span className="text-xs text-meeple">{error}</span>}
       {prompt.confirm && tone && (
         <Dialog open={confirming} onOpenChange={setConfirming}>
           <DialogContent
