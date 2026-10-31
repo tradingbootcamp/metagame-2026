@@ -18,9 +18,9 @@ export const CLASS_LABELS: Record<MegagameClass, string> = {
 
 /** What each class's players join. */
 export const FACTION_NAMES: Record<MegagameClass, string> = {
-  wizard: "Wizard College",
-  pirate: "Pirate Crew",
-  alien: "Alien Fleet",
+  wizard: "Astral College",
+  pirate: "Brethren Fleet",
+  alien: "Galactic Survey",
 };
 
 export const isMegagameClass = (value: unknown): value is MegagameClass =>

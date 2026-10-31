@@ -12,6 +12,7 @@ import {
   findClash,
   fromPacificWall,
   movedTimes,
+  nowLinePx,
   openingDayKey,
   selectedDay,
   outsideHours,
@@ -507,5 +508,36 @@ describe("planConflicts", () => {
     const tba = { id: "t", startsAt: null, endsAt: null };
     const busy = other({ id: "h", hosts: [me] });
     expect(planConflicts(tba, [busy], "me", {})).toEqual([]);
+  });
+});
+
+describe("nowLinePx", () => {
+  const friday = "2026-11-06";
+  it("offsets from the first slot on the same Pacific day", () => {
+    // 3:15pm PST
+    expect(nowLinePx(friday, 14 * 60, new Date("2026-11-06T23:15:00Z"))).toBe(
+      75 * 2,
+    );
+  });
+  it("moves within a minute, not just on the minute", () => {
+    expect(nowLinePx(friday, 14 * 60, new Date("2026-11-06T23:15:30Z"))).toBe(
+      75.5 * 2,
+    );
+  });
+  it("is null on another day", () => {
+    expect(
+      nowLinePx("2026-11-07", 10 * 60, new Date("2026-11-06T23:15:00Z")),
+    ).toBe(null);
+  });
+  it("is null before the grid opens", () => {
+    expect(nowLinePx(friday, 14 * 60, new Date("2026-11-06T20:00:00Z"))).toBe(
+      null,
+    );
+  });
+  it("uses Pacific, not UTC, for the day", () => {
+    // 05:30 UTC Nov 7 is still Nov 6, 9:30pm PST.
+    expect(nowLinePx(friday, 14 * 60, new Date("2026-11-07T05:30:00Z"))).toBe(
+      450 * 2,
+    );
   });
 });

@@ -4,7 +4,11 @@ import { GENERIC_AREA } from "@/lib/poster-options";
 import { toolAccess } from "@/lib/admin-auth";
 import { listStripeCodes, standardProduct } from "@/lib/promo-codes-stripe";
 import { posterAccepts } from "@/lib/poster-promo";
-import PosterForm, { type PromoChoice } from "./poster-form";
+import QRCode from "qrcode";
+import PosterForm, {
+  type PromoChoice,
+  type QrSampleMatrix,
+} from "./poster-form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -35,6 +39,17 @@ async function promoChoices(): Promise<PromoChoice[]> {
   }
 }
 
+/** A sample link's modules at levels M and H, for the QR style previews. */
+function qrSamples(): Record<"M" | "H", QrSampleMatrix> {
+  const sample = (level: "M" | "H") => {
+    const { modules } = QRCode.create("https://metagame.games/go/poster", {
+      errorCorrectionLevel: level,
+    });
+    return { size: modules.size, bits: Array.from(modules.data).join("") };
+  };
+  return { M: sample("M"), H: sample("H") };
+}
+
 export default async function PostersPage() {
   const promos = await promoChoices();
   let options;
@@ -59,6 +74,7 @@ export default async function PostersPage() {
             options={options}
             initialArea={GENERIC_AREA}
             promos={promos}
+            qrSamples={qrSamples()}
           />
         ) : (
           <p role="alert" className="rounded-xl border border-current p-6">

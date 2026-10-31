@@ -42,6 +42,7 @@ describe("POST /api/forms/[form]", () => {
       fld42qY2zzbMKiZAC: "Ada",
       fld0okgOArTQTNUir: "ada@example.com",
       fldvRIark8ZyTFpNf: "Gold",
+      fldmLx6E4fpMxaVHw: ["sponsoring"],
     });
     expect(backUp).not.toHaveBeenCalled();
   });
