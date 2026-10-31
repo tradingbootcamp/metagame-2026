@@ -15,11 +15,11 @@ import GuildSeal from "@/v2/components/megagame/GuildSeal";
 
 const BRIEFS: Record<MegagameClass, string> = {
   wizard:
-    "The Wizard College is looking for studious wizards and witches who have the wits and the words to help us complete our grand spell research.",
+    "The Astral College is looking for studious wizards and witches who have the wits and the words to help us complete our grand spell research.",
   pirate:
-    "The Pirate Crew is looking for adventurous and cunning pirates to navigate through Lighthaven and find the legendary treasure hidden there!",
+    "The Brethren Fleet is looking for adventurous and cunning pirates to navigate through Lighthaven and find the legendary treasure hidden there!",
   alien:
-    "The Alien Fleet has recently crashed and is looking for clever members to join our fleet and help solve the puzzle of how to get home.",
+    "The Galactic Survey has recently crashed and is looking for clever members to join our survey and help solve the puzzle of how to get home.",
 };
 
 // Shown on hover or focus where there's a mouse; always on touch screens and
