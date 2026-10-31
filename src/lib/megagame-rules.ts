@@ -115,6 +115,22 @@ function listLevels(levels: number[]): string {
   return `${levels.slice(0, -1).join(", ")} and ${levels.at(-1)}`;
 }
 
+/**
+ * The longest run of skipped levels written out one by one. A longer run is
+ * written as a range, so a very large level from a request cannot make this
+ * build a huge list.
+ */
+const MAX_LISTED_SKIPS = 10;
+
+/** "Skips level 2." / "Skips levels 1, 2 and 3." / "Skips levels 1 to 400." */
+function skipWarning(from: number, to: number): string {
+  if (from === to) return `Skips level ${from}.`;
+  if (to - from + 1 > MAX_LISTED_SKIPS) return `Skips levels ${from} to ${to}.`;
+  const skipped: number[] = [];
+  for (let n = from; n <= to; n += 1) skipped.push(n);
+  return `Skips levels ${listLevels(skipped)}.`;
+}
+
 export function checkLevelUp(
   input: LevelUpInput,
   table: readonly LevelRequirement[] = LEVEL_REQUIREMENTS,
@@ -137,13 +153,7 @@ export function checkLevelUp(
       warnings.push(`Level ${level} is above the ${MAX_LEVEL}-level chart.`);
     }
     if (level > current + 1) {
-      const skipped: number[] = [];
-      for (let n = current + 1; n < level; n += 1) skipped.push(n);
-      warnings.push(
-        skipped.length === 1
-          ? `Skips level ${skipped[0]}.`
-          : `Skips levels ${listLevels(skipped)}.`,
-      );
+      warnings.push(skipWarning(current + 1, level - 1));
     }
     const requirement = requirementFor(cls, level, table);
     if (requirement && completionsInClass < requirement.minCompletions) {
@@ -158,8 +168,8 @@ export function checkLevelUp(
 }
 
 export type QuestWindow = {
-  /** Null means any class. */
-  class: string | null;
+  /** Null or absent means any class. */
+  class?: string | null;
   minLevel?: number | null;
   maxLevel?: number | null;
 };
@@ -175,7 +185,7 @@ export function checkQuestWindow(
   levels: MegagameLevels,
 ): QuestWindowCheck {
   const warnings: string[] = [];
-  if (quest.class === null) return { ok: true, warnings };
+  if (quest.class == null) return { ok: true, warnings };
   if (!isMegagameClass(quest.class)) {
     warnings.push(`Quest class "${quest.class}" is not a known class.`);
     return { ok: false, warnings };
@@ -199,7 +209,7 @@ export function checkQuestWindow(
 /** A level window needs a class. The phase 3 CSV importer calls this per row. */
 export function questWindowIsValid(quest: QuestWindow): boolean {
   return (
-    quest.class !== null || (quest.minLevel == null && quest.maxLevel == null)
+    quest.class != null || (quest.minLevel == null && quest.maxLevel == null)
   );
 }
 

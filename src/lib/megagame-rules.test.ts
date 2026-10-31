@@ -279,6 +279,65 @@ describe("checkLevelUp transitions", () => {
     expect(got.warnings[0]).toContain(String(MAX_LEVEL));
     expect(got.warnings[1]).toBe(`Skips level ${MAX_LEVEL + 1}.`);
   });
+
+  it("still lists ten skipped levels one by one", () => {
+    const got = checkLevelUp(
+      { class: "wizard", level: 11, levels: at(0), completionsInClass: 0 },
+      [],
+    );
+    expect(got.warnings).toContain(
+      "Skips levels 1, 2, 3, 4, 5, 6, 7, 8, 9 and 10.",
+    );
+  });
+
+  it("writes a longer run of skipped levels as a range", () => {
+    const got = checkLevelUp(
+      { class: "wizard", level: 12, levels: at(0), completionsInClass: 0 },
+      [],
+    );
+    expect(got.warnings).toContain("Skips levels 1 to 11.");
+  });
+
+  it("handles a huge level without building a list of every level", () => {
+    const started = Date.now();
+    const got = checkLevelUp(
+      {
+        class: "wizard",
+        level: 1_000_000_000,
+        levels: at(0),
+        completionsInClass: 0,
+      },
+      [],
+    );
+    expect(got.ok).toBe(true);
+    expect(got.warnings).toContain("Skips levels 1 to 999999999.");
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
+  it("names the class it was given", () => {
+    const refused = checkLevelUp(
+      {
+        class: "pirate",
+        level: 1,
+        levels: { ...NO_LEVELS, pirate: 2 },
+        completionsInClass: 0,
+      },
+      [],
+    );
+    expect(refused.errors).toEqual([
+      "Already a level 2 pirate; a new level must be higher.",
+    ]);
+    const short = checkLevelUp(
+      {
+        class: "alien",
+        level: 2,
+        levels: { ...NO_LEVELS, alien: 1 },
+        completionsInClass: 1,
+      },
+      [{ class: "alien", level: 2, minCompletions: 3 }],
+    );
+    expect(short.warnings).toEqual(["Has 1 alien quest; level 2 asks for 3."]);
+  });
 });
 
 describe("requirementFor", () => {
@@ -386,6 +445,26 @@ describe("checkQuestWindow", () => {
     ).toEqual({ ok: true, warnings: [] });
   });
 
+  it("treats an absent class the same as a null one", () => {
+    expect(checkQuestWindow({}, levels(0))).toEqual({
+      ok: true,
+      warnings: [],
+    });
+    expect(checkQuestWindow({ class: undefined }, levels(0))).toEqual({
+      ok: true,
+      warnings: [],
+    });
+  });
+
+  it("names the quest's own class in its warnings", () => {
+    expect(checkQuestWindow({ class: "pirate" }, levels(2)).warnings).toEqual([
+      "Not a pirate yet.",
+    ]);
+    expect(
+      checkQuestWindow({ class: "pirate", minLevel: 3 }, levels(0, 1)).warnings,
+    ).toEqual(["Level 1 pirate; this quest asks for level 3 or higher."]);
+  });
+
   it("accepts a player inside the window", () => {
     expect(
       checkQuestWindow(
@@ -452,6 +531,11 @@ describe("questWindowIsValid", () => {
     ).toBe(true);
     expect(questWindowIsValid({ class: null, minLevel: 2 })).toBe(false);
     expect(questWindowIsValid({ class: null, maxLevel: 2 })).toBe(false);
+  });
+
+  it("treats an absent class the same as a null one", () => {
+    expect(questWindowIsValid({})).toBe(true);
+    expect(questWindowIsValid({ minLevel: 2 })).toBe(false);
   });
 
   it("lets a classed quest carry either bound", () => {
