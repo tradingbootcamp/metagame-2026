@@ -236,24 +236,25 @@ export function rsvpPrompt(
   const running = conflicts.some(
     (c) => c.role === "host" || c.role === "shepherd",
   );
-  const held = conflicts
-    .filter((c) => c.commitment && c.role !== "host" && c.role !== "shepherd")
-    .map((c) => `“${c.title}”`);
-  const heldNote =
-    held.length > 0
-      ? `${held.join(" and ")} ${held.length > 1 ? "have" : "has"} limited spots and they’re counting on you — if you switch, cancel that RSVP so someone else can take your place.`
-      : null;
+  const held = conflicts.filter(
+    (c) => c.commitment && c.role !== "host" && c.role !== "shepherd",
+  ).length;
+  const yours = held > 1 ? "your existing RSVPs" : "your existing RSVP";
+  const stakesNote =
+    commitment && !running && held > 0
+      ? `The session you’re joining and ${yours} both have limited spots, and they’re counting on you to attend. If you switch, cancel ${yours} so someone else can take your place.`
+      : commitment && !running
+        ? "The session you’re joining has limited spots and they’ll be counting on you to attend — a firmer commitment than attending a talk."
+        : held > 0
+          ? `${held > 1 ? "Your existing RSVPs are for sessions" : "Your existing RSVP is for a session"} with limited spots, where they’re counting on you. If you switch, cancel ${held > 1 ? "them" : "it"} so someone else can take your place.`
+          : null;
   const top = ROLE_ORDER.find((r) => conflicts.some((c) => c.role === r))!;
   return {
     label,
     confirm: {
       title: BUSY_TITLE[top],
       conflicts: conflicts.map(conflictLine),
-      body: [
-        running ? null : stakes,
-        heldNote,
-        "Only continue if you’re changing plans.",
-      ]
+      body: [stakesNote, "Only continue if you’re changing plans."]
         .filter(Boolean)
         .join(" "),
       tone:

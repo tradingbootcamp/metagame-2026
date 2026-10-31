@@ -423,7 +423,9 @@ describe("rsvpPrompt", () => {
 
   it("adds the stakes when the clash is only another RSVP", () => {
     const out = rsvpPrompt(true, false, [clash({})]);
-    expect(out.confirm?.body).toMatch(/^RSVPs here are a firmer commitment/);
+    expect(out.confirm?.body).toMatch(
+      /^The session you’re joining has limited spots/,
+    );
   });
 
   it("calls out a clashing commitment RSVP", () => {
@@ -431,7 +433,9 @@ describe("rsvpPrompt", () => {
     expect(out.confirm?.conflicts).toEqual([
       "You’ve already RSVP’d to “Chess” 1:00 PM–2:00 PM PT",
     ]);
-    expect(out.confirm?.body).toMatch(/“Chess” has limited spots/);
+    expect(out.confirm?.body).toMatch(
+      /^Your existing RSVP is for a session with limited spots/,
+    );
     expect(out.confirm?.tone).toBe("urgent");
   });
 });
