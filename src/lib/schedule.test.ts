@@ -376,7 +376,7 @@ describe("rsvpPrompt", () => {
   it("asks before claiming a spot in a commitment session", () => {
     const open = rsvpPrompt(true, false);
     expect(open.label).toBe("Claim a spot");
-    expect(open.confirm?.body).toMatch(/relying on you/);
+    expect(open.confirm?.body).toMatch(/isn’t just interest/);
   });
 
   it("asks before joining a commitment session's waitlist too", () => {
