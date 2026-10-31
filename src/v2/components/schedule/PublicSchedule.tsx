@@ -1,8 +1,10 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { FaStar } from "react-icons/fa";
 import {
+  onlySessions,
   openingDayKey,
   selectedDay,
   type Day,
@@ -13,8 +15,11 @@ import { LEGEND } from "@/v2/lib/schedule-styles";
 import {
   buildColumns,
   DayTabs,
+  EmptyPanel,
   GridDay,
   ListDay,
+  TOGGLE,
+  toggleButton,
   ViewToggle,
   type View,
 } from "./ScheduleViews";
@@ -46,12 +51,16 @@ export function CategoryLegend() {
 export default function PublicSchedule({
   days,
   locations,
+  mine,
 }: {
   days: PublicDay[];
   locations: PublicLocation[];
+  /** Ids of the viewer's own sessions; null when signed out. */
+  mine: string[] | null;
 }) {
   const [dayKey, setDayKey] = useState(() => openingDayKey(days));
   const [view, setView] = useState<View>("grid");
+  const [onlyMine, setOnlyMine] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -76,22 +85,44 @@ export default function PublicSchedule({
     return () => clearTimeout(t);
   }, []);
 
+  // The layout isn't re-rendered when a session modal closes, so an RSVP or
+  // bookmark made in one wouldn't reach `mine` without this.
+  useEffect(() => {
+    if (onlyMine && pathname === "/schedule") router.refresh();
+  }, [onlyMine, pathname, router]);
+
+  const shownDays = useMemo(
+    () => (onlyMine && mine ? onlySessions(days, new Set(mine)) : days),
+    [days, mine, onlyMine],
+  );
+
   const columns = buildColumns(
     locations,
     days.some((d) => d.sessions.some((s) => s.locationId === null)),
   );
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
-  const day = selectedDay(days, dayKey);
+  const day = selectedDay(shownDays, dayKey);
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex">
+      <div className="flex items-center gap-3">
         <ScheduleSearch
           sessions={days.flatMap((d) => d.sessions)}
           roomName={(s) => roomName(s.locationId)}
           onPick={(s) => router.push(href(s), { scroll: false })}
         />
+        {mine && (
+          <button
+            type="button"
+            aria-pressed={onlyMine}
+            onClick={() => setOnlyMine((on) => !on)}
+            className={`${TOGGLE} ml-auto shrink-0 items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(onlyMine, 0)}`}
+          >
+            <FaStar size={12} />
+            My sessions
+          </button>
+        )}
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
         {view !== "moments" && (
@@ -108,10 +139,16 @@ export default function PublicSchedule({
 
       {view === "moments" ? (
         <ScheduleMoments
-          days={days}
+          days={shownDays}
           columns={columns}
           onOpen={(s) => router.push(href(s), { scroll: false })}
         />
+      ) : onlyMine && day.sessions.length === 0 ? (
+        <EmptyPanel>
+          {mine?.length
+            ? `None of your sessions are on ${day.name}.`
+            : "Sessions you RSVP to, bookmark or host will show up here."}
+        </EmptyPanel>
       ) : view === "grid" && columns.length > 0 ? (
         <GridDay day={day} columns={columns} href={href} />
       ) : (
