@@ -417,7 +417,9 @@ describe("rsvpPrompt", () => {
       "You’re shepherding “Go” 1:00 PM–2:00 PM PT",
       "You’re on the waitlist for “Chess” 1:00 PM–2:00 PM PT",
     ]);
-    expect(out.confirm?.body).not.toMatch(/firmer commitment/);
+    expect(out.confirm?.body).toBe(
+      "Make sure you can fulfill your shepherd duties.",
+    );
     expect(out.confirm?.tone).toBe("urgent");
   });
 
