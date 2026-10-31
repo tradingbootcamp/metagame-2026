@@ -18,6 +18,7 @@ import {
   ViewToggle,
   type View,
 } from "./ScheduleViews";
+import ScheduleMoments from "./ScheduleMoments";
 import ScheduleSearch from "./ScheduleSearch";
 
 type PublicDay = Day<PublicSession>;
@@ -93,13 +94,25 @@ export default function PublicSchedule({
         />
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
-        <ViewToggle view={view} onSelect={setView} />
+        {view !== "moments" && (
+          <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
+        )}
+        <ViewToggle
+          view={view}
+          onSelect={setView}
+          views={["grid", "list", "moments"]}
+        />
       </div>
 
       <CategoryLegend />
 
-      {view === "grid" && columns.length > 0 ? (
+      {view === "moments" ? (
+        <ScheduleMoments
+          days={days}
+          columns={columns}
+          onOpen={(s) => router.push(href(s), { scroll: false })}
+        />
+      ) : view === "grid" && columns.length > 0 ? (
         <GridDay day={day} columns={columns} href={href} />
       ) : (
         <ListDay day={day} roomName={roomName} href={href} />
