@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { StarIcon } from "lucide-react";
+import { StarIcon, TriangleAlertIcon } from "lucide-react";
 import {
   bookmark,
   rsvpTo,
@@ -15,10 +15,32 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/v2/components/ui/dialog";
-import { rsvpPrompt, type RsvpStatus } from "@/lib/schedule";
+import {
+  rsvpPrompt,
+  type PlanConflict,
+  type RsvpConfirm,
+  type RsvpStatus,
+} from "@/lib/schedule";
 
 type Plan = { status: RsvpStatus | null; bookmarked: boolean };
 type Field = keyof Plan;
+
+const TONE: Record<
+  RsvpConfirm["tone"],
+  { content: string; title: string; list: string }
+> = {
+  confirm: { content: "border-line", title: "text-navy", list: "" },
+  warning: {
+    content: "border-2 border-tan",
+    title: "text-navy",
+    list: "border-tan bg-peach/40",
+  },
+  urgent: {
+    content: "border-2 border-meeple",
+    title: "text-meeple",
+    list: "border-meeple bg-meeple/10",
+  },
+};
 
 /**
  * The signed-in attendee's RSVP and bookmark controls for one session.
@@ -30,6 +52,7 @@ export default function PlanButtons({
   bookmarked,
   full,
   commitment = false,
+  conflicts = [],
   onSettled,
 }: {
   sessionId: string;
@@ -39,6 +62,8 @@ export default function PlanButtons({
   full: boolean;
   /** RSVPing claims a spot people rely on, so it's confirmed first. */
   commitment?: boolean;
+  /** The viewer's other sessions at the same time, warned about first. */
+  conflicts?: PlanConflict[];
   onSettled?: (result: PlanResult) => void;
 }) {
   const fromProps: Plan = { status, bookmarked };
@@ -53,7 +78,8 @@ export default function PlanButtons({
   const latest = useRef<Record<Field, number>>({ status: 0, bookmarked: 0 });
   const rsvpSaving = useRef(false);
   const [confirming, setConfirming] = useState(false);
-  const prompt = rsvpPrompt(commitment, full);
+  const prompt = rsvpPrompt(commitment, full, conflicts);
+  const tone = prompt.confirm && TONE[prompt.confirm.tone];
   const join = () => runRsvp(full ? "waitlist" : "going");
 
   // A server render with new values (e.g. after navigating back) wins.
@@ -150,18 +176,32 @@ export default function PlanButtons({
         {plan.bookmarked ? "Bookmarked" : "Bookmark"}
       </button>
       {error && <span className="text-xs text-meeple">{error}</span>}
-      {prompt.confirm && (
+      {prompt.confirm && tone && (
         <Dialog open={confirming} onOpenChange={setConfirming}>
           <DialogContent
             role="alertdialog"
             showCloseButton={false}
             // Above RouteModal (z-[100]), which hosts this on the session page.
             overlayClassName="z-[110]"
-            className="z-[110] max-w-[440px] border-line bg-white px-6 py-5 text-ink"
+            className={`z-[110] max-w-[440px] bg-white px-6 py-5 text-ink ${tone.content}`}
           >
-            <DialogTitle className="mb-2 font-grotesk text-xl font-bold text-navy">
+            <DialogTitle
+              className={`mb-2 flex items-center gap-2 font-grotesk text-xl font-bold ${tone.title}`}
+            >
+              {prompt.confirm.conflicts.length > 0 && (
+                <TriangleAlertIcon aria-hidden className="size-5 shrink-0" />
+              )}
               {prompt.confirm.title}
             </DialogTitle>
+            {prompt.confirm.conflicts.length > 0 && (
+              <ul
+                className={`mb-3 flex flex-col gap-1 rounded-md border-l-4 px-3 py-2 text-sm font-semibold text-ink ${tone.list}`}
+              >
+                {prompt.confirm.conflicts.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            )}
             <DialogDescription className="text-sm text-ink/80">
               {prompt.confirm.body}
             </DialogDescription>

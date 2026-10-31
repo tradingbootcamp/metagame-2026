@@ -27,6 +27,7 @@ import {
   movedTimes,
   openingDayKey,
   pacificDayKey,
+  planConflicts,
   VISIBILITY_LABEL,
   type Attendance,
   type RoomClash,
@@ -522,6 +523,11 @@ export default function ScheduleTool({
           locations={locations}
           attendance={openNow ? attendance[openNow.id] : undefined}
           viewer={viewer}
+          conflicts={
+            openNow && viewer
+              ? planConflicts(openNow, sessions, viewer.userId, viewer.rsvps)
+              : []
+          }
           onClose={close}
         />
       )}

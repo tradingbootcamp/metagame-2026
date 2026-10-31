@@ -18,7 +18,9 @@ import {
   outsideHours,
   overlapLanes,
   overlapWarning,
+  planConflicts,
   rsvpPrompt,
+  type PlanConflict,
   type LocationVisibility,
   type ScheduleSession,
 } from "./schedule";
@@ -384,6 +386,128 @@ describe("rsvpPrompt", () => {
     const full = rsvpPrompt(true, true);
     expect(full.label).toBe("Join waitlist");
     expect(full.confirm?.body).toMatch(/firmer commitment/);
+  });
+
+  const clash = (over: Partial<PlanConflict>): PlanConflict => ({
+    role: "going",
+    title: "Chess",
+    startsAt: "2026-11-07T21:00:00.000Z",
+    endsAt: "2026-11-07T22:00:00.000Z",
+    commitment: false,
+    ...over,
+  });
+
+  it("warns about a clash before an interest-only RSVP", () => {
+    const out = rsvpPrompt(false, false, [clash({ role: "host" })]);
+    expect(out.confirm).toMatchObject({
+      title: "You’re hosting something at this time",
+      conflicts: ["You’re hosting “Chess” 1:00 PM–2:00 PM PT"],
+      tone: "warning",
+    });
+  });
+
+  it("names each clash in one combined commitment dialog", () => {
+    const out = rsvpPrompt(true, false, [
+      clash({ role: "shepherd", title: "Go" }),
+      clash({ role: "waitlist" }),
+    ]);
+    expect(out.confirm?.title).toBe(
+      "You’re shepherding something at this time",
+    );
+    expect(out.confirm?.conflicts).toEqual([
+      "You’re shepherding “Go” 1:00 PM–2:00 PM PT",
+      "You’re on the waitlist for “Chess” 1:00 PM–2:00 PM PT",
+    ]);
+    expect(out.confirm?.body).toBe(
+      "Make sure you can fulfill your shepherd duties.",
+    );
+    expect(out.confirm?.tone).toBe("urgent");
+  });
+
+  it("adds the stakes when the clash is only another RSVP", () => {
+    const out = rsvpPrompt(true, false, [clash({})]);
+    expect(out.confirm?.body).toMatch(
+      /^The session you’re joining has limited spots/,
+    );
+  });
+
+  it("calls out a clashing commitment RSVP", () => {
+    const out = rsvpPrompt(false, false, [clash({ commitment: true })]);
+    expect(out.confirm?.conflicts).toEqual([
+      "You’ve already RSVP’d to “Chess” 1:00 PM–2:00 PM PT",
+    ]);
+    expect(out.confirm?.body).toMatch(
+      /^Your existing RSVP is for a session with limited spots/,
+    );
+    expect(out.confirm?.tone).toBe("urgent");
+  });
+});
+
+describe("planConflicts", () => {
+  const at = (h: number, m = 0) =>
+    `2026-11-07T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00.000Z`;
+  const target = session({
+    id: "t",
+    status: "published",
+    startsAt: at(20),
+    endsAt: at(21),
+  });
+  const me = { userId: "me", name: "Me", email: "me@x" };
+  const other = (over: Partial<ScheduleSession>) =>
+    session({ status: "published", startsAt: at(20), endsAt: at(21), ...over });
+  const ids = (sessions: ScheduleSession[], rsvps = {}) =>
+    planConflicts(target, [target, ...sessions], "me", rsvps).map((c) => [
+      c.title,
+      c.role,
+    ]);
+
+  it("finds hosting, shepherding and RSVPs that overlap, in time order", () => {
+    expect(
+      ids(
+        [
+          other({ id: "r", title: "R", startsAt: at(20, 30), endsAt: at(22) }),
+          other({ id: "h", title: "H", hosts: [me], startsAt: at(19, 30) }),
+          other({ id: "s", title: "S", shepherd: me }),
+          other({ id: "w", title: "W" }),
+        ],
+        { r: "going", w: "waitlist", t: "going" },
+      ),
+    ).toEqual([
+      ["H", "host"],
+      ["S", "shepherd"],
+      ["W", "waitlist"],
+      ["R", "going"],
+    ]);
+  });
+
+  it("names a session once, by its strongest tie", () => {
+    expect(
+      ids([other({ id: "h", title: "H", hosts: [me], shepherd: me })], {
+        h: "going",
+      }),
+    ).toEqual([["H", "host"]]);
+  });
+
+  it("skips back-to-back sessions, other people's, drafts and unplaced ones", () => {
+    expect(
+      ids(
+        [
+          other({ id: "before", startsAt: at(19), endsAt: at(20) }),
+          other({ id: "after", startsAt: at(21), endsAt: at(22) }),
+          other({ id: "theirs", hosts: [{ ...me, userId: "x" }] }),
+          other({ id: "draft", status: "draft", hosts: [me] }),
+          other({ id: "tba", startsAt: null, endsAt: null, hosts: [me] }),
+          other({ id: "marked" }),
+        ],
+        { before: "going", after: "going" },
+      ),
+    ).toEqual([]);
+  });
+
+  it("has nothing to clash with while the target is unplaced", () => {
+    const tba = { id: "t", startsAt: null, endsAt: null };
+    const busy = other({ id: "h", hosts: [me] });
+    expect(planConflicts(tba, [busy], "me", {})).toEqual([]);
   });
 });
 

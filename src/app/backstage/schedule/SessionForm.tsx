@@ -40,6 +40,7 @@ import {
   wallAt,
   pacificMinutes,
   type Attendance,
+  type PlanConflict,
   type ScheduleLocation,
   type ScheduleSession,
   type ViewerPlans,
@@ -142,6 +143,7 @@ export default function SessionForm({
   locations,
   attendance,
   viewer,
+  conflicts,
   onClose,
 }: {
   session: ScheduleSession | null;
@@ -149,6 +151,7 @@ export default function SessionForm({
   locations: ScheduleLocation[];
   attendance?: Attendance[string];
   viewer: (ViewerPlans & { userId: string }) | null;
+  conflicts: PlanConflict[];
   onClose: () => void;
 }) {
   const [day, setDay] = useState(
@@ -574,6 +577,7 @@ export default function SessionForm({
             session={session}
             attendance={attendance}
             viewer={viewer}
+            conflicts={conflicts}
           />
         )}
       </DialogContent>
