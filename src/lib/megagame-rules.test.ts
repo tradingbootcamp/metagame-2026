@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { MAX_LEVEL, NO_LEVELS } from "./megagame-levels";
 import {
   checkLevelUp,
+  checkQuestWindow,
+  questWindowIsValid,
   deriveLevels,
   LEVEL_REQUIREMENTS,
   requirementFor,
@@ -356,5 +358,97 @@ describe("checkLevelUp requirements", () => {
     );
     expect(got.ok).toBe(false);
     expect(got.warnings).toEqual([]);
+  });
+});
+
+describe("checkQuestWindow", () => {
+  const levels = (wizard: number, pirate = 0) => ({
+    ...NO_LEVELS,
+    wizard,
+    pirate,
+  });
+
+  it("says nothing about a classless quest", () => {
+    expect(checkQuestWindow({ class: null }, levels(0))).toEqual({
+      ok: true,
+      warnings: [],
+    });
+    expect(
+      checkQuestWindow({ class: null, minLevel: 2, maxLevel: 3 }, levels(0)),
+    ).toEqual({ ok: true, warnings: [] });
+  });
+
+  it("accepts a player inside the window", () => {
+    expect(
+      checkQuestWindow(
+        { class: "wizard", minLevel: 1, maxLevel: 3 },
+        levels(2),
+      ),
+    ).toEqual({ ok: true, warnings: [] });
+  });
+
+  it("warns below the minimum level", () => {
+    expect(
+      checkQuestWindow({ class: "wizard", minLevel: 2 }, levels(1)),
+    ).toEqual({
+      ok: false,
+      warnings: ["Level 1 wizard; this quest asks for level 2 or higher."],
+    });
+  });
+
+  it("warns above the maximum level", () => {
+    expect(
+      checkQuestWindow({ class: "wizard", maxLevel: 3 }, levels(4)),
+    ).toEqual({
+      ok: false,
+      warnings: ["Level 4 wizard; this quest is for level 3 and below."],
+    });
+  });
+
+  it("warns when the player is not in the quest's class", () => {
+    expect(checkQuestWindow({ class: "wizard" }, levels(0))).toEqual({
+      ok: false,
+      warnings: ["Not a wizard yet."],
+    });
+    expect(
+      checkQuestWindow({ class: "wizard", minLevel: 2 }, levels(0)).warnings,
+    ).toEqual(["Not a wizard yet."]);
+  });
+
+  it("accepts a classed quest with no window", () => {
+    expect(checkQuestWindow({ class: "wizard" }, levels(2))).toEqual({
+      ok: true,
+      warnings: [],
+    });
+  });
+
+  it("looks only at the quest's own class", () => {
+    expect(
+      checkQuestWindow({ class: "wizard" }, levels(0, 3)).warnings,
+    ).toEqual(["Not a wizard yet."]);
+  });
+
+  it("warns about an unknown class without throwing", () => {
+    expect(checkQuestWindow({ class: "sorcerer" }, levels(2))).toEqual({
+      ok: false,
+      warnings: ['Quest class "sorcerer" is not a known class.'],
+    });
+  });
+});
+
+describe("questWindowIsValid", () => {
+  it("lets a classless quest through only without a window", () => {
+    expect(questWindowIsValid({ class: null })).toBe(true);
+    expect(
+      questWindowIsValid({ class: null, minLevel: null, maxLevel: null }),
+    ).toBe(true);
+    expect(questWindowIsValid({ class: null, minLevel: 2 })).toBe(false);
+    expect(questWindowIsValid({ class: null, maxLevel: 2 })).toBe(false);
+  });
+
+  it("lets a classed quest carry either bound", () => {
+    expect(questWindowIsValid({ class: "wizard", minLevel: 2 })).toBe(true);
+    expect(questWindowIsValid({ class: "wizard", maxLevel: 2 })).toBe(true);
+    expect(questWindowIsValid({ class: "wizard" })).toBe(true);
   });
 });

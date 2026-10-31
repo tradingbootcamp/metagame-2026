@@ -156,3 +156,49 @@ export function checkLevelUp(
 
   return { ok: errors.length === 0, errors, warnings };
 }
+
+export type QuestWindow = {
+  /** Null means any class. */
+  class: string | null;
+  minLevel?: number | null;
+  maxLevel?: number | null;
+};
+
+export type QuestWindowCheck = {
+  /** False means show the warning; nothing here blocks a confirmation. */
+  ok: boolean;
+  warnings: string[];
+};
+
+export function checkQuestWindow(
+  quest: QuestWindow,
+  levels: MegagameLevels,
+): QuestWindowCheck {
+  const warnings: string[] = [];
+  if (quest.class === null) return { ok: true, warnings };
+  if (!isMegagameClass(quest.class)) {
+    warnings.push(`Quest class "${quest.class}" is not a known class.`);
+    return { ok: false, warnings };
+  }
+  const cls = quest.class;
+  const level = levels[cls] ?? 0;
+  if (level === 0) {
+    warnings.push(`Not a ${cls} yet.`);
+  } else if (quest.minLevel != null && level < quest.minLevel) {
+    warnings.push(
+      `Level ${level} ${cls}; this quest asks for level ${quest.minLevel} or higher.`,
+    );
+  } else if (quest.maxLevel != null && level > quest.maxLevel) {
+    warnings.push(
+      `Level ${level} ${cls}; this quest is for level ${quest.maxLevel} and below.`,
+    );
+  }
+  return { ok: warnings.length === 0, warnings };
+}
+
+/** A level window needs a class. The phase 3 CSV importer calls this per row. */
+export function questWindowIsValid(quest: QuestWindow): boolean {
+  return (
+    quest.class !== null || (quest.minLevel == null && quest.maxLevel == null)
+  );
+}
