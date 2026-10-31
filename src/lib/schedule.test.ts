@@ -376,12 +376,12 @@ describe("rsvpPrompt", () => {
   it("asks before claiming a spot in a commitment session", () => {
     const open = rsvpPrompt(true, false);
     expect(open.label).toBe("Claim a spot");
-    expect(open.confirm?.body).toMatch(/isn’t just interest/);
+    expect(open.confirm?.body).toMatch(/firmer commitment/);
   });
 
   it("asks before joining a commitment session's waitlist too", () => {
     const full = rsvpPrompt(true, true);
     expect(full.label).toBe("Join waitlist");
-    expect(full.confirm?.body).toMatch(/moved in automatically/);
+    expect(full.confirm?.body).toMatch(/firmer commitment/);
   });
 });

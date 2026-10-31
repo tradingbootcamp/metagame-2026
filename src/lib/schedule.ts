@@ -126,11 +126,8 @@ export function summarizeRsvps(
  * null for an interest-only session, which RSVPs in one click.
  */
 const COMMITMENT_TITLE = "This session is counting on you";
-const COMMITMENT_STAKES = {
-  open: "Unlike most sessions, an RSVP here isn’t just interest. Spots are limited and the host is planning around exactly who claims one, so only claim a spot if you’ll definitely be there — and cancel if your plans change so someone else can have it.",
-  waitlist:
-    "Unlike most sessions, an RSVP here isn’t just interest. The host is planning around exactly who shows up, and if a spot opens you’ll be moved in automatically — so only join the waitlist if you’ll definitely be there.",
-};
+const COMMITMENT_STAKES =
+  "RSVPs to this session are a firmer commitment than attending a talk — there are a limited number of spots and they’ll be counting on you to attend.";
 
 export function rsvpPrompt(
   commitment: boolean,
@@ -142,7 +139,7 @@ export function rsvpPrompt(
     label,
     confirm: {
       title: COMMITMENT_TITLE,
-      body: full ? COMMITMENT_STAKES.waitlist : COMMITMENT_STAKES.open,
+      body: COMMITMENT_STAKES,
     },
   };
 }
