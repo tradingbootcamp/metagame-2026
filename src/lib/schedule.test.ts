@@ -400,7 +400,7 @@ describe("rsvpPrompt", () => {
     const out = rsvpPrompt(false, false, [clash({ role: "host" })]);
     expect(out.confirm).toMatchObject({
       title: "RSVP anyway?",
-      conflicts: ["You’re hosting “Chess” 1:00 PM–2:00 PM"],
+      conflicts: ["You’re hosting “Chess” 1:00 PM–2:00 PM PT"],
       tone: "warning",
     });
   });
@@ -412,8 +412,8 @@ describe("rsvpPrompt", () => {
     ]);
     expect(out.confirm?.title).toBe("Claim a spot anyway?");
     expect(out.confirm?.conflicts).toEqual([
-      "You’re shepherding “Go” 1:00 PM–2:00 PM",
-      "You’re on the waitlist for “Chess” 1:00 PM–2:00 PM",
+      "You’re shepherding “Go” 1:00 PM–2:00 PM PT",
+      "You’re on the waitlist for “Chess” 1:00 PM–2:00 PM PT",
     ]);
     expect(out.confirm?.body).toMatch(/relying on you to show up/);
     expect(out.confirm?.tone).toBe("urgent");
@@ -422,7 +422,7 @@ describe("rsvpPrompt", () => {
   it("calls out a clashing commitment RSVP", () => {
     const out = rsvpPrompt(false, false, [clash({ commitment: true })]);
     expect(out.confirm?.conflicts).toEqual([
-      "You’ve already RSVP’d to “Chess” 1:00 PM–2:00 PM",
+      "You’ve already RSVP’d to “Chess” 1:00 PM–2:00 PM PT",
     ]);
     expect(out.confirm?.body).toMatch(/counting on you at “Chess”/);
     expect(out.confirm?.tone).toBe("urgent");

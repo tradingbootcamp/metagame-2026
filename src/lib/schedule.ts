@@ -186,7 +186,7 @@ const ROLE_PHRASE: Record<PlanRole, string> = {
 
 /** "You’re hosting “Chess” 2:00 PM–3:00 PM" */
 export function conflictLine(c: PlanConflict): string {
-  return `${ROLE_PHRASE[c.role]} “${c.title}” ${formatPacificTime(c.startsAt)}–${formatPacificTime(c.endsAt)}`;
+  return `${ROLE_PHRASE[c.role]} “${c.title}” ${formatPacificTime(c.startsAt)}–${formatPacificTime(c.endsAt)} PT`;
 }
 
 export type RsvpConfirm = {
