@@ -151,14 +151,17 @@ export default async function SessionDetails({ slug }: { slug: string }) {
     toolAccess("schedule.manage"),
   ]);
   const viewerId = account?.user.id ?? null;
-  const [rsvps, plans, editor, raw] = await Promise.all([
+  const [rsvps, plans, editor, raw, shown] = await Promise.all([
     loadSessionRsvps(session.id),
     viewerId ? loadViewerPlans(viewerId) : null,
     // PublicSession carries host names but no ids, so ownership is its own read.
     viewerId ? editSessionAccess(session.id) : null,
     // Host ids and shepherds aren't public, so clashes read the raw schedule.
     viewerId ? loadRawSchedule() : null,
+    viewerId ? loadPublicSchedule() : null,
   ]);
+  // Only sessions this viewer can see, as loadMySessionIds does.
+  const visible = new Set(shown?.sessions.map((s) => s.id));
 
   const tags = [
     session.category ? CATEGORY_LABEL[session.category] : null,
@@ -259,7 +262,12 @@ export default async function SessionDetails({ slug }: { slug: string }) {
           commitment={session.rsvpIsCommitment}
           conflicts={
             viewerId && plans && raw
-              ? planConflicts(session, raw.sessions, viewerId, plans.rsvps)
+              ? planConflicts(
+                  session,
+                  raw.sessions.filter((s) => visible.has(s.id)),
+                  viewerId,
+                  plans.rsvps,
+                )
               : []
           }
           rsvps={rsvps}

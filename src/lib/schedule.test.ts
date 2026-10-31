@@ -431,6 +431,21 @@ describe("rsvpPrompt", () => {
     );
   });
 
+  it("doesn't treat a waitlist place as a held spot", () => {
+    const out = rsvpPrompt(false, false, [
+      clash({ role: "waitlist", commitment: true }),
+    ]);
+    expect(out.confirm?.body).toBe("");
+  });
+
+  it("keeps the held-spot note when you're also running something", () => {
+    const out = rsvpPrompt(true, false, [
+      clash({ commitment: true }),
+      clash({ role: "host", title: "Go" }),
+    ]);
+    expect(out.confirm?.body).toMatch(/^Your existing RSVP is for a session/);
+  });
+
   it("calls out a clashing commitment RSVP", () => {
     const out = rsvpPrompt(false, false, [clash({ commitment: true })]);
     expect(out.confirm?.conflicts).toEqual([
