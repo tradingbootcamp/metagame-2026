@@ -198,9 +198,17 @@ export type RsvpConfirm = {
   tone: "confirm" | "warning" | "urgent";
 };
 
-const COMMITMENT_TITLE = "This session is counting on you";
+const COMMITMENT_TITLE = "RSVPing here is a commitment";
 const COMMITMENT_STAKES =
-  "RSVPs to this session are a firmer commitment than attending a talk — there are a limited number of spots and they’ll be counting on you to attend.";
+  "RSVPs here are a firmer commitment than attending a talk — there are a limited number of spots and they’ll be counting on you to attend.";
+
+const BUSY_TITLE: Record<PlanRole, string> = {
+  host: "You’re hosting something at this time",
+  shepherd: "You’re shepherding something at this time",
+  going: "You’ve already RSVP’d to something at this time",
+  waitlist: "You’re on a waitlist for something at this time",
+};
+const ROLE_ORDER: PlanRole[] = ["host", "shepherd", "going", "waitlist"];
 
 /**
  * How the RSVP button reads, and what to confirm before it goes through:
@@ -225,26 +233,29 @@ export function rsvpPrompt(
       },
     };
   }
+  const running = conflicts.some(
+    (c) => c.role === "host" || c.role === "shepherd",
+  );
   const held = conflicts
     .filter((c) => c.commitment && c.role !== "host" && c.role !== "shepherd")
     .map((c) => `“${c.title}”`);
   const heldNote =
     held.length > 0
-      ? `People are counting on you at ${held.join(" and ")}. If you’re switching, give up your place there so someone else can have it.`
+      ? `${held.join(" and ")} ${held.length > 1 ? "have" : "has"} limited spots and they’re counting on you — if you switch, cancel that RSVP so someone else can take your place.`
       : null;
-  const running = conflicts.some(
-    (c) => c.role === "host" || c.role === "shepherd",
-  );
-  const overlapStakes = running ? null : stakes;
-  const overlap = overlapStakes
-    ? "This session overlaps the time above."
-    : "This session overlaps the time above. Only continue if you’re changing plans.";
+  const top = ROLE_ORDER.find((r) => conflicts.some((c) => c.role === r))!;
   return {
     label,
     confirm: {
-      title: "You’re already busy at this time",
+      title: BUSY_TITLE[top],
       conflicts: conflicts.map(conflictLine),
-      body: [overlap, overlapStakes, heldNote].filter(Boolean).join(" "),
+      body: [
+        running ? null : stakes,
+        heldNote,
+        "Only continue if you’re changing plans.",
+      ]
+        .filter(Boolean)
+        .join(" "),
       tone:
         commitment || conflicts.some((c) => c.commitment)
           ? "urgent"
