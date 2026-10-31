@@ -232,7 +232,11 @@ export function rsvpPrompt(
     held.length > 0
       ? `People are counting on you at ${held.join(" and ")}. If you’re switching, give up your place there so someone else can have it.`
       : null;
-  const overlap = stakes
+  const running = conflicts.some(
+    (c) => c.role === "host" || c.role === "shepherd",
+  );
+  const overlapStakes = running ? null : stakes;
+  const overlap = overlapStakes
     ? "This session overlaps the time above."
     : "This session overlaps the time above. Only continue if you’re changing plans.";
   return {
@@ -240,7 +244,7 @@ export function rsvpPrompt(
     confirm: {
       title: "You’re already busy at this time",
       conflicts: conflicts.map(conflictLine),
-      body: [overlap, stakes, heldNote].filter(Boolean).join(" "),
+      body: [overlap, overlapStakes, heldNote].filter(Boolean).join(" "),
       tone:
         commitment || conflicts.some((c) => c.commitment)
           ? "urgent"

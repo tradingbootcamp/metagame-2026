@@ -415,10 +415,15 @@ describe("rsvpPrompt", () => {
       "You’re shepherding “Go” 1:00 PM–2:00 PM PT",
       "You’re on the waitlist for “Chess” 1:00 PM–2:00 PM PT",
     ]);
+    expect(out.confirm?.body).not.toMatch(/firmer commitment/);
+    expect(out.confirm?.tone).toBe("urgent");
+  });
+
+  it("adds the stakes when the clash is only another RSVP", () => {
+    const out = rsvpPrompt(true, false, [clash({})]);
     expect(out.confirm?.body).toMatch(
       /overlaps the time above\. RSVPs to this session are a firmer commitment/,
     );
-    expect(out.confirm?.tone).toBe("urgent");
   });
 
   it("calls out a clashing commitment RSVP", () => {
