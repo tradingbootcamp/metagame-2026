@@ -199,11 +199,8 @@ export type RsvpConfirm = {
 };
 
 const COMMITMENT_TITLE = "This session is counting on you";
-const COMMITMENT_STAKES = {
-  open: "Unlike most sessions, an RSVP here isn’t just interest. Spots are limited and the host is planning around exactly who claims one, so only claim a spot if you’ll definitely be there — and cancel if your plans change so someone else can have it.",
-  waitlist:
-    "Unlike most sessions, an RSVP here isn’t just interest. The host is planning around exactly who shows up, and if a spot opens you’ll be moved in automatically — so only join the waitlist if you’ll definitely be there.",
-};
+const COMMITMENT_STAKES =
+  "RSVPs to this session are a firmer commitment than attending a talk — there are a limited number of spots and they’ll be counting on you to attend.";
 
 /**
  * How the RSVP button reads, and what to confirm before it goes through:
@@ -215,11 +212,7 @@ export function rsvpPrompt(
   conflicts: PlanConflict[] = [],
 ): { label: string; confirm: RsvpConfirm | null } {
   const label = full ? "Join waitlist" : commitment ? "Claim a spot" : "RSVP";
-  const stakes = !commitment
-    ? null
-    : full
-      ? COMMITMENT_STAKES.waitlist
-      : COMMITMENT_STAKES.open;
+  const stakes = commitment ? COMMITMENT_STAKES : null;
   if (conflicts.length === 0) {
     if (!stakes) return { label, confirm: null };
     return {
@@ -240,7 +233,7 @@ export function rsvpPrompt(
       ? `People are counting on you at ${held.join(" and ")}. If you’re switching, give up your place there so someone else can have it.`
       : null;
   const overlap = stakes
-    ? "This session overlaps the time above, and it’s one that’s counting on you."
+    ? "This session overlaps the time above."
     : "This session overlaps the time above. Only continue if you’re changing plans.";
   return {
     label,
