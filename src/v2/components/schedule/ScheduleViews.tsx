@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { FaListUl, FaThLarge } from "react-icons/fa";
+import { FaClock, FaListUl, FaThLarge } from "react-icons/fa";
 import {
   cellSessions,
   formatPacificTime,
@@ -118,6 +118,7 @@ export function DayTabs({
 const VIEWS = [
   { id: "grid", label: "Grid", Icon: FaThLarge },
   { id: "list", label: "List", Icon: FaListUl },
+  { id: "moments", label: "Moments", Icon: FaClock },
 ] as const;
 
 export type View = (typeof VIEWS)[number]["id"];
@@ -126,25 +127,29 @@ export function ViewToggle({
   view,
   onSelect,
   labels,
+  views = ["grid", "list"],
 }: {
   view: View;
   onSelect: (v: View) => void;
   labels?: Partial<Record<View, string>>;
+  views?: View[];
 }) {
   return (
     <div role="group" aria-label="View" className={TOGGLE}>
-      {VIEWS.map(({ id, label, Icon }, i) => (
-        <button
-          key={id}
-          type="button"
-          aria-pressed={view === id}
-          onClick={() => onSelect(id)}
-          className={`flex items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(view === id, i)}`}
-        >
-          <Icon size={12} />
-          {labels?.[id] ?? label}
-        </button>
-      ))}
+      {VIEWS.filter((v) => views.includes(v.id)).map(
+        ({ id, label, Icon }, i) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={view === id}
+            onClick={() => onSelect(id)}
+            className={`flex items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(view === id, i)}`}
+          >
+            <Icon size={12} />
+            {labels?.[id] ?? label}
+          </button>
+        ),
+      )}
     </div>
   );
 }
