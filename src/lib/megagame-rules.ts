@@ -83,6 +83,14 @@ export type LevelRequirement = {
 /** Tunable soft checks. Empty ships the tool with checks off, which is allowed. */
 export const LEVEL_REQUIREMENTS: readonly LevelRequirement[] = [];
 
+export function requirementFor(
+  cls: MegagameClass,
+  level: number,
+  table: readonly LevelRequirement[] = LEVEL_REQUIREMENTS,
+): LevelRequirement | null {
+  return table.find((row) => row.class === cls && row.level === level) ?? null;
+}
+
 export type LevelUpInput = {
   class: MegagameClass;
   /** The level being awarded. */
@@ -111,7 +119,7 @@ export function checkLevelUp(
   input: LevelUpInput,
   table: readonly LevelRequirement[] = LEVEL_REQUIREMENTS,
 ): LevelUpCheck {
-  const { class: cls, level, levels } = input;
+  const { class: cls, level, levels, completionsInClass } = input;
   const current = levels[cls] ?? 0;
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -135,6 +143,13 @@ export function checkLevelUp(
         skipped.length === 1
           ? `Skips level ${skipped[0]}.`
           : `Skips levels ${listLevels(skipped)}.`,
+      );
+    }
+    const requirement = requirementFor(cls, level, table);
+    if (requirement && completionsInClass < requirement.minCompletions) {
+      const quests = completionsInClass === 1 ? "quest" : "quests";
+      warnings.push(
+        `Has ${completionsInClass} ${cls} ${quests}; level ${level} asks for ${requirement.minCompletions}.`,
       );
     }
   }

@@ -3,6 +3,9 @@ import { MAX_LEVEL, NO_LEVELS } from "./megagame-levels";
 import {
   checkLevelUp,
   deriveLevels,
+  LEVEL_REQUIREMENTS,
+  requirementFor,
+  type LevelRequirement,
   isCompleteMegagameCode,
   matchAnswer,
   normalizeAnswer,
@@ -265,5 +268,93 @@ describe("checkLevelUp transitions", () => {
     expect(got.warnings).toHaveLength(2);
     expect(got.warnings[0]).toContain(String(MAX_LEVEL));
     expect(got.warnings[1]).toBe(`Skips level ${MAX_LEVEL + 1}.`);
+  });
+});
+
+describe("requirementFor", () => {
+  const table: LevelRequirement[] = [
+    { class: "wizard", level: 2, minCompletions: 3 },
+  ];
+
+  it("finds the row for a class and level", () => {
+    expect(requirementFor("wizard", 2, table)).toEqual(table[0]);
+  });
+
+  it("returns null when no row matches", () => {
+    expect(requirementFor("wizard", 3, table)).toBeNull();
+    expect(requirementFor("pirate", 2, table)).toBeNull();
+  });
+
+  it("ships empty, so the checks are off until staff fill it in", () => {
+    expect(LEVEL_REQUIREMENTS).toEqual([]);
+  });
+});
+
+describe("checkLevelUp requirements", () => {
+  const table: LevelRequirement[] = [
+    { class: "wizard", level: 2, minCompletions: 3 },
+  ];
+  const at = (wizard: number, pirate = 0) => ({
+    ...NO_LEVELS,
+    wizard,
+    pirate,
+  });
+
+  it("warns about a shortfall and still allows the record", () => {
+    const got = checkLevelUp(
+      { class: "wizard", level: 2, levels: at(1), completionsInClass: 1 },
+      table,
+    );
+    expect(got.ok).toBe(true);
+    expect(got.warnings).toEqual(["Has 1 wizard quest; level 2 asks for 3."]);
+  });
+
+  it("pluralises the count it has", () => {
+    const got = checkLevelUp(
+      { class: "wizard", level: 2, levels: at(1), completionsInClass: 0 },
+      table,
+    );
+    expect(got.warnings).toEqual(["Has 0 wizard quests; level 2 asks for 3."]);
+    const two = checkLevelUp(
+      { class: "wizard", level: 2, levels: at(1), completionsInClass: 2 },
+      table,
+    );
+    expect(two.warnings).toEqual(["Has 2 wizard quests; level 2 asks for 3."]);
+  });
+
+  it("does not warn once the requirement is met", () => {
+    const got = checkLevelUp(
+      { class: "wizard", level: 2, levels: at(1), completionsInClass: 3 },
+      table,
+    );
+    expect(got.warnings).toEqual([]);
+  });
+
+  it("does not apply another class's requirement", () => {
+    const got = checkLevelUp(
+      { class: "pirate", level: 2, levels: at(0, 1), completionsInClass: 0 },
+      table,
+    );
+    expect(got.warnings).toEqual([]);
+  });
+
+  it("lists a skip before a shortfall", () => {
+    const got = checkLevelUp(
+      { class: "wizard", level: 2, levels: at(0), completionsInClass: 1 },
+      table,
+    );
+    expect(got.warnings).toEqual([
+      "Skips level 1.",
+      "Has 1 wizard quest; level 2 asks for 3.",
+    ]);
+  });
+
+  it("says nothing about requirements when the level itself is refused", () => {
+    const got = checkLevelUp(
+      { class: "wizard", level: 2, levels: at(2), completionsInClass: 0 },
+      table,
+    );
+    expect(got.ok).toBe(false);
+    expect(got.warnings).toEqual([]);
   });
 });
