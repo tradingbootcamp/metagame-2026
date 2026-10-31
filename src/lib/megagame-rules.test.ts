@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { MAX_LEVEL, NO_LEVELS } from "./megagame-levels";
 import {
+  checkLevelUp,
+  deriveLevels,
   isCompleteMegagameCode,
   matchAnswer,
   normalizeAnswer,
@@ -118,5 +121,149 @@ describe("matchAnswer", () => {
       matched: false,
       answer: null,
     });
+  });
+});
+
+describe("deriveLevels", () => {
+  it("starts everyone at zero in every class", () => {
+    expect(deriveLevels([])).toEqual(NO_LEVELS);
+  });
+
+  it("takes the maximum, not the last event", () => {
+    expect(
+      deriveLevels([
+        { class: "wizard", level: 3 },
+        { class: "wizard", level: 1 },
+      ]),
+    ).toEqual({ ...NO_LEVELS, wizard: 3 });
+  });
+
+  it("ignores a voided event, dropping the class back to zero", () => {
+    expect(
+      deriveLevels([{ class: "wizard", level: 2, voidedAt: new Date() }]),
+    ).toEqual(NO_LEVELS);
+    expect(
+      deriveLevels([
+        { class: "wizard", level: 1 },
+        { class: "wizard", level: 2, voidedAt: new Date() },
+      ]),
+    ).toEqual({ ...NO_LEVELS, wizard: 1 });
+  });
+
+  it("treats a voidedAt string the same as a Date", () => {
+    expect(
+      deriveLevels([
+        { class: "wizard", level: 2, voidedAt: "2026-11-07T10:00:00.000Z" },
+      ]),
+    ).toEqual(NO_LEVELS);
+  });
+
+  it("ignores an unknown class without throwing", () => {
+    expect(deriveLevels([{ class: "sorcerer", level: 4 }])).toEqual(NO_LEVELS);
+  });
+
+  it("ignores a level that is not a positive integer", () => {
+    expect(
+      deriveLevels([
+        { class: "wizard", level: 0 },
+        { class: "wizard", level: -2 },
+        { class: "wizard", level: 1.5 },
+      ]),
+    ).toEqual(NO_LEVELS);
+  });
+
+  it("fills two classes and leaves the third at zero", () => {
+    expect(
+      deriveLevels([
+        { class: "wizard", level: 2 },
+        { class: "pirate", level: 4 },
+      ]),
+    ).toEqual({ wizard: 2, pirate: 4, alien: 0 });
+  });
+});
+
+describe("checkLevelUp transitions", () => {
+  const at = (wizard: number) => ({ ...NO_LEVELS, wizard });
+
+  it("accepts the next level with nothing to say", () => {
+    expect(
+      checkLevelUp(
+        { class: "wizard", level: 1, levels: at(0), completionsInClass: 0 },
+        [],
+      ),
+    ).toEqual({ ok: true, errors: [], warnings: [] });
+  });
+
+  it("refuses a level that is not a whole number of 1 or more", () => {
+    for (const level of [0, 1.5, -1]) {
+      const got = checkLevelUp(
+        { class: "wizard", level, levels: at(0), completionsInClass: 0 },
+        [],
+      );
+      expect(got.ok).toBe(false);
+      expect(got.errors).toContain(
+        "A level must be a whole number of 1 or more.",
+      );
+    }
+  });
+
+  it("refuses a level that is not above the current one", () => {
+    for (const level of [3, 2]) {
+      const got = checkLevelUp(
+        { class: "wizard", level, levels: at(3), completionsInClass: 9 },
+        [],
+      );
+      expect(got.ok).toBe(false);
+      expect(got.errors).toEqual([
+        "Already a level 3 wizard; a new level must be higher.",
+      ]);
+    }
+  });
+
+  it("warns rather than refuses above the chart", () => {
+    const got = checkLevelUp(
+      {
+        class: "wizard",
+        level: MAX_LEVEL + 1,
+        levels: at(MAX_LEVEL),
+        completionsInClass: 0,
+      },
+      [],
+    );
+    expect(got.ok).toBe(true);
+    expect(got.warnings).toHaveLength(1);
+    expect(got.warnings[0]).toContain(String(MAX_LEVEL));
+  });
+
+  it("warns about one skipped level", () => {
+    const got = checkLevelUp(
+      { class: "wizard", level: 3, levels: at(1), completionsInClass: 0 },
+      [],
+    );
+    expect(got.ok).toBe(true);
+    expect(got.warnings).toEqual(["Skips level 2."]);
+  });
+
+  it("warns about several skipped levels", () => {
+    const got = checkLevelUp(
+      { class: "wizard", level: 4, levels: at(0), completionsInClass: 0 },
+      [],
+    );
+    expect(got.warnings).toEqual(["Skips levels 1, 2 and 3."]);
+  });
+
+  it("puts the above-the-chart warning before the skip warning", () => {
+    const got = checkLevelUp(
+      {
+        class: "wizard",
+        level: MAX_LEVEL + 2,
+        levels: at(MAX_LEVEL),
+        completionsInClass: 0,
+      },
+      [],
+    );
+    expect(got.warnings).toHaveLength(2);
+    expect(got.warnings[0]).toContain(String(MAX_LEVEL));
+    expect(got.warnings[1]).toBe(`Skips level ${MAX_LEVEL + 1}.`);
   });
 });
