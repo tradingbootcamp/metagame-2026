@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { MAX_LEVEL, NO_LEVELS } from "./megagame-levels";
 import {
+  BUCKET_MINUTES,
+  BUCKET_ORIGIN,
+  BUCKET_SIZES,
+  bucketIntervalSql,
+  bucketSeries,
+  bucketStart,
   checkLevelUp,
   checkQuestWindow,
   questWindowIsValid,
@@ -11,7 +17,9 @@ import {
   isCompleteMegagameCode,
   matchAnswer,
   normalizeAnswer,
+  isBucketSize,
   normalizeMegagameCode,
+  type BucketSize,
 } from "./megagame-rules";
 
 describe("normalizeMegagameCode", () => {
@@ -450,5 +458,142 @@ describe("questWindowIsValid", () => {
     expect(questWindowIsValid({ class: "wizard", minLevel: 2 })).toBe(true);
     expect(questWindowIsValid({ class: "wizard", maxLevel: 2 })).toBe(true);
     expect(questWindowIsValid({ class: "wizard" })).toBe(true);
+  });
+});
+
+describe("bucket sizes", () => {
+  it("whitelists the interval literals and throws on anything else", () => {
+    expect(bucketIntervalSql("5m")).toBe("5 minutes");
+    expect(bucketIntervalSql("1h")).toBe("1 hour");
+    expect(bucketIntervalSql("1d")).toBe("1 day");
+    expect(() => bucketIntervalSql("2h")).toThrow();
+    expect(() => bucketIntervalSql("1h; drop table quests")).toThrow();
+    expect(() => bucketIntervalSql("")).toThrow();
+  });
+
+  it("recognises only its own sizes", () => {
+    for (const size of BUCKET_SIZES) expect(isBucketSize(size)).toBe(true);
+    expect(isBucketSize("2h")).toBe(false);
+    expect(isBucketSize("")).toBe(false);
+    expect(isBucketSize(null)).toBe(false);
+  });
+
+  it("gives minutes for every size", () => {
+    expect(BUCKET_MINUTES).toEqual({
+      "5m": 5,
+      "15m": 15,
+      "30m": 30,
+      "1h": 60,
+      "3h": 180,
+      "6h": 360,
+      "1d": 1440,
+    });
+  });
+});
+
+describe("bucketStart", () => {
+  const iso = (at: Date) => at.toISOString();
+
+  it("floors to the quarter hour", () => {
+    expect(iso(bucketStart(new Date("2026-11-07T10:07:00.000Z"), "15m"))).toBe(
+      "2026-11-07T10:00:00.000Z",
+    );
+    expect(iso(bucketStart(new Date("2026-11-07T10:15:00.000Z"), "15m"))).toBe(
+      "2026-11-07T10:15:00.000Z",
+    );
+    expect(iso(bucketStart(new Date("2026-11-07T10:14:59.999Z"), "15m"))).toBe(
+      "2026-11-07T10:00:00.000Z",
+    );
+  });
+
+  it("floors at every size", () => {
+    const at = new Date("2026-11-07T10:07:00.000Z");
+    const expected: Record<string, string> = {
+      "5m": "2026-11-07T10:05:00.000Z",
+      "30m": "2026-11-07T10:00:00.000Z",
+      "3h": "2026-11-07T09:00:00.000Z",
+      "6h": "2026-11-07T06:00:00.000Z",
+      "1d": "2026-11-07T00:00:00.000Z",
+    };
+    for (const [size, want] of Object.entries(expected)) {
+      expect(iso(bucketStart(at, size as BucketSize)), size).toBe(want);
+    }
+  });
+
+  it("is idempotent", () => {
+    const at = new Date("2026-11-07T10:07:33.123Z");
+    for (const size of BUCKET_SIZES) {
+      expect(iso(bucketStart(bucketStart(at, size), size))).toBe(
+        iso(bucketStart(at, size)),
+      );
+    }
+  });
+
+  it("floors downwards before the origin too", () => {
+    expect(BUCKET_ORIGIN.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+    expect(iso(bucketStart(new Date("2025-12-31T23:58:00.000Z"), "15m"))).toBe(
+      "2025-12-31T23:45:00.000Z",
+    );
+  });
+});
+
+describe("bucketSeries", () => {
+  const isos = (at: Date[]) => at.map((d) => d.toISOString());
+
+  it("includes the buckets holding both endpoints", () => {
+    expect(
+      isos(
+        bucketSeries(
+          new Date("2026-11-07T10:07:00.000Z"),
+          new Date("2026-11-07T12:07:00.000Z"),
+          "30m",
+        ),
+      ),
+    ).toEqual([
+      "2026-11-07T10:00:00.000Z",
+      "2026-11-07T10:30:00.000Z",
+      "2026-11-07T11:00:00.000Z",
+      "2026-11-07T11:30:00.000Z",
+      "2026-11-07T12:00:00.000Z",
+    ]);
+    expect(
+      isos(
+        bucketSeries(
+          new Date("2026-11-07T10:07:00.000Z"),
+          new Date("2026-11-07T12:07:00.000Z"),
+          "1h",
+        ),
+      ),
+    ).toEqual([
+      "2026-11-07T10:00:00.000Z",
+      "2026-11-07T11:00:00.000Z",
+      "2026-11-07T12:00:00.000Z",
+    ]);
+  });
+
+  it("handles endpoints already on a boundary", () => {
+    expect(
+      isos(
+        bucketSeries(
+          new Date("2026-11-07T10:00:00.000Z"),
+          new Date("2026-11-07T11:00:00.000Z"),
+          "30m",
+        ),
+      ),
+    ).toEqual([
+      "2026-11-07T10:00:00.000Z",
+      "2026-11-07T10:30:00.000Z",
+      "2026-11-07T11:00:00.000Z",
+    ]);
+  });
+
+  it("gives one entry for an instant and none for a reversed range", () => {
+    const at = new Date("2026-11-07T10:07:00.000Z");
+    expect(isos(bucketSeries(at, at, "5m"))).toEqual([
+      "2026-11-07T10:05:00.000Z",
+    ]);
+    expect(
+      bucketSeries(at, new Date("2026-11-07T09:00:00.000Z"), "5m"),
+    ).toEqual([]);
   });
 });

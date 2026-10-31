@@ -202,3 +202,69 @@ export function questWindowIsValid(quest: QuestWindow): boolean {
     quest.class !== null || (quest.minLevel == null && quest.maxLevel == null)
   );
 }
+
+export const BUCKET_SIZES = [
+  "5m",
+  "15m",
+  "30m",
+  "1h",
+  "3h",
+  "6h",
+  "1d",
+] as const;
+export type BucketSize = (typeof BUCKET_SIZES)[number];
+
+export const isBucketSize = (value: unknown): value is BucketSize =>
+  BUCKET_SIZES.includes(value as BucketSize);
+
+/** Minutes per bucket, used for the JavaScript side of the math. */
+export const BUCKET_MINUTES: Record<BucketSize, number> = {
+  "5m": 5,
+  "15m": 15,
+  "30m": 30,
+  "1h": 60,
+  "3h": 180,
+  "6h": 360,
+  "1d": 1440,
+};
+
+// The only place a Postgres interval literal for date_bin comes from: a fixed
+// map, never a caller's string.
+const BUCKET_INTERVALS: Record<BucketSize, string> = {
+  "5m": "5 minutes",
+  "15m": "15 minutes",
+  "30m": "30 minutes",
+  "1h": "1 hour",
+  "3h": "3 hours",
+  "6h": "6 hours",
+  "1d": "1 day",
+};
+
+/** Throws on anything not in BUCKET_SIZES, so no input reaches SQL unchecked. */
+export function bucketIntervalSql(size: string): string {
+  if (!isBucketSize(size)) throw new Error(`Unknown bucket size: ${size}`);
+  return BUCKET_INTERVALS[size];
+}
+
+// Shared origin for date_bin, so the JavaScript buckets and the SQL buckets
+// line up. Every size divides a day evenly, so any UTC midnight gives the same
+// boundaries.
+export const BUCKET_ORIGIN = new Date(Date.UTC(2026, 0, 1));
+
+export function bucketStart(at: Date, size: BucketSize): Date {
+  const ms = BUCKET_MINUTES[size] * 60_000;
+  const origin = BUCKET_ORIGIN.getTime();
+  return new Date(Math.floor((at.getTime() - origin) / ms) * ms + origin);
+}
+
+/** Every bucket start from `from`'s bucket to `to`'s bucket, inclusive. */
+export function bucketSeries(from: Date, to: Date, size: BucketSize): Date[] {
+  if (to.getTime() < from.getTime()) return [];
+  const ms = BUCKET_MINUTES[size] * 60_000;
+  const last = bucketStart(to, size).getTime();
+  const out: Date[] = [];
+  for (let t = bucketStart(from, size).getTime(); t <= last; t += ms) {
+    out.push(new Date(t));
+  }
+  return out;
+}
