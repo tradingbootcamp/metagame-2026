@@ -8,12 +8,14 @@ import PlanButtons from "./PlanButtons";
 export default function SessionPlans({
   sessionId,
   capacity,
+  commitment,
   rsvps: initial,
   plan,
   signIn,
 }: {
   sessionId: string;
   capacity: number | null;
+  commitment: boolean;
   rsvps: SessionRsvps;
   /** The viewer's own plan, or null when signed out. */
   plan: { status: RsvpStatus | null; bookmarked: boolean } | null;
@@ -34,6 +36,7 @@ export default function SessionPlans({
           status={plan.status}
           bookmarked={plan.bookmarked}
           full={capacity !== null && rsvps.going >= capacity}
+          commitment={commitment}
           onSettled={(result) => result.rsvps && setRsvps(result.rsvps)}
         />
       ) : (

@@ -49,6 +49,9 @@ export type ScheduleSession = {
   ages: Ages | null;
   needs: string | null;
   status: Status;
+  /** An RSVP claims a limited spot people rely on, not just interest. */
+  rsvpIsCommitment: boolean;
+  sponsored: boolean;
   /** The Airtable RFP Submissions row this came from. */
   airtableRfpRecordId: string | null;
   /** Billing order, lead first. */
@@ -115,6 +118,29 @@ export function summarizeRsvps(
     going: going.length,
     waitlist: waitlist.length,
     names: showNames ? { going, waitlist } : null,
+  };
+}
+
+/**
+ * How the RSVP button reads, and what to confirm before it goes through:
+ * null for an interest-only session, which RSVPs in one click.
+ */
+const COMMITMENT_TITLE = "RSVPing here is a commitment";
+const COMMITMENT_STAKES =
+  "RSVPs here are a firmer commitment than attending a talk — there are a limited number of spots and they’ll be counting on you to attend.";
+
+export function rsvpPrompt(
+  commitment: boolean,
+  full: boolean,
+): { label: string; confirm: { title: string; body: string } | null } {
+  const label = full ? "Join waitlist" : commitment ? "Claim a spot" : "RSVP";
+  if (!commitment) return { label, confirm: null };
+  return {
+    label,
+    confirm: {
+      title: COMMITMENT_TITLE,
+      body: COMMITMENT_STAKES,
+    },
   };
 }
 
@@ -629,6 +655,8 @@ export type PublicSession = Pick<
   | "locationId"
   | "maxCapacity"
   | "ages"
+  | "rsvpIsCommitment"
+  | "sponsored"
 > & { startsAt: string; endsAt: string; hosts: { name: string }[] };
 
 export type PublicLocation = Pick<
@@ -687,6 +715,8 @@ export function publicSchedule(
       locationId: s.locationId,
       maxCapacity: s.maxCapacity,
       ages: s.ages,
+      rsvpIsCommitment: s.rsvpIsCommitment,
+      sponsored: s.sponsored,
       hosts: s.hosts.map((h) => ({ name: publicAccountName(h) })),
     }));
   const locations = rooms.map((l) => ({

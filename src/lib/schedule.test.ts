@@ -18,6 +18,7 @@ import {
   outsideHours,
   overlapLanes,
   overlapWarning,
+  rsvpPrompt,
   type LocationVisibility,
   type ScheduleSession,
 } from "./schedule";
@@ -36,6 +37,8 @@ const session = (over: Partial<ScheduleSession>): ScheduleSession => ({
   ages: null,
   needs: null,
   status: "draft",
+  rsvpIsCommitment: false,
+  sponsored: false,
   airtableRfpRecordId: null,
   hosts: [],
   shepherd: null,
@@ -359,6 +362,28 @@ describe("clashDescription", () => {
     expect(overlapWarning(clash)).toBe(
       'Saved, but this overlaps "Chess" in Eigen Hall (10:00 AM–10:55 AM).',
     );
+  });
+});
+
+describe("rsvpPrompt", () => {
+  it("RSVPs an interest-only session in one click", () => {
+    expect(rsvpPrompt(false, false)).toEqual({ label: "RSVP", confirm: null });
+    expect(rsvpPrompt(false, true)).toEqual({
+      label: "Join waitlist",
+      confirm: null,
+    });
+  });
+
+  it("asks before claiming a spot in a commitment session", () => {
+    const open = rsvpPrompt(true, false);
+    expect(open.label).toBe("Claim a spot");
+    expect(open.confirm?.body).toMatch(/firmer commitment/);
+  });
+
+  it("asks before joining a commitment session's waitlist too", () => {
+    const full = rsvpPrompt(true, true);
+    expect(full.label).toBe("Join waitlist");
+    expect(full.confirm?.body).toMatch(/firmer commitment/);
   });
 });
 

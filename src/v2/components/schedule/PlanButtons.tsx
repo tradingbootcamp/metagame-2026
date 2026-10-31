@@ -9,7 +9,13 @@ import {
   type PlanResult,
 } from "@/app/(v2)/schedule/actions";
 import { Button } from "@/v2/components/ui/button";
-import type { RsvpStatus } from "@/lib/schedule";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/v2/components/ui/dialog";
+import { rsvpPrompt, type RsvpStatus } from "@/lib/schedule";
 
 type Plan = { status: RsvpStatus | null; bookmarked: boolean };
 type Field = keyof Plan;
@@ -23,6 +29,7 @@ export default function PlanButtons({
   status,
   bookmarked,
   full,
+  commitment = false,
   onSettled,
 }: {
   sessionId: string;
@@ -30,6 +37,8 @@ export default function PlanButtons({
   bookmarked: boolean;
   /** Going count has reached capacity, so a new RSVP joins the waitlist. */
   full: boolean;
+  /** RSVPing claims a spot people rely on, so it's confirmed first. */
+  commitment?: boolean;
   onSettled?: (result: PlanResult) => void;
 }) {
   const fromProps: Plan = { status, bookmarked };
@@ -43,6 +52,9 @@ export default function PlanButtons({
   const [error, setError] = useState<string | null>(null);
   const latest = useRef<Record<Field, number>>({ status: 0, bookmarked: 0 });
   const rsvpSaving = useRef(false);
+  const [confirming, setConfirming] = useState(false);
+  const prompt = rsvpPrompt(commitment, full);
+  const join = () => runRsvp(full ? "waitlist" : "going");
 
   // A server render with new values (e.g. after navigating back) wins.
   if (state.props.status !== status || state.props.bookmarked !== bookmarked) {
@@ -103,8 +115,11 @@ export default function PlanButtons({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {plan.status === null ? (
-        <Button size="sm" onClick={() => runRsvp(full ? "waitlist" : "going")}>
-          {full ? "Join waitlist" : "RSVP"}
+        <Button
+          size="sm"
+          onClick={() => (prompt.confirm ? setConfirming(true) : join())}
+        >
+          {prompt.label}
         </Button>
       ) : (
         <>
@@ -135,6 +150,42 @@ export default function PlanButtons({
         {plan.bookmarked ? "Bookmarked" : "Bookmark"}
       </button>
       {error && <span className="text-xs text-meeple">{error}</span>}
+      {prompt.confirm && (
+        <Dialog open={confirming} onOpenChange={setConfirming}>
+          <DialogContent
+            role="alertdialog"
+            showCloseButton={false}
+            // Above RouteModal (z-[100]), which hosts this on the session page.
+            overlayClassName="z-[110]"
+            className="z-[110] max-w-[440px] border-line bg-white px-6 py-5 text-ink"
+          >
+            <DialogTitle className="mb-2 font-grotesk text-xl font-bold text-navy">
+              {prompt.confirm.title}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-ink/80">
+              {prompt.confirm.body}
+            </DialogDescription>
+            <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                className="rounded-md px-3 py-2 text-sm font-semibold text-ink/70 hover:text-navy"
+              >
+                Cancel
+              </button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setConfirming(false);
+                  join();
+                }}
+              >
+                Continue
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
