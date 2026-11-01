@@ -70,9 +70,7 @@ const nextConfig: NextConfig = {
     },
     // Key dates used to be its own page, then a home-page section; now gone.
     { source: "/key-dates", destination: "/", permanent: true },
-    // /propose, the session proposal's short link, is its journey page now.
-    // Old short links into checkout now land on the home page; /buy/<code>
-    // passes the code along so it's stored and applied at Standard checkout.
+    // /buy/<code> hands its code to the home page, which stores it for Standard checkout.
     { source: "/buy", destination: "/", permanent: false },
     { source: "/buy/:promo", destination: "/?promo=:promo", permanent: false },
     // Short links into Standard checkout; /ticket/<code> pre-applies a promo code.

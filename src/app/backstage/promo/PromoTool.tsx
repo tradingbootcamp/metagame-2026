@@ -22,7 +22,7 @@ const CUSTOM = "__custom__";
 const STRIPE_ACCOUNT = "acct_1QeQd1CtO443EG3n";
 
 const redeemUrl = (origin: string, code: string) =>
-  `${origin.replace(/\/$/, "")}/buy/${code}`;
+  `${origin.replace(/\/$/, "")}/ticket/${code}`;
 
 const initial: MintState = {};
 
