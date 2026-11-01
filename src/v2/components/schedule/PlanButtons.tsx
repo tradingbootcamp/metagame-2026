@@ -77,9 +77,11 @@ export default function PlanButtons({
   const plan = state.shown;
   const latest = useRef<Record<Field, number>>({ status: 0, bookmarked: 0 });
   const rsvpSaving = useRef(false);
-  const [confirming, setConfirming] = useState(false);
+  // Index into prompt.confirms of the dialog showing, or null when closed.
+  const [step, setStep] = useState<number | null>(null);
   const prompt = rsvpPrompt(commitment, full, conflicts);
-  const tone = prompt.confirm && TONE[prompt.confirm.tone];
+  const confirm = step === null ? null : (prompt.confirms[step] ?? null);
+  const tone = confirm && TONE[confirm.tone];
   const join = () => runRsvp(full ? "waitlist" : "going");
 
   // A server render with new values (e.g. after navigating back) wins.
@@ -159,7 +161,7 @@ export default function PlanButtons({
       {plan.status === null ? (
         <Button
           size="sm"
-          onClick={() => (prompt.confirm ? setConfirming(true) : join())}
+          onClick={() => (prompt.confirms.length > 0 ? setStep(0) : join())}
         >
           {prompt.label}
         </Button>
@@ -194,8 +196,13 @@ export default function PlanButtons({
         />
         {plan.bookmarked ? "Bookmarked" : "Bookmark"}
       </button>
-      {prompt.confirm && tone && (
-        <Dialog open={confirming} onOpenChange={setConfirming}>
+      {confirm && tone && (
+        <Dialog
+          // A fresh dialog per step, so the next one opens rather than morphs.
+          key={step}
+          open
+          onOpenChange={(open) => !open && setStep(null)}
+        >
           <DialogContent
             role="alertdialog"
             showCloseButton={false}
@@ -206,10 +213,10 @@ export default function PlanButtons({
             <DialogTitle
               className={`mb-2 flex items-center gap-2 font-grotesk text-xl font-bold ${tone.title}`}
             >
-              {prompt.confirm.conflicts.length > 0 && (
+              {confirm.conflicts.length > 0 && (
                 <TriangleAlertIcon aria-hidden className="size-5 shrink-0" />
               )}
-              {prompt.confirm.title}
+              {confirm.title}
             </DialogTitle>
             {/* The classes go on DialogDescription so cn() overrides its
                 cream default; on the asChild div they'd only be concatenated. */}
@@ -218,22 +225,22 @@ export default function PlanButtons({
               className="flex flex-col gap-3 text-sm text-ink/80"
             >
               <div>
-                {prompt.confirm.conflicts.length > 0 && (
+                {confirm.conflicts.length > 0 && (
                   <ul
                     className={`flex flex-col gap-1 rounded-md border-l-4 px-3 py-2 font-semibold text-ink ${tone.list}`}
                   >
-                    {prompt.confirm.conflicts.map((line, i) => (
+                    {confirm.conflicts.map((line, i) => (
                       <li key={i}>{line}</li>
                     ))}
                   </ul>
                 )}
-                {prompt.confirm.body && <p>{prompt.confirm.body}</p>}
+                {confirm.body && <p>{confirm.body}</p>}
               </div>
             </DialogDescription>
             <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setConfirming(false)}
+                onClick={() => setStep(null)}
                 className="rounded-md px-3 py-2 text-sm font-semibold text-ink/70 hover:text-navy"
               >
                 Cancel
@@ -241,8 +248,13 @@ export default function PlanButtons({
               <Button
                 size="sm"
                 onClick={() => {
-                  setConfirming(false);
-                  join();
+                  const next = step! + 1;
+                  if (next < prompt.confirms.length) {
+                    setStep(next);
+                  } else {
+                    setStep(null);
+                    join();
+                  }
                 }}
               >
                 Continue

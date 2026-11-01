@@ -211,27 +211,24 @@ const BUSY_TITLE: Record<PlanRole, string> = {
 const ROLE_ORDER: PlanRole[] = ["host", "shepherd", "going", "waitlist"];
 
 /**
- * How the RSVP button reads, and what to confirm before it goes through:
- * null for an interest-only session with no clash, which RSVPs in one click.
+ * How the RSVP button reads, and the dialogs to confirm in turn before it goes
+ * through: none for an interest-only session with no clash, which RSVPs in
+ * one click.
  */
 export function rsvpPrompt(
   commitment: boolean,
   full: boolean,
   conflicts: PlanConflict[] = [],
-): { label: string; confirm: RsvpConfirm | null } {
+): { label: string; confirms: RsvpConfirm[] } {
   const label = full ? "Join waitlist" : commitment ? "Claim a spot" : "RSVP";
-  const stakes = commitment ? COMMITMENT_STAKES : null;
+  const commitmentStep: RsvpConfirm = {
+    title: COMMITMENT_TITLE,
+    conflicts: [],
+    body: COMMITMENT_STAKES,
+    tone: "confirm",
+  };
   if (conflicts.length === 0) {
-    if (!stakes) return { label, confirm: null };
-    return {
-      label,
-      confirm: {
-        title: COMMITMENT_TITLE,
-        conflicts: [],
-        body: stakes,
-        tone: "confirm",
-      },
-    };
+    return { label, confirms: commitment ? [commitmentStep] : [] };
   }
   const running = conflicts.some(
     (c) => c.role === "host" || c.role === "shepherd",
@@ -250,24 +247,25 @@ export function rsvpPrompt(
           ? `${held > 1 ? "Your existing RSVPs are for sessions" : "Your existing RSVP is for a session"} with limited spots that will be counting on you. If you switch, cancel ${held > 1 ? "them" : "it"} so someone else can take your place.`
           : null;
   const top = ROLE_ORDER.find((r) => conflicts.some((c) => c.role === r))!;
+  const clash: RsvpConfirm = {
+    title: BUSY_TITLE[top],
+    conflicts: conflicts.map(conflictLine),
+    body: [
+      conflicts.some((c) => c.role === "shepherd")
+        ? "Make sure you can fulfill your shepherd duties."
+        : null,
+      stakesNote,
+    ]
+      .filter(Boolean)
+      .join(" "),
+    tone:
+      commitment || conflicts.some((c) => c.commitment) ? "urgent" : "warning",
+  };
+  // The clash dialog only carries the joined session's stakes when the viewer
+  // isn't running something then, so otherwise they get their own step.
   return {
     label,
-    confirm: {
-      title: BUSY_TITLE[top],
-      conflicts: conflicts.map(conflictLine),
-      body: [
-        conflicts.some((c) => c.role === "shepherd")
-          ? "Make sure you can fulfill your shepherd duties."
-          : null,
-        stakesNote,
-      ]
-        .filter(Boolean)
-        .join(" "),
-      tone:
-        commitment || conflicts.some((c) => c.commitment)
-          ? "urgent"
-          : "warning",
-    },
+    confirms: commitment && running ? [clash, commitmentStep] : [clash],
   };
 }
 
