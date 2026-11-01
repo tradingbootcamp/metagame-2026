@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { FaStripeS } from "react-icons/fa";
 import { listCodes, mint, setActive, type MintState } from "./actions";
 import {
   buttonClass,
@@ -390,8 +391,9 @@ function CopyButtons({ code, origin }: { code: string; origin: string }) {
         type="button"
         onClick={() => checkoutCopy.copy(checkoutUrl(origin, code))}
         title="Goes straight to Stripe checkout with the code applied"
-        className={smallButtonClass}
+        className={`${smallButtonClass} inline-flex items-center gap-1.5`}
       >
+        <FaStripeS aria-hidden className="text-[#635BFF]" />
         {label(checkoutCopy.status, "Copy checkout link")}
       </button>
     </>
