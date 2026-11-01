@@ -100,16 +100,14 @@ export function ticketMatch(
 }
 
 /**
- * Why a ticket gets the bring-a-friend swag, or null: it came in a Family &
- * Friends pack, was bought with a referral, or referred someone. Derived, so
- * a refunded referee drops off on its own.
+ * Why a ticket gets the bring-a-friend swag, or null: it was bought with a
+ * referral (pack admissions count, linked to the pack's first) or referred
+ * someone. Derived, so a refunded referee drops off on its own.
  */
 export function swagReason(t: {
-  tier: string;
   referredBy: string | null;
   referrals: number;
 }): string | null {
-  if (/family/i.test(t.tier)) return "Family & Friends pack";
   if (t.referredBy !== null) return `Referred by ${t.referredBy}`;
   if (t.referrals > 0)
     return `Referred ${t.referrals} ${t.referrals === 1 ? "friend" : "friends"}`;
