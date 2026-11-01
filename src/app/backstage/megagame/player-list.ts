@@ -30,3 +30,17 @@ export function listHref(
   const query = params.toString();
   return query ? `${path}?${query}` : path;
 }
+
+/** Holds adds made before the URL catches up, so quick scans do not drop each other. */
+export function listQueue() {
+  let pending: string[] | null = null;
+  return {
+    add(ids: readonly string[], id: string): string[] {
+      pending = withPlayer(pending ?? ids, id);
+      return pending;
+    },
+    settle() {
+      pending = null;
+    },
+  };
+}

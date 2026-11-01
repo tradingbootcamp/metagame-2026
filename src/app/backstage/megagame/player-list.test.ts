@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_LIST,
   listHref,
+  listQueue,
   parsePlayerIds,
   withPlayer,
   withoutPlayer,
@@ -35,5 +36,26 @@ describe("player list in the URL", () => {
   it("adds extra parameters after the list", () => {
     expect(listHref("/q", ["u1"], { c: "id1" })).toBe("/q?players=u1&c=id1");
     expect(listHref("/q", [], { c: "id1" })).toBe("/q?c=id1");
+  });
+});
+
+describe("listQueue", () => {
+  it("builds on adds the URL has not caught up with yet", () => {
+    const queue = listQueue();
+    expect(queue.add(["a"], "b")).toEqual(["a", "b"]);
+    expect(queue.add(["a"], "c")).toEqual(["a", "b", "c"]);
+  });
+
+  it("goes back to the URL's list once navigation settles", () => {
+    const queue = listQueue();
+    queue.add(["a"], "b");
+    queue.settle();
+    expect(queue.add(["x"], "y")).toEqual(["x", "y"]);
+  });
+
+  it("does not add a player twice", () => {
+    const queue = listQueue();
+    queue.add([], "a");
+    expect(queue.add([], "a")).toEqual(["a"]);
   });
 });

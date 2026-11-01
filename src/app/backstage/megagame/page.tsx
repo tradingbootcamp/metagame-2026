@@ -53,7 +53,8 @@ export default async function MegagameHome(
       <Section title="Open a quest">
         <QuestCodeEntry players={ids} />
         <p className="text-sm text-ink/60">
-          Type the code on the quest label. The players below come along.
+          Type or scan the code on the quest label. The players below come
+          along.
         </p>
       </Section>
 

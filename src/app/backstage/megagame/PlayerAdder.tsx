@@ -5,13 +5,19 @@ import { fieldClass, smallButtonClass } from "../ui";
 import { findPlayers, lookupPlayer, type PlayerHit } from "./actions";
 import CodeEntry from "./CodeEntry";
 import { latestRequest } from "./latest";
+import ScanCodes from "./ScanCodes";
 
-/** Add a player by badge code or by name. Never creates accounts. */
+/**
+ * Add a player by badge code, scanned badge or name. Never creates accounts.
+ * With `onQuest`, a scanned quest label opens that quest.
+ */
 export default function PlayerAdder({
   onAdd,
+  onQuest,
   codeLabel = "Player code",
 }: {
   onAdd: (player: PlayerHit) => void;
+  onQuest?: (code: string) => void;
   codeLabel?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +54,12 @@ export default function PlayerAdder({
 
   return (
     <div className="flex flex-col gap-4">
+      <ScanCodes
+        label="Scan badges"
+        bareKind="player"
+        onPlayer={add}
+        onQuest={onQuest}
+      />
       <CodeEntry
         label={codeLabel}
         onCode={async (code) => {
