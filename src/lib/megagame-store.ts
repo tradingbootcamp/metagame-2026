@@ -18,11 +18,12 @@ import {
   type MegagameClass,
   type MegagameLevels,
 } from "./megagame-levels";
+import type { QuestImportRow } from "./megagame-quest-csv";
 import {
   isCompleteMegagameCode,
   normalizeMegagameCode,
 } from "./megagame-rules";
-import { withFreshTicketCode } from "./ticket-code";
+import { randomTicketCode, withFreshTicketCode } from "./ticket-code";
 
 // The driver is neon-http: one request per statement and no interactive
 // transactions, so every multi-statement write here is safe to retry and
@@ -97,6 +98,86 @@ export async function findQuestByCode(input: string): Promise<Quest | null> {
     .where(eq(quests.code, code))
     .limit(1);
   return row ?? null;
+}
+
+export async function listQuests(): Promise<Quest[]> {
+  const { quests } = schema;
+  return getDb()
+    .select()
+    .from(quests)
+    .orderBy(asc(quests.createdAt), asc(quests.code));
+}
+
+const FRESH_CODE_ATTEMPTS = 5;
+
+/**
+ * Rows with a code replace that quest's fields (active is left alone); rows
+ * without one become new quests under fresh codes.
+ */
+export async function importQuests(
+  rows: readonly QuestImportRow[],
+): Promise<{ created: number; updated: number }> {
+  const { quests } = schema;
+  const db = getDb();
+  const coded = rows.filter((r) => r.code !== null);
+  let updated = 0;
+  if (coded.length > 0) {
+    const existing = await db
+      .select({ code: quests.code })
+      .from(quests)
+      .where(
+        inArray(
+          quests.code,
+          coded.map((r) => r.code as string),
+        ),
+      );
+    updated = existing.length;
+    await db
+      .insert(quests)
+      .values(coded.map((r) => ({ ...r, code: r.code as string })))
+      .onConflictDoUpdate({
+        target: quests.code,
+        set: {
+          title: sql`excluded.title`,
+          class: sql`excluded.class`,
+          kind: sql`excluded.kind`,
+          answers: sql`excluded.answers`,
+          evidence: sql`excluded.evidence`,
+          hint: sql`excluded.hint`,
+          minLevel: sql`excluded.min_level`,
+          maxLevel: sql`excluded.max_level`,
+          updatedAt: sql`now()`,
+        },
+      });
+  }
+
+  // One insert for all of them; a code that turns out to be taken is the
+  // do-nothing case, and only those rows go round again.
+  let pending = rows.filter((r) => r.code === null);
+  for (
+    let attempt = 0;
+    pending.length > 0 && attempt < FRESH_CODE_ATTEMPTS;
+    attempt++
+  ) {
+    const taken = new Set(coded.map((r) => r.code));
+    const values = pending.map((r) => {
+      let code: string;
+      do code = randomTicketCode();
+      while (taken.has(code));
+      taken.add(code);
+      return { ...r, code };
+    });
+    const inserted = await db
+      .insert(quests)
+      .values(values)
+      .onConflictDoNothing({ target: quests.code })
+      .returning({ code: quests.code });
+    const done = new Set(inserted.map((r) => r.code));
+    pending = pending.filter((_, i) => !done.has(values[i].code));
+  }
+  if (pending.length > 0)
+    throw new Error(`No free quest code for ${pending.length} rows`);
+  return { created: rows.length - updated, updated };
 }
 
 // ---- Players ----

@@ -21,6 +21,7 @@ const { db } = vi.hoisted(() => {
       "orderBy",
       "groupBy",
       "onConflictDoNothing",
+      "onConflictDoUpdate",
       "returning",
     ])
       c[m] = vi.fn((...args: unknown[]) => {
@@ -57,6 +58,8 @@ import {
   playersByIds,
   findQuestByCode,
   hasVolunteerLevelEvent,
+  importQuests,
+  listQuests,
   liveCompletions,
   recentConfirmations,
   recordLevelUp,
@@ -94,6 +97,115 @@ describe("findQuestByCode", () => {
     expect(await findQuestByCode("https://x.test/q/a2c-4ef")).toEqual(quest);
     const where = arg(chainOf(db.select, 0), "where");
     expect(dialect.sqlToQuery(where as SQL).params).toEqual(["A2C4EF"]);
+  });
+});
+
+describe("listQuests", () => {
+  it("returns every quest, oldest first", async () => {
+    queue([{ id: "q1" }, { id: "q2" }]);
+    expect(await listQuests()).toEqual([{ id: "q1" }, { id: "q2" }]);
+    expect(db.select).toHaveBeenCalledTimes(1);
+    const order = chainOf(db.select, 0).calls.find((c) => c[0] === "orderBy");
+    expect(order?.slice(1).map(render)).toEqual([
+      '"quests"."created_at" asc',
+      '"quests"."code" asc',
+    ]);
+  });
+});
+
+describe("importQuests", () => {
+  const row = (code: string | null, title: string) => ({
+    code,
+    title,
+    class: "wizard" as const,
+    kind: "answer" as const,
+    answers: ["Fire"],
+    evidence: null,
+    hint: null,
+    minLevel: 1,
+    maxLevel: 2,
+  });
+
+  it("upserts rows that carry a code and counts the ones that existed", async () => {
+    queue([{ code: "A2C4EF" }], []);
+    expect(
+      await importQuests([row("A2C4EF", "Old"), row("B3D5F7", "New")]),
+    ).toEqual({ created: 1, updated: 1 });
+    expect(db.insert).toHaveBeenCalledTimes(1);
+    const c = chainOf(db.insert, 0);
+    expect(arg(c, "values")).toEqual([
+      { ...row("A2C4EF", "Old") },
+      { ...row("B3D5F7", "New") },
+    ]);
+    const conflict = arg(c, "onConflictDoUpdate") as {
+      target: unknown;
+      set: Record<string, unknown>;
+    };
+    expect(conflict.target).toBe(schema.quests.code);
+    expect(render(conflict.set.title)).toBe("excluded.title");
+    expect(render(conflict.set.minLevel)).toBe("excluded.min_level");
+    expect(Object.keys(conflict.set)).not.toContain("active");
+    expect(Object.keys(conflict.set)).not.toContain("code");
+  });
+
+  /** An insert whose returning() echoes back the codes `keep` lets through. */
+  const freshInsert = (keep = (v: { code: string }[]) => v) =>
+    db.insert.mockImplementationOnce(() => {
+      const c: Record<string, unknown> = { calls: [] };
+      let values: { code: string }[] = [];
+      const record =
+        (m: string) =>
+        (...a: unknown[]) => {
+          (c.calls as unknown[][]).push([m, ...a]);
+          if (m === "values") values = a[0] as { code: string }[];
+          if (m === "returning")
+            return Promise.resolve(keep(values).map(({ code }) => ({ code })));
+          return c;
+        };
+      for (const m of ["values", "onConflictDoNothing", "returning"])
+        c[m] = vi.fn(record(m));
+      return c as never;
+    });
+
+  it("gives rows without a code fresh codes in one insert", async () => {
+    freshInsert();
+    expect(await importQuests([row(null, "A"), row(null, "B")])).toEqual({
+      created: 2,
+      updated: 0,
+    });
+    expect(db.select).not.toHaveBeenCalled();
+    expect(db.insert).toHaveBeenCalledTimes(1);
+    const c = chainOf(db.insert, 0);
+    expect(arg(c, "onConflictDoNothing")).toEqual({
+      target: schema.quests.code,
+    });
+    const values = arg(c, "values") as { code: string; title: string }[];
+    expect(values.map((v) => v.title)).toEqual(["A", "B"]);
+    for (const v of values) expect(v.code).toMatch(/^[0-9A-HJKMNP-TV-Z]{6}$/);
+    expect(values[0].code).not.toBe(values[1].code);
+  });
+
+  it("retries only the rows whose fresh code was taken", async () => {
+    freshInsert((v) => v.slice(0, 1));
+    freshInsert();
+    expect(await importQuests([row(null, "A"), row(null, "B")])).toEqual({
+      created: 2,
+      updated: 0,
+    });
+    expect(db.insert).toHaveBeenCalledTimes(2);
+    const retry = arg(chainOf(db.insert, 1), "values") as { title: string }[];
+    expect(retry.map((v) => v.title)).toEqual(["B"]);
+  });
+
+  it("gives up after five attempts", async () => {
+    for (let i = 0; i < 5; i++) freshInsert(() => []);
+    await expect(importQuests([row(null, "A")])).rejects.toThrow();
+    expect(db.insert).toHaveBeenCalledTimes(5);
+  });
+
+  it("writes nothing for an empty list", async () => {
+    expect(await importQuests([])).toEqual({ created: 0, updated: 0 });
+    expect(db.insert).not.toHaveBeenCalled();
   });
 });
 
