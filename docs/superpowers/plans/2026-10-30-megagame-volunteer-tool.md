@@ -49,18 +49,17 @@ class order is wizard, pirate, alien, while the spec's prose lists pirate, wizar
 existing order wins, because `activeClasses` and its test depend on it.
 
 The `user` table also already carries `wizard_level`, `pirate_level` and `alien_level` (smallint,
-default 0, check constraint 0 to 5), written today by the Megagame tab on `/account`. The spec
-derives a player's level from `level_events` instead. Those two are not reconciled anywhere, and the
-reconciliation is a decision for the user, not for the implementer. It does not block phase 1:
-`deriveLevels` below takes events as an argument and returns a `MegagameLevels`, so it works whether
-the caller later passes event rows or the user columns. Raise it before phase 2 starts. See section 8.
+default 0, check constraint 0 to 5), written today by the Megagame tab on `/account`. The user
+settled on 2026-11-01 that these columns are the source of truth for a player's current level, and
+`level_events` is the audit log that undo and the dashboard time series read. Section 4 spells out
+how each write path keeps the two consistent.
 
 `src/lib/megagame-store.ts` also already exists. It is 36 lines and exports `loadMegagameLevels` and
 `setMegagameLevels`, both reading and writing the three `user` level columns, and it has no
 `server-only` import. Its callers today are `src/app/(v2)/account/actions.ts`,
 `src/app/(v2)/account/page.tsx` and `src/app/(v2)/u/[id]/page.tsx`. Phase 2 adds to that file rather
-than creating it, and both existing exports and all three callers keep working until the user settles
-the level-source question in section 8. Phase 1 does not touch it.
+than creating it, and both existing exports and all three callers keep working, since the user
+columns stay the source of truth. Phase 1 does not touch it.
 
 ## 3. Phase 1 (implement now)
 
@@ -232,6 +231,10 @@ undefined, whose class fails `isMegagameClass`, or whose level is not an integer
 Take the maximum per class. The input type is loose on purpose so the phase 2 store can pass rows
 straight in.
 
+Current levels are read from the user columns, not derived from events (decision of 2026-11-01).
+`deriveLevels` stays in the module because undo of a level event uses it to recompute the column from
+the remaining non-voided events (section 4.2).
+
 Tests:
 
 - No events gives `NO_LEVELS` (all three classes at 0).
@@ -266,7 +269,7 @@ export type LevelUpInput = {
   class: MegagameClass;
   /** The level being awarded. */
   level: number;
-  /** The player's current levels, from `deriveLevels`. */
+  /** The player's current levels, from the user table's level columns. */
   levels: MegagameLevels;
   /** Non-voided completions this player has in that class. */
   completionsInClass: number;
@@ -292,24 +295,24 @@ the tests keep passing when staff tune the constant.
 `checkLevelUp` errors, in this order:
 
 1. `level` is not an integer or is below 1: `"A level must be a whole number of 1 or more."`
-2. `level` is not strictly greater than `input.levels[input.class]`: for a current level of 3 and a
+2. `level` is above `MAX_LEVEL`: `` `Level ${level} is above the maximum of ${MAX_LEVEL}.` `` so the
+   string cannot drift from the constant. This matches the check constraints on the user level
+   columns (decision of 2026-11-01).
+3. `level` is not strictly greater than `input.levels[input.class]`: for a current level of 3 and a
    requested 3, `"Already a level 3 wizard; a new level must be higher."` and for a requested 2,
    `"Already a level 3 wizard; a new level must be higher."` as well. The spec makes strictly greater
    a hard rule, with corrections handled by voiding.
 
-`MAX_LEVEL` is not an error. Spec section 4 says the maximum is "used only for the picker and the
-dashboard grid", so refusing a level above it would remove the ability to record a level 6 without a
-code change, and a database check constraint on the range would need a migration. It is a warning
-instead, and no message hard-codes the number.
+Only the first error that applies is reported, and warnings are computed only when there is no
+error.
 
 Warnings, in this order:
 
-1. Above the chart, when `level > MAX_LEVEL`: `` `Level ${level} is above the ${MAX_LEVEL}-level
-chart.` `` so the string cannot drift from the constant.
-2. Skipped levels, when `level > current + 1`: `"Skips level 2."` for one, and
+1. Skipped levels, when `level > current + 1`: `"Skips level 2."` for one, and
    `"Skips levels 2 and 3."` for several, listing `current + 1` through `level - 1` and joining with
-   commas and a final "and".
-3. A requirement shortfall, when a matching row exists and `completionsInClass < minCompletions`:
+   commas and a final "and". Since a level above `MAX_LEVEL` is refused first, the list has at most
+   four entries.
+2. A requirement shortfall, when a matching row exists and `completionsInClass < minCompletions`:
    `"Has 1 wizard quest; level 2 asks for 3."` Use the singular "quest" at exactly 1 and "quests"
    otherwise, and the lowercase class name from the class key.
 
@@ -321,8 +324,11 @@ Tests (each passing its own table):
 
 - Current level 0, requested 1, empty table: ok, no errors, no warnings.
 - Requested 0 and requested 1.5: each is an error and `ok` is false.
-- Current 5, requested 6: `ok` is true with the above-the-chart warning, and the warning string is
-  built from `MAX_LEVEL` rather than hard-coded, so assert it contains `String(MAX_LEVEL)`.
+- Current 5, requested 6: `ok` is false with the single error
+  `` `Level ${MAX_LEVEL + 1} is above the maximum of ${MAX_LEVEL}.` `` and no warnings.
+- Current 4, requested `MAX_LEVEL`: ok, no errors, no warnings.
+- Current 1, requested `MAX_LEVEL + 2`, and current 0, requested 1,000,000,000: refused with the
+  above-the-maximum error and no skip warning, and the second case returns quickly.
 - Current 3, requested 3 and requested 2: both error, and the message names the current level.
 - Current 1, requested 3: ok with one warning naming level 2.
 - Current 0, requested 4: ok with one warning whose string is `"Skips levels 1, 2 and 3."`, since the
@@ -331,7 +337,7 @@ Tests (each passing its own table):
   the exact sentence above and still returns ok; `completionsInClass: 3` does not warn.
 - A requirement for another class does not apply.
 - Both a skip and a shortfall produce two warnings, skip first.
-- A request above `MAX_LEVEL` that also skips a level produces the above-the-chart warning first.
+- Current 0, requested `MAX_LEVEL`: one warning, `"Skips levels 1, 2, 3 and 4."`
 - `requirementFor` returns null for a level with no row, and the row for one with it.
 - `LEVEL_REQUIREMENTS` is empty as shipped (one assertion, so a later edit to the constant is a
   deliberate test change).
@@ -340,7 +346,7 @@ Tests (each passing its own table):
 
 Spec section 5.1 step 3 gives each player in the list a status, one of which is "outside the lock
 window (warning)", and spec section 8 says a classless quest cannot carry a window. Both are pure
-functions of the quest's class and level window and the player's derived levels, so they belong here
+functions of the quest's class and level window and the player's current levels, so they belong here
 beside `checkLevelUp` rather than in the store. The other two statuses, "already completed" and "no
 claimed ticket", need rows and stay in phase 2.
 
@@ -429,7 +435,7 @@ export function bucketIntervalSql(size: string): string;
 
 /**
  * Shared origin for `date_bin`, so the JavaScript buckets and the SQL buckets
- * line up. See the open question about day boundaries.
+ * line up. Con days are Pacific, so this is midnight Pacific standard time.
  */
 export const BUCKET_ORIGIN: Date;
 
@@ -445,8 +451,10 @@ export function bucketSeries(
 
 `BUCKET_MINUTES` is `{ "5m": 5, "15m": 15, "30m": 30, "1h": 60, "3h": 180, "6h": 360, "1d": 1440 }`
 and `BUCKET_INTERVALS` is `{ "5m": "5 minutes", ..., "1d": "1 day" }`. `BUCKET_ORIGIN` is
-`new Date(Date.UTC(2026, 0, 1))`, a UTC midnight. Every bucket size divides a day evenly, so any UTC
-midnight gives the same boundaries and the choice of date does not affect any expectation.
+`new Date(Date.UTC(2026, 0, 1, 8))`, midnight Pacific standard time (UTC-8) on 2026-01-01, because
+con days are Pacific (decision of 2026-11-01). Every bucket size divides a day evenly, so only the
+origin's time of day affects the boundaries. Sizes up to 1h are unaffected by the 8-hour offset;
+3h, 6h and 1d buckets start at 08:00 UTC and its multiples.
 
 `bucketStart` is `floor((at - origin) / ms) * ms + origin` in milliseconds, which is what
 `date_bin(interval, ts, origin)` computes, and is well defined for negative differences too because
@@ -469,12 +477,14 @@ machine's time zone):
   `"2026-11-07T10:15:00.000Z"` gives itself, and `"2026-11-07T10:14:59.999Z"` gives
   `"2026-11-07T10:00:00.000Z"`.
 - `bucketStart` with `"5m"`, `"30m"`, `"3h"`, `"6h"` and `"1d"`: one case each, from
-  `"2026-11-07T10:07:00.000Z"`, expecting `10:05`, `10:00`, `09:00`, `06:00` and `00:00` on the same
+  `"2026-11-07T10:07:00.000Z"`, expecting `10:05`, `10:00`, `08:00`, `08:00` and `08:00` on the same
   UTC day.
+- `BUCKET_ORIGIN` is `"2026-01-01T08:00:00.000Z"`, and at `"1d"` `"2026-11-08T07:59:00.000Z"` gives
+  `"2026-11-07T08:00:00.000Z"` while `"2026-11-08T08:00:00.000Z"` gives itself.
 - `bucketStart` is idempotent: `bucketStart(bucketStart(t, s), s)` equals `bucketStart(t, s)` for
   every size.
 - A time before `BUCKET_ORIGIN` still floors downwards rather than towards the origin:
-  `"2025-12-31T23:58:00.000Z"` at `"15m"` gives `"2025-12-31T23:45:00.000Z"`.
+  `"2026-01-01T07:58:00.000Z"` at `"15m"` gives `"2026-01-01T07:45:00.000Z"`.
 - `bucketSeries` from `"2026-11-07T10:07:00.000Z"` to `"2026-11-07T12:07:00.000Z"` at `"30m"` gives
   five starts, `10:00`, `10:30`, `11:00`, `11:30` and `12:00`, because both endpoint buckets are
   included.
@@ -490,8 +500,7 @@ machine's time zone):
 
 ## 4. Phase 2: schema and store (blocked on the schema freeze lifting)
 
-Do not start until the user lifts the freeze. Ask about section 8's first open question before
-writing the schema.
+Do not start until the user lifts the freeze.
 
 ### 4.1 `src/db/schema/megagame.ts`
 
@@ -609,6 +618,8 @@ export const levelEvents = pgTable(
     userId: text().references(() => user.id, { onDelete: "set null" }),
     class: text().notNull(),
     level: integer().notNull(),
+    // 'picker' for the /account faction picker, 'volunteer' for the level-up action.
+    source: text().notNull(),
     awardedBy: text().references(() => user.id, { onDelete: "set null" }),
     awardedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     checksPassed: boolean().notNull(),
@@ -624,7 +635,11 @@ export const levelEvents = pgTable(
       .on(t.userId, t.class, t.level)
       .where(sql`${t.voidedAt} is null and ${t.userId} is not null`),
     index("level_events_user_id_idx").on(t.userId),
-    check("level_events_level_positive", sql`${t.level} >= 1`),
+    check("level_events_level_range", sql`${t.level} between 1 and 5`),
+    check(
+      "level_events_source_known",
+      sql`${t.source} in ('picker', 'volunteer')`,
+    ),
     check(
       "level_events_card_photo_https",
       sql`${t.cardPhotoUrl} is null or ${t.cardPhotoUrl} like 'https://%'`,
@@ -656,11 +671,12 @@ Two things in that file are deliberate departures from an earlier draft:
   completion history along with the quest row. `quests.active` is how a quest is withdrawn, so no
   flow needs the delete. References to `user` stay `set null`, which is what the retention policy
   asks for.
-- The level check is `level >= 1`, not `level between 1 and 5`. Spec section 4 puts the maximum in
-  the rules module and uses it only for the picker and the dashboard grid, so a database range check
-  would make recording a level 6 need a migration. The existing `user_wizard_level_range` check is
-  precedent for the stricter form, but it is attached to the `/account` columns, which are a
-  different question (section 8, question 1).
+- The level check is `level between 1 and 5`, the same range as the `user_*_level_range` checks on
+  the user columns, since a level-up writes both. `checkLevelUp` refuses a level above `MAX_LEVEL`
+  before either write (decision of 2026-11-01).
+- `source` records which path wrote the row. The picker lock in phase 3 and the undo fallback below
+  both need to tell a picker join from a volunteer level-up, and `awarded_by` cannot, since a
+  volunteer may level up their own account.
 
 ### 4.2 The no-transaction insert pattern
 
@@ -757,6 +773,31 @@ id collision. Untargeted absorbs either, and the outcome is then read back:
 - No row, and no event with this id: a live event for that user, class and level already exists, so
   report that the level was already awarded.
 
+When a row is returned, the action then sets the player's column for that class to the event's level
+through `setMegagameLevels` (the other two classes unchanged). On an idempotent retry it sets the
+column again, which repairs a crash between the insert and the update. The event is written first so
+that a crash never leaves a column change with no audit row.
+
+Level-event undo voids the event (`where voided_at is null`, so a second undo is a no-op), then
+recomputes that class's column:
+
+1. Read the player's non-voided `level_events` rows and take `deriveLevels(rows)[class]`.
+2. If that is above 0, set the column to it.
+3. If it is 0, set the column to 1 if the player joined this class through the picker, else 0. A
+   non-voided `picker` row in that class already makes step 1 return 1, so this fallback matters
+   only for a player whose picker join has no row. Those are players who picked before phase 2
+   landed; see section 8, question 1.
+
+Only the undone event's class is recomputed; the other two columns are left as they are. The tool's
+undo applies to `volunteer` rows. `picker` rows are voided only by the picker itself, below.
+
+The picker (`chooseMegagameClass` in `src/app/(v2)/account/actions.ts`) changes in phase 2 to write a
+`level_events` row with `source: 'picker'`, level 1, `awarded_by` the player, `checks_passed` true and
+a server-generated id, before it sets the columns. When a player switches class, the picker voids
+their earlier non-voided `picker` rows in the other classes in the same `db.batch()` as the insert,
+since it resets those columns to 0; without that, a later undo recomputation would bring the old
+class back. This switching path exists only before the phase 3 picker lock applies.
+
 Undo is `db.batch()` over two updates keyed by confirmation id, setting `voidedAt`, `voidedBy` and
 `voidReason` on the confirmation and on its completions, which is what clears the partial index. Both
 updates carry `where voided_at is null` so a second undo is a no-op rather than a reason overwrite.
@@ -783,13 +824,15 @@ phase 2 report and leave the test written but skipped rather than claiming the r
 ### 4.4 `src/lib/megagame-store.ts`
 
 This file already exists (section 2). Add to it; do not replace it. `loadMegagameLevels` and
-`setMegagameLevels` and their three callers, `src/app/(v2)/account/actions.ts`,
-`src/app/(v2)/account/page.tsx` and `src/app/(v2)/u/[id]/page.tsx`, keep working unchanged until the
-user settles section 8's first question. Once that is settled, list the caller changes it implies and
-cover `/account` and `/u/[id]` with tests before changing either.
+`setMegagameLevels` stay the read and write for current levels, and `src/app/(v2)/account/page.tsx`
+and `src/app/(v2)/u/[id]/page.tsx` keep calling them unchanged. `src/app/(v2)/account/actions.ts`
+changes as described at the end of section 4.2; write a test for the picker's event row and for the
+voiding on a class switch before changing it.
 
-New exports: quest lookup by code, player lookup by code, player search by name, and the confirm,
-level-up and void actions above, plus the reads `deriveLevels` and the dashboard need. Add
+New exports: quest lookup by code, player lookup by code, player search by name, the confirm,
+level-up and void actions above (level-up and level-event undo also write the user column), the
+picker's event write, a check for whether a player has any non-voided `volunteer` row (for the phase
+3 picker lock), and the reads that undo's recomputation and the dashboard need. Add
 `import "server-only"` at the top (the file does not have it today) and route every query through
 `getDb()`. `src/lib/name-match.ts` is not a person search; it exports only
 `matchLabel(name, labels)`, which picks a spelling out of a label list. Name search needs its own
@@ -829,6 +872,23 @@ Reuse `PinInput`, `QrDownload`, `uploadImage` and `downscaleImage`. Keep the in-
 in the URL query string. Read the Next.js guides in `node_modules/next/dist/docs/` before writing any
 of this.
 
+Picker lock (decision of 2026-11-01). The picker is a pre-con tool and the volunteer process runs
+during the con, so once a player has any non-voided `level_events` row with `source: 'volunteer'`,
+the picker stops working:
+
+- `chooseMegagameClass` checks for such a row before doing anything else after the session check, and
+  returns an error state without writing when one exists.
+- `src/app/(v2)/account/MegagamePanel.tsx` shows the player's current levels instead of the picker
+  when one exists. `src/app/(v2)/account/page.tsx` passes it that flag from the store.
+- Before the first volunteer level-up, the picker keeps its current behavior, including resetting
+  the other classes to 0 when a player switches.
+
+Acceptance test for the picker lock, written before the change, in a test next to
+`src/app/(v2)/account/actions.ts` with the mocked database: a player with a non-voided `volunteer`
+row who submits the picker gets the refusal, and neither `setMegagameLevels` nor any `level_events`
+insert runs. A player whose only `volunteer` row is voided can still pick, and a player with only
+`picker` rows can still switch class, with the other classes reset to 0.
+
 Acceptance: the flows in spec section 5 work on the Vercel preview, and
 `node scripts/preview-shot.mjs <preview-url> /backstage/megagame …` screenshots look right on phone
 and desktop widths, per `CLAUDE.md`. Delete the screenshots afterwards.
@@ -850,19 +910,14 @@ option, because it does not work in any iOS browser.
 
 ## 8. Open questions for the user
 
-1. The `user.wizard_level`, `user.pirate_level` and `user.alien_level` columns already hold levels and
-   are written from `/account` through `loadMegagameLevels` and `setMegagameLevels` in
-   `src/lib/megagame-store.ts`, while the spec derives levels from `level_events`. Phase 2 needs a
-   decision: derive and mirror into the user columns on each level event, treat the columns as a
-   cache rebuilt from events, or drop one of the two. The file to reconcile is
-   `src/lib/megagame-store.ts`, and its callers are `src/app/(v2)/account/actions.ts`,
-   `src/app/(v2)/account/page.tsx` and `src/app/(v2)/u/[id]/page.tsx`. Do not start phase 2 without
-   this.
-2. `BUCKET_ORIGIN` sets where `date_bin` day boundaries fall. A UTC midnight origin means the `"1d"`
-   bucket does not line up with a con day in local time. Ask which the dashboard should use.
-3. A level above `MAX_LEVEL` is now a warning rather than a refusal, and `level_events` carries no
-   upper range check, so a level 6 can be recorded without a code change. Say if it should be a hard
-   refusal instead; that is a one-line change in `checkLevelUp` plus a check constraint.
+The three questions an earlier draft listed here were settled by the user on 2026-11-01 (section
+9, items 22 to 24). One question follows from those decisions:
+
+1. Players who used the picker before phase 2 lands have a level column at 1 and no `picker` row. The
+   undo fallback in section 4.2 needs to know they joined through the picker, and the dashboard time
+   series will not show their join. One option is a one-off script when phase 2 lands that writes a
+   `picker` row for each such player, dated at the script's run time since no earlier time is
+   recorded. Ask before phase 2 ships which the user wants.
 
 ## 9. Review decisions
 
@@ -873,11 +928,8 @@ the choice taken is named here.
 
 Phase 1, the only phase being implemented now:
 
-1. `MAX_LEVEL` is a warning, not a refusal. Spec section 4 says the maximum is used only for the
-   picker and the dashboard grid, so the draft's hard error contradicted it. The phase 2 check
-   constraint dropped from `between 1 and 5` to `>= 1` for the same reason, and no message
-   hard-codes the number. Carried to open question 3, since it is a behavior change the user may not
-   want.
+1. `MAX_LEVEL` was made a warning, not a refusal, after this review. Superseded on 2026-11-01 by
+   item 24: it is a refusal again.
 2. `normalizeAnswer` removes punctuation and whitespace instead of collapsing them to a space. Spec
    section 5.1 lists both as things matching ignores, and the draft's choice meant "co-op" did not
    match "coop". This closes the draft's third open question, so that slot now holds the `MAX_LEVEL`
@@ -892,9 +944,9 @@ Phase 1, the only phase being implemented now:
    helper, which answers the assumption review's point that nothing covered them.
 5. `bucketSeries` keeps both endpoint buckets, and its tests now carry explicit UTC timestamps. The
    codex review was right that the draft's contract and its test disagreed: 10:07 through 12:07 at
-   `"30m"` is five starts, not four. `BUCKET_ORIGIN` now has a stated value, a UTC midnight, and
-   every size divides a day evenly so the date chosen does not affect any expectation. This also
-   fixes the assumption review's point that the bucket tests were written in local time.
+   `"30m"` is five starts, not four. `BUCKET_ORIGIN` now has a stated value. This also fixes the
+   assumption review's point that the bucket tests were written in local time. The value was a UTC
+   midnight until item 24 moved it to midnight Pacific standard time.
 6. Added `checkQuestWindow` and `questWindowIsValid` to phase 1, with tests. The technical review
    found that spec section 5.1 step 3 requires an "outside the lock window" status and spec section 8
    requires that a classless quest carry no window, and the draft had neither function. Both are pure
@@ -942,10 +994,31 @@ Later phases, recorded so the order is settled:
     make the event tables append-only and say counts must not change after a deletion, and
     `quests.active` already covers withdrawing a quest.
 19. `src/lib/megagame-store.ts` already exists and is added to, not created. Both the technical and
-    the codex review found the draft treated it as new; its two exports and three callers must keep
-    working until open question 1 is settled.
+    the codex review found the draft treated it as new; its two exports and three callers keep
+    working, and only the picker action changes (items 22 and 23).
 20. Phase 3 authorization is per route, with the three branches on `/q/<code>` and `/p/<code>`
     spelled out and tested. The codex review found that the draft's single rule would have gated the
     public badge page, and that `requireAccess()` returns `Access | null` without enforcing anything.
 21. Phase 2 gets one integration test against a scratch database for the confirm-and-undo
     interleaving, because the mocked database in section 0 cannot see it.
+
+Settled by the user on 2026-11-01:
+
+22. Levels stay on the user columns. `wizard_level`, `pirate_level` and `alien_level` are the source
+    of truth for current levels. The level-up action writes a `level_events` row and then sets the
+    column, and level-event undo recomputes the column from the remaining non-voided events with
+    `deriveLevels`, falling back to 1 for a picker join and 0 otherwise (section 4.2). The picker
+    also writes a `level_events` row from phase 2 on, so joins appear in the time series. This
+    replaces the spec's earlier rule of deriving current levels from events, and closes the old open
+    question 1. It adds a `source` column to `level_events` so picker rows and volunteer rows can be
+    told apart.
+23. The picker locks after a volunteer level-up. Once a player has a non-voided `volunteer` row, the
+    picker action refuses and the panel shows current levels. This is a phase 3 task (section 5)
+    with its own acceptance test. Before that point the picker keeps resetting the other classes to
+    0 on a switch.
+24. A level above `MAX_LEVEL` is a hard refusal in `checkLevelUp`, matching the user columns' check
+    constraints, and `level_events` gets the same `between 1 and 5` check. This closes the old open
+    question 3. `BUCKET_ORIGIN` is midnight Pacific standard time on 2026-01-01,
+    `Date.UTC(2026, 0, 1, 8)`, since con days are Pacific. This closes the old open question 2. With
+    the refusal in place, the cap on how many skipped levels the warning lists one by one was
+    removed, since at most four can be skipped.

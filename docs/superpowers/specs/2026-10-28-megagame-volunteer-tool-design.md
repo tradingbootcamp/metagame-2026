@@ -1,6 +1,6 @@
 # Megagame volunteer tool: design (specs and effects)
 
-Date: 2026-10-28. Reviewed by three agents and revised; decisions below were settled with the user on the same day. The schema section is applied only once the database is stable.
+Date: 2026-10-28. Reviewed by three agents and revised; decisions below were settled with the user on the same day. Three more were settled on 2026-11-01 (section 10). The schema section is applied only once the database is stable.
 
 ## 0. Repo facts the design relies on (verified at commit 6ba4bbe)
 
@@ -14,6 +14,7 @@ Date: 2026-10-28. Reviewed by three agents and revised; decisions below were set
 - `/u/[id]` profiles 404 for signed-out viewers and for non-public profiles unless the viewer holds `profiles.view`.
 - `removeUser` hard-deletes the user row.
 - Sessions already carry `megagameIntegrationLevel`.
+- Added on main after this design was first written (commit 3351fab): the `user` table has `wizard_level`, `pirate_level` and `alien_level` columns (smallint, default 0, checked 0 to 5), read and written by `src/lib/megagame-store.ts`. The faction picker on `/account` (`chooseMegagameClass` in `src/app/(v2)/account/actions.ts`) sets level 1 in the chosen class and 0 in the others.
 
 ## 1. Scope
 
@@ -99,11 +100,12 @@ quest_completions
   voided_at, voided_by, void_reason          -- copied from the confirmation on undo so the partial index clears
   partial unique (quest_id, user_id) where voided_at is null and user_id is not null
 
-level_events
+level_events                         -- the audit log of level changes; current levels are on the user columns
   id uuid pk                         -- client-generated, the idempotency key for the level-up action
   user_id -> user (set null), nullable
   class text not null
-  level int not null
+  level int not null                 -- checked 1 to 5, matching the user columns
+  source text not null               -- 'picker' (the /account faction picker) | 'volunteer' (the level-up action)
   awarded_by -> user (set null), nullable
   awarded_at timestamptz
   checks_passed boolean not null
@@ -117,17 +119,24 @@ quest_attempts                       -- optional, cycle one if cheap
   id, quest_id, entered_by, entered_answer text, correct boolean, at
 ```
 
-Level derivation (pure, in `megagame-rules.ts`): a player's current level in a class is the max `level` over non-voided events, or 0, which means not in the class. Everyone starts at {0, 0, 0}. Levels are positive integers; the maximum is a constant in the rules module (from the 5-level chart) used only for the picker and the dashboard grid. Transition rule: a new level event must be strictly greater than the current level (checked in the action, not atomic across two simultaneous level-ups; corrections happen by voiding), and the tool warns when it is not current + 1, since the notes describe one unique experience per (class, level). All user-referencing columns are `text`, matching `user.id`.
+Current levels: the `user` table's `wizard_level`, `pirate_level` and `alien_level` columns are the source of truth for a player's current level in each class. 0 means not in the class. Everyone starts at {0, 0, 0}. `level_events` is the audit log: it is what undo and the dashboard time series read. The volunteer level-up action writes a `level_events` row and then sets the column. The faction picker on `/account` also writes a `level_events` row (source `picker`) when it sets a class, so joins appear in the time series.
+
+Undo of a level event voids it and then recomputes that class's column from the player's remaining non-voided events (the max `level`, through `deriveLevels` in `megagame-rules.ts`). If no event remains in that class, the column falls back to 1 if the player joined that class through the picker, else 0.
+
+Levels are whole numbers from 1 to `MAX_LEVEL` (5, in `megagame-levels.ts`). A level above the maximum is refused, matching the check constraints on the user columns. Transition rule: a new level event must be strictly greater than the current level (checked in the action, not atomic across two simultaneous level-ups; corrections happen by voiding), and the tool warns when it is not current + 1, since the notes describe one unique experience per (class, level). All user-referencing columns are `text`, matching `user.id`.
+
+Picker lock: once a player has any non-voided `level_events` row recorded by a volunteer (source `volunteer`), the picker on `/account` no longer works. The action refuses, and the panel shows the current levels instead. The picker is a pre-con tool and the volunteer process is during the con. Before the first volunteer level-up, the picker keeps its current behavior, including resetting the other classes to 0 when a player switches.
 
 Requirements (soft checks) are a constant table in `megagame-rules.ts` in cycle one, keyed by (class, level): minimum completions in that class, plus a warning when a level is skipped. Shipping with the table empty is allowed. A UI-editable table is the follow-up if redeploying to tune proves too slow.
 
 Concurrency and retries, given no transactions:
 
 - Confirm: insert the `confirmations` row with its requested players (`on conflict do nothing`). If it already exists and is voided, return "voided" and insert nothing. Otherwise (new or a retry) run `insert ... on conflict do nothing returning` for all requested players at once, targeting the partial index. The result is built from the completion rows carrying this confirmation id: present means recorded, absent means already completed elsewhere. A crash between the two statements is repaired by the retry, since the second statement is idempotent.
-- Level-up: `insert ... on conflict do nothing returning` on the event id and on the partial unique index; check evaluation before the insert is not atomic, which is acceptable for soft checks.
+- Level-up: `insert ... on conflict do nothing returning` on the event id and on the partial unique index, then set the user column; check evaluation before the insert is not atomic, which is acceptable for soft checks.
 - Undo: voids the confirmation and its completions by confirmation id (`db.batch()` for the two updates). A retry of the original confirm after undo returns "voided", it does not re-insert.
+- Level-event undo: void the event, then recompute the column as described above.
 
-Code layout: `src/db/schema/megagame.ts`; `src/lib/megagame-rules.ts` (pure: code normalization reuse, answer normalization and matching, level derivation, requirement evaluation, bucket math); `src/lib/megagame-store.ts` (queries, tested with the mocked DB); `src/app/backstage/megagame/{page,actions,layout}.tsx` plus `q/[code]`, `dashboard`, `quests`; `src/app/(v2)/q/[code]` and `/p/[code]`.
+Code layout: `src/db/schema/megagame.ts`; `src/lib/megagame-rules.ts` (pure: code normalization reuse, answer normalization and matching, level derivation for undo, requirement evaluation, bucket math); `src/lib/megagame-store.ts` (queries, tested with the mocked DB); `src/app/backstage/megagame/{page,actions,layout}.tsx` plus `q/[code]`, `dashboard`, `quests`; `src/app/(v2)/q/[code]` and `/p/[code]`.
 
 ## 5. Flows
 
@@ -143,7 +152,7 @@ Code layout: `src/db/schema/megagame.ts`; `src/lib/megagame-rules.ts` (pure: cod
 
 ### 5.2 Level up
 
-1. Pick player (same lookup), pick class; see current level per class; pick the new level (default current + 1).
+1. Pick player (same lookup), pick class; see current level per class (from the user columns); pick the new level (default current + 1). A level above 5 is refused.
 2. The action lists failing checks in words ("Has 1 wizard quest; level 2 asks for 3", "Skips level 2"). With failures the button reads "Record anyway" and needs a "Yes, I'm sure" checkbox plus optional reason. No setting makes checks hard; zeroing the constant table turns them off.
 3. Optional photo of the record card: browser-side downscale, Blob upload, `card_photo_url`. Never required.
 
@@ -155,9 +164,9 @@ Cycle one: a CSV paste importer (code, title, class, kind, answers, evidence, hi
 
 Gated on `megagame.verify`. Tables first, inline SVG bars for the few charts that matter, no charting dependency. Last phase, so it cannot block the tool.
 
-1. Levels: class x level grid of players at each current level; denominator is claimed ticket holders, labeled as such (there is no check-in data).
+1. Levels: class x level grid of players at each current level, read from the user columns; denominator is claimed ticket holders, labeled as such (there is no check-in data).
 2. Quests: completions per quest, per class, distinct players with at least one completion, completions per volunteer.
-3. Over time: completions and level-ups per class per bucket, bucket sizes 5m, 15m, 30m, 1h, 3h, 6h, 1d, range presets (last 2h, today, whole con). Computed with `date_bin` over a whitelist of intervals, filtered to non-voided. A cumulative view gives the level distribution as of each bucket end.
+3. Over time: completions and level-ups per class per bucket, bucket sizes 5m, 15m, 30m, 1h, 3h, 6h, 1d, range presets (last 2h, today, whole con). Computed with `date_bin` over a whitelist of intervals, filtered to non-voided. Con days are Pacific, so day buckets start at midnight Pacific standard time (UTC-8). A cumulative view gives the level distribution as of each bucket end.
 4. Recent overrides and voids.
 5. CSV export of the three event tables.
 
@@ -180,7 +189,7 @@ Page refreshes every 60 s.
 
 1. Now, nothing in the DB: `megagame-rules.ts` with tests (matching, level derivation, requirement evaluation, bucket math); the two permission keys (harmless until granted, consistent with the file's "keys wait for their page" note). No placeholder tile in prod.
 2. Schema stable: schema file, `pnpm db:generate`, describe.ts and its test, store module with mocked-DB tests.
-3. Verification tool, level-up, `/q/` and `/p/` routes, QR download, CSV import. Phone-first; preview screenshots per CLAUDE.md.
+3. Verification tool, level-up, `/q/` and `/p/` routes, QR download, CSV import, and the picker lock on `/account`. Phone-first; preview screenshots per CLAUDE.md.
 4. Dashboard and export.
 5. In-page scanner (move `jsqr` to dependencies), attempt logging.
 
@@ -193,6 +202,12 @@ Page refreshes every 60 s.
 - Undo: the confirming volunteer, plus `megagame.manage` for anything.
 - Defaults taken without objection: lock windows warn rather than block; a deleted user's events are kept with the user column set to null; soft checks are code constants; the record-card photo is optional.
 
+Settled on 2026-11-01:
+
+- Current levels are the `user` level columns. Level-ups write a `level_events` row and then set the column. Undo recomputes the column from the remaining non-voided events, falling back to 1 for a picker join and 0 otherwise. The picker also writes a `level_events` row once phase 2 lands.
+- The picker on `/account` stops working once a volunteer has recorded a non-voided level event for the player. This is a phase 3 change to the picker action.
+- A level above 5 is refused rather than warned about. Dashboard day buckets start at midnight Pacific standard time.
+
 ## 11. Assumptions the design makes that the request did not state
 
-Kept unless the user objects: quests have a class (nullable) and a lock window from the notes; codes are 6-char Crockford with the ticket normalizer; answer matching ignores case, whitespace, punctuation and accents, with several accepted answers per quest; attempt logging; group confirmations undo as a group; current level is the max non-voided event; no offline mode; CSV import rather than an editor; dashboard extras (per-volunteer counts, overrides list, cumulative view, export, auto-refresh); session rewards recorded per session by the shepherd or host; the duplicate-completion rule has no override.
+Kept unless the user objects: quests have a class (nullable) and a lock window from the notes; codes are 6-char Crockford with the ticket normalizer; answer matching ignores case, whitespace, punctuation and accents, with several accepted answers per quest; attempt logging; group confirmations undo as a group; no offline mode; CSV import rather than an editor; dashboard extras (per-volunteer counts, overrides list, cumulative view, export, auto-refresh); session rewards recorded per session by the shepherd or host; the duplicate-completion rule has no override.
