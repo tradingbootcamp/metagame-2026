@@ -49,6 +49,8 @@ export type StripeCode = {
   created: number; // unix seconds
   coupon: string;
   discount: CodeDiscount | null;
+  /** Active, coupon still valid, unexpired and not used up. */
+  redeemable: boolean;
 };
 
 const meta = (p: Stripe.PromotionCode): Stripe.Metadata => p.metadata ?? {};
@@ -163,6 +165,27 @@ function discountOf(
   return null;
 }
 
+/** Whether Standard checkout takes the code: open to everyone and not scoped to another product. */
+export function standardAccepts(
+  discount: CodeDiscount,
+  standard: string,
+): boolean {
+  return (
+    !discount.restricted &&
+    (!discount.products || discount.products.includes(standard))
+  );
+}
+
+/** The code's coupon when the code redeems right now; null otherwise. */
+function liveCoupon(p: Stripe.PromotionCode): Stripe.Coupon | null {
+  const c = p.promotion?.coupon;
+  if (!p.active || !c || typeof c === "string" || !c.valid) return null;
+  if (p.expires_at && p.expires_at < Date.now() / 1000) return null;
+  if (p.max_redemptions != null && p.times_redeemed >= p.max_redemptions)
+    return null;
+  return c;
+}
+
 /** "$50", "$12.50" or "20%". */
 export function discountText(d: CodeDiscount): string {
   if (d.percentOff != null) return `${d.percentOff}%`;
@@ -208,13 +231,9 @@ export async function redeemableCode(
     limit: 10,
     expand: ["data.promotion.coupon.applies_to"],
   });
-  const now = Date.now() / 1000;
   for (const p of data) {
-    const c = p.promotion?.coupon;
-    if (!c || typeof c === "string" || !c.valid) continue;
-    if (p.expires_at && p.expires_at < now) continue;
-    if (p.max_redemptions != null && p.times_redeemed >= p.max_redemptions)
-      continue;
+    const c = liveCoupon(p);
+    if (!c) continue;
     const discount = discountOf(p, c);
     if (discount) return { code: p.code, discount };
   }
@@ -380,6 +399,7 @@ export async function listStripeCodes(): Promise<StripeCode[]> {
         coupon: couponLabel(typeof coupon === "string" ? null : coupon),
         discount:
           coupon && typeof coupon !== "string" ? discountOf(p, coupon) : null,
+        redeemable: liveCoupon(p) != null,
       };
     });
 }
