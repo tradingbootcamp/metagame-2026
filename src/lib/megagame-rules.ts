@@ -28,6 +28,38 @@ export function isCompleteMegagameCode(code: string): boolean {
   return code.length === TICKET_CODE_LENGTH;
 }
 
+export type ScannedCode = {
+  /** null for a bare code, whose meaning depends on where it was scanned. */
+  kind: "quest" | "player" | null;
+  code: string;
+};
+
+const KIND_BY_SEGMENT: Record<string, ScannedCode["kind"]> = {
+  q: "quest",
+  p: "player",
+};
+
+/** A QR payload: a /q/<code> or /p/<code> URL on any host, or a bare code. */
+export function parseScannedCode(text: string): ScannedCode | null {
+  const raw = text.trim();
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(raw) || raw.startsWith("/")) {
+    let path: string;
+    try {
+      path = new URL(raw, "https://x.invalid").pathname;
+    } catch {
+      return null;
+    }
+    const parts = path.split("/").filter(Boolean);
+    const kind = KIND_BY_SEGMENT[parts.at(-2) ?? ""];
+    if (!kind) return null;
+    const code = normalizeTicketCode(parts.at(-1)!);
+    return isCompleteMegagameCode(code) ? { kind, code } : null;
+  }
+  if (!/^[\dA-Za-z\s-]+$/.test(raw)) return null;
+  const code = normalizeTicketCode(raw);
+  return isCompleteMegagameCode(code) ? { kind: null, code } : null;
+}
+
 /** Case, accents, punctuation and whitespace do not matter. */
 export function normalizeAnswer(input: string): string {
   return input

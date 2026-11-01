@@ -22,6 +22,7 @@ import {
   normalizeAnswer,
   isBucketSize,
   normalizeMegagameCode,
+  parseScannedCode,
   type BucketSize,
 } from "./megagame-rules";
 
@@ -65,6 +66,48 @@ describe("normalizeMegagameCode", () => {
   it("handles empty input", () => {
     expect(normalizeMegagameCode("")).toBe("");
     expect(isCompleteMegagameCode("")).toBe(false);
+  });
+});
+
+describe("parseScannedCode", () => {
+  it("reads a quest label URL", () => {
+    expect(parseScannedCode("https://metagame.games/q/A2C-4EF")).toEqual({
+      kind: "quest",
+      code: "A2C4EF",
+    });
+  });
+
+  it("reads a badge URL from any host, ignoring query, hash and a trailing slash", () => {
+    expect(
+      parseScannedCode("https://preview.vercel.app/p/b3d5f7/?x=1#y"),
+    ).toEqual({ kind: "player", code: "B3D5F7" });
+  });
+
+  it("reads the tool's own quest URL", () => {
+    expect(
+      parseScannedCode("https://metagame.games/backstage/megagame/q/A2C4EF"),
+    ).toEqual({ kind: "quest", code: "A2C4EF" });
+  });
+
+  it("reads a bare code without deciding what it is", () => {
+    expect(parseScannedCode(" a2c-4ef ")).toEqual({
+      kind: null,
+      code: "A2C4EF",
+    });
+  });
+
+  it("refuses an incomplete or over-long code", () => {
+    expect(parseScannedCode("https://metagame.games/q/A2C4E")).toBeNull();
+    expect(parseScannedCode("A2C4EFG")).toBeNull();
+  });
+
+  it("refuses URLs and text that are not quest or badge codes", () => {
+    expect(parseScannedCode("https://example.com/menu")).toBeNull();
+    expect(parseScannedCode("https://example.com/x/A2C4EF")).toBeNull();
+    expect(parseScannedCode("https://example.com/")).toBeNull();
+    expect(parseScannedCode("WIFI:S:Hall;T:WPA;P:abc;;")).toBeNull();
+    expect(parseScannedCode("Hi, Ada!")).toBeNull();
+    expect(parseScannedCode("")).toBeNull();
   });
 });
 
