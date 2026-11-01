@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { FaStar } from "react-icons/fa";
+import { toast } from "sonner";
 import {
   onlySessions,
   openingDayKey,
@@ -130,7 +131,15 @@ export default function PublicSchedule({
           <button
             type="button"
             aria-pressed={onlyMine}
-            onClick={() => setOnlyMine((on) => !on)}
+            onClick={() => {
+              setOnlyMine(!onlyMine);
+              toast(
+                onlyMine
+                  ? "Showing all sessions."
+                  : "Now showing only your sessions.",
+                { id: "schedule-filter" },
+              );
+            }}
             className={`${TOGGLE} ml-auto shrink-0 items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(onlyMine, 0)}`}
           >
             <FaStar size={12} />

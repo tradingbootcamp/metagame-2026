@@ -65,6 +65,7 @@ export type HostSessionFields = {
   minCapacity: number | null;
   ages: Ages | null;
   needs: string | null;
+  rsvpIsCommitment: boolean;
 };
 
 const str = (raw: Raw, key: string) => {
@@ -136,6 +137,10 @@ export function parseHostSessionFields(raw: Raw): Parsed<HostSessionFields> {
   if (agesRaw && !ages)
     return { ok: false, field: "ages", error: `One of ${AGES.join(", ")}.` };
 
+  const rsvpIsCommitment = flag(raw, "rsvpIsCommitment");
+  if (rsvpIsCommitment === null)
+    return { ok: false, field: "rsvpIsCommitment", error: "true or false." };
+
   return {
     ok: true,
     value: {
@@ -146,6 +151,7 @@ export function parseHostSessionFields(raw: Raw): Parsed<HostSessionFields> {
       minCapacity,
       ages,
       needs: optional(raw, "needs"),
+      rsvpIsCommitment,
     },
   };
 }

@@ -22,7 +22,11 @@ import {
   type Category,
 } from "@/lib/schedule";
 import { loadSessionRsvps, loadViewerPlans } from "@/lib/schedule-store";
-import { loadPublicSchedule, loadRawSchedule } from "@/app/(v2)/schedule/data";
+import {
+  loadPublicSchedule,
+  loadRawSchedule,
+  rsvpTicket,
+} from "@/app/(v2)/schedule/data";
 import SessionPlans from "@/v2/components/schedule/SessionPlans";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
 import { HEADING } from "@/v2/components/styles";
@@ -151,14 +155,18 @@ export default async function SessionDetails({ slug }: { slug: string }) {
     toolAccess("schedule.manage"),
   ]);
   const viewerId = account?.user.id ?? null;
-  const [rsvps, plans, editor, raw] = await Promise.all([
+  const [rsvps, plans, editor, raw, shown, ticket] = await Promise.all([
     loadSessionRsvps(session.id),
     viewerId ? loadViewerPlans(viewerId) : null,
     // PublicSession carries host names but no ids, so ownership is its own read.
     viewerId ? editSessionAccess(session.id) : null,
     // Host ids and shepherds aren't public, so clashes read the raw schedule.
     viewerId ? loadRawSchedule() : null,
+    viewerId ? loadPublicSchedule() : null,
+    rsvpTicket(),
   ]);
+  // Only sessions this viewer can see, as loadMySessionIds does.
+  const visible = new Set(shown?.sessions.map((s) => s.id));
 
   const tags = [
     session.category ? CATEGORY_LABEL[session.category] : null,
@@ -259,10 +267,16 @@ export default async function SessionDetails({ slug }: { slug: string }) {
           commitment={session.rsvpIsCommitment}
           conflicts={
             viewerId && plans && raw
-              ? planConflicts(session, raw.sessions, viewerId, plans.rsvps)
+              ? planConflicts(
+                  session,
+                  raw.sessions.filter((s) => visible.has(s.id)),
+                  viewerId,
+                  plans.rsvps,
+                )
               : []
           }
           rsvps={rsvps}
+          ticket={ticket}
           plan={
             plans && {
               status: plans.rsvps[session.id] ?? null,
@@ -291,16 +305,15 @@ export default async function SessionDetails({ slug }: { slug: string }) {
       {editor && (
         <p className="mt-6 text-sm">
           <Link
-            href={`/account/sessions/${session.id}`}
+            href={
+              editor.via === "team"
+                ? `/backstage/schedule?edit=${encodeURIComponent(session.slug)}`
+                : `/account/sessions/${session.id}`
+            }
             className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
           >
             Edit this session
           </Link>
-          <span className="text-[#1b1530]/55">
-            {editor.via === "host"
-              ? " — you’re a host"
-              : " — you can edit any session"}
-          </span>
         </p>
       )}
 

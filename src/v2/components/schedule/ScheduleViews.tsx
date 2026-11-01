@@ -276,7 +276,7 @@ export function GridDay<S extends ViewSession>({
   const now = useNow();
   const nowTop = now ? nowLinePx(day.key, day.slots[0], now) : null;
   return (
-    <div className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--board-w:232px] [--col-w:104px] [--time-w:44px] sm:[--board-w:300px] sm:[--col-w:120px] sm:[--time-w:56px]">
+    <div className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--board-w:232px] [--col-w:104px] [--time-w:36px] sm:[--board-w:300px] sm:[--col-w:120px] sm:[--time-w:40px]">
       <div className="min-w-fit">
         <div
           className="sticky top-0 z-30 grid bg-[#4096ff] text-white"
@@ -336,7 +336,7 @@ export function GridDay<S extends ViewSession>({
                 className="sticky left-0 z-20 flex justify-center border-r border-b border-[#1b1530]/15 bg-background pt-1 text-[11px] text-[#1b1530]/55"
                 style={{ height: SLOT_PX }}
               >
-                {slotLabel(slotStart)}
+                {slotLabel(slotStart, { period: false })}
               </div>
               {columns.map((col, i) =>
                 boards.includes(i) ? null : (
