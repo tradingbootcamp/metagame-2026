@@ -250,7 +250,7 @@ export default function TicketsPanel({
                 type="button"
                 id="buy"
                 onClick={() => setOpenModal("buy")}
-                className="scroll-mt-24 font-space-mono text-[12px] tracking-[0.06em] text-cream/70 underline underline-offset-4 hover:text-tan"
+                className="scroll-mt-24 font-space-mono text-[12px] tracking-[0.06em] underline underline-offset-4 opacity-75 transition-opacity hover:opacity-100"
               >
                 Use a referral code
               </button>
