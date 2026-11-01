@@ -10,6 +10,7 @@ import { currentSession, getAuth, hasPassword } from "@/lib/auth";
 import { deleteImage, uploadImage } from "@/lib/blob";
 import { isMegagameClass, starterLevels } from "@/lib/megagame-levels";
 import {
+  hasVolunteerLevelEvent,
   loadMegagameLevels,
   recordPickerJoin,
   setMegagameLevels,
@@ -275,6 +276,12 @@ export async function chooseMegagameClass(
   formData: FormData,
 ): Promise<ClassState> {
   const session = await requireSession();
+  if (await hasVolunteerLevelEvent(session.user.id)) {
+    return {
+      error:
+        "Your class is locked now that a volunteer has recorded a level for you.",
+    };
+  }
   const chosen = formData.get("class");
   if (!isMegagameClass(chosen)) return { error: "Pick a class." };
   const current = await loadMegagameLevels(session.user.id);

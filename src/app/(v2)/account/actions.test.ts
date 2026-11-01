@@ -10,6 +10,7 @@ const { store, order } = vi.hoisted(() => {
     recordPickerJoin: vi.fn(async () => {
       order.push("event");
     }),
+    hasVolunteerLevelEvent: vi.fn(async () => false),
   };
   return { store, order };
 });
@@ -66,5 +67,29 @@ describe("chooseMegagameClass", () => {
   it("refuses an unknown class without writing", async () => {
     expect(await pick("sorcerer")).toEqual({ error: "Pick a class." });
     expect(store.recordPickerJoin).not.toHaveBeenCalled();
+  });
+
+  it("refuses once a volunteer has recorded a level, without writing", async () => {
+    store.hasVolunteerLevelEvent.mockResolvedValueOnce(true);
+    const result = await pick("alien");
+    expect(result.error).toBeTruthy();
+    expect(store.hasVolunteerLevelEvent).toHaveBeenCalledWith("u1");
+    expect(store.recordPickerJoin).not.toHaveBeenCalled();
+    expect(store.setMegagameLevels).not.toHaveBeenCalled();
+  });
+
+  it("still lets a player with only picker rows switch class", async () => {
+    store.loadMegagameLevels.mockResolvedValueOnce({
+      wizard: 1,
+      pirate: 0,
+      alien: 0,
+    });
+    expect(await pick("alien")).toEqual({});
+    expect(store.recordPickerJoin).toHaveBeenCalledWith("u1", "alien");
+    expect(store.setMegagameLevels).toHaveBeenCalledWith("u1", {
+      wizard: 0,
+      pirate: 0,
+      alien: 1,
+    });
   });
 });
