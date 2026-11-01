@@ -18,6 +18,7 @@ const { auth, store, blob, nav } = vi.hoisted(() => ({
     findLevelEvent: vi.fn(),
     recordLevelUp: vi.fn(),
     voidLevelEvent: vi.fn(),
+    importQuests: vi.fn(),
   },
   blob: {
     LARGE_IMAGE_MAX_BYTES: 900 * 1024,
@@ -35,9 +36,11 @@ vi.mock("@/lib/blob", () => blob);
 vi.mock("next/navigation", () => nav);
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
+import { revalidatePath } from "next/cache";
 import {
   confirmCompletions,
   findPlayers,
+  importQuestCsv,
   levelUp,
   lookupPlayer,
   undoCompletion,
@@ -392,5 +395,51 @@ describe("undoLevelUp", () => {
     expect((await undoLevelUp({}, form({ id: ID }))).error).toMatch(
       /faction picker/,
     );
+  });
+});
+
+describe("importQuestCsv", () => {
+  const CSV = "title,kind,answers\nThe riddle,answer,Fire|Flame";
+
+  it("needs megagame.manage and touches no data without it", async () => {
+    holds("megagame.verify");
+    expect(await importQuestCsv({}, form({ csv: CSV }))).toEqual({
+      errors: [auth.EXPIRED],
+    });
+    expect(auth.requireAccess).toHaveBeenCalledWith("megagame.manage");
+    expect(store.importQuests).not.toHaveBeenCalled();
+  });
+
+  it("returns the parse errors and imports nothing", async () => {
+    holds("megagame.verify", "megagame.manage");
+    expect(
+      await importQuestCsv({}, form({ csv: "title,kind,answers\n,answer,x" })),
+    ).toEqual({
+      errors: ["Line 2: title is required."],
+      csv: "title,kind,answers\n,answer,x",
+    });
+    expect(store.importQuests).not.toHaveBeenCalled();
+  });
+
+  it("imports the parsed rows and reports the counts", async () => {
+    holds("megagame.verify", "megagame.manage");
+    store.importQuests.mockResolvedValue({ created: 1, updated: 2 });
+    expect(await importQuestCsv({}, form({ csv: CSV }))).toEqual({
+      done: "Added 1 quest and updated 2.",
+    });
+    expect(store.importQuests).toHaveBeenCalledWith([
+      {
+        code: null,
+        title: "The riddle",
+        class: null,
+        kind: "answer",
+        answers: ["Fire", "Flame"],
+        evidence: null,
+        hint: null,
+        minLevel: null,
+        maxLevel: null,
+      },
+    ]);
+    expect(revalidatePath).toHaveBeenCalledWith("/backstage/megagame/quests");
   });
 });
