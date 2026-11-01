@@ -34,13 +34,15 @@ async function lookupPromo(
   };
 }
 
+export type DiscountParams = Pick<
+  Stripe.Checkout.SessionCreateParams,
+  "discounts" | "allow_promotion_codes"
+>;
+
 export type StandardDiscounts = {
   promo: PromoLookup | null;
   applied: "promo" | "referral" | null;
-  session: Pick<
-    Stripe.Checkout.SessionCreateParams,
-    "discounts" | "allow_promotion_codes"
-  >;
+  session: DiscountParams;
   metadata: Record<string, string>;
 };
 

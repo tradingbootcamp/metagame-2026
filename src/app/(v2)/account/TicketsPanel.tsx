@@ -12,7 +12,6 @@ import { CheckIcon, CopyIcon, LinkIcon } from "lucide-react";
 import { Button } from "@/v2/components/ui/button";
 import PinInput from "@/v2/components/auth/PinInput";
 import { FAMILY_PACK } from "@/lib/family-pack";
-import { inviteHref, normalizeReferralCode } from "@/lib/referral";
 import {
   TICKET_CODE_LENGTH,
   normalizeTicketCode,
@@ -87,7 +86,7 @@ function CopyButton({
  * the Family & Friends price, and both tickets count for the swag.
  */
 function InviteCode({ code, referrals }: { code: string; referrals: number }) {
-  const href = inviteHref(normalizeReferralCode(code));
+  const href = `/invite/${code}`;
   return (
     <span className="flex basis-full flex-wrap items-center gap-x-1.5 gap-y-1 pt-1 text-sm text-ink/70">
       Invite a friend:

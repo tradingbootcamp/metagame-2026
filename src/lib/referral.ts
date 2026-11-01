@@ -25,9 +25,6 @@ export function referralCodeOf(value: string | null | undefined): string {
   return code.length === REFERRAL_CODE_LENGTH ? code : "";
 }
 
-/** The link a ticket holder shares. */
-export const inviteHref = (code: string) => `/invite/${code}`;
-
 /** Every ticket refers except Night Market booths. `tier` is a stored tier label. */
 export function canRefer(tier: string | null): boolean {
   return !/night market/i.test(tier ?? "");

@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { isEarlyBirdActive } from "@/lib/early-bird";
 import { sendAdminErrorEmail } from "@/lib/email";
-import { resolveStandardDiscounts } from "@/lib/referral-checkout";
+import { REFERRAL_PARAM } from "@/lib/referral";
+import {
+  resolveStandardDiscounts,
+  type DiscountParams,
+} from "@/lib/referral-checkout";
 import { getStripe } from "@/lib/stripe";
 import {
   DAY_PASS_TIER,
@@ -97,10 +101,7 @@ async function promoParams(
   ticket: TicketTier,
   params: URLSearchParams,
 ): Promise<{
-  session: Pick<
-    Stripe.Checkout.SessionCreateParams,
-    "discounts" | "allow_promotion_codes"
-  >;
+  session: DiscountParams;
   metadata: Record<string, string>;
   utm: Utm;
 }> {
@@ -111,7 +112,7 @@ async function promoParams(
       : undefined;
   const { session, metadata, promo, applied } = await resolveStandardDiscounts(
     stripe,
-    { promo: linked || earlyBird, ref: params.get("ref") },
+    { promo: linked || earlyBird, ref: params.get(REFERRAL_PARAM) },
     ticket.prices.full.usd,
   );
   return {
@@ -151,12 +152,7 @@ export async function GET(request: Request) {
     const utm = pickUtm((k) => params.get(k));
     // UTMs on the link itself win over the ones a comp code implies.
     const tagged = Object.keys(utm).some((k) => k.startsWith("utm_"));
-    const create = (
-      discount: Pick<
-        Stripe.Checkout.SessionCreateParams,
-        "discounts" | "allow_promotion_codes"
-      > = {},
-    ) =>
+    const create = (discount: DiscountParams = {}) =>
       stripe.checkout.sessions.create({
         mode: "payment",
         line_items: [{ price: purchase.price, quantity: 1 }],
@@ -177,7 +173,9 @@ export async function GET(request: Request) {
       session = await create(promo?.session);
     } catch (err) {
       // A dead coupon or code mustn't block the sale: open the code box instead.
-      if (!promo?.session.discounts) throw err;
+      const rejected =
+        (err as { type?: string } | null)?.type === "StripeInvalidRequestError";
+      if (!rejected || !promo?.session.discounts) throw err;
       console.error("[checkout/stripe] discount rejected, retrying:", err);
       await sendAdminErrorEmail(
         `Checkout discount rejected (${JSON.stringify(promo.session.discounts)}); buyer sent to the open code box: ${err instanceof Error ? err.message : String(err)}`,
