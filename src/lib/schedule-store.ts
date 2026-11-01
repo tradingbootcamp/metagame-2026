@@ -266,6 +266,7 @@ export async function updateSessionAsHost(
       minCapacity: fields.minCapacity,
       ages: fields.ages,
       needs: fields.needs,
+      rsvpIsCommitment: fields.rsvpIsCommitment,
     })
     .where(eq(sessions.id, sessionId))
     .returning({ id: sessions.id });
