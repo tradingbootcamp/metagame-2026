@@ -52,7 +52,9 @@ import {
   confirmQuest,
   confirmationOutcome,
   ensurePlayerCode,
+  findLevelEvent,
   findPlayerByCode,
+  playersByIds,
   findQuestByCode,
   hasVolunteerLevelEvent,
   liveCompletions,
@@ -137,6 +139,43 @@ describe("player lookup", () => {
   it("does not search on fewer than two characters", async () => {
     expect(await searchPlayers(" a ")).toEqual([]);
     expect(db.select).not.toHaveBeenCalled();
+  });
+});
+
+describe("playersByIds", () => {
+  const row = (id: string, name: string) => ({
+    id,
+    name,
+    pronouns: null,
+    imageUrl: null,
+    wizard: 1,
+    pirate: 0,
+    alien: 0,
+    code: null,
+  });
+
+  it("skips the query for an empty list", async () => {
+    expect(await playersByIds([])).toEqual([]);
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it("returns players in the order asked for, once each, dropping unknown ids", async () => {
+    queue([row("u2", "Bea"), row("u1", "Ada")]);
+    const players = await playersByIds(["u1", "u3", "u2", "u1"]);
+    expect(players.map((p) => p.id)).toEqual(["u1", "u2"]);
+    expect(players[0].levels).toEqual({ wizard: 1, pirate: 0, alien: 0 });
+    const where = dialect.sqlToQuery(
+      arg(chainOf(db.select, 0), "where") as SQL,
+    );
+    expect(where.params).toEqual(["u1", "u3", "u2"]);
+  });
+});
+
+describe("findLevelEvent", () => {
+  it("returns the event or null", async () => {
+    queue([{ id: "e1", awardedBy: "v1" }], []);
+    expect(await findLevelEvent("e1")).toEqual({ id: "e1", awardedBy: "v1" });
+    expect(await findLevelEvent("e2")).toBeNull();
   });
 });
 

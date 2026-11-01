@@ -156,6 +156,23 @@ export async function findPlayerByCode(
   return row ? toPlayer(row) : null;
 }
 
+/** The players behind a list of user ids, in that order; unknown ids drop out. */
+export async function playersByIds(
+  ids: readonly string[],
+): Promise<PlayerSummary[]> {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return [];
+  const { user, profiles, playerCodes } = schema;
+  const rows = await getDb()
+    .select(playerColumns())
+    .from(user)
+    .leftJoin(profiles, eq(profiles.userId, user.id))
+    .leftJoin(playerCodes, eq(playerCodes.userId, user.id))
+    .where(inArray(user.id, unique));
+  const byId = new Map(rows.map((r) => [r.id, toPlayer(r)]));
+  return unique.flatMap((id) => byId.get(id) ?? []);
+}
+
 /** Name search for the volunteer tool. Never creates accounts. */
 export async function searchPlayers(
   query: string,
@@ -710,6 +727,16 @@ export async function hasVolunteerLevelEvent(userId: string): Promise<boolean> {
     )
     .limit(1);
   return row !== undefined;
+}
+
+export async function findLevelEvent(id: string): Promise<LevelEvent | null> {
+  const { levelEvents } = schema;
+  const [row] = await getDb()
+    .select()
+    .from(levelEvents)
+    .where(eq(levelEvents.id, id))
+    .limit(1);
+  return row ?? null;
 }
 
 /** A player's level events, newest first, voided ones included. */
