@@ -22,10 +22,15 @@ const CUSTOM = "__custom__";
 // Coupons are made by hand in the dashboard (the key is Coupons: Read only).
 const STRIPE_ACCOUNT = "acct_1QeQd1CtO443EG3n";
 
+const codeUrl = (origin: string, path: "buy" | "ticket", code: string) =>
+  `${origin.replace(/\/$/, "")}/${path}/${code}`;
 const redeemUrl = (origin: string, code: string) =>
-  `${origin.replace(/\/$/, "")}/buy/${code}`;
+  codeUrl(origin, "buy", code);
 const checkoutUrl = (origin: string, code: string) =>
-  `${origin.replace(/\/$/, "")}/ticket/${code}`;
+  codeUrl(origin, "ticket", code);
+// A checkout link for a code Stripe won't apply lands on full price or an error.
+const redeemable = (active: boolean, redeemed: number, max: number | null) =>
+  active && (max == null || redeemed < max);
 
 const initial: MintState = {};
 
@@ -364,7 +369,15 @@ function Field({
   );
 }
 
-function CopyButtons({ code, origin }: { code: string; origin: string }) {
+function CopyButtons({
+  code,
+  origin,
+  checkout,
+}: {
+  code: string;
+  origin: string;
+  checkout: boolean;
+}) {
   const codeCopy = useCopy();
   const urlCopy = useCopy();
   const checkoutCopy = useCopy();
@@ -387,22 +400,24 @@ function CopyButtons({ code, origin }: { code: string; origin: string }) {
       >
         {label(urlCopy.status, "Copy link")}
       </button>
-      <button
-        type="button"
-        onClick={() => checkoutCopy.copy(checkoutUrl(origin, code))}
-        title="Goes straight to Stripe checkout with the code applied"
-        className={`${smallButtonClass} inline-flex items-center gap-1.5`}
-      >
-        <FaStripeS aria-hidden className="text-[#635BFF]" />
-        {label(checkoutCopy.status, "Copy checkout link")}
-      </button>
+      {checkout && (
+        <button
+          type="button"
+          onClick={() => checkoutCopy.copy(checkoutUrl(origin, code))}
+          title="Goes straight to Stripe checkout with the code applied"
+          className={`${smallButtonClass} inline-flex items-center gap-1.5`}
+        >
+          <FaStripeS aria-hidden className="text-[#635BFF]" />
+          {label(checkoutCopy.status, "Copy checkout link")}
+        </button>
+      )}
     </>
   );
 }
 
 function Result({ minted, origin }: { minted: MintResult; origin: string }) {
-  const url = redeemUrl(origin, minted.code);
   const { prior } = minted;
+  const checkout = redeemable(true, prior?.redeemed ?? 0, minted.max);
   return (
     <div
       className={`mt-6 rounded-lg border p-4 ${
@@ -435,11 +450,16 @@ function Result({ minted, origin }: { minted: MintResult; origin: string }) {
       <p className="my-2 font-mono text-2xl break-all text-navy select-all">
         {minted.code}
       </p>
-      <p className="mb-2 font-mono text-sm break-all text-ink/70 select-all">
-        {url}
+      <p className="font-mono text-sm break-all text-ink/70 select-all">
+        {redeemUrl(origin, minted.code)}
       </p>
-      <div className="flex flex-wrap gap-2">
-        <CopyButtons code={minted.code} origin={origin} />
+      {checkout && (
+        <p className="font-mono text-sm break-all text-ink/70 select-all">
+          {checkoutUrl(origin, minted.code)}
+        </p>
+      )}
+      <div className="mt-2 flex flex-wrap gap-2">
+        <CopyButtons code={minted.code} origin={origin} checkout={checkout} />
       </div>
       <p className="mt-3 text-xs text-ink/60">
         {minted.max == null
@@ -639,7 +659,11 @@ function StripeRow({
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <CopyButtons code={c.code} origin={origin} />
+        <CopyButtons
+          code={c.code}
+          origin={origin}
+          checkout={redeemable(c.active, c.redeemed, c.max)}
+        />
         {onToggle && (
           <button
             type="button"
