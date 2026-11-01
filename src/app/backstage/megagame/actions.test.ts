@@ -522,6 +522,17 @@ describe("logAnswerAttempt", () => {
     expect(store.recordQuestAttempt).not.toHaveBeenCalled();
   });
 
+  it("normalizes the quest code and skips the lookup for a malformed one", async () => {
+    store.findQuestByCode.mockResolvedValue(quest);
+    await logAnswerAttempt("a2c4-ef", "fire");
+    expect(store.findQuestByCode).toHaveBeenCalledWith("A2C4EF");
+    store.findQuestByCode.mockClear();
+    expect(await logAnswerAttempt("x".repeat(500), "fire")).toEqual({
+      error: "That quest was not found.",
+    });
+    expect(store.findQuestByCode).not.toHaveBeenCalled();
+  });
+
   it("refuses input that is not a string", async () => {
     store.findQuestByCode.mockResolvedValue(quest);
     expect(

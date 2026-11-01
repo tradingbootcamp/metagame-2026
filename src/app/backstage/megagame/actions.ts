@@ -145,7 +145,10 @@ export async function logAnswerAttempt(
   }
   const entered = answer.trim().slice(0, MAX_ANSWER_CHARS);
   if (normalizeAnswer(entered) === "") return {};
-  const quest = await findQuestByCode(questCode);
+  const code = normalizeMegagameCode(questCode);
+  const quest = isCompleteMegagameCode(code)
+    ? await findQuestByCode(code)
+    : null;
   if (quest?.kind !== "answer") return { error: "That quest was not found." };
   const { matched } = matchAnswer(entered, quest.answers);
   await recordQuestAttempt({
