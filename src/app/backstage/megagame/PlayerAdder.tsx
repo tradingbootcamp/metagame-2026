@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { fieldClass, smallButtonClass } from "../ui";
 import { findPlayers, lookupPlayer, type PlayerHit } from "./actions";
 import CodeEntry from "./CodeEntry";
@@ -18,13 +18,13 @@ export default function PlayerAdder({
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<PlayerHit[]>([]);
   const [pending, start] = useTransition();
-  const search = useRef(latestRequest());
+  const [search] = useState(latestRequest);
 
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2) return;
     const timer = setTimeout(() => {
-      const isCurrent = search.current.begin();
+      const isCurrent = search.begin();
       start(async () => {
         const res = await findPlayers(q);
         if (!isCurrent()) return;
@@ -34,12 +34,12 @@ export default function PlayerAdder({
     }, 300);
     return () => {
       clearTimeout(timer);
-      search.current.cancel();
+      search.cancel();
     };
-  }, [query]);
+  }, [query, search]);
 
   const add = (player: PlayerHit) => {
-    search.current.cancel();
+    search.cancel();
     setError(null);
     setQuery("");
     setHits([]);
