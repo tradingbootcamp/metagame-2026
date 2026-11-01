@@ -9,7 +9,11 @@ import { getDb, schema } from "@/db";
 import { currentSession, getAuth, hasPassword } from "@/lib/auth";
 import { deleteImage, uploadImage } from "@/lib/blob";
 import { isMegagameClass, starterLevels } from "@/lib/megagame-levels";
-import { loadMegagameLevels, setMegagameLevels } from "@/lib/megagame-store";
+import {
+  loadMegagameLevels,
+  recordPickerJoin,
+  setMegagameLevels,
+} from "@/lib/megagame-store";
 import {
   claimOwnTicket,
   claimTicket,
@@ -275,6 +279,8 @@ export async function chooseMegagameClass(
   if (!isMegagameClass(chosen)) return { error: "Pick a class." };
   const current = await loadMegagameLevels(session.user.id);
   if (current[chosen] > 0) return {};
+  // The audit row goes first so a failed column write never leaves a level with no event.
+  await recordPickerJoin(session.user.id, chosen);
   await setMegagameLevels(session.user.id, starterLevels(chosen));
   revalidatePath("/account");
   revalidatePath(`/u/${session.user.id}`);
