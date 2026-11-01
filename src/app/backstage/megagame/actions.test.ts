@@ -46,6 +46,7 @@ import {
 
 const ME = { name: "Vol", userId: "v1" };
 const ID = "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b";
+const QUEST = "0b9c8d7e-6f5a-4b3c-9d2e-1f0a9b8c7d6e";
 
 /** Grants exactly these permissions to the signed-in volunteer. */
 const holds = (...perms: string[]) =>
@@ -82,7 +83,7 @@ describe("gating", () => {
     expect(
       await confirmCompletions(
         {},
-        form({ id: ID, questId: "q1", questCode: "A2C4EF", player: "u1" }),
+        form({ id: ID, questId: QUEST, questCode: "A2C4EF", player: "u1" }),
       ),
     ).toEqual({ error: auth.EXPIRED });
     expect(await undoConfirmation({}, form({ id: ID }))).toEqual({
@@ -120,7 +121,7 @@ describe("confirmCompletions", () => {
   const submit = (players: string[], id = ID) =>
     confirmCompletions(
       {},
-      form({ id, questId: "q1", questCode: "a2c4ef", player: players }),
+      form({ id, questId: QUEST, questCode: "a2c4ef", player: players }),
     );
 
   it("records as the signed-in volunteer and opens the result by its id", async () => {
@@ -130,7 +131,7 @@ describe("confirmCompletions", () => {
     );
     expect(store.confirmQuest).toHaveBeenCalledWith({
       id: ID,
-      questId: "q1",
+      questId: QUEST,
       requestedUserIds: ["u1", "u2"],
       confirmedBy: "v1",
     });

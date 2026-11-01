@@ -25,13 +25,13 @@ import {
   type PlayerSummary,
 } from "@/lib/megagame-store";
 import { formatTicketCode } from "@/lib/ticket-code-format";
+import { isUuid } from "./uuid";
 
 const TOOL = "/backstage/megagame";
 const STALE = "This form is out of date. Reload and try again.";
 const NOT_YOURS =
   "Only the volunteer who recorded it, or someone who manages the megagame, can undo this.";
 const MAX_PLAYERS = 40;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const str = (formData: FormData, key: string, max = 500) =>
   String(formData.get(key) ?? "")
@@ -83,7 +83,7 @@ export async function confirmCompletions(
   if (!access) return { error: EXPIRED };
   const id = str(formData, "id");
   const questId = str(formData, "questId");
-  if (!UUID.test(id) || !questId) return { error: STALE };
+  if (!isUuid(id) || !isUuid(questId)) return { error: STALE };
   const code = normalizeMegagameCode(str(formData, "questCode"));
   const players = formData
     .getAll("player")
@@ -119,7 +119,7 @@ export async function undoConfirmation(
   const access = await verify();
   if (!access) return { error: EXPIRED };
   const id = str(formData, "id");
-  const outcome = UUID.test(id) ? await confirmationOutcome(id) : null;
+  const outcome = isUuid(id) ? await confirmationOutcome(id) : null;
   if (!outcome) return { error: "That confirmation was not found." };
   if (!(await mayUndo(access, outcome.confirmation.confirmedBy))) {
     return { error: NOT_YOURS };
@@ -141,7 +141,7 @@ export async function undoCompletion(
   const access = await requireAccess("megagame.manage");
   if (!access) return { error: EXPIRED };
   const id = str(formData, "id");
-  if (!UUID.test(id)) return { error: STALE };
+  if (!isUuid(id)) return { error: STALE };
   await voidCompletion({
     id,
     voidedBy: access.userId,
@@ -170,7 +170,7 @@ export async function levelUp(
   const userId = str(formData, "userId");
   const cls = str(formData, "class");
   const level = Number(str(formData, "level"));
-  if (!UUID.test(id) || !userId) return { error: STALE };
+  if (!isUuid(id) || !userId) return { error: STALE };
   if (!isMegagameClass(cls)) return { error: "Pick a class." };
 
   const [player] = await playersByIds([userId]);
@@ -242,7 +242,7 @@ export async function undoLevelUp(
   const access = await verify();
   if (!access) return { error: EXPIRED };
   const id = str(formData, "id");
-  const event = UUID.test(id) ? await findLevelEvent(id) : null;
+  const event = isUuid(id) ? await findLevelEvent(id) : null;
   if (!event) return { error: "That level-up was not found." };
   if (!(await mayUndo(access, event.awardedBy))) return { error: NOT_YOURS };
   const result = await voidLevelEvent({
