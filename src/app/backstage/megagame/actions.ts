@@ -300,6 +300,7 @@ export async function importQuestCsv(
       errors: [
         `The paste is longer than ${MAX_CSV_CHARS.toLocaleString("en-US")} characters. Split it up.`,
       ],
+      csv,
     };
   const { rows, errors } = parseQuestCsv(csv);
   if (errors.length > 0) return { errors, csv };

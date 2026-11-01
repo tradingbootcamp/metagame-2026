@@ -1,18 +1,15 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { fieldClass, buttonClass } from "../../ui";
 import { importQuestCsv, type ImportState } from "../actions";
 
 export default function ImportForm() {
-  const [text, setText] = useState("");
+  // React resets the form after each submit. The paste comes back on an
+  // error and is cleared on success, so a second submit cannot add the
+  // code-less rows twice.
   const [state, action, pending] = useActionState<ImportState, FormData>(
-    async (prev, formData) => {
-      const result = await importQuestCsv(prev, formData);
-      // Cleared so a second submit cannot add the code-less rows twice.
-      if (result.done) setText("");
-      return result;
-    },
+    importQuestCsv,
     {},
   );
   return (
@@ -25,8 +22,7 @@ export default function ImportForm() {
           name="csv"
           required
           rows={8}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+          defaultValue={state.csv}
           spellCheck={false}
           placeholder={
             "code,title,class,kind,answers,evidence,hint,min_level,max_level\n,The riddle,wizard,answer,fire|flame,,,1,2"

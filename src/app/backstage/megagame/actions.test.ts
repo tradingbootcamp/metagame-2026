@@ -427,6 +427,7 @@ describe("importQuestCsv", () => {
     expect(csv.length).toBeGreaterThan(500_000);
     expect(await importQuestCsv({}, form({ csv }))).toEqual({
       errors: ["The paste is longer than 500,000 characters. Split it up."],
+      csv,
     });
     expect(store.importQuests).not.toHaveBeenCalled();
   });
