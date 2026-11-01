@@ -421,6 +421,16 @@ describe("importQuestCsv", () => {
     expect(store.importQuests).not.toHaveBeenCalled();
   });
 
+  it("refuses a paste over the size limit and imports nothing", async () => {
+    holds("megagame.verify", "megagame.manage");
+    const csv = CSV + "\n" + "Another,answer,x\n".repeat(40_000);
+    expect(csv.length).toBeGreaterThan(500_000);
+    expect(await importQuestCsv({}, form({ csv }))).toEqual({
+      errors: ["The paste is longer than 500,000 characters. Split it up."],
+    });
+    expect(store.importQuests).not.toHaveBeenCalled();
+  });
+
   it("imports the parsed rows and reports the counts", async () => {
     holds("megagame.verify", "megagame.manage");
     store.importQuests.mockResolvedValue({ created: 1, updated: 2 });

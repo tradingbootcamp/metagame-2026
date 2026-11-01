@@ -294,7 +294,13 @@ export async function importQuestCsv(
   formData: FormData,
 ): Promise<ImportState> {
   if (!(await requireAccess("megagame.manage"))) return { errors: [EXPIRED] };
-  const csv = String(formData.get("csv") ?? "").slice(0, MAX_CSV_CHARS);
+  const csv = String(formData.get("csv") ?? "");
+  if (csv.length > MAX_CSV_CHARS)
+    return {
+      errors: [
+        `The paste is longer than ${MAX_CSV_CHARS.toLocaleString("en-US")} characters. Split it up.`,
+      ],
+    };
   const { rows, errors } = parseQuestCsv(csv);
   if (errors.length > 0) return { errors, csv };
   const { created, updated } = await importQuests(rows);
