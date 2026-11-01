@@ -12,6 +12,16 @@ const { auth, store, data } = vi.hoisted(() => ({
     completionsInClass: vi.fn(),
     levelEventsFor: vi.fn(),
     listQuests: vi.fn(),
+    levelGrid: vi.fn(),
+    claimedTicketHolderCount: vi.fn(),
+    questCompletionCounts: vi.fn(),
+    distinctCompletingPlayers: vi.fn(),
+    completionsByVolunteer: vi.fn(),
+    completionSeries: vi.fn(),
+    levelEventSeries: vi.fn(),
+    liveLevelEventsBefore: vi.fn(),
+    recentOverrides: vi.fn(),
+    recentVoids: vi.fn(),
   },
   data: { loadPlayerRows: vi.fn() },
 }));
@@ -30,6 +40,7 @@ import MegagameHome from "./page";
 import LevelUpPage from "./level/page";
 import QuestPage from "./q/[code]/page";
 import QuestsPage from "./quests/page";
+import DashboardPage from "./dashboard/page";
 
 const C = "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b";
 const props = <T>(params: T, searchParams: Record<string, string>) =>
@@ -100,5 +111,66 @@ describe("quest management page", () => {
     store.listQuests.mockResolvedValue([]);
     await QuestsPage();
     expect(store.listQuests).toHaveBeenCalled();
+  });
+});
+
+describe("dashboard page", () => {
+  it("needs megagame.verify, keeps its choices through sign-in, and loads nothing without it", async () => {
+    const el = await DashboardPage(
+      props({}, { range: "con", bucket: "1h", cls: "alien" }),
+    );
+    expect(auth.toolAccess).toHaveBeenCalledWith("megagame.verify");
+    expectSignInOnly(
+      el,
+      "/backstage/megagame/dashboard?range=con&bucket=1h&cls=alien",
+    );
+  });
+
+  it("loads the figures for a volunteer, with the series over the chosen range", async () => {
+    auth.toolAccess.mockResolvedValue({ name: "Vol", userId: "v1" });
+    store.levelGrid.mockResolvedValue({
+      wizard: [0, 1, 0, 0, 0, 0],
+      pirate: [0, 0, 0, 0, 0, 0],
+      alien: [0, 0, 0, 0, 0, 0],
+    });
+    store.claimedTicketHolderCount.mockResolvedValue(10);
+    store.questCompletionCounts.mockResolvedValue([]);
+    store.distinctCompletingPlayers.mockResolvedValue(0);
+    store.completionsByVolunteer.mockResolvedValue([]);
+    store.completionSeries.mockResolvedValue([]);
+    store.levelEventSeries.mockResolvedValue([]);
+    store.liveLevelEventsBefore.mockResolvedValue([]);
+    store.recentOverrides.mockResolvedValue([]);
+    store.recentVoids.mockResolvedValue([]);
+    await DashboardPage(props({}, { range: "con", bucket: "1d" }));
+    expect(store.completionSeries).toHaveBeenCalledWith(
+      "1d",
+      new Date("2026-11-06T08:00:00.000Z"),
+      new Date("2026-11-09T08:00:00.000Z"),
+    );
+    expect(store.levelEventSeries).toHaveBeenCalledWith(
+      "1d",
+      new Date("2026-11-06T08:00:00.000Z"),
+      new Date("2026-11-09T08:00:00.000Z"),
+    );
+    expect(store.liveLevelEventsBefore).toHaveBeenCalledWith(
+      new Date("2026-11-09T08:00:00.000Z"),
+    );
+  });
+
+  it("skips the series queries when the range has too many buckets", async () => {
+    auth.toolAccess.mockResolvedValue({ name: "Vol", userId: "v1" });
+    for (const fn of Object.values(store)) fn.mockResolvedValue([]);
+    store.levelGrid.mockResolvedValue({
+      wizard: [0, 0, 0, 0, 0, 0],
+      pirate: [0, 0, 0, 0, 0, 0],
+      alien: [0, 0, 0, 0, 0, 0],
+    });
+    store.claimedTicketHolderCount.mockResolvedValue(0);
+    store.distinctCompletingPlayers.mockResolvedValue(0);
+    await DashboardPage(props({}, { range: "con", bucket: "5m" }));
+    expect(store.completionSeries).not.toHaveBeenCalled();
+    expect(store.levelEventSeries).not.toHaveBeenCalled();
+    expect(store.liveLevelEventsBefore).not.toHaveBeenCalled();
   });
 });

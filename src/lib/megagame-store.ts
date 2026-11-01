@@ -33,6 +33,7 @@ import {
   isCompleteMegagameCode,
   normalizeMegagameCode,
   type DatedLevelEvent,
+  type EventTable,
 } from "./megagame-rules";
 import { visibleTickets } from "./ticket-store";
 import { randomTicketCode, withFreshTicketCode } from "./ticket-code";
@@ -1195,16 +1196,6 @@ export async function recentVoids(limit = 20): Promise<VoidRow[]> {
     .sort((a, b) => b.voidedAt.getTime() - a.voidedAt.getTime())
     .slice(0, limit);
 }
-
-export const EVENT_TABLES = [
-  "confirmations",
-  "quest_completions",
-  "level_events",
-] as const;
-export type EventTable = (typeof EVENT_TABLES)[number];
-
-export const isEventTable = (value: unknown): value is EventTable =>
-  EVENT_TABLES.includes(value as EventTable);
 
 /** Every row of an event table, voided ones included, oldest first, with names joined. */
 export async function exportEventTable(

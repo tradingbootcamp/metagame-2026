@@ -118,6 +118,12 @@ export default async function MegagameHome(
         >
           Record a level-up →
         </Link>
+        <Link
+          href={`${TOOL}/dashboard`}
+          className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
+        >
+          Dashboard →
+        </Link>
         {manager && (
           <Link
             href={`${TOOL}/quests`}

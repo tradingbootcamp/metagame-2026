@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+const NAV =
+  "text-sm whitespace-nowrap text-ink/60 underline-offset-2 hover:text-meeple hover:underline";
+
 export default function MegagameLayout({
   children,
 }: {
@@ -17,12 +20,14 @@ export default function MegagameLayout({
       title="Megagame"
       href="/backstage/megagame"
       nav={
-        <Link
-          href="/backstage/megagame/level"
-          className="text-sm whitespace-nowrap text-ink/60 underline-offset-2 hover:text-meeple hover:underline"
-        >
-          Level up
-        </Link>
+        <>
+          <Link href="/backstage/megagame/level" className={NAV}>
+            Level up
+          </Link>
+          <Link href="/backstage/megagame/dashboard" className={NAV}>
+            Dashboard
+          </Link>
+        </>
       }
     >
       <div className="mx-auto flex max-w-xl flex-col gap-8">{children}</div>

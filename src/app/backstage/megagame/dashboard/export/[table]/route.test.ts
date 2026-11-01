@@ -2,13 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { auth, store } = vi.hoisted(() => ({
   auth: { toolAccess: vi.fn() },
-  store: {
-    exportEventTable: vi.fn(),
-    isEventTable: (v: unknown) =>
-      ["confirmations", "quest_completions", "level_events"].includes(
-        v as string,
-      ),
-  },
+  store: { exportEventTable: vi.fn() },
 }));
 vi.mock("@/lib/admin-auth", () => auth);
 vi.mock("@/lib/megagame-store", () => store);

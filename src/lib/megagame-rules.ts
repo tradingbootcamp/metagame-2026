@@ -339,3 +339,14 @@ export function cumulativeLevelDistribution(
   }
   return out;
 }
+
+/** The append-only tables the dashboard exports. */
+export const EVENT_TABLES = [
+  "confirmations",
+  "quest_completions",
+  "level_events",
+] as const;
+export type EventTable = (typeof EVENT_TABLES)[number];
+
+export const isEventTable = (value: unknown): value is EventTable =>
+  EVENT_TABLES.includes(value as EventTable);

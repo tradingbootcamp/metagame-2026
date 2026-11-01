@@ -1,6 +1,7 @@
 import { toolAccess } from "@/lib/admin-auth";
 import { toCsv, type CsvCell } from "@/lib/csv";
-import { exportEventTable, isEventTable } from "@/lib/megagame-store";
+import { isEventTable } from "@/lib/megagame-rules";
+import { exportEventTable } from "@/lib/megagame-store";
 import { pacificDayKey } from "@/lib/schedule";
 
 export const runtime = "nodejs";
