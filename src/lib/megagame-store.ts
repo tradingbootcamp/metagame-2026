@@ -19,7 +19,6 @@ import {
   type MegagameLevels,
 } from "./megagame-levels";
 import {
-  deriveLevels,
   isCompleteMegagameCode,
   normalizeMegagameCode,
 } from "./megagame-rules";
@@ -271,10 +270,12 @@ export async function confirmQuest(
     return { status: "players-mismatch" };
   }
 
-  // One statement that reads the stored confirmation, so an undo landing
-  // between the read above and this insert leaves nothing live behind it.
-  // Quest and players come from the stored row, and the join on "user" skips
-  // accounts deleted since the form was filled in.
+  // One statement that reads and share-locks the stored confirmation, so a
+  // concurrent undo either waits for this insert and voids its rows, or
+  // commits first and this insert finds it voided. Quest and players come from
+  // the stored row, the join on "user" skips accounts deleted since the form
+  // was filled in, and "not exists" keeps a player voided out of this
+  // confirmation from coming back on a retry.
   await db.execute(sql`
     insert into quest_completions (confirmation_id, quest_id, user_id)
     select c.id, c.quest_id, u.id
@@ -282,6 +283,8 @@ export async function confirmQuest(
     cross join lateral unnest(c.requested_user_ids) as r(id)
     join "user" u on u.id = r.id
     where c.id = ${row.id} and c.voided_at is null
+      and not exists (select 1 from quest_completions q where q.confirmation_id = c.id and q.user_id = u.id)
+    for share of c
     on conflict (quest_id, user_id) where voided_at is null and user_id is not null do nothing
   `);
 
@@ -470,7 +473,8 @@ export async function recentConfirmations(
       questId: confirmations.questId,
       questTitle: quests.title,
       questCode: quests.code,
-      players: sql<number>`cardinality(${confirmations.requestedUserIds})`,
+      // What it recorded, or had recorded before a whole undo.
+      players: sql<number>`(select count(*)::int from quest_completions q where q.confirmation_id = ${confirmations.id} and (q.voided_at is null or ${confirmations.voidedAt} is not null))`,
       createdAt: confirmations.createdAt,
       voidedAt: confirmations.voidedAt,
     })
@@ -633,18 +637,19 @@ export async function voidLevelEvent({
 
   const cls = target.class;
   if (!target.userId || !isMegagameClass(cls)) return { status, level: 0 };
-  const remaining = await db
-    .select({ class: levelEvents.class, level: levelEvents.level })
-    .from(levelEvents)
-    .where(
-      and(
-        eq(levelEvents.userId, target.userId),
-        eq(levelEvents.class, cls),
-        isNull(levelEvents.voidedAt),
-      ),
-    );
-  const level = deriveLevels(remaining)[cls];
-  await setClassLevel(target.userId, cls, level);
+  const { user } = schema;
+  const column = user[LEVEL_KEY[cls]];
+  const liveMax = sql`coalesce((select max(${levelEvents.level}) from ${levelEvents} where ${levelEvents.userId} = ${target.userId} and ${levelEvents.class} = ${cls} and ${levelEvents.voidedAt} is null), 0)`;
+  // The recompute can lower the column. If an award commits while it runs, its
+  // stale subquery may overwrite the award's raise, so a second statement with
+  // a fresh snapshot raises the column back to the live maximum.
+  await setClassLevel(target.userId, cls, liveMax);
+  const [repaired] = await db
+    .update(user)
+    .set({ [LEVEL_KEY[cls]]: sql`greatest(${column}, ${liveMax})` })
+    .where(eq(user.id, target.userId))
+    .returning({ level: column });
+  const level = repaired?.level ?? 0;
   return { status, level };
 }
 

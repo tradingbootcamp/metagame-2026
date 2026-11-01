@@ -56,6 +56,7 @@ import {
   findQuestByCode,
   hasVolunteerLevelEvent,
   liveCompletions,
+  recentConfirmations,
   recordLevelUp,
   recordPickerJoin,
   searchPlayers,
@@ -224,6 +225,13 @@ describe("confirmQuest", () => {
     expect(sqlText).toContain("unnest(c.requested_user_ids)");
     expect(sqlText).toContain('join "user" u on u.id = r.id');
     expect(sqlText).toContain("c.voided_at is null");
+    // Locks the confirmation so a concurrent undo either waits for this insert
+    // or is seen by it.
+    expect(sqlText).toContain("for share of c");
+    // A player voided out of this confirmation stays voided on a retry.
+    expect(sqlText).toContain(
+      "not exists (select 1 from quest_completions q where q.confirmation_id = c.id and q.user_id = u.id)",
+    );
     expect(sqlText).toContain(
       "on conflict (quest_id, user_id) where voided_at is null and user_id is not null do nothing",
     );
@@ -402,31 +410,40 @@ describe("recordLevelUp", () => {
 });
 
 describe("voidLevelEvent", () => {
-  it("voids a volunteer event and recomputes that class from what remains", async () => {
-    queue(
-      [{ userId: "u1", class: "wizard" }],
-      [
-        { class: "wizard", level: 1 },
-        { class: "wizard", level: 2 },
-      ],
-      [],
-    );
+  it("voids a volunteer event and recomputes that class in SQL, then repairs upward", async () => {
+    queue([{ userId: "u1", class: "wizard" }], [], [{ level: 2 }]);
     expect(
       await voidLevelEvent({ id: "e3", voidedBy: "v1", reason: "typo" }),
     ).toEqual({ status: "voided", level: 2 });
     const where = render(arg(chainOf(db.update, 0), "where"));
     expect(where).toContain('"level_events"."voided_at" is null');
     expect(where).toContain('"level_events"."source" = $');
-    const set = arg(chainOf(db.update, 1), "set");
-    expect(set).toEqual({ wizardLevel: 2 });
+
+    expect(db.update).toHaveBeenCalledTimes(3);
+    const recompute = arg(chainOf(db.update, 1), "set") as Record<string, SQL>;
+    expect(Object.keys(recompute)).toEqual(["wizardLevel"]);
+    const recomputeSql = render(recompute.wizardLevel);
+    expect(recomputeSql).toContain('max("level_events"."level")');
+    expect(recomputeSql).toContain('"level_events"."voided_at" is null');
+    expect(recomputeSql).not.toContain("greatest");
+
+    // A second statement with a fresh snapshot can only raise the column, so
+    // an award that committed while the recompute ran is not lost.
+    const repair = arg(chainOf(db.update, 2), "set") as Record<string, SQL>;
+    expect(Object.keys(repair)).toEqual(["wizardLevel"]);
+    const repairSql = render(repair.wizardLevel);
+    expect(repairSql).toContain('greatest("user"."wizard_level"');
+    expect(repairSql).toContain('max("level_events"."level")');
   });
 
-  it("drops the class to 0 when no live event remains", async () => {
-    queue([{ userId: "u1", class: "alien" }], [], []);
+  it("reports 0 when no live event remains", async () => {
+    queue([{ userId: "u1", class: "alien" }], [], [{ level: 0 }]);
     expect(
       await voidLevelEvent({ id: "e3", voidedBy: "v1", reason: null }),
     ).toEqual({ status: "voided", level: 0 });
-    expect(arg(chainOf(db.update, 1), "set")).toEqual({ alienLevel: 0 });
+    expect(Object.keys(arg(chainOf(db.update, 1), "set") as object)).toEqual([
+      "alienLevel",
+    ]);
   });
 
   it("recomputes again on a repeated undo, which repairs a crash between the two writes", async () => {
@@ -440,12 +457,13 @@ describe("voidLevelEvent", () => {
           voidedAt: new Date(),
         },
       ],
-      [{ class: "wizard", level: 1 }],
       [],
+      [{ level: 1 }],
     );
     expect(
       await voidLevelEvent({ id: "e3", voidedBy: "v1", reason: null }),
     ).toEqual({ status: "already-voided", level: 1 });
+    expect(db.update).toHaveBeenCalledTimes(3);
   });
 
   it("refuses to void a picker event", async () => {
@@ -560,5 +578,19 @@ describe("completion reads", () => {
       arg(chainOf(db.select, 0), "where") as SQL,
     );
     expect(where.params).toEqual(["u1", "wizard"]);
+  });
+});
+
+describe("recentConfirmations", () => {
+  it("counts the completions a confirmation recorded, not the players requested", async () => {
+    queue([]);
+    await recentConfirmations("v1");
+    const fields = (
+      db.select.mock.calls[0] as unknown as [{ players: SQL }]
+    )[0];
+    const players = render(fields.players);
+    expect(players).not.toContain("cardinality");
+    expect(players).toContain("from quest_completions q");
+    expect(players).toContain('q.confirmation_id = "confirmations"."id"');
   });
 });
