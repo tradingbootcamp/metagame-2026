@@ -138,6 +138,39 @@ describe("parseQuestCsv", () => {
     ]);
   });
 
+  it("refuses evidence and hints longer than 2000 characters", () => {
+    const long = "x".repeat(2001);
+    const text = [
+      HEADER,
+      `,Q,,evidence,,${long},,,`,
+      `,Q,,answer,x,,${long},,`,
+      `,Q,,evidence,,${"y".repeat(2000)},${"z".repeat(2000)},,`,
+    ].join("\n");
+    expect(parseQuestCsv(text).errors).toEqual([
+      "Line 2: evidence is longer than 2000 characters.",
+      "Line 3: hint is longer than 2000 characters.",
+    ]);
+  });
+
+  it("refuses a column that appears twice", () => {
+    expect(parseQuestCsv("title,kind,Title\nQ,answer,R").errors).toEqual([
+      'Column "title" appears more than once.',
+    ]);
+  });
+
+  it("names the line where an unclosed quote starts", () => {
+    const text = [
+      HEADER,
+      ",Q,,answer,x,,,,",
+      ',"R,,answer,y,,,,',
+      ",S,,answer,z,,,,",
+    ].join("\n");
+    expect(parseQuestCsv(text)).toEqual({
+      rows: [],
+      errors: ["Line 3: a quote is never closed."],
+    });
+  });
+
   it("counts lines across a quoted newline", () => {
     const text = [
       HEADER,

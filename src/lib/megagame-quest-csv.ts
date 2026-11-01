@@ -52,7 +52,10 @@ export type QuestCsvResult = { rows: QuestImportRow[]; errors: string[] };
 type CsvRecord = { line: number; cells: string[] };
 
 /** RFC 4180 quoting; tab-separated when the first line has a tab. */
-function parseRecords(text: string): CsvRecord[] {
+function parseRecords(text: string): {
+  records: CsvRecord[];
+  unclosedQuoteLine: number | null;
+} {
   const firstBreak = text.search(/\r?\n/);
   const firstLine = firstBreak === -1 ? text : text.slice(0, firstBreak);
   const sep = firstLine.includes("\t") ? "\t" : ",";
@@ -61,6 +64,7 @@ function parseRecords(text: string): CsvRecord[] {
   let cells: string[] = [];
   let cell = "";
   let quoted = false;
+  let quoteLine = 1;
   let line = 1;
   let start = 1;
   const endRecord = () => {
@@ -85,6 +89,7 @@ function parseRecords(text: string): CsvRecord[] {
       }
     } else if (ch === '"' && cell.trim() === "") {
       quoted = true;
+      quoteLine = line;
       cell = "";
     } else if (ch === sep) {
       cells.push(cell);
@@ -99,11 +104,11 @@ function parseRecords(text: string): CsvRecord[] {
     }
   }
   if (cell !== "" || cells.length > 0) endRecord();
-  return records;
+  return { records, unclosedQuoteLine: quoted ? quoteLine : null };
 }
 
 export function parseCsv(text: string): string[][] {
-  return parseRecords(text).map((r) => r.cells);
+  return parseRecords(text).records.map((r) => r.cells);
 }
 
 const headerKey = (cell: string) =>
@@ -120,7 +125,12 @@ function parseLevel(raw: string): number | null | "bad" {
 }
 
 export function parseQuestCsv(text: string): QuestCsvResult {
-  const records = parseRecords(text);
+  const { records, unclosedQuoteLine } = parseRecords(text);
+  if (unclosedQuoteLine !== null)
+    return {
+      rows: [],
+      errors: [`Line ${unclosedQuoteLine}: a quote is never closed.`],
+    };
   if (records.length < 2)
     return { rows: [], errors: ["Paste a header row and at least one quest."] };
 
@@ -130,9 +140,11 @@ export function parseQuestCsv(text: string): QuestCsvResult {
   header.cells.forEach((cell, i) => {
     const key = headerKey(cell);
     if (key === "") return;
-    if ((QUEST_CSV_COLUMNS as readonly string[]).includes(key))
-      index.set(key as Column, i);
-    else errors.push(`Unknown column "${cell.trim()}".`);
+    if (!(QUEST_CSV_COLUMNS as readonly string[]).includes(key))
+      errors.push(`Unknown column "${cell.trim()}".`);
+    else if (index.has(key as Column))
+      errors.push(`Column "${key}" appears more than once.`);
+    else index.set(key as Column, i);
   });
   for (const col of REQUIRED)
     if (!index.has(col)) errors.push(`Missing column "${col}".`);
@@ -170,7 +182,12 @@ export function parseQuestCsv(text: string): QuestCsvResult {
       .split("|")
       .map((a) => a.trim())
       .filter((a) => normalizeAnswer(a) !== "");
-    const evidence = get("evidence").slice(0, MAX_TEXT) || null;
+    const evidence = get("evidence") || null;
+    const hint = get("hint") || null;
+    if (evidence !== null && evidence.length > MAX_TEXT)
+      fail(`evidence is longer than ${MAX_TEXT} characters.`);
+    if (hint !== null && hint.length > MAX_TEXT)
+      fail(`hint is longer than ${MAX_TEXT} characters.`);
     if (kind !== "answer" && kind !== "evidence")
       fail('kind must be "answer" or "evidence".');
     else if (kind === "answer" && answers.length === 0)
@@ -215,7 +232,7 @@ export function parseQuestCsv(text: string): QuestCsvResult {
       kind: kind as "answer" | "evidence",
       answers: kind === "answer" ? answers : [],
       evidence,
-      hint: get("hint").slice(0, MAX_TEXT) || null,
+      hint,
       minLevel: minLevel as number | null,
       maxLevel: maxLevel as number | null,
     });
