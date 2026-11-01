@@ -46,6 +46,15 @@ describe("listQueue", () => {
     expect(queue.add(["a"], "c")).toEqual(["a", "b", "c"]);
   });
 
+  it("reports the queued list until navigation settles", () => {
+    const queue = listQueue();
+    expect(queue.current(["a"])).toEqual(["a"]);
+    queue.add(["a"], "b");
+    expect(queue.current(["a"])).toEqual(["a", "b"]);
+    queue.settle();
+    expect(queue.current(["a", "b"])).toEqual(["a", "b"]);
+  });
+
   it("goes back to the URL's list once navigation settles", () => {
     const queue = listQueue();
     queue.add(["a"], "b");

@@ -28,7 +28,9 @@ export default function ListAdder({
         start(() => router.replace(listHref(path, next), { scroll: false }));
       }}
       onQuest={(code) =>
-        router.push(listHref(`/backstage/megagame/q/${code}`, ids))
+        router.push(
+          listHref(`/backstage/megagame/q/${code}`, queue.current(ids)),
+        )
       }
     />
   );

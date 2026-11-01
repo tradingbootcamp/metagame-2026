@@ -39,6 +39,9 @@ export function listQueue() {
       pending = withPlayer(pending ?? ids, id);
       return pending;
     },
+    current(ids: readonly string[]): string[] {
+      return pending ?? [...ids];
+    },
     settle() {
       pending = null;
     },
