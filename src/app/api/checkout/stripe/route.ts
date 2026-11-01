@@ -87,7 +87,8 @@ function compUtm(promo: Stripe.PromotionCode): Utm {
 /**
  * A `promo` on the link (/ticket/CODE) is applied for the buyer, as is the tier's
  * own code during early-bird; Stripe then shows no code box. Otherwise — or on
- * the unlisted `code=own` link, or when the code isn't redeemable — the box is shown.
+ * the unlisted `code=own` link, or when the code isn't redeemable — the box is shown
+ * (the GET handler also retries without a code Stripe refuses at session create).
  */
 async function promoParams(
   stripe: Stripe,
@@ -152,20 +153,34 @@ export async function GET(request: Request) {
     const utm = pickUtm((k) => params.get(k));
     // UTMs on the link itself win over the ones a comp code implies.
     const tagged = Object.keys(utm).some((k) => k.startsWith("utm_"));
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items: [{ price: purchase.price, quantity: 1 }],
-      ...promo?.session,
-      metadata: {
-        ...purchase.metadata,
-        ...(tagged ? {} : promo?.utm),
-        ...utm,
-      },
-      custom_fields: CUSTOM_FIELDS,
-      name_collection: { individual: { enabled: true, optional: false } },
-      success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/#tickets`,
-    });
+    const create = (p?: Awaited<ReturnType<typeof promoParams>>) =>
+      stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [{ price: purchase.price, quantity: 1 }],
+        ...p?.session,
+        metadata: {
+          ...purchase.metadata,
+          ...(tagged ? {} : p?.utm),
+          ...utm,
+        },
+        custom_fields: CUSTOM_FIELDS,
+        name_collection: { individual: { enabled: true, optional: false } },
+        success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/#tickets`,
+      });
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await create(promo);
+    } catch (err) {
+      // Stripe refuses codes the listing can't vet (used up, expired, wrong
+      // product, first-order only…); check out without it, code box shown.
+      if (!promo?.session.discounts) throw err;
+      console.warn("[checkout/stripe] promo refused, dropping it:", err);
+      session = await create({
+        session: { allow_promotion_codes: true },
+        utm: {},
+      });
+    }
     if (!session.url) throw new Error(`session ${session.id} has no url`);
     return NextResponse.redirect(session.url, 303);
   } catch (err) {
