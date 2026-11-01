@@ -284,7 +284,9 @@ const profile = (u) => {
 // prettier-ignore
 const ROOMS = [
   ["foodtruck", "Food Truck Parking", null, "Behind E", 0],
-  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1],
+  // The bulletin board, where anyone with a ticket pitches something. Rat
+  // Park for now; the board follows whichever room carries layout "board".
+  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1, "public", false, "board"],
   ["eigen", "Eigen Hall", 40, "Building E, 1st floor", 2],
   ["cantor", "Cantor's Diagonal", 60, "Building C", 3],
   ["glass", "Glass Hall", 35, "Building A, 1st floor", 4],
@@ -299,10 +301,6 @@ const ROOMS = [
   ["d1", "1D1", 6, "Building D, 1st floor", 100, "hidden"],
   ["gyroscope", "Gyroscope", 30, "Building E, 2nd floor", 100, "volunteer", false],
   ["other", "Other", null, null, 100, "hidden", false],
-  // Appended, not slotted in by display_order: uuid(k + 1) below would move
-  // every later room's id. The bulletin board, where anyone with a ticket
-  // pitches something.
-  ["unconference", "Unconference Park", null, "Outdoors, between B and E", 7, "public", false, "board"],
 ];
 const locations = Object.fromEntries(
   ROOMS.map(
@@ -359,7 +357,7 @@ const NOTES = [
   [1806, "attendee", "lilac", 1, 0.35, 7, 13, "Does anyone want to co-run a Werewolf game at 10pm? Need a second moderator."],
 ].map(([n, who, color, x, y, day, hour, body]) => ({
   id: uuid(n),
-  location_id: locations.unconference.id,
+  location_id: locations.ratpark.id,
   author_user_id: users[who].id,
   body,
   color,
@@ -492,7 +490,7 @@ const program = [
   [113, 6, 16, 60, "attic", "other", "Sunset Tea & Unconference Pitches", "Pitch a Sunday session in sixty seconds.", "all", 25],
   [114, 6, 19, 180, "courtyard", "game", "Megagame Briefing: The Orchard Accords", "Faction leads, read your sealed envelopes.", "all", 80, { megagame_integration_level: "deep" }],
   [115, 6, 21, 120, "thingspace", "game", "Werewolf After Dark", "The classic, with a moderator who holds grudges.", "adults", 20],
-  [116, 7, 8, 60, "ratpark", "other", "Morning Run: Fog of War", "A 5k where the route is revealed one checkpoint at a time.", "all", 30],
+  [116, 7, 8, 60, "gardens", "other", "Morning Run: Fog of War", "A 5k where the route is revealed one checkpoint at a time.", "all", 30],
   [117, 7, 10, 90, "courtyard", "talk", "Why Your Board Game Prototype Is Boring", "A design critique panel, by request only.", "all", 80],
   [118, 7, 10, 120, "cantor", "game", "Escape Room: The Librarian's Lament", "Two rooms, one key, forty minutes per team.", "all", 16, { min_capacity: 4, needs: "Padlocks, a red herring" }],
   [119, 7, 10, 60, "d2", "workshop", "Teaching Kids Go", "Nine-by-nine boards, no stones thrown.", "kids", 12],

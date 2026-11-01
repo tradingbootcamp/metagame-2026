@@ -139,6 +139,16 @@ export type SessionInput = Omit<
  * Inserts or, with an id, replaces the session and its host list. Refuses a
  * clash in its room unless `allowOverlap`; a clash let through comes back.
  */
+/** A room refused the switch to a board because sessions are still in it. */
+export class OccupiedBoardError extends Error {
+  readonly field = "layout";
+  constructor(readonly held: number) {
+    super(
+      `${held} session${held === 1 ? " is" : "s are"} still in this room. Move ${held === 1 ? "it" : "them"} before drawing it as a bulletin board.`,
+    );
+  }
+}
+
 /** A save refused because the room is a bulletin board, not a time column. */
 export class BoardRoomError extends Error {
   readonly field = "locationId";
@@ -648,9 +658,25 @@ export async function removeSession(id: string): Promise<void> {
 
 export type LocationInput = Omit<ScheduleLocation, "id"> & { id?: string };
 
+/** How many sessions sit in a room — for refusing to turn an occupied one into a board. */
+export async function sessionsInRoom(locationId: string): Promise<number> {
+  const [row] = await getDb()
+    .select({ n: count() })
+    .from(sessions)
+    .where(eq(sessions.locationId, locationId));
+  return row?.n ?? 0;
+}
+
 export async function upsertLocation(input: LocationInput): Promise<string> {
   const db = getDb();
   const { id, ...row } = input;
+  // Turning an occupied room into a board would leave its sessions listed and
+  // searchable but drawn nowhere, which is the same hole assertRoomTakesSessions
+  // closes from the session side.
+  if (id && !roomTakesSessions(row.layout)) {
+    const held = await sessionsInRoom(id);
+    if (held > 0) throw new OccupiedBoardError(held);
+  }
   if (id) {
     const [updated] = await db
       .update(locations)

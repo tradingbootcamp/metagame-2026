@@ -13,6 +13,7 @@ import {
 } from "@/lib/schedule-input";
 import {
   BoardRoomError,
+  OccupiedBoardError,
   cancelRsvp,
   ensureAccount,
   explainDbError,
@@ -41,7 +42,7 @@ export type FormState = {
 
 const refused = (err: unknown): FormState => {
   if (err instanceof OverlapError) return { conflict: err.clash };
-  if (err instanceof BoardRoomError) {
+  if (err instanceof BoardRoomError || err instanceof OccupiedBoardError) {
     return { field: err.field, error: err.message };
   }
   return explainDbError(err);
