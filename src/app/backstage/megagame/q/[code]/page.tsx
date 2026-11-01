@@ -47,7 +47,12 @@ export default async function QuestPage(
   const path = `${TOOL}/q/${code}`;
 
   const access = await toolAccess("megagame.verify");
-  if (!access) return <SignIn next={listHref(path, ids)} />;
+  if (!access) {
+    const keep: Record<string, string> = isUuid(confirmationId)
+      ? { c: confirmationId }
+      : {};
+    return <SignIn next={listHref(path, ids, keep)} />;
+  }
 
   const quest = await findQuestByCode(code);
   if (!quest) {

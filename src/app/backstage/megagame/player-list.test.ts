@@ -31,4 +31,9 @@ describe("player list in the URL", () => {
     );
     expect(listHref("/backstage/megagame", [])).toBe("/backstage/megagame");
   });
+
+  it("adds extra parameters after the list", () => {
+    expect(listHref("/q", ["u1"], { c: "id1" })).toBe("/q?players=u1&c=id1");
+    expect(listHref("/q", [], { c: "id1" })).toBe("/q?c=id1");
+  });
 });

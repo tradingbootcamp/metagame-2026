@@ -18,7 +18,15 @@ export const withPlayer = (ids: readonly string[], id: string) =>
 export const withoutPlayer = (ids: readonly string[], id: string) =>
   ids.filter((x) => x !== id);
 
-export function listHref(path: string, ids: readonly string[]): string {
-  if (ids.length === 0) return path;
-  return `${path}?${new URLSearchParams({ players: ids.join(",") })}`;
+export function listHref(
+  path: string,
+  ids: readonly string[],
+  extra: Record<string, string> = {},
+): string {
+  const params = new URLSearchParams(
+    ids.length > 0 ? { players: ids.join(",") } : {},
+  );
+  for (const [k, v] of Object.entries(extra)) params.set(k, v);
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
 }
