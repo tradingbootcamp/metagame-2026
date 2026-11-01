@@ -25,7 +25,8 @@ describe("dashboardView", () => {
   });
 
   it("covers the three con days in Pacific time, ending at Monday midnight", () => {
-    const v = dashboardView({ range: "con", bucket: "1d" }, now);
+    const after = new Date("2026-11-10T18:00:00.000Z");
+    const v = dashboardView({ range: "con", bucket: "1d" }, after);
     expect(iso(v.from)).toBe("2026-11-06T08:00:00.000Z");
     expect(iso(v.to)).toBe("2026-11-09T08:00:00.000Z");
     expect(v.buckets.map(iso)).toEqual([
@@ -33,6 +34,21 @@ describe("dashboardView", () => {
       "2026-11-07T08:00:00.000Z",
       "2026-11-08T08:00:00.000Z",
     ]);
+  });
+
+  it("ends the whole con range at now while the con is on", () => {
+    const v = dashboardView({ range: "con", bucket: "1h" }, now);
+    expect(iso(v.from)).toBe("2026-11-06T08:00:00.000Z");
+    expect(iso(v.to)).toBe(iso(now));
+    expect(iso(v.buckets.at(-1)!)).toBe("2026-11-07T18:00:00.000Z");
+  });
+
+  it("shows the whole con range before and after the con", () => {
+    for (const at of ["2026-11-01T18:00:00.000Z", "2026-11-12T18:00:00.000Z"]) {
+      const v = dashboardView({ range: "con", bucket: "1d" }, new Date(at));
+      expect(iso(v.from)).toBe("2026-11-06T08:00:00.000Z");
+      expect(iso(v.to)).toBe("2026-11-09T08:00:00.000Z");
+    }
   });
 
   it("ignores an unknown range, bucket or class", () => {

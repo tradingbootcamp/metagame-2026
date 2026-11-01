@@ -43,7 +43,9 @@ function rangeFor(preset: RangePreset, now: Date): { from: Date; to: Date } {
   }
   const first = fromPacificWall(`${CONFERENCE_DAYS[0].key}T00:00`)!;
   const last = fromPacificWall(`${CONFERENCE_DAYS.at(-1)!.key}T00:00`)!;
-  return { from: first, to: new Date(last.getTime() + DAY_MS) };
+  const end = new Date(last.getTime() + DAY_MS);
+  const during = now > first && now < end;
+  return { from: first, to: during ? now : end };
 }
 
 export type DashboardParams = Record<string, string | string[] | undefined>;

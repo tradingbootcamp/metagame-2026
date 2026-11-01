@@ -210,9 +210,9 @@ export default async function DashboardPage(
         </div>
         <p className={NOTE}>
           Players at each current level. Percentages are of the {holders}{" "}
-          accounts that have claimed a ticket. There is no check-in data, so
-          that is not a count of people at the con, and staff without a ticket
-          can push a percentage up.
+          accounts that have claimed a paid ticket. There is no check-in data,
+          so that is not a count of people at the con, and staff without a
+          ticket can push a percentage up.
         </p>
       </Section>
 
@@ -468,7 +468,9 @@ export default async function DashboardPage(
             {CLASS_LABELS[view.cls]} players at each level as of the end of each
             bucket, counted from the level-up log rather than the current level
             columns, so the last row can differ slightly from the table at the
-            top.
+            top. Undone level-ups are left out of every row, so a player who
+            switched class through the picker shows only in the new class, even
+            in rows from before the switch.
           </p>
         </Section>
       )}
@@ -534,7 +536,8 @@ export default async function DashboardPage(
           ))}
         </ul>
         <p className={NOTE}>
-          Every row, voided ones included, with names joined in.
+          Every row of each table, voided ones included. People and quests
+          appear as ids.
         </p>
       </Section>
     </div>

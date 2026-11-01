@@ -142,7 +142,13 @@ describe("dashboard page", () => {
     store.liveLevelEventsBefore.mockResolvedValue([]);
     store.recentOverrides.mockResolvedValue([]);
     store.recentVoids.mockResolvedValue([]);
-    await DashboardPage(props({}, { range: "con", bucket: "1d" }));
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-01T18:00:00.000Z"));
+    try {
+      await DashboardPage(props({}, { range: "con", bucket: "1d" }));
+    } finally {
+      vi.useRealTimers();
+    }
     expect(store.completionSeries).toHaveBeenCalledWith(
       "1d",
       new Date("2026-11-06T08:00:00.000Z"),
