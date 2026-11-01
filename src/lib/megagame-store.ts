@@ -4,15 +4,23 @@ import {
   asc,
   desc,
   eq,
+  gt,
+  gte,
   ilike,
   inArray,
+  isNotNull,
   isNull,
+  lt,
   ne,
+  or,
   sql,
+  type SQLWrapper,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { getDb, schema } from "@/db";
 import {
   MAX_LEVEL,
+  MEGAGAME_CLASSES,
   NO_LEVELS,
   isMegagameClass,
   type MegagameClass,
@@ -20,9 +28,13 @@ import {
 } from "./megagame-levels";
 import type { QuestImportRow } from "./megagame-quest-csv";
 import {
+  BUCKET_ORIGIN,
+  bucketIntervalSql,
   isCompleteMegagameCode,
   normalizeMegagameCode,
+  type DatedLevelEvent,
 } from "./megagame-rules";
+import { visibleTickets } from "./ticket-store";
 import { randomTicketCode, withFreshTicketCode } from "./ticket-code";
 
 // The driver is neon-http: one request per statement and no interactive
@@ -828,4 +840,455 @@ export async function levelEventsFor(userId: string): Promise<LevelEvent[]> {
     .from(levelEvents)
     .where(eq(levelEvents.userId, userId))
     .orderBy(desc(levelEvents.awardedAt));
+}
+
+// ---- Dashboard ----
+
+/** Players per current level in each class, from the user columns; index = level. */
+export async function levelGrid(): Promise<Record<MegagameClass, number[]>> {
+  const { user } = schema;
+  const rows = await getDb()
+    .select({
+      wizard: user.wizardLevel,
+      pirate: user.pirateLevel,
+      alien: user.alienLevel,
+      n: sql<number>`count(*)::int`,
+    })
+    .from(user)
+    .where(
+      or(
+        gt(user.wizardLevel, 0),
+        gt(user.pirateLevel, 0),
+        gt(user.alienLevel, 0),
+      ),
+    )
+    .groupBy(user.wizardLevel, user.pirateLevel, user.alienLevel);
+  const grid = Object.fromEntries(
+    MEGAGAME_CLASSES.map((c) => [c, new Array(MAX_LEVEL + 1).fill(0)]),
+  ) as Record<MegagameClass, number[]>;
+  for (const row of rows) {
+    for (const c of MEGAGAME_CLASSES) {
+      const level = row[c];
+      if (level >= 1 && level <= MAX_LEVEL) grid[c][level] += row.n;
+    }
+  }
+  return grid;
+}
+
+/** Accounts that have claimed a paid ticket: the dashboard's denominator. */
+export async function claimedTicketHolderCount(): Promise<number> {
+  const { tickets } = schema;
+  const [row] = await getDb()
+    .select({ n: sql<number>`count(distinct ${tickets.ownerUserId})::int` })
+    .from(tickets)
+    .where(
+      and(
+        visibleTickets,
+        isNotNull(tickets.ownerUserId),
+        eq(tickets.status, "paid"),
+      ),
+    );
+  return row?.n ?? 0;
+}
+
+export type QuestCount = {
+  id: string;
+  code: string;
+  title: string;
+  class: string | null;
+  active: boolean;
+  n: number;
+};
+
+/** Live completions per quest, quests with none included, most first. */
+export async function questCompletionCounts(): Promise<QuestCount[]> {
+  const { quests, questCompletions } = schema;
+  const n = sql<number>`count(${questCompletions.id})::int`;
+  return getDb()
+    .select({
+      id: quests.id,
+      code: quests.code,
+      title: quests.title,
+      class: quests.class,
+      active: quests.active,
+      n,
+    })
+    .from(quests)
+    .leftJoin(
+      questCompletions,
+      and(
+        eq(questCompletions.questId, quests.id),
+        isNull(questCompletions.voidedAt),
+      ),
+    )
+    .groupBy(quests.id)
+    .orderBy(desc(n), asc(quests.code));
+}
+
+/** Players with at least one live completion; deleted accounts count as one. */
+export async function distinctCompletingPlayers(): Promise<number> {
+  const { questCompletions } = schema;
+  const [row] = await getDb()
+    .select({
+      n: sql<number>`count(distinct coalesce(${questCompletions.userId}, ''))::int`,
+    })
+    .from(questCompletions)
+    .where(isNull(questCompletions.voidedAt));
+  return row?.n ?? 0;
+}
+
+export type VolunteerCount = {
+  userId: string | null;
+  name: string | null;
+  n: number;
+};
+
+export async function completionsByVolunteer(): Promise<VolunteerCount[]> {
+  const { questCompletions, confirmations, user } = schema;
+  const n = sql<number>`count(*)::int`;
+  return getDb()
+    .select({ userId: confirmations.confirmedBy, name: user.name, n })
+    .from(questCompletions)
+    .innerJoin(
+      confirmations,
+      eq(confirmations.id, questCompletions.confirmationId),
+    )
+    .leftJoin(user, eq(user.id, confirmations.confirmedBy))
+    .where(isNull(questCompletions.voidedAt))
+    .groupBy(confirmations.confirmedBy, user.name)
+    .orderBy(desc(n));
+}
+
+// The interval comes only from bucketIntervalSql's whitelist, and goes in as a
+// bound parameter rather than SQL text.
+const dateBin = (size: string, column: SQLWrapper) =>
+  sql`date_bin(${bucketIntervalSql(size)}::interval, ${column}, ${BUCKET_ORIGIN.toISOString()}::timestamptz)`;
+
+export type CompletionBucket = {
+  bucket: Date;
+  class: string | null;
+  n: number;
+};
+
+/** Live completions per bucket and quest class, for [from, to). */
+export async function completionSeries(
+  size: string,
+  from: Date,
+  to: Date,
+): Promise<CompletionBucket[]> {
+  const { questCompletions, quests } = schema;
+  const bucket = dateBin(size, questCompletions.confirmedAt);
+  const rows = await getDb()
+    .select({
+      bucket: bucket.mapWith(String),
+      class: quests.class,
+      n: sql<number>`count(*)::int`,
+    })
+    .from(questCompletions)
+    .innerJoin(quests, eq(quests.id, questCompletions.questId))
+    .where(
+      and(
+        isNull(questCompletions.voidedAt),
+        gte(questCompletions.confirmedAt, from),
+        lt(questCompletions.confirmedAt, to),
+      ),
+    )
+    .groupBy(sql`1`, sql`2`)
+    .orderBy(sql`1`);
+  return rows.map((r) => ({ ...r, bucket: new Date(r.bucket) }));
+}
+
+export type LevelEventBucket = {
+  bucket: Date;
+  class: string;
+  source: string;
+  n: number;
+};
+
+/** Live level events per bucket, class and source, for [from, to). */
+export async function levelEventSeries(
+  size: string,
+  from: Date,
+  to: Date,
+): Promise<LevelEventBucket[]> {
+  const { levelEvents } = schema;
+  const bucket = dateBin(size, levelEvents.awardedAt);
+  const rows = await getDb()
+    .select({
+      bucket: bucket.mapWith(String),
+      class: levelEvents.class,
+      source: levelEvents.source,
+      n: sql<number>`count(*)::int`,
+    })
+    .from(levelEvents)
+    .where(
+      and(
+        isNull(levelEvents.voidedAt),
+        gte(levelEvents.awardedAt, from),
+        lt(levelEvents.awardedAt, to),
+      ),
+    )
+    .groupBy(sql`1`, sql`2`, sql`3`)
+    .orderBy(sql`1`);
+  return rows.map((r) => ({ ...r, bucket: new Date(r.bucket) }));
+}
+
+/** Live level events awarded before `to`, for the cumulative level view. */
+export async function liveLevelEventsBefore(
+  to: Date,
+): Promise<DatedLevelEvent[]> {
+  const { levelEvents } = schema;
+  const rows = await getDb()
+    .select({
+      userId: levelEvents.userId,
+      class: levelEvents.class,
+      level: levelEvents.level,
+      awardedAt: levelEvents.awardedAt,
+    })
+    .from(levelEvents)
+    .where(
+      and(
+        isNull(levelEvents.voidedAt),
+        isNotNull(levelEvents.userId),
+        lt(levelEvents.awardedAt, to),
+      ),
+    );
+  return rows.filter((r): r is DatedLevelEvent => r.userId !== null);
+}
+
+export type OverrideRow = {
+  id: string;
+  playerName: string | null;
+  class: string;
+  level: number;
+  awardedByName: string | null;
+  awardedAt: Date;
+  overrideReason: string | null;
+  voidedAt: Date | null;
+};
+
+/** Volunteer level-ups recorded despite failing checks, newest first. */
+export async function recentOverrides(limit = 20): Promise<OverrideRow[]> {
+  const { levelEvents } = schema;
+  const player = alias(schema.user, "player");
+  const awarder = alias(schema.user, "awarder");
+  return getDb()
+    .select({
+      id: levelEvents.id,
+      playerName: player.name,
+      class: levelEvents.class,
+      level: levelEvents.level,
+      awardedByName: awarder.name,
+      awardedAt: levelEvents.awardedAt,
+      overrideReason: levelEvents.overrideReason,
+      voidedAt: levelEvents.voidedAt,
+    })
+    .from(levelEvents)
+    .leftJoin(player, eq(player.id, levelEvents.userId))
+    .leftJoin(awarder, eq(awarder.id, levelEvents.awardedBy))
+    .where(
+      and(
+        eq(levelEvents.checksPassed, false),
+        eq(levelEvents.source, "volunteer"),
+      ),
+    )
+    .orderBy(desc(levelEvents.awardedAt))
+    .limit(limit);
+}
+
+export type VoidRow = {
+  kind: "confirmation" | "completion" | "level";
+  id: string;
+  voidedAt: Date;
+  voidedByName: string | null;
+  reason: string | null;
+  questTitle: string | null;
+  playerName: string | null;
+  class: string | null;
+  level: number | null;
+};
+
+/**
+ * Whole confirmations undone, single completions voided out of a live
+ * confirmation, and volunteer level-ups undone, newest first. Picker rows
+ * voided by a class switch are left out.
+ */
+export async function recentVoids(limit = 20): Promise<VoidRow[]> {
+  const { confirmations, questCompletions, quests, levelEvents } = schema;
+  const db = getDb();
+  const voider = alias(schema.user, "voider");
+  const player = alias(schema.user, "player");
+  const [whole, single, levels] = await Promise.all([
+    db
+      .select({
+        id: confirmations.id,
+        voidedAt: confirmations.voidedAt,
+        voidedByName: voider.name,
+        reason: confirmations.voidReason,
+        questTitle: quests.title,
+      })
+      .from(confirmations)
+      .innerJoin(quests, eq(quests.id, confirmations.questId))
+      .leftJoin(voider, eq(voider.id, confirmations.voidedBy))
+      .where(isNotNull(confirmations.voidedAt))
+      .orderBy(desc(confirmations.voidedAt))
+      .limit(limit),
+    db
+      .select({
+        id: questCompletions.id,
+        voidedAt: questCompletions.voidedAt,
+        voidedByName: voider.name,
+        reason: questCompletions.voidReason,
+        questTitle: quests.title,
+        playerName: player.name,
+      })
+      .from(questCompletions)
+      .innerJoin(
+        confirmations,
+        eq(confirmations.id, questCompletions.confirmationId),
+      )
+      .innerJoin(quests, eq(quests.id, questCompletions.questId))
+      .leftJoin(voider, eq(voider.id, questCompletions.voidedBy))
+      .leftJoin(player, eq(player.id, questCompletions.userId))
+      .where(
+        and(
+          isNotNull(questCompletions.voidedAt),
+          isNull(confirmations.voidedAt),
+        ),
+      )
+      .orderBy(desc(questCompletions.voidedAt))
+      .limit(limit),
+    db
+      .select({
+        id: levelEvents.id,
+        voidedAt: levelEvents.voidedAt,
+        voidedByName: voider.name,
+        reason: levelEvents.voidReason,
+        playerName: player.name,
+        class: levelEvents.class,
+        level: levelEvents.level,
+      })
+      .from(levelEvents)
+      .leftJoin(voider, eq(voider.id, levelEvents.voidedBy))
+      .leftJoin(player, eq(player.id, levelEvents.userId))
+      .where(
+        and(
+          isNotNull(levelEvents.voidedAt),
+          eq(levelEvents.source, "volunteer"),
+        ),
+      )
+      .orderBy(desc(levelEvents.voidedAt))
+      .limit(limit),
+  ]);
+  const blank = {
+    questTitle: null,
+    playerName: null,
+    class: null,
+    level: null,
+  };
+  const rows: VoidRow[] = [
+    ...whole.map((r) => ({ ...blank, ...r, kind: "confirmation" as const })),
+    ...single.map((r) => ({ ...blank, ...r, kind: "completion" as const })),
+    ...levels.map((r) => ({ ...blank, ...r, kind: "level" as const })),
+  ].flatMap(({ voidedAt, ...r }) => (voidedAt ? [{ ...r, voidedAt }] : []));
+  return rows
+    .sort((a, b) => b.voidedAt.getTime() - a.voidedAt.getTime())
+    .slice(0, limit);
+}
+
+export const EVENT_TABLES = [
+  "confirmations",
+  "quest_completions",
+  "level_events",
+] as const;
+export type EventTable = (typeof EVENT_TABLES)[number];
+
+export const isEventTable = (value: unknown): value is EventTable =>
+  EVENT_TABLES.includes(value as EventTable);
+
+/** Every row of an event table, voided ones included, oldest first, with names joined. */
+export async function exportEventTable(
+  table: EventTable,
+): Promise<{ columns: string[]; rows: unknown[][] }> {
+  const { confirmations, questCompletions, quests, levelEvents } = schema;
+  const db = getDb();
+  const named = alias(schema.user, "named");
+  const keys = (fields: Record<string, unknown>) => Object.keys(fields);
+  const snake = (k: string) =>
+    k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+  const shape = (fields: Record<string, unknown>, rows: object[]) => ({
+    columns: keys(fields).map(snake),
+    rows: rows.map((r) =>
+      keys(fields).map((k) => (r as Record<string, unknown>)[k]),
+    ),
+  });
+
+  if (table === "confirmations") {
+    const fields = {
+      id: confirmations.id,
+      questId: confirmations.questId,
+      questCode: quests.code,
+      requestedUserIds: confirmations.requestedUserIds,
+      confirmedBy: confirmations.confirmedBy,
+      confirmedByName: named.name,
+      createdAt: confirmations.createdAt,
+      voidedAt: confirmations.voidedAt,
+      voidedBy: confirmations.voidedBy,
+      voidReason: confirmations.voidReason,
+    };
+    const rows = await db
+      .select(fields)
+      .from(confirmations)
+      .innerJoin(quests, eq(quests.id, confirmations.questId))
+      .leftJoin(named, eq(named.id, confirmations.confirmedBy))
+      .orderBy(asc(confirmations.createdAt));
+    return shape(fields, rows);
+  }
+  if (table === "quest_completions") {
+    const fields = {
+      id: questCompletions.id,
+      confirmationId: questCompletions.confirmationId,
+      questId: questCompletions.questId,
+      questCode: quests.code,
+      userId: questCompletions.userId,
+      userName: named.name,
+      confirmedAt: questCompletions.confirmedAt,
+      voidedAt: questCompletions.voidedAt,
+      voidedBy: questCompletions.voidedBy,
+      voidReason: questCompletions.voidReason,
+    };
+    const rows = await db
+      .select(fields)
+      .from(questCompletions)
+      .innerJoin(quests, eq(quests.id, questCompletions.questId))
+      .leftJoin(named, eq(named.id, questCompletions.userId))
+      .orderBy(asc(questCompletions.confirmedAt));
+    return shape(fields, rows);
+  }
+  const awarder = alias(schema.user, "awarder");
+  const fields = {
+    id: levelEvents.id,
+    userId: levelEvents.userId,
+    userName: named.name,
+    class: levelEvents.class,
+    level: levelEvents.level,
+    source: levelEvents.source,
+    awardedBy: levelEvents.awardedBy,
+    awardedByName: awarder.name,
+    awardedAt: levelEvents.awardedAt,
+    checksPassed: levelEvents.checksPassed,
+    overrideReason: levelEvents.overrideReason,
+    cardPhotoUrl: levelEvents.cardPhotoUrl,
+    note: levelEvents.note,
+    voidedAt: levelEvents.voidedAt,
+    voidedBy: levelEvents.voidedBy,
+    voidReason: levelEvents.voidReason,
+  };
+  const rows = await db
+    .select(fields)
+    .from(levelEvents)
+    .leftJoin(named, eq(named.id, levelEvents.userId))
+    .leftJoin(awarder, eq(awarder.id, levelEvents.awardedBy))
+    .orderBy(asc(levelEvents.awardedAt));
+  return shape(fields, rows);
 }

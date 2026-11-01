@@ -36,6 +36,7 @@ const visible =
   process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
     ? eq(tickets.test, false)
     : undefined;
+export { visible as visibleTickets };
 
 /** holdsTicket as a WHERE clause. */
 const heldBy = (userId: string, email: string) =>
