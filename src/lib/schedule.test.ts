@@ -1,16 +1,27 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDays,
+  capAtMidnight,
   clashDescription,
+  formatLength,
+  defaultEnd,
+  endMinutes,
+  movedEnd,
+  wallAt,
   EDITOR_DAYS,
   findClash,
   fromPacificWall,
   movedTimes,
-  openingDayIndex,
+  nowLinePx,
+  openingDayKey,
+  selectedDay,
   outsideHours,
   overlapLanes,
   overlapWarning,
   roomTakesSessions,
+  planConflicts,
+  rsvpPrompt,
+  type PlanConflict,
   type LocationVisibility,
   type ScheduleSession,
 } from "./schedule";
@@ -29,6 +40,8 @@ const session = (over: Partial<ScheduleSession>): ScheduleSession => ({
   ages: null,
   needs: null,
   status: "draft",
+  rsvpIsCommitment: false,
+  sponsored: false,
   airtableRfpRecordId: null,
   hosts: [],
   shepherd: null,
@@ -57,8 +70,8 @@ describe("movedTimes", () => {
 });
 
 const rooms = (visibility: LocationVisibility = "public") => [
-  { id: "room1", visibility },
-  { id: "room2", visibility: "public" as const },
+  { id: "room1", name: "Eigen Hall", visibility },
+  { id: "room2", name: "Annex", visibility: "public" as const },
 ];
 
 describe("findClash", () => {
@@ -69,6 +82,12 @@ describe("findClash", () => {
     startsAt: "2026-11-07T17:00:00.000Z",
     endsAt: "2026-11-07T17:55:00.000Z",
   });
+  const chess = {
+    title: "Chess",
+    room: "Eigen Hall",
+    startsAt: "2026-11-07T17:00:00.000Z",
+    endsAt: "2026-11-07T17:55:00.000Z",
+  };
   const move = (startsAt: string, endsAt: string, over = {}) => ({
     id: "b",
     locationId: "room1",
@@ -84,7 +103,7 @@ describe("findClash", () => {
         move("2026-11-07T17:30:00.000Z", "2026-11-07T18:25:00.000Z"),
         rooms(),
       ),
-    ).toBe(existing);
+    ).toEqual(chess);
   });
 
   it("allows back-to-back sessions", () => {
@@ -136,7 +155,85 @@ describe("findClash", () => {
       "2026-11-07T18:25:00.000Z",
     );
     expect(findClash([existing], overlap, rooms("volunteer"))).toBeNull();
-    expect(findClash([existing], overlap, rooms("hidden"))).toBe(existing);
+    expect(findClash([existing], overlap, rooms("hidden"))).toEqual(chess);
+  });
+});
+
+describe("form end times", () => {
+  const h = (hours: number, minutes = 0) => hours * 60 + minutes;
+  it("reads an end at the next midnight as 24:00", () => {
+    const start = fromPacificWall("2026-11-07T23:00")!.toISOString();
+    const end = fromPacificWall("2026-11-08T00:00")!.toISOString();
+    expect(endMinutes(start, end)).toBe(h(24));
+    expect(
+      endMinutes(start, fromPacificWall("2026-11-07T23:55")!.toISOString()),
+    ).toBe(h(23, 55));
+  });
+  it("writes 24:00 as the next day's 00:00", () => {
+    expect(wallAt("2026-11-07", h(14, 30))).toBe("2026-11-07T14:30");
+    expect(wallAt("2026-11-07", h(24))).toBe("2026-11-08T00:00");
+    expect(wallAt("2026-11-30", h(24))).toBe("2026-12-01T00:00");
+  });
+  it("gives any start before midnight a later default end", () => {
+    expect(defaultEnd(h(10))).toBe(h(10, 25));
+    expect(defaultEnd(h(23, 59))).toBe(h(24));
+    for (let start = 0; start < h(24); start += 7)
+      expect(defaultEnd(start)).toBeGreaterThan(start);
+  });
+  it("keeps the length when the start moves, up to ending at midnight", () => {
+    expect(movedEnd(h(10), h(11), h(23))).toEqual({
+      end: h(24),
+      capped: false,
+    });
+    expect(movedEnd(h(10), h(11), h(22))).toEqual({
+      end: h(23),
+      capped: false,
+    });
+    expect(movedEnd(null, null, h(12))).toEqual({
+      end: h(12, 25),
+      capped: false,
+    });
+  });
+  it("caps a moved end at midnight and says so", () => {
+    expect(movedEnd(h(10), h(11), h(23, 30))).toEqual({
+      end: h(24),
+      capped: true,
+    });
+    expect(movedEnd(h(10), h(12), h(23, 59))).toEqual({
+      end: h(24),
+      capped: true,
+    });
+  });
+});
+
+describe("capAtMidnight", () => {
+  const pt = (wall: string) => fromPacificWall(wall)!;
+  it("cuts a run past midnight back to it, keeping the old length", () => {
+    const capped = capAtMidnight({
+      startsAt: pt("2026-11-07T23:00"),
+      endsAt: pt("2026-11-08T00:30"),
+    });
+    expect(capped.endsAt.toISOString()).toBe(
+      pt("2026-11-08T00:00").toISOString(),
+    );
+    expect(capped.cutFromMinutes).toBe(90);
+    expect(outsideHours(capped.startsAt, capped.endsAt)).toBeNull();
+  });
+  it("leaves times that end by midnight alone", () => {
+    const times = {
+      startsAt: pt("2026-11-07T22:00"),
+      endsAt: pt("2026-11-08T00:00"),
+    };
+    expect(capAtMidnight(times)).toEqual({ ...times, cutFromMinutes: null });
+  });
+});
+
+describe("formatLength", () => {
+  it("reads as hours and minutes", () => {
+    expect(formatLength(90)).toBe("1h 30m");
+    expect(formatLength(120)).toBe("2h");
+    expect(formatLength(45)).toBe("45m");
+    expect(formatLength(0)).toBe("0m");
   });
 });
 
@@ -203,8 +300,25 @@ describe("buildDays", () => {
     ]);
   });
   it("opens on Friday even with an earlier day shown", () => {
-    expect(openingDayIndex(buildDays([], EDITOR_DAYS))).toBe(1);
-    expect(openingDayIndex(buildDays([]))).toBe(0);
+    expect(openingDayKey(buildDays([], EDITOR_DAYS))).toBe("2026-11-06");
+    expect(openingDayKey(buildDays([]))).toBe("2026-11-06");
+  });
+  it("keeps the selected tab when a session lands on an earlier day", () => {
+    const before = buildDays([], EDITOR_DAYS);
+    expect(selectedDay(before, "2026-11-07").name).toBe("Saturday");
+    const early = session({
+      id: "early",
+      startsAt: fromPacificWall("2026-11-03T10:00")!.toISOString(),
+      endsAt: fromPacificWall("2026-11-03T11:00")!.toISOString(),
+    });
+    const after = buildDays([early], EDITOR_DAYS);
+    expect(after[0].key).toBe("2026-11-03");
+    expect(selectedDay(after, "2026-11-07").name).toBe("Saturday");
+  });
+  it("falls back to the opening day when the selected day is gone", () => {
+    expect(selectedDay(buildDays([], EDITOR_DAYS), "2026-11-03").key).toBe(
+      "2026-11-06",
+    );
   });
 });
 
@@ -250,6 +364,181 @@ describe("clashDescription", () => {
     );
     expect(overlapWarning(clash)).toBe(
       'Saved, but this overlaps "Chess" in Eigen Hall (10:00 AM–10:55 AM).',
+    );
+  });
+});
+
+describe("rsvpPrompt", () => {
+  it("RSVPs an interest-only session in one click", () => {
+    expect(rsvpPrompt(false, false)).toEqual({ label: "RSVP", confirm: null });
+    expect(rsvpPrompt(false, true)).toEqual({
+      label: "Join waitlist",
+      confirm: null,
+    });
+  });
+
+  it("asks before claiming a spot in a commitment session", () => {
+    const open = rsvpPrompt(true, false);
+    expect(open.label).toBe("Claim a spot");
+    expect(open.confirm?.body).toMatch(/firmer commitment/);
+  });
+
+  it("asks before joining a commitment session's waitlist too", () => {
+    const full = rsvpPrompt(true, true);
+    expect(full.label).toBe("Join waitlist");
+    expect(full.confirm?.body).toMatch(/firmer commitment/);
+  });
+
+  const clash = (over: Partial<PlanConflict>): PlanConflict => ({
+    role: "going",
+    title: "Chess",
+    startsAt: "2026-11-07T21:00:00.000Z",
+    endsAt: "2026-11-07T22:00:00.000Z",
+    commitment: false,
+    ...over,
+  });
+
+  it("warns about a clash before an interest-only RSVP", () => {
+    const out = rsvpPrompt(false, false, [clash({ role: "host" })]);
+    expect(out.confirm).toMatchObject({
+      title: "You’re hosting something at this time",
+      conflicts: ["You’re hosting “Chess” 1:00 PM–2:00 PM PT"],
+      tone: "warning",
+    });
+  });
+
+  it("names each clash in one combined commitment dialog", () => {
+    const out = rsvpPrompt(true, false, [
+      clash({ role: "shepherd", title: "Go" }),
+      clash({ role: "waitlist" }),
+    ]);
+    expect(out.confirm?.title).toBe(
+      "You’re shepherding something at this time",
+    );
+    expect(out.confirm?.conflicts).toEqual([
+      "You’re shepherding “Go” 1:00 PM–2:00 PM PT",
+      "You’re on the waitlist for “Chess” 1:00 PM–2:00 PM PT",
+    ]);
+    expect(out.confirm?.body).toBe(
+      "Make sure you can fulfill your shepherd duties.",
+    );
+    expect(out.confirm?.tone).toBe("urgent");
+  });
+
+  it("adds the stakes when the clash is only another RSVP", () => {
+    const out = rsvpPrompt(true, false, [clash({})]);
+    expect(out.confirm?.body).toMatch(
+      /^The session you’re joining has limited spots/,
+    );
+  });
+
+  it("calls out a clashing commitment RSVP", () => {
+    const out = rsvpPrompt(false, false, [clash({ commitment: true })]);
+    expect(out.confirm?.conflicts).toEqual([
+      "You’ve already RSVP’d to “Chess” 1:00 PM–2:00 PM PT",
+    ]);
+    expect(out.confirm?.body).toMatch(
+      /^Your existing RSVP is for a session with limited spots/,
+    );
+    expect(out.confirm?.tone).toBe("urgent");
+  });
+});
+
+describe("planConflicts", () => {
+  const at = (h: number, m = 0) =>
+    `2026-11-07T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00.000Z`;
+  const target = session({
+    id: "t",
+    status: "published",
+    startsAt: at(20),
+    endsAt: at(21),
+  });
+  const me = { userId: "me", name: "Me", email: "me@x" };
+  const other = (over: Partial<ScheduleSession>) =>
+    session({ status: "published", startsAt: at(20), endsAt: at(21), ...over });
+  const ids = (sessions: ScheduleSession[], rsvps = {}) =>
+    planConflicts(target, [target, ...sessions], "me", rsvps).map((c) => [
+      c.title,
+      c.role,
+    ]);
+
+  it("finds hosting, shepherding and RSVPs that overlap, in time order", () => {
+    expect(
+      ids(
+        [
+          other({ id: "r", title: "R", startsAt: at(20, 30), endsAt: at(22) }),
+          other({ id: "h", title: "H", hosts: [me], startsAt: at(19, 30) }),
+          other({ id: "s", title: "S", shepherd: me }),
+          other({ id: "w", title: "W" }),
+        ],
+        { r: "going", w: "waitlist", t: "going" },
+      ),
+    ).toEqual([
+      ["H", "host"],
+      ["S", "shepherd"],
+      ["W", "waitlist"],
+      ["R", "going"],
+    ]);
+  });
+
+  it("names a session once, by its strongest tie", () => {
+    expect(
+      ids([other({ id: "h", title: "H", hosts: [me], shepherd: me })], {
+        h: "going",
+      }),
+    ).toEqual([["H", "host"]]);
+  });
+
+  it("skips back-to-back sessions, other people's, drafts and unplaced ones", () => {
+    expect(
+      ids(
+        [
+          other({ id: "before", startsAt: at(19), endsAt: at(20) }),
+          other({ id: "after", startsAt: at(21), endsAt: at(22) }),
+          other({ id: "theirs", hosts: [{ ...me, userId: "x" }] }),
+          other({ id: "draft", status: "draft", hosts: [me] }),
+          other({ id: "tba", startsAt: null, endsAt: null, hosts: [me] }),
+          other({ id: "marked" }),
+        ],
+        { before: "going", after: "going" },
+      ),
+    ).toEqual([]);
+  });
+
+  it("has nothing to clash with while the target is unplaced", () => {
+    const tba = { id: "t", startsAt: null, endsAt: null };
+    const busy = other({ id: "h", hosts: [me] });
+    expect(planConflicts(tba, [busy], "me", {})).toEqual([]);
+  });
+});
+
+describe("nowLinePx", () => {
+  const friday = "2026-11-06";
+  it("offsets from the first slot on the same Pacific day", () => {
+    // 3:15pm PST
+    expect(nowLinePx(friday, 14 * 60, new Date("2026-11-06T23:15:00Z"))).toBe(
+      75 * 2,
+    );
+  });
+  it("moves within a minute, not just on the minute", () => {
+    expect(nowLinePx(friday, 14 * 60, new Date("2026-11-06T23:15:30Z"))).toBe(
+      75.5 * 2,
+    );
+  });
+  it("is null on another day", () => {
+    expect(
+      nowLinePx("2026-11-07", 10 * 60, new Date("2026-11-06T23:15:00Z")),
+    ).toBe(null);
+  });
+  it("is null before the grid opens", () => {
+    expect(nowLinePx(friday, 14 * 60, new Date("2026-11-06T20:00:00Z"))).toBe(
+      null,
+    );
+  });
+  it("uses Pacific, not UTC, for the day", () => {
+    // 05:30 UTC Nov 7 is still Nov 6, 9:30pm PST.
+    expect(nowLinePx(friday, 14 * 60, new Date("2026-11-07T05:30:00Z"))).toBe(
+      450 * 2,
     );
   });
 });

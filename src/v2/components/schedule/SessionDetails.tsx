@@ -17,6 +17,7 @@ import {
   formatPacificDay,
   formatPacificTime,
   hostNames,
+  planConflicts,
   type Ages,
   type Category,
 } from "@/lib/schedule";
@@ -150,16 +151,19 @@ export default async function SessionDetails({ slug }: { slug: string }) {
     toolAccess("schedule.manage"),
   ]);
   const viewerId = account?.user.id ?? null;
-  const [rsvps, plans, editor] = await Promise.all([
+  const [rsvps, plans, editor, raw] = await Promise.all([
     loadSessionRsvps(session.id),
     viewerId ? loadViewerPlans(viewerId) : null,
     // PublicSession carries host names but no ids, so ownership is its own read.
     viewerId ? editSessionAccess(session.id) : null,
+    // Host ids and shepherds aren't public, so clashes read the raw schedule.
+    viewerId ? loadRawSchedule() : null,
   ]);
 
   const tags = [
     session.category ? CATEGORY_LABEL[session.category] : null,
     session.ages ? AGES_LABEL[session.ages] : null,
+    session.sponsored ? "Sponsor" : null,
   ].filter(Boolean) as string[];
   const cap = session.maxCapacity;
 
@@ -252,6 +256,12 @@ export default async function SessionDetails({ slug }: { slug: string }) {
         <SessionPlans
           sessionId={session.id}
           capacity={cap}
+          commitment={session.rsvpIsCommitment}
+          conflicts={
+            viewerId && plans && raw
+              ? planConflicts(session, raw.sessions, viewerId, plans.rsvps)
+              : []
+          }
           rsvps={rsvps}
           plan={
             plans && {

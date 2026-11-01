@@ -4,6 +4,7 @@ vi.mock("@/lib/tracking-links", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/tracking-links")>()),
   findTrackingLink: vi.fn(),
 }));
+vi.mock("@/lib/poster-promo", () => ({ checkPosterPromo: vi.fn() }));
 vi.mock("@/lib/poster-pdf", () => ({
   createPosterPdf: vi.fn().mockResolvedValue(new Uint8Array([37, 80, 68, 70])),
 }));
@@ -11,6 +12,7 @@ import { GET } from "./route";
 import { loadPosterCatalog } from "@/lib/poster-catalog";
 import { findTrackingLink, type TrackingLink } from "@/lib/tracking-links";
 import { createPosterPdf } from "@/lib/poster-pdf";
+import { checkPosterPromo } from "@/lib/poster-promo";
 const link = {
   slug: "berkeley",
   destination: "https://metagame.games/",
@@ -21,6 +23,7 @@ const link = {
   active: true,
   template: false,
 } as TrackingLink;
+const plain = { dots: "square", corners: "square", logo: "none" };
 const request = (query = "area=area:Berkeley&design=d20&size=letter") =>
   new Request(`http://localhost/api/posters?${query}`);
 it("uses the existing admin workflow's Generic poster placement", async () => {
@@ -42,7 +45,14 @@ it("uses the existing admin workflow's Generic poster placement", async () => {
   expect(
     (await GET(request("area=generic&design=chess&size=letter"))).status,
   ).toBe(200);
-  expect(createPosterPdf).toHaveBeenCalledWith("chess", "letter", "poster", "");
+  expect(createPosterPdf).toHaveBeenCalledWith(
+    "chess",
+    "letter",
+    "poster",
+    undefined,
+    true,
+    plain,
+  );
 });
 beforeEach(() => {
   vi.clearAllMocks();
@@ -63,7 +73,14 @@ it("downloads without login and never accepts an arbitrary URL or slug", async (
   expect(response.status).toBe(200);
   expect(response.headers.get("content-type")).toBe("application/pdf");
   expect(response.headers.get("content-disposition")).toMatch(/^attachment;/);
-  expect(createPosterPdf).toHaveBeenCalledWith("d20", "letter", "berkeley", "");
+  expect(createPosterPdf).toHaveBeenCalledWith(
+    "d20",
+    "letter",
+    "berkeley",
+    undefined,
+    true,
+    plain,
+  );
   const preview = await GET(
     request("area=area:Berkeley&design=d20&size=letter&preview=1"),
   );
@@ -110,9 +127,21 @@ it.each([
     (await GET(request(`area=area:Berkeley&design=${design}&size=${size}`)))
       .status,
   ).toBe(200);
-  expect(createPosterPdf).toHaveBeenCalledWith(design, size, "berkeley", "");
+  expect(createPosterPdf).toHaveBeenCalledWith(
+    design,
+    size,
+    "berkeley",
+    undefined,
+    true,
+    plain,
+  );
 });
-it("puts a promo code on the QR and refuses malformed ones", async () => {
+it("prints a live promo code with its discount and refuses others", async () => {
+  vi.mocked(checkPosterPromo).mockResolvedValue({
+    ok: true,
+    code: "POSTER20",
+    discount: "$20",
+  });
   const response = await GET(
     request("area=area:Berkeley&design=d20&size=letter&promo=POSTER20"),
   );
@@ -124,8 +153,19 @@ it("puts a promo code on the QR and refuses malformed ones", async () => {
     "d20",
     "letter",
     "berkeley",
-    "POSTER20",
+    {
+      code: "POSTER20",
+      discount: "$20",
+    },
+    true,
+    plain,
   );
+  expect(checkPosterPromo).toHaveBeenCalledWith("POSTER20");
+  vi.mocked(checkPosterPromo).mockResolvedValue({ ok: false });
+  expect(
+    (await GET(request("area=area:Berkeley&design=d20&size=letter&promo=GONE")))
+      .status,
+  ).toBe(422);
   expect(
     (
       await GET(
@@ -133,4 +173,74 @@ it("puts a promo code on the QR and refuses malformed ones", async () => {
       )
     ).status,
   ).toBe(400);
+});
+it("checks a code without rendering a poster", async () => {
+  vi.mocked(checkPosterPromo).mockResolvedValue({
+    ok: true,
+    code: "Friends",
+    discount: "20%",
+  });
+  const ok = await GET(request("check=1&promo=friends"));
+  expect(await ok.json()).toEqual({ code: "Friends", discount: "20%" });
+  vi.mocked(checkPosterPromo).mockResolvedValue({ ok: false });
+  expect((await GET(request("check=1&promo=GONE"))).status).toBe(422);
+  expect(createPosterPdf).not.toHaveBeenCalled();
+});
+it("prints a /buy/<code> link's own code and keeps it off the QR", async () => {
+  vi.mocked(findTrackingLink).mockResolvedValue({
+    ...link,
+    destination: "https://metagame.games/buy/ELYSIAN",
+  });
+  vi.mocked(checkPosterPromo).mockResolvedValue({
+    ok: true,
+    code: "ELYSIAN",
+    discount: "$50",
+  });
+  expect(
+    (
+      await GET(
+        request("area=area:Berkeley&design=d20&size=letter&promo=OTHER"),
+      )
+    ).status,
+  ).toBe(200);
+  expect(checkPosterPromo).toHaveBeenCalledWith("ELYSIAN");
+  expect(createPosterPdf).toHaveBeenCalledWith(
+    "d20",
+    "letter",
+    "berkeley",
+    { code: "ELYSIAN", discount: "$50" },
+    false,
+    plain,
+  );
+});
+it("passes QR choices through and rejects unknown ones", async () => {
+  expect(
+    (
+      await GET(
+        request(
+          "area=area:Berkeley&design=d20&size=letter&qrDots=dots&qrCorners=dice&qrLogo=mg2",
+        ),
+      )
+    ).status,
+  ).toBe(200);
+  expect(createPosterPdf).toHaveBeenCalledWith(
+    "d20",
+    "letter",
+    "berkeley",
+    undefined,
+    true,
+    { dots: "dots", corners: "dice", logo: "mg2" },
+  );
+  for (const qr of [
+    "qrDots=sparkly",
+    "qrDots=",
+    "qrCorners=toString",
+    "qrLogo=logo",
+  ]) {
+    const response = await GET(
+      request(`area=area:Berkeley&design=d20&size=letter&${qr}`),
+    );
+    expect(response.status).toBe(400);
+  }
+  expect(createPosterPdf).toHaveBeenCalledTimes(1);
 });

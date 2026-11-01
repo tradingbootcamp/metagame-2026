@@ -20,7 +20,7 @@ export const FACTION_ON: Record<MegagameClass, string> = {
 };
 
 const V = { soft: "#E6DCFF", sky: "#CEE1FF" };
-const P = { pale: "#F6EFC2", side: "#E4D98C" };
+const P = { pale: "#F6EFC2" };
 const A = {
   space: "#0F1430",
   star: "#FFF5E6",
@@ -38,8 +38,8 @@ const GROTESK: CSSProperties = {
 // Each emblem comes alive while its button (a `group`) is hovered or focused.
 const FLOAT =
   "motion-safe:group-hover:animate-[mg-float_1.6s_ease-in-out_infinite] motion-safe:group-focus-visible:animate-[mg-float_1.6s_ease-in-out_infinite]";
-const ROLL =
-  "origin-center [transform-box:fill-box] motion-safe:group-hover:animate-[mg-roll_1.1s_ease-in-out_infinite] motion-safe:group-focus-visible:animate-[mg-roll_1.1s_ease-in-out_infinite]";
+const THROB =
+  "origin-center [transform-box:fill-box] motion-safe:group-hover:animate-[mg-throb_1.1s_ease-in-out_infinite] motion-safe:group-focus-visible:animate-[mg-throb_1.1s_ease-in-out_infinite]";
 const PULSE =
   "motion-safe:group-hover:animate-[mg-pulse_1.6s_ease-in-out_infinite] motion-safe:group-focus-visible:animate-[mg-pulse_1.6s_ease-in-out_infinite]";
 
@@ -118,28 +118,28 @@ function Wizard() {
   );
 }
 
-const PIPS = (
-  <g fill={NAVY}>
-    <ellipse cx="100" cy="60" rx="7" ry="3.8" />
-    <ellipse cx="74" cy="76" rx="4.4" ry="5.6" transform="rotate(-27 74 76)" />
-    <ellipse
-      cx="90"
-      cy="106"
-      rx="4.4"
-      ry="5.6"
-      transform="rotate(-27 90 106)"
-    />
-    <ellipse cx="127" cy="75" rx="4.4" ry="5.6" transform="rotate(27 127 75)" />
-    <ellipse cx="118" cy="91" rx="4.4" ry="5.6" transform="rotate(27 118 91)" />
-    <ellipse
-      cx="109"
-      cy="107"
-      rx="4.4"
-      ry="5.6"
-      transform="rotate(27 109 107)"
-    />
-  </g>
-);
+// A 5×5 maze in grid units: its one route leads in at the bottom left, round
+// the right side and into the centre cell, where the X is.
+const MAZE_WALLS: [number, number, number, number][] = [
+  [0, 0, 5, 0],
+  [5, 0, 5, 5],
+  [1, 5, 5, 5],
+  [0, 0, 0, 5],
+  [2, 0, 2, 1],
+  [4, 1, 5, 1],
+  [1, 1, 4, 1],
+  [1, 1, 1, 4],
+  [1, 4, 4, 4],
+  [4, 1, 4, 2],
+  [4, 3, 4, 4],
+  [1, 2, 2, 2],
+  [2, 2, 2, 3],
+  [2, 3, 3, 3],
+  [3, 2, 3, 3],
+];
+const MAZE_CELL = 12;
+const mx = (u: number) => 70 + u * MAZE_CELL;
+const my = (v: number) => 76 + v * MAZE_CELL;
 
 function Pirate() {
   const c = FACTION_COLORS.pirate;
@@ -148,37 +148,60 @@ function Pirate() {
       <path
         d="M8 38c34-14 62 10 96 0s58-12 88 0v124c-30-12-54-10-88 0s-62-14-96 0Z"
         fill={NAVY}
+        transform="translate(100 100) scale(1.06) translate(-100 -100)"
       />
-      <path
-        d="M50 146 150 66M50 66l100 80"
-        stroke={c}
-        strokeWidth="13"
-        strokeLinecap="round"
-      />
-      <g fill={c}>
-        {[
-          [42, 142],
-          [54, 154],
-          [158, 142],
-          [146, 154],
-          [42, 70],
-          [54, 58],
-          [158, 70],
-          [146, 58],
-        ].map(([x, y]) => (
-          <circle key={`${x}-${y}`} cx={x} cy={y} r="9" />
-        ))}
-      </g>
-      {/* Centred where the bones cross. */}
-      <g transform="translate(0 24)">
-        <g className={ROLL}>
-          <g stroke={NAVY} strokeWidth="3.5" strokeLinejoin="round">
-            <path d="M100 42 136 60 100 78 64 60Z" fill={CREAM} />
-            <path d="M64 60 100 78V122L64 104Z" fill={P.pale} />
-            <path d="M100 78 136 60V104L100 122Z" fill={P.side} />
-          </g>
-          {PIPS}
+      {/* Scaled about where the bones cross, so every knob sits on the flag. */}
+      <g transform="translate(100 106) scale(.85) translate(-100 -106)">
+        <path
+          d="M50 146 150 66M50 66l100 80"
+          stroke={c}
+          strokeWidth="13"
+          strokeLinecap="round"
+        />
+        <g fill={c}>
+          {[
+            [42, 142],
+            [54, 154],
+            [158, 142],
+            [146, 154],
+            [42, 70],
+            [54, 58],
+            [158, 70],
+            [146, 58],
+          ].map(([x, y]) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="9" />
+          ))}
         </g>
+      </g>
+      {/* Turned 45° so its corners sit between the bones. */}
+      <g transform="rotate(45 100 106)">
+        <rect
+          x="63"
+          y="69"
+          width="74"
+          height="74"
+          rx="5"
+          fill={P.pale}
+          stroke={NAVY}
+          strokeWidth="3"
+        />
+        <g stroke={NAVY} strokeWidth="3.2" strokeLinecap="square">
+          {MAZE_WALLS.map(([a, b, x, y]) => (
+            <path
+              key={`${a}${b}${x}${y}`}
+              d={`M${mx(a)} ${my(b)}L${mx(x)} ${my(y)}`}
+            />
+          ))}
+        </g>
+      </g>
+      {/* Upright, unlike the maze: turned, an X reads as a plus. */}
+      <g className={THROB}>
+        <path
+          d="M96 102 104 110M104 102 96 110"
+          stroke="#D8502B"
+          strokeWidth="3.4"
+          strokeLinecap="round"
+        />
       </g>
     </>
   );

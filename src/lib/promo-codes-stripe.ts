@@ -16,6 +16,8 @@ import {
   type Prior,
 } from "@/lib/promo-codes";
 import { getPromoStripe, promoMode } from "@/lib/stripe-promo";
+import { getStripe } from "@/lib/stripe";
+import { getTicket, stripeMode } from "@/lib/tickets";
 
 // Each code is a Stripe promotion code pointing at a
 // hand-made dashboard coupon. Never set `customer` on a promotion code — a
@@ -46,6 +48,7 @@ export type StripeCode = {
   active: boolean;
   created: number; // unix seconds
   coupon: string;
+  discount: CodeDiscount | null;
 };
 
 const meta = (p: Stripe.PromotionCode): Stripe.Metadata => p.metadata ?? {};
@@ -133,6 +136,89 @@ export async function findStripeCode(code: string): Promise<FoundCode | null> {
   return promo
     ? { id: promo.id, active: promo.active, couponId: couponIdOf(promo) }
     : null;
+}
+
+/** What a coupon takes off, and which products it's limited to (null = any). */
+export type CodeDiscount = {
+  percentOff?: number;
+  /** Whole dollars. */
+  amountOff?: number;
+  products: string[] | null;
+  /** First-time-only, minimum-amount, or customer-bound: not for everyone. */
+  restricted: boolean;
+};
+
+function discountOf(
+  p: Stripe.PromotionCode,
+  c: Stripe.Coupon,
+): CodeDiscount | null {
+  const products = c.applies_to?.products ?? null;
+  const r = p.restrictions;
+  const restricted =
+    !!r?.first_time_transaction || r?.minimum_amount != null || !!p.customer;
+  if (c.percent_off != null)
+    return { percentOff: c.percent_off, products, restricted };
+  if (c.amount_off != null)
+    return { amountOff: c.amount_off / 100, products, restricted };
+  return null;
+}
+
+/** "$50", "$12.50" or "20%". */
+export function discountText(d: CodeDiscount): string {
+  if (d.percentOff != null) return `${d.percentOff}%`;
+  const usd = d.amountOff ?? 0;
+  return `$${Number.isInteger(usd) ? usd : usd.toFixed(2)}`;
+}
+
+let standardProductId: Promise<string> | undefined;
+
+/**
+ * The Standard ticket's Stripe product, read from its price with the site's
+ * key (the promo key can't read prices). Coupons scope to products.
+ */
+export function standardProduct(): Promise<string> {
+  standardProductId ??= (async () => {
+    const stripe = getStripe();
+    if (!stripe)
+      throw new PromoError(
+        "Stripe isn't configured — set STRIPE_SECRET_KEY.",
+        "config",
+      );
+    const price = await stripe.prices.retrieve(
+      getTicket("standard")!.priceIds[stripeMode],
+    );
+    return typeof price.product === "string" ? price.product : price.product.id;
+  })().catch((error) => {
+    standardProductId = undefined;
+    throw error;
+  });
+  return standardProductId;
+}
+
+/**
+ * A code that redeems right now, spelled as Stripe has it; null when it's
+ * unknown, archived, expired, or used up.
+ */
+export async function redeemableCode(
+  code: string,
+): Promise<{ code: string; discount: CodeDiscount } | null> {
+  const { data } = await stripeOrThrow().promotionCodes.list({
+    code,
+    active: true,
+    limit: 10,
+    expand: ["data.promotion.coupon.applies_to"],
+  });
+  const now = Date.now() / 1000;
+  for (const p of data) {
+    const c = p.promotion?.coupon;
+    if (!c || typeof c === "string" || !c.valid) continue;
+    if (p.expires_at && p.expires_at < now) continue;
+    if (p.max_redemptions != null && p.times_redeemed >= p.max_redemptions)
+      continue;
+    const discount = discountOf(p, c);
+    if (discount) return { code: p.code, discount };
+  }
+  return null;
 }
 
 type Probe =
@@ -274,7 +360,7 @@ export async function mintStripeCode(
 export async function listStripeCodes(): Promise<StripeCode[]> {
   const stripe = stripeOrThrow();
   const codes = await stripe.promotionCodes
-    .list({ limit: 100, expand: ["data.promotion.coupon"] })
+    .list({ limit: 100, expand: ["data.promotion.coupon.applies_to"] })
     .autoPagingToArray({ limit: 1000 });
   return codes
     .filter((p) => meta(p).source === PROMO_SOURCE)
@@ -292,6 +378,8 @@ export async function listStripeCodes(): Promise<StripeCode[]> {
         active: p.active,
         created: p.created,
         coupon: couponLabel(typeof coupon === "string" ? null : coupon),
+        discount:
+          coupon && typeof coupon !== "string" ? discountOf(p, coupon) : null,
       };
     });
 }

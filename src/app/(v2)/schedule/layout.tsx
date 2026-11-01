@@ -3,7 +3,12 @@ import ContentPage from "@/v2/components/ContentPage";
 import { ModalHost } from "@/v2/components/RouteModal";
 import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
 import AccountWall from "@/v2/components/AccountWall";
-import { loadBoard, loadPublicSchedule, scheduleGate } from "./data";
+import {
+  loadBoard,
+  loadMySessionIds,
+  loadPublicSchedule,
+  scheduleGate,
+} from "./data";
 
 const CLOSED =
   "The schedule isn’t public yet. Session hosts and the Metagame team can preview it — if you’re one of them and this is all you see, ask us to turn it on for your account.";
@@ -27,9 +32,10 @@ export default async function ScheduleLayout({
       />
     );
   }
-  const [{ locations, sessions }, board] = await Promise.all([
+  const [{ locations, sessions }, board, mine] = await Promise.all([
     loadPublicSchedule(),
     loadBoard(),
+    loadMySessionIds(),
   ]);
   return (
     <ModalHost closeHref="/schedule">
@@ -48,6 +54,7 @@ export default async function ScheduleLayout({
           days={buildDays(sessions)}
           locations={locations}
           board={board}
+          mine={mine}
         />
       </ContentPage>
       {children}

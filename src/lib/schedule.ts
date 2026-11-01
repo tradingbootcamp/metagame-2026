@@ -59,6 +59,9 @@ export type ScheduleSession = {
   ages: Ages | null;
   needs: string | null;
   status: Status;
+  /** An RSVP claims a limited spot people rely on, not just interest. */
+  rsvpIsCommitment: boolean;
+  sponsored: boolean;
   /** The Airtable RFP Submissions row this came from. */
   airtableRfpRecordId: string | null;
   /** Billing order, lead first. */
@@ -125,6 +128,155 @@ export function summarizeRsvps(
     going: going.length,
     waitlist: waitlist.length,
     names: showNames ? { going, waitlist } : null,
+  };
+}
+
+/** What ties the viewer to a session besides a bookmark. */
+export type PlanRole = "host" | "shepherd" | RsvpStatus;
+
+/** Another session the viewer is already tied to at the same time. */
+export type PlanConflict = {
+  role: PlanRole;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  commitment: boolean;
+};
+
+/**
+ * The viewer's other published sessions that overlap `target`: ones they
+ * host, shepherd or have RSVP'd to. Back-to-back sessions don't overlap.
+ */
+export function planConflicts(
+  target: Pick<ScheduleSession, "id" | "startsAt" | "endsAt">,
+  sessions: ScheduleSession[],
+  viewerId: string,
+  rsvps: Record<string, RsvpStatus>,
+): PlanConflict[] {
+  if (!isPlaced(target)) return [];
+  const start = Date.parse(target.startsAt);
+  const end = Date.parse(target.endsAt);
+  const role = (s: ScheduleSession): PlanRole | null => {
+    if (s.hosts.some((h) => h.userId === viewerId)) return "host";
+    if (s.shepherd?.userId === viewerId) return "shepherd";
+    return rsvps[s.id] ?? null;
+  };
+  return sessions
+    .filter(isPlaced)
+    .filter(
+      (s) =>
+        s.id !== target.id &&
+        s.status === "published" &&
+        Date.parse(s.startsAt) < end &&
+        Date.parse(s.endsAt) > start,
+    )
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
+    .flatMap((s) => {
+      const r = role(s);
+      return r
+        ? [
+            {
+              role: r,
+              title: s.title,
+              startsAt: s.startsAt,
+              endsAt: s.endsAt,
+              commitment: s.rsvpIsCommitment,
+            },
+          ]
+        : [];
+    });
+}
+
+const ROLE_PHRASE: Record<PlanRole, string> = {
+  host: "You’re hosting",
+  shepherd: "You’re shepherding",
+  going: "You’ve already RSVP’d to",
+  waitlist: "You’re on the waitlist for",
+};
+
+/** "You’re hosting “Chess” 2:00 PM–3:00 PM" */
+export function conflictLine(c: PlanConflict): string {
+  return `${ROLE_PHRASE[c.role]} “${c.title}” ${formatPacificTime(c.startsAt)}–${formatPacificTime(c.endsAt)} PT`;
+}
+
+export type RsvpConfirm = {
+  title: string;
+  /** What already has the viewer at that time, one line each. */
+  conflicts: string[];
+  body: string;
+  /** "urgent" when a clash involves a commitment session, either side. */
+  tone: "confirm" | "warning" | "urgent";
+};
+
+const COMMITMENT_TITLE = "RSVPing here is a commitment";
+const COMMITMENT_STAKES =
+  "RSVPs here are a firmer commitment than attending a talk — there are a limited number of spots and they’ll be counting on you to attend.";
+
+const BUSY_TITLE: Record<PlanRole, string> = {
+  host: "You’re hosting something at this time",
+  shepherd: "You’re shepherding something at this time",
+  going: "You’ve already RSVP’d to something at this time",
+  waitlist: "You’re on a waitlist for something at this time",
+};
+const ROLE_ORDER: PlanRole[] = ["host", "shepherd", "going", "waitlist"];
+
+/**
+ * How the RSVP button reads, and what to confirm before it goes through:
+ * null for an interest-only session with no clash, which RSVPs in one click.
+ */
+export function rsvpPrompt(
+  commitment: boolean,
+  full: boolean,
+  conflicts: PlanConflict[] = [],
+): { label: string; confirm: RsvpConfirm | null } {
+  const label = full ? "Join waitlist" : commitment ? "Claim a spot" : "RSVP";
+  const stakes = commitment ? COMMITMENT_STAKES : null;
+  if (conflicts.length === 0) {
+    if (!stakes) return { label, confirm: null };
+    return {
+      label,
+      confirm: {
+        title: COMMITMENT_TITLE,
+        conflicts: [],
+        body: stakes,
+        tone: "confirm",
+      },
+    };
+  }
+  const running = conflicts.some(
+    (c) => c.role === "host" || c.role === "shepherd",
+  );
+  const held = conflicts.filter(
+    (c) => c.commitment && c.role !== "host" && c.role !== "shepherd",
+  ).length;
+  const yours = held > 1 ? "your existing RSVPs" : "your existing RSVP";
+  const stakesNote =
+    commitment && !running && held > 0
+      ? `The session you’re joining and ${yours} both have limited spots and will be counting on you to attend. If you switch, cancel ${yours} so someone else can take your place.`
+      : commitment && !running
+        ? "The session you’re joining has limited spots and will be counting on you to attend — a firmer commitment than attending a talk."
+        : held > 0
+          ? `${held > 1 ? "Your existing RSVPs are for sessions" : "Your existing RSVP is for a session"} with limited spots that will be counting on you. If you switch, cancel ${held > 1 ? "them" : "it"} so someone else can take your place.`
+          : null;
+  const top = ROLE_ORDER.find((r) => conflicts.some((c) => c.role === r))!;
+  return {
+    label,
+    confirm: {
+      title: BUSY_TITLE[top],
+      conflicts: conflicts.map(conflictLine),
+      body: [
+        conflicts.some((c) => c.role === "shepherd")
+          ? "Make sure you can fulfill your shepherd duties."
+          : null,
+        stakesNote,
+      ]
+        .filter(Boolean)
+        .join(" "),
+      tone:
+        commitment || conflicts.some((c) => c.commitment)
+          ? "urgent"
+          : "warning",
+    },
   };
 }
 
@@ -256,11 +408,74 @@ export function minutesToHHMM(min: number): string {
 // period. Any start and end is allowed; this only shapes the defaults.
 export const END_GAP_MINUTES = 5;
 
+const MIDNIGHT = 24 * 60;
+
+/** The default end for a start: the shortest slot, capped at midnight. */
+export function defaultEnd(start: number): number {
+  return Math.min(start + 30 - END_GAP_MINUTES, MIDNIGHT);
+}
+
+/**
+ * Where the end goes when the start moves: the length kept, cut back to
+ * midnight if it would run past (`capped`).
+ */
+export function movedEnd(
+  start: number | null,
+  end: number | null,
+  next: number,
+): { end: number; capped: boolean } {
+  if (start === null || end === null || end <= start)
+    return { end: defaultEnd(next), capped: false };
+  const moved = next + (end - start);
+  return { end: Math.min(moved, MIDNIGHT), capped: moved > MIDNIGHT };
+}
+
+/** The times cut back to end at midnight after the start, with the length they had if that cut anything. */
+export function capAtMidnight(times: { startsAt: Date; endsAt: Date }): {
+  startsAt: Date;
+  endsAt: Date;
+  cutFromMinutes: number | null;
+} {
+  const midnight = fromPacificWall(
+    wallAt(pacificDayKey(times.startsAt.toISOString()), MIDNIGHT),
+  )!;
+  if (times.endsAt <= midnight) return { ...times, cutFromMinutes: null };
+  return {
+    startsAt: times.startsAt,
+    endsAt: midnight,
+    cutFromMinutes:
+      (times.endsAt.getTime() - times.startsAt.getTime()) / 60_000,
+  };
+}
+
+/** "1h 30m", "45m", "2h". */
+export function formatLength(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return [h ? `${h}h` : "", m || !h ? `${m}m` : ""].filter(Boolean).join(" ");
+}
+
+/** A session's end in minutes past its start day's midnight; the next midnight is 1440. */
+export function endMinutes(startsAt: string, endsAt: string): number {
+  const min = pacificMinutes(endsAt);
+  return min === 0 && pacificDayKey(endsAt) !== pacificDayKey(startsAt)
+    ? MIDNIGHT
+    : min;
+}
+
+/** The wall time `minutes` past midnight on `dayKey`, 1440 being the next day's 00:00. */
+export function wallAt(dayKey: string, minutes: number): string {
+  if (minutes < MIDNIGHT) return `${dayKey}T${minutesToHHMM(minutes)}`;
+  const [y, m, d] = dayKey.split("-").map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+  return `${next}T${minutesToHHMM(minutes - MIDNIGHT)}`;
+}
+
 // Where the grid starts by default (Friday 2pm, otherwise 10am). Not a limit:
 // the grid reaches earlier for an earlier session.
 const OPENS_AT = 10 * 60;
 const DAY_OPENS_AT: Record<string, number> = { "2026-11-06": 14 * 60 };
-const CLOSES_AT = 24 * 60;
+const CLOSES_AT = MIDNIGHT;
 
 export function opensAt(dayKey: string): number {
   return DAY_OPENS_AT[dayKey] ?? OPENS_AT;
@@ -295,6 +510,20 @@ export function isPlaced<S extends Timed>(s: S): s is Placed<S> {
 
 export function offsetPx(session: Placed<Timed>, slotStart: number): number {
   return Math.max(0, pacificMinutes(session.startsAt) - slotStart) * PX_PER_MIN;
+}
+
+/** Pixels down the day grid for the current Pacific time, or null if `now` isn't on `dayKey` or is outside the grid's hours. */
+export function nowLinePx(
+  dayKey: string,
+  firstSlot: number,
+  now: Date,
+): number | null {
+  const iso = now.toISOString();
+  if (pacificDayKey(iso) !== dayKey) return null;
+  const minutes =
+    pacificMinutes(iso) +
+    (now.getUTCSeconds() + now.getUTCMilliseconds() / 1000) / 60;
+  return minutes < firstSlot ? null : (minutes - firstSlot) * PX_PER_MIN;
 }
 
 export function heightPx(session: Placed<Timed>): number {
@@ -363,28 +592,43 @@ export function overlapWarning(clash: RoomClash): string {
   return `Saved, but this overlaps ${clashDescription(clash)}.`;
 }
 
+/** The clash shape both the conflict dialog and the API warning read. */
+export function toRoomClash(
+  other: { title: string; startsAt: string | Date; endsAt: string | Date },
+  room: string,
+): RoomClash {
+  const iso = (t: string | Date) =>
+    typeof t === "string" ? t : t.toISOString();
+  return {
+    title: other.title,
+    room,
+    startsAt: iso(other.startsAt),
+    endsAt: iso(other.endsAt),
+  };
+}
+
 /**
  * The session already in that room at that time, if any. "No room" and
  * rooms that allow overlap never clash.
  */
-export function findClash<S extends ScheduleSession>(
-  sessions: S[],
+export function findClash(
+  sessions: ScheduleSession[],
   move: { id: string; locationId: string | null; startsAt: Date; endsAt: Date },
-  locations: Pick<ScheduleLocation, "id" | "visibility">[],
-): S | null {
+  locations: Pick<ScheduleLocation, "id" | "name" | "visibility">[],
+): RoomClash | null {
   if (move.locationId === null) return null;
   const room = locations.find((l) => l.id === move.locationId);
-  if (room && roomAllowsOverlap(room.visibility)) return null;
-  return (
-    sessions.find(
+  if (!room || roomAllowsOverlap(room.visibility)) return null;
+  const other = sessions
+    .filter(isPlaced)
+    .find(
       (s) =>
         s.id !== move.id &&
         s.locationId === move.locationId &&
-        isPlaced(s) &&
         Date.parse(s.startsAt) < move.endsAt.getTime() &&
         Date.parse(s.endsAt) > move.startsAt.getTime(),
-    ) ?? null
-  );
+    );
+  return other ? toRoomClash(other, room.name) : null;
 }
 
 /** Grid column id for placed sessions with no room. */
@@ -415,7 +659,9 @@ export function overlapLanes<
   const byColumn = new Map<string, Placed<S>[]>();
   for (const s of sessions) {
     const col = s.locationId ?? NO_ROOM;
-    byColumn.set(col, [...(byColumn.get(col) ?? []), s]);
+    const list = byColumn.get(col);
+    if (list) list.push(s);
+    else byColumn.set(col, [s]);
   }
   for (const column of byColumn.values()) {
     const sorted = column
@@ -526,10 +772,24 @@ export function buildDays<S extends Timed>(
 }
 
 /** The tab to open on: the conference's first day, even when an earlier day is shown. */
-export function openingDayIndex(days: { key: string }[]): number {
-  return Math.max(
-    0,
-    days.findIndex((d) => d.key === CONFERENCE_DAYS[0].key),
+export function openingDayKey(days: { key: string }[]): string {
+  const first = CONFERENCE_DAYS[0].key;
+  return days.some((d) => d.key === first) ? first : (days[0]?.key ?? first);
+}
+
+/**
+ * The tab selected by key, or the opening day once that day is gone. Tabs are
+ * picked by key, not position, because a session saved on an earlier day adds
+ * a tab in front.
+ */
+export function selectedDay<D extends { key: string }>(
+  days: D[],
+  key: string,
+): D {
+  return (
+    days.find((d) => d.key === key) ??
+    days.find((d) => d.key === openingDayKey(days)) ??
+    days[0]
   );
 }
 
@@ -544,6 +804,8 @@ export type PublicSession = Pick<
   | "locationId"
   | "maxCapacity"
   | "ages"
+  | "rsvpIsCommitment"
+  | "sponsored"
 > & { startsAt: string; endsAt: string; hosts: { name: string }[] };
 
 export type PublicLocation = Pick<
@@ -608,6 +870,8 @@ export function publicSchedule(
       locationId: s.locationId,
       maxCapacity: s.maxCapacity,
       ages: s.ages,
+      rsvpIsCommitment: s.rsvpIsCommitment,
+      sponsored: s.sponsored,
       hosts: s.hosts.map((h) => ({ name: publicAccountName(h) })),
     }));
   const locations = rooms.map((l) => ({
@@ -620,6 +884,39 @@ export function publicSchedule(
     imageUrl: l.imageUrl,
   }));
   return { locations, sessions };
+}
+
+/**
+ * The ids of the sessions a viewer is in: hosting, shepherding, RSVP'd to
+ * (waitlist included) or bookmarked. Only ids from `sessions` come back, so
+ * plans on sessions the caller left out (drafts, hidden rooms) stay out.
+ */
+export function viewerSessionIds(
+  userId: string,
+  sessions: Pick<ScheduleSession, "id" | "hosts" | "shepherd">[],
+  plans: ViewerPlans,
+): string[] {
+  const marked = new Set(plans.bookmarks);
+  return sessions
+    .filter(
+      (s) =>
+        s.hosts.some((h) => h.userId === userId) ||
+        s.shepherd?.userId === userId ||
+        plans.rsvps[s.id] ||
+        marked.has(s.id),
+    )
+    .map((s) => s.id);
+}
+
+/** The days with only the given sessions left; tabs and time slots stay put. */
+export function onlySessions<D extends { sessions: { id: string }[] }>(
+  days: D[],
+  ids: ReadonlySet<string>,
+): D[] {
+  return days.map((d) => ({
+    ...d,
+    sessions: d.sessions.filter((s) => ids.has(s.id)),
+  }));
 }
 
 /** "my-session-title" from "My Session Title!", capped so slugs stay short. */

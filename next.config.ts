@@ -24,7 +24,12 @@ const nextConfig: NextConfig = {
   // locally, which just means no `?dpl=` on asset URLs.
   deploymentId: process.env.DEPLOYMENT_ID,
   outputFileTracingIncludes: {
-    "/api/posters": ["./assets/posters/*.pdf"],
+    "/api/posters": [
+      "./assets/posters/*.pdf",
+      "./assets/posters/sponsors/*.png",
+      "./assets/posters/overlays/*.png",
+      "./assets/posters/fonts/*.ttf",
+    ],
     // The sent-email catalog reads emails/ at request time. Keys are globs,
     // so `[slug]` can't be spelled out.
     "/backstage/emails": ["./emails/*"],

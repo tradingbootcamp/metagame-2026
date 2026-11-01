@@ -1,5 +1,5 @@
 {
-  "id": "3793ffa8-e949-48c5-9192-24a26d2fc913",
+  "id": "1e650a77-1715-408a-8577-c8c26819d8b1",
   "prevId": "49bf294d-cd41-4a6e-9a26-15f723b1c219",
   "version": "7",
   "dialect": "postgresql",
@@ -1017,14 +1017,6 @@
           "notNull": true,
           "default": "'hidden'"
         },
-        "layout": {
-          "name": "layout",
-          "type": "location_layout",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'grid'"
-        },
         "thumbnail_url": {
           "name": "thumbnail_url",
           "type": "text",
@@ -1328,6 +1320,20 @@
           "notNull": true,
           "default": "'draft'"
         },
+        "rsvp_is_commitment": {
+          "name": "rsvp_is_commitment",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "sponsored": {
+          "name": "sponsored",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "airtable_rfp_record_id": {
           "name": "airtable_rfp_record_id",
           "type": "text",
@@ -1584,142 +1590,6 @@
         "sessions_min_within_max": {
           "name": "sessions_min_within_max",
           "value": "\"sessions\".\"min_capacity\" >= 0 AND \"sessions\".\"min_capacity\" <= \"sessions\".\"max_capacity\""
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.unconference_notes": {
-      "name": "unconference_notes",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "location_id": {
-          "name": "location_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "author_user_id": {
-          "name": "author_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "body": {
-          "name": "body",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "color": {
-          "name": "color",
-          "type": "unconference_note_color",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "x": {
-          "name": "x",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "y": {
-          "name": "y",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "unconference_notes_location_id_idx": {
-          "name": "unconference_notes_location_id_idx",
-          "columns": [
-            {
-              "expression": "location_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "unconference_notes_author_user_id_idx": {
-          "name": "unconference_notes_author_user_id_idx",
-          "columns": [
-            {
-              "expression": "author_user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "unconference_notes_location_id_locations_id_fk": {
-          "name": "unconference_notes_location_id_locations_id_fk",
-          "tableFrom": "unconference_notes",
-          "tableTo": "locations",
-          "columnsFrom": ["location_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "unconference_notes_author_user_id_user_id_fk": {
-          "name": "unconference_notes_author_user_id_user_id_fk",
-          "tableFrom": "unconference_notes",
-          "tableTo": "user",
-          "columnsFrom": ["author_user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "unconference_notes_body_length": {
-          "name": "unconference_notes_body_length",
-          "value": "char_length(\"unconference_notes\".\"body\") > 0 AND char_length(\"unconference_notes\".\"body\") <= 1000"
-        },
-        "unconference_notes_x_fraction": {
-          "name": "unconference_notes_x_fraction",
-          "value": "\"unconference_notes\".\"x\" >= 0 AND \"unconference_notes\".\"x\" <= 1"
-        },
-        "unconference_notes_y_fraction": {
-          "name": "unconference_notes_y_fraction",
-          "value": "\"unconference_notes\".\"y\" >= 0 AND \"unconference_notes\".\"y\" <= 1"
         }
       },
       "isRLSEnabled": false
@@ -2429,11 +2299,6 @@
       "schema": "public",
       "values": ["not_yet", "needs_role", "session_host", "refused"]
     },
-    "public.location_layout": {
-      "name": "location_layout",
-      "schema": "public",
-      "values": ["grid", "board"]
-    },
     "public.location_visibility": {
       "name": "location_visibility",
       "schema": "public",
@@ -2515,11 +2380,6 @@
         "free_ticket",
         "no_comp"
       ]
-    },
-    "public.unconference_note_color": {
-      "name": "unconference_note_color",
-      "schema": "public",
-      "values": ["butter", "rose", "sky", "mint", "tangerine", "lilac"]
     },
     "public.potential_panel": {
       "name": "potential_panel",

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { FaListUl, FaThLarge } from "react-icons/fa";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { FaClock, FaListUl, FaThLarge } from "react-icons/fa";
 import {
   cellSessions,
   formatPacificTime,
@@ -10,6 +10,7 @@ import {
   hostNames,
   laneInset,
   NO_ROOM,
+  nowLinePx,
   offsetPx,
   overlapLanes,
   slotLabel,
@@ -20,7 +21,7 @@ import {
   type LocationLayout,
   type PublicLocation,
 } from "@/lib/schedule";
-import { AgeMark, BlockSummary, blockStyle } from "./SessionBits";
+import { AgeMark, BlockSummary, blockStyle, SponsorTag } from "./SessionBits";
 
 // The day grid, the day list and the toggles the schedule is built from,
 // shared by /schedule and the profile pages' session views.
@@ -32,6 +33,7 @@ export type ViewSession = {
   title: string;
   category: Category | null;
   ages: Ages | null;
+  sponsored: boolean;
   locationId: string | null;
   hosts: { name: string }[];
   startsAt: string;
@@ -90,12 +92,12 @@ export const toggleButton = (active: boolean, i: number) =>
 
 export function DayTabs({
   days,
-  index,
+  selected,
   onSelect,
 }: {
   days: { key: string; name: string; dateLabel: string }[];
-  index: number;
-  onSelect: (i: number) => void;
+  selected: string;
+  onSelect: (key: string) => void;
 }) {
   return (
     <div role="tablist" aria-label="Conference day" className={TOGGLE}>
@@ -104,9 +106,9 @@ export function DayTabs({
           key={d.key}
           type="button"
           role="tab"
-          aria-selected={i === index}
-          onClick={() => onSelect(i)}
-          className={`px-4 py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors sm:px-6 sm:text-xl ${toggleButton(i === index, i)}`}
+          aria-selected={d.key === selected}
+          onClick={() => onSelect(d.key)}
+          className={`px-4 py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors sm:px-6 sm:text-xl ${toggleButton(d.key === selected, i)}`}
         >
           {d.name}
           <span className="ml-1.5 inline-block text-sm whitespace-nowrap opacity-70">
@@ -121,6 +123,7 @@ export function DayTabs({
 const VIEWS = [
   { id: "grid", label: "Grid", Icon: FaThLarge },
   { id: "list", label: "List", Icon: FaListUl },
+  { id: "moments", label: "Moments", Icon: FaClock },
 ] as const;
 
 export type View = (typeof VIEWS)[number]["id"];
@@ -129,25 +132,29 @@ export function ViewToggle({
   view,
   onSelect,
   labels,
+  views = ["grid", "list"],
 }: {
   view: View;
   onSelect: (v: View) => void;
   labels?: Partial<Record<View, string>>;
+  views?: View[];
 }) {
   return (
     <div role="group" aria-label="View" className={TOGGLE}>
-      {VIEWS.map(({ id, label, Icon }, i) => (
-        <button
-          key={id}
-          type="button"
-          aria-pressed={view === id}
-          onClick={() => onSelect(id)}
-          className={`flex items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(view === id, i)}`}
-        >
-          <Icon size={12} />
-          {labels?.[id] ?? label}
-        </button>
-      ))}
+      {VIEWS.filter((v) => views.includes(v.id)).map(
+        ({ id, label, Icon }, i) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={view === id}
+            onClick={() => onSelect(id)}
+            className={`flex items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(view === id, i)}`}
+          >
+            <Icon size={12} />
+            {labels?.[id] ?? label}
+          </button>
+        ),
+      )}
     </div>
   );
 }
@@ -218,6 +225,20 @@ export type BoardSurface = (surface: {
   height: number;
 }) => ReactNode;
 
+/** The current time, ticking each minute; null until mounted so the server render matches. */
+const NOW_TICK_MS = 5_000;
+
+function useNow(): Date | null {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    tick();
+    const id = setInterval(tick, NOW_TICK_MS);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
 /** One day as a room-by-time grid, the way the printed schedule reads. */
 export function GridDay<S extends ViewSession>({
   day,
@@ -232,7 +253,7 @@ export function GridDay<S extends ViewSession>({
   badge?: (s: S) => ReactNode;
   board?: BoardSurface;
 }) {
-  const lanes = overlapLanes(day.sessions);
+  const lanes = useMemo(() => overlapLanes(day.sessions), [day.sessions]);
   const boards = board
     ? columns.flatMap((col, i) => (col.layout === "board" ? [i] : []))
     : [];
@@ -252,6 +273,8 @@ export function GridDay<S extends ViewSession>({
   // `last:border-r-0`, which moves to the wrong cell once a board column
   // stops emitting one per row.
   const edge = (i: number) => (i === columns.length - 1 ? "" : "border-r");
+  const now = useNow();
+  const nowTop = now ? nowLinePx(day.key, day.slots[0], now) : null;
   return (
     <div className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--board-w:232px] [--col-w:104px] [--time-w:44px] sm:[--board-w:300px] sm:[--col-w:120px] sm:[--time-w:56px]">
       <div className="min-w-fit">
@@ -289,7 +312,7 @@ export function GridDay<S extends ViewSession>({
         </div>
 
         <div
-          className="grid"
+          className="relative grid"
           style={{
             gridTemplateColumns: gridCols,
             // Definite rows only when a board spans them: it makes the span
@@ -300,6 +323,13 @@ export function GridDay<S extends ViewSession>({
             }),
           }}
         >
+          {nowTop !== null && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute right-0 left-0 z-[25] h-0.5 bg-red-600 transition-[top] ease-linear"
+              style={{ top: nowTop, transitionDuration: `${NOW_TICK_MS}ms` }}
+            />
+          )}
           {day.slots.map((slotStart) => (
             <div key={slotStart} className="contents">
               <div
@@ -391,6 +421,7 @@ export function SessionRow<S extends ViewSession>({
         <div className="flex flex-wrap items-start gap-1.5 leading-tight font-semibold">
           <span>{session.title}</span>
           <AgeMark ages={session.ages} />
+          {session.sponsored && <SponsorTag />}
           {badge?.(session)}
         </div>
         <div className="mt-0.5 text-[13px] text-[#1b1530]/65">

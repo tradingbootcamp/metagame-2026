@@ -37,6 +37,8 @@ export type SessionFields = {
   ages: Ages | null;
   needs: string | null;
   status: Status;
+  rsvpIsCommitment: boolean;
+  sponsored: boolean;
   /** Undefined when the input doesn't mention it, so it's left as stored. */
   airtableRfpRecordId?: string | null;
   /** Undefined when the input doesn't mention it, so it's left as stored. */
@@ -86,6 +88,17 @@ function int(raw: Raw, key: string): number | null {
   const s = str(raw, key);
   if (!s) return null;
   return /^-?\d+$/.test(s) ? Number(s) : Number.NaN;
+}
+
+/**
+ * A checkbox: FormData sends "on" when ticked and nothing when not, JSON a
+ * boolean. Absent is false; anything else is null.
+ */
+function flag(raw: Raw, key: string): boolean | null {
+  const v = raw[key];
+  if (v === undefined || v === null || v === false || v === "") return false;
+  if (v === true || v === "on" || v === "true") return true;
+  return v === "false" ? false : null;
 }
 
 /** `startsAt`/`endsAt` are Pacific wall-clock strings, "2026-11-06T14:00". */
@@ -209,6 +222,13 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
     };
   }
 
+  const rsvpIsCommitment = flag(raw, "rsvpIsCommitment");
+  if (rsvpIsCommitment === null)
+    return { ok: false, field: "rsvpIsCommitment", error: "true or false." };
+  const sponsored = flag(raw, "sponsored");
+  if (sponsored === null)
+    return { ok: false, field: "sponsored", error: "true or false." };
+
   let airtableRfpRecordId: string | null | undefined;
   if ("airtableRfpRecordId" in raw) {
     airtableRfpRecordId = optional(raw, "airtableRfpRecordId");
@@ -252,6 +272,8 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
       ages,
       needs: optional(raw, "needs"),
       status: status ?? "draft",
+      rsvpIsCommitment,
+      sponsored,
       airtableRfpRecordId,
       shepherdUserId,
     },

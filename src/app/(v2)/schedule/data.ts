@@ -5,10 +5,11 @@ import { toolAccess } from "@/lib/admin-auth";
 import { currentSession } from "@/lib/auth";
 import {
   publicSchedule,
+  viewerSessionIds,
   type PublicLocation,
   type ScheduleViewer,
 } from "@/lib/schedule";
-import { loadSchedule } from "@/lib/schedule-store";
+import { loadSchedule, loadViewerPlans } from "@/lib/schedule-store";
 import { boardNote, type BoardData } from "@/lib/unconference";
 import { listNotesIn } from "@/lib/unconference-store";
 
@@ -78,4 +79,21 @@ export const loadBoard = cache(async (): Promise<BoardData | null> => {
     canPost: !!post && !session?.user.banned,
     isTeam: !!team,
   };
+});
+
+/** The public sessions the signed-in viewer is in; null when signed out. */
+export const loadMySessionIds = cache(async (): Promise<string[] | null> => {
+  const account = await currentSession();
+  if (!account) return null;
+  const [raw, { sessions }, plans] = await Promise.all([
+    loadRawSchedule(),
+    loadPublicSchedule(),
+    loadViewerPlans(account.user.id),
+  ]);
+  const shown = new Set(sessions.map((s) => s.id));
+  return viewerSessionIds(
+    account.user.id,
+    raw.sessions.filter((s) => shown.has(s.id)),
+    plans,
+  );
 });
