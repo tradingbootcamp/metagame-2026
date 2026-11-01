@@ -102,7 +102,10 @@ export default function PlanButtons({
   const tone = confirm && TONE[confirm.tone];
   const join = () => runRsvp(full ? "waitlist" : "going");
   const [claimed, setClaimed] = useState(false);
-  const [askTicket, setAskTicket] = useState(false);
+  // The ticket dialog's activatable tickets while it's open, else null.
+  const [askTicket, setAskTicket] = useState<RsvpTicket["claimable"] | null>(
+    null,
+  );
   const hasTicket = claimed || (ticket?.has ?? true);
   const proceed = () => (prompt.confirms.length > 0 ? setStep(0) : join());
 
@@ -135,7 +138,7 @@ export default function PlanButtons({
           ...s,
           shown: { ...s.shown, [field]: s.confirmed[field] },
         }));
-        if (result.needsTicket) setAskTicket(true);
+        if (result.needsTicket) setAskTicket(result.needsTicket);
         else toast.error(result.error, { id: toastId });
       }
       return;
@@ -184,7 +187,9 @@ export default function PlanButtons({
       {plan.status === null ? (
         <Button
           size="sm"
-          onClick={() => (hasTicket ? proceed() : setAskTicket(true))}
+          onClick={() =>
+            hasTicket ? proceed() : setAskTicket(ticket?.claimable ?? [])
+          }
         >
           {prompt.label}
         </Button>
@@ -279,13 +284,13 @@ export default function PlanButtons({
           </DialogContent>
         </Dialog>
       )}
-      {askTicket && (
+      {askTicket !== null && (
         <TicketDialog
-          claimable={ticket?.claimable ?? []}
-          onClose={() => setAskTicket(false)}
+          claimable={askTicket}
+          onClose={() => setAskTicket(null)}
           onClaimed={() => {
             setClaimed(true);
-            setAskTicket(false);
+            setAskTicket(null);
             proceed();
           }}
         />
@@ -335,6 +340,18 @@ function TicketDialog({
                 .
               </p>
             )}
+            {!mine && (
+              <p>
+                Have a ticket code?{" "}
+                <Link
+                  href="/account?tab=tickets"
+                  className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
+                >
+                  Enter it on your account
+                </Link>
+                .
+              </p>
+            )}
             {error && <p className="font-semibold text-meeple">{error}</p>}
           </div>
         </DialogDescription>
@@ -351,7 +368,7 @@ function TicketDialog({
                   const result = await claimMine(mine.id).catch(() => ({
                     error: "Couldn’t activate it. Try again.",
                   }));
-                  if ("error" in result && result.error) {
+                  if (result.error) {
                     setError(result.error);
                     return;
                   }

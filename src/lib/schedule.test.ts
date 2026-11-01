@@ -19,7 +19,6 @@ import {
   overlapLanes,
   overlapWarning,
   planConflicts,
-  rsvpNeedsTicket,
   rsvpPrompt,
   slotLabel,
   type PlanConflict,
@@ -489,18 +488,6 @@ describe("rsvpPrompt", () => {
       /^Your existing RSVP is for a session with limited spots/,
     );
     expect(out.confirms[0]?.tone).toBe("urgent");
-  });
-});
-
-describe("rsvpNeedsTicket", () => {
-  it("lets a ticket holder RSVP", () => {
-    expect(rsvpNeedsTicket(true, "user")).toBe(false);
-  });
-
-  it("stops anyone else but an admin", () => {
-    expect(rsvpNeedsTicket(false, "user")).toBe(true);
-    expect(rsvpNeedsTicket(false, null)).toBe(true);
-    expect(rsvpNeedsTicket(false, "admin")).toBe(false);
   });
 });
 

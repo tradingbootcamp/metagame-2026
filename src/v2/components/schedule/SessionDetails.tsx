@@ -22,8 +22,11 @@ import {
   type Category,
 } from "@/lib/schedule";
 import { loadSessionRsvps, loadViewerPlans } from "@/lib/schedule-store";
-import { rsvpTicket } from "@/lib/ticket-store";
-import { loadPublicSchedule, loadRawSchedule } from "@/app/(v2)/schedule/data";
+import {
+  loadPublicSchedule,
+  loadRawSchedule,
+  rsvpTicket,
+} from "@/app/(v2)/schedule/data";
 import SessionPlans from "@/v2/components/schedule/SessionPlans";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
 import { HEADING } from "@/v2/components/styles";
@@ -160,7 +163,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
     // Host ids and shepherds aren't public, so clashes read the raw schedule.
     viewerId ? loadRawSchedule() : null,
     viewerId ? loadPublicSchedule() : null,
-    account ? rsvpTicket(account.user) : undefined,
+    rsvpTicket(),
   ]);
   // Only sessions this viewer can see, as loadMySessionIds does.
   const visible = new Set(shown?.sessions.map((s) => s.id));
