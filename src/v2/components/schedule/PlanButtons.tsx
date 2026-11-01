@@ -211,8 +211,13 @@ export default function PlanButtons({
               )}
               {prompt.confirm.title}
             </DialogTitle>
-            <DialogDescription asChild>
-              <div className="flex flex-col gap-3 text-sm text-ink/80">
+            {/* The classes go on DialogDescription so cn() overrides its
+                cream default; on the asChild div they'd only be concatenated. */}
+            <DialogDescription
+              asChild
+              className="flex flex-col gap-3 text-sm text-ink/80"
+            >
+              <div>
                 {prompt.confirm.conflicts.length > 0 && (
                   <ul
                     className={`flex flex-col gap-1 rounded-md border-l-4 px-3 py-2 font-semibold text-ink ${tone.list}`}
