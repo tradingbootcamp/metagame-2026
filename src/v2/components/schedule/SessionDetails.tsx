@@ -22,6 +22,7 @@ import {
   type Category,
 } from "@/lib/schedule";
 import { loadSessionRsvps, loadViewerPlans } from "@/lib/schedule-store";
+import { rsvpTicket } from "@/lib/ticket-store";
 import { loadPublicSchedule, loadRawSchedule } from "@/app/(v2)/schedule/data";
 import SessionPlans from "@/v2/components/schedule/SessionPlans";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
@@ -151,7 +152,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
     toolAccess("schedule.manage"),
   ]);
   const viewerId = account?.user.id ?? null;
-  const [rsvps, plans, editor, raw, shown] = await Promise.all([
+  const [rsvps, plans, editor, raw, shown, ticket] = await Promise.all([
     loadSessionRsvps(session.id),
     viewerId ? loadViewerPlans(viewerId) : null,
     // PublicSession carries host names but no ids, so ownership is its own read.
@@ -159,6 +160,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
     // Host ids and shepherds aren't public, so clashes read the raw schedule.
     viewerId ? loadRawSchedule() : null,
     viewerId ? loadPublicSchedule() : null,
+    account ? rsvpTicket(account.user) : undefined,
   ]);
   // Only sessions this viewer can see, as loadMySessionIds does.
   const visible = new Set(shown?.sessions.map((s) => s.id));
@@ -271,6 +273,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
               : []
           }
           rsvps={rsvps}
+          ticket={ticket}
           plan={
             plans && {
               status: plans.rsvps[session.id] ?? null,

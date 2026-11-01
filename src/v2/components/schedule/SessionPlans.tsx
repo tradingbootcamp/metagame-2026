@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import type { PlanConflict, RsvpStatus, SessionRsvps } from "@/lib/schedule";
+import type {
+  PlanConflict,
+  RsvpStatus,
+  RsvpTicket,
+  SessionRsvps,
+} from "@/lib/schedule";
 import PlanButtons from "./PlanButtons";
 
 /** A session page's RSVP controls and attendee list, updated together in place. */
@@ -11,6 +16,7 @@ export default function SessionPlans({
   commitment,
   conflicts,
   rsvps: initial,
+  ticket,
   plan,
   signIn,
 }: {
@@ -19,6 +25,7 @@ export default function SessionPlans({
   commitment: boolean;
   conflicts: PlanConflict[];
   rsvps: SessionRsvps;
+  ticket?: RsvpTicket;
   /** The viewer's own plan, or null when signed out. */
   plan: { status: RsvpStatus | null; bookmarked: boolean } | null;
   signIn: ReactNode;
@@ -40,6 +47,7 @@ export default function SessionPlans({
           full={capacity !== null && rsvps.going >= capacity}
           commitment={commitment}
           conflicts={conflicts}
+          ticket={ticket}
           onSettled={(result) => result.rsvps && setRsvps(result.rsvps)}
         />
       ) : (

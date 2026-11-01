@@ -17,6 +17,8 @@ import {
   type PurchaseStatus,
 } from "@/lib/airtable";
 import { cleanDiscordHandle } from "@/lib/discord-handle";
+import { ticketStep } from "@/lib/first-signin";
+import { rsvpNeedsTicket, type RsvpTicket } from "@/lib/schedule";
 import { sendAdminErrorEmail } from "@/lib/email";
 import { ticketCode, withFreshTicketCode } from "@/lib/ticket-code";
 import { emailKey } from "@/lib/ticket-holder";
@@ -200,6 +202,32 @@ export async function hasClaimedTicket(userId: string): Promise<boolean> {
     )
     .limit(1);
   return row !== undefined;
+}
+
+/** What the RSVP button needs to know before it's clicked. */
+export async function rsvpTicket(user: {
+  id: string;
+  email: string;
+  role?: string | null;
+}): Promise<RsvpTicket> {
+  const email = emailKey(user.email);
+  const [claimed, rows] = await Promise.all([
+    hasClaimedTicket(user.id),
+    ticketsForUser(user.id, email),
+  ]);
+  if (!rsvpNeedsTicket(claimed, user.role)) return { has: true, claimable: [] };
+  const step = ticketStep(
+    rows.map((t) => ({ ...t, tier: ticketLabel(t.tier) })),
+    user.id,
+    email,
+  );
+  return {
+    has: false,
+    claimable:
+      step.kind === "claimable"
+        ? step.tickets.map(({ id, tier }) => ({ id, tier }))
+        : [],
+  };
 }
 
 export type ClaimResult =

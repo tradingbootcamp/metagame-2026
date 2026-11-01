@@ -1,8 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { StarIcon, TriangleAlertIcon } from "lucide-react";
 import { toast } from "sonner";
+import { claimMine } from "@/app/(v2)/account/actions";
 import {
   bookmark,
   rsvpTo,
@@ -21,6 +24,7 @@ import {
   type PlanConflict,
   type RsvpConfirm,
   type RsvpStatus,
+  type RsvpTicket,
 } from "@/lib/schedule";
 
 type Plan = { status: RsvpStatus | null; bookmarked: boolean };
@@ -43,6 +47,17 @@ const TONE: Record<
   },
 };
 
+// Above RouteModal (z-[100]), which hosts these on the session page.
+const DIALOG_OVERLAY = "z-[110]";
+const DIALOG = "z-[110] max-w-[440px] bg-white px-6 py-5 text-ink";
+const DIALOG_TITLE =
+  "mb-2 flex items-center gap-2 font-grotesk text-xl font-bold";
+// On DialogDescription itself, so cn() overrides its cream default; on an
+// asChild child they'd only be concatenated with it.
+const DIALOG_BODY = "flex flex-col gap-3 text-sm text-ink/80";
+const CANCEL =
+  "rounded-md px-3 py-2 text-sm font-semibold text-ink/70 hover:text-navy";
+
 /**
  * The signed-in attendee's RSVP and bookmark controls for one session.
  * Clicks show at once; the server's answer then settles them.
@@ -54,6 +69,7 @@ export default function PlanButtons({
   full,
   commitment = false,
   conflicts = [],
+  ticket,
   onSettled,
 }: {
   sessionId: string;
@@ -65,6 +81,8 @@ export default function PlanButtons({
   commitment?: boolean;
   /** The viewer's other sessions at the same time, warned about first. */
   conflicts?: PlanConflict[];
+  /** Without it the server's answer is the only ticket check. */
+  ticket?: RsvpTicket;
   onSettled?: (result: PlanResult) => void;
 }) {
   const fromProps: Plan = { status, bookmarked };
@@ -83,6 +101,10 @@ export default function PlanButtons({
   const confirm = step === null ? null : (prompt.confirms[step] ?? null);
   const tone = confirm && TONE[confirm.tone];
   const join = () => runRsvp(full ? "waitlist" : "going");
+  const [claimed, setClaimed] = useState(false);
+  const [askTicket, setAskTicket] = useState(false);
+  const hasTicket = claimed || (ticket?.has ?? true);
+  const proceed = () => (prompt.confirms.length > 0 ? setStep(0) : join());
 
   // A server render with new values (e.g. after navigating back) wins.
   if (state.props.status !== status || state.props.bookmarked !== bookmarked) {
@@ -113,7 +135,8 @@ export default function PlanButtons({
           ...s,
           shown: { ...s.shown, [field]: s.confirmed[field] },
         }));
-        toast.error(result.error, { id: toastId });
+        if (result.needsTicket) setAskTicket(true);
+        else toast.error(result.error, { id: toastId });
       }
       return;
     }
@@ -161,7 +184,7 @@ export default function PlanButtons({
       {plan.status === null ? (
         <Button
           size="sm"
-          onClick={() => (prompt.confirms.length > 0 ? setStep(0) : join())}
+          onClick={() => (hasTicket ? proceed() : setAskTicket(true))}
         >
           {prompt.label}
         </Button>
@@ -206,24 +229,17 @@ export default function PlanButtons({
           <DialogContent
             role="alertdialog"
             showCloseButton={false}
-            // Above RouteModal (z-[100]), which hosts this on the session page.
-            overlayClassName="z-[110]"
-            className={`z-[110] max-w-[440px] bg-white px-6 py-5 text-ink ${tone.content}`}
+            overlayClassName={DIALOG_OVERLAY}
+            className={`${DIALOG} ${tone.content}`}
           >
-            <DialogTitle
-              className={`mb-2 flex items-center gap-2 font-grotesk text-xl font-bold ${tone.title}`}
-            >
+            <DialogTitle className={`${DIALOG_TITLE} ${tone.title}`}>
               {confirm.conflicts.length > 0 && (
                 <TriangleAlertIcon aria-hidden className="size-5 shrink-0" />
               )}
               {confirm.title}
             </DialogTitle>
-            {/* The classes go on DialogDescription so cn() overrides its
-                cream default; on the asChild div they'd only be concatenated. */}
-            <DialogDescription
-              asChild
-              className="flex flex-col gap-3 text-sm text-ink/80"
-            >
+
+            <DialogDescription asChild className={DIALOG_BODY}>
               <div>
                 {confirm.conflicts.length > 0 && (
                   <ul
@@ -241,7 +257,7 @@ export default function PlanButtons({
               <button
                 type="button"
                 onClick={() => setStep(null)}
-                className="rounded-md px-3 py-2 text-sm font-semibold text-ink/70 hover:text-navy"
+                className={CANCEL}
               >
                 Cancel
               </button>
@@ -263,6 +279,97 @@ export default function PlanButtons({
           </DialogContent>
         </Dialog>
       )}
+      {askTicket && (
+        <TicketDialog
+          claimable={ticket?.claimable ?? []}
+          onClose={() => setAskTicket(false)}
+          onClaimed={() => {
+            setClaimed(true);
+            setAskTicket(false);
+            proceed();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/** Shown instead of RSVPing without a ticket; offers one bought on the account. */
+function TicketDialog({
+  claimable,
+  onClose,
+  onClaimed,
+}: {
+  claimable: RsvpTicket["claimable"];
+  onClose: () => void;
+  onClaimed: () => void;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const mine = claimable[0];
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        role="alertdialog"
+        showCloseButton={false}
+        overlayClassName={DIALOG_OVERLAY}
+        className={`${DIALOG} border-line`}
+      >
+        <DialogTitle className={`${DIALOG_TITLE} text-navy`}>
+          You need a ticket to RSVP
+        </DialogTitle>
+        <DialogDescription asChild className={DIALOG_BODY}>
+          <div>
+            <p>RSVPs to sessions are for ticket holders.</p>
+            {mine && (
+              <p>
+                A {mine.tier} ticket was bought on your account. Activate it for
+                yourself? Or{" "}
+                <Link
+                  href="/#tickets"
+                  className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
+                >
+                  get another ticket
+                </Link>
+                .
+              </p>
+            )}
+            {error && <p className="font-semibold text-meeple">{error}</p>}
+          </div>
+        </DialogDescription>
+        <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+          <button type="button" onClick={onClose} className={CANCEL}>
+            Cancel
+          </button>
+          {mine ? (
+            <Button
+              size="sm"
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  const result = await claimMine(mine.id).catch(() => ({
+                    error: "Couldn’t activate it. Try again.",
+                  }));
+                  if ("error" in result && result.error) {
+                    setError(result.error);
+                    return;
+                  }
+                  // Ticket holders see who's coming, so re-read the page.
+                  router.refresh();
+                  onClaimed();
+                })
+              }
+            >
+              {pending ? "Activating…" : "Activate my ticket"}
+            </Button>
+          ) : (
+            <Button size="sm" asChild>
+              <Link href="/#tickets">Get a ticket</Link>
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

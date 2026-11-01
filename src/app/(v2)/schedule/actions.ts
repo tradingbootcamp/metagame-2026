@@ -3,13 +3,18 @@
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { currentSession } from "@/lib/auth";
-import type { RsvpStatus, SessionRsvps } from "@/lib/schedule";
+import {
+  rsvpNeedsTicket,
+  type RsvpStatus,
+  type SessionRsvps,
+} from "@/lib/schedule";
 import {
   cancelRsvp,
   loadSessionRsvps,
   rsvp,
   setBookmark,
 } from "@/lib/schedule-store";
+import { hasClaimedTicket } from "@/lib/ticket-store";
 
 // No revalidatePath: it would re-render the whole current route behind every
 // click. The caller updates in place from this result.
@@ -18,10 +23,14 @@ export type PlanResult = {
   status?: RsvpStatus | null;
   bookmarked?: boolean;
   rsvps?: SessionRsvps;
+  /** Refused for want of a claimed ticket. */
+  needsTicket?: boolean;
 };
 
+type Attendee = { id: string; role?: string | null };
+
 /** The signed-in user, if they may act on this session. */
-async function attendee(sessionId: string): Promise<string | PlanResult> {
+async function attendee(sessionId: string): Promise<Attendee | PlanResult> {
   const session = await currentSession();
   const u = session?.user;
   if (!u) return { error: "Sign in first." };
@@ -35,17 +44,17 @@ async function attendee(sessionId: string): Promise<string | PlanResult> {
       .limit(1);
     if (row?.status !== "published") return { error: "No such session." };
   }
-  return u.id;
+  return { id: u.id, role: u.role };
 }
 
 async function act(
   sessionId: string,
-  run: (userId: string) => Promise<PlanResult>,
+  run: (userId: string, who: Attendee) => Promise<PlanResult>,
 ): Promise<PlanResult> {
   const who = await attendee(sessionId);
-  if (typeof who !== "string") return who;
+  if (!("id" in who)) return who;
   try {
-    return await run(who);
+    return await run(who.id, who);
   } catch (err) {
     return { error: err instanceof Error ? err.message : String(err) };
   }
@@ -53,7 +62,10 @@ async function act(
 
 /** Going, or waitlisted when the session is full. */
 export async function rsvpTo(sessionId: string): Promise<PlanResult> {
-  return act(sessionId, async (userId) => {
+  return act(sessionId, async (userId, who) => {
+    if (rsvpNeedsTicket(await hasClaimedTicket(userId), who.role)) {
+      return { error: "You need a ticket to RSVP.", needsTicket: true };
+    }
     const status = await rsvp(sessionId, userId);
     return { status, rsvps: await loadSessionRsvps(sessionId) };
   });

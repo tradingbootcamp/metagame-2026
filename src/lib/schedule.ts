@@ -269,6 +269,20 @@ export function rsvpPrompt(
   };
 }
 
+/** Whether the viewer may RSVP yet, and any ticket bought on their account they could claim to. */
+export type RsvpTicket = {
+  has: boolean;
+  claimable: { id: string; tier: string }[];
+};
+
+/** RSVPs need a claimed ticket; admins can try sessions out without one. */
+export function rsvpNeedsTicket(
+  hasTicket: boolean,
+  role: string | null | undefined,
+): boolean {
+  return !hasTicket && role !== "admin";
+}
+
 export function hostNames(session: { hosts: { name: string }[] }): string {
   return session.hosts.map((h) => h.name).join(", ");
 }
