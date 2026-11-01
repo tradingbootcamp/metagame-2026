@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { startCamera, stopStream } from "./camera";
 import { repeatGate } from "./scan-gate";
 
 const FRAME_MS = 250;
@@ -61,26 +62,27 @@ export default function QrScanner({
         return;
       }
       try {
-        const [media, jsqr] = await Promise.all([
-          navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-              facingMode: { ideal: "environment" },
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-          }),
-          import("jsqr"),
-        ]);
-        stream = media;
-        if (stopped) {
-          media.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        const el = video.current!;
-        el.srcObject = media;
-        await el.play();
+        const { decoder: jsqr } = await startCamera({
+          getMedia: () =>
+            navigator.mediaDevices.getUserMedia({
+              audio: false,
+              video: {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+            }),
+          decoder: import("jsqr"),
+          attach: async (media) => {
+            stream = media;
+            if (stopped) throw new Error("stopped");
+            const el = video.current!;
+            el.srcObject = media;
+            await el.play();
+          },
+        });
         if (stopped) return;
+        const el = video.current!;
         setStatus("scanning");
         const scan = async () => {
           if (stopped) return;
@@ -106,7 +108,7 @@ export default function QrScanner({
     return () => {
       stopped = true;
       clearTimeout(timer);
-      stream?.getTracks().forEach((t) => t.stop());
+      if (stream) stopStream(stream);
     };
   }, []);
 
