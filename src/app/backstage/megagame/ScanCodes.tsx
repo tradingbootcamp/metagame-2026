@@ -4,8 +4,10 @@ import { useCallback, useState } from "react";
 import { smallButtonClass } from "../ui";
 import { lookupPlayer, type PlayerHit } from "./actions";
 import QrScanner from "./QrScanner";
-import { parseScannedCode } from "@/lib/megagame-rules";
+import { routeScan } from "./scan-route";
 import { formatTicketCode } from "@/lib/ticket-code-format";
+
+const addedNext = (name: string) => `Added ${name}. Scan the next badge.`;
 
 /**
  * A Scan button that opens the camera. A bare code counts as `bareKind`;
@@ -17,31 +19,33 @@ export default function ScanCodes({
   bareKind,
   onPlayer,
   onQuest,
+  addedMessage = addedNext,
 }: {
   label: string;
   bareKind: "quest" | "player";
   onPlayer?: (player: PlayerHit) => void;
   onQuest?: (code: string) => void;
+  addedMessage?: (name: string) => string;
 }) {
   const [open, setOpen] = useState(false);
 
   const onDecode = useCallback(
     async (payload: string): Promise<string> => {
-      const scanned = parseScannedCode(payload);
-      if (!scanned) return "That QR code is not a quest label or a badge.";
-      const kind = scanned.kind ?? bareKind;
-      if (kind === "quest") {
-        if (!onQuest) return "That is a quest label. Scan a player's badge.";
-        onQuest(scanned.code);
-        return `Opening quest ${formatTicketCode(scanned.code)}…`;
+      const route = routeScan(payload, bareKind, {
+        quest: !!onQuest,
+        player: !!onPlayer,
+      });
+      if ("message" in route) return route.message;
+      if (route.kind === "quest") {
+        onQuest!(route.code);
+        return `Opening quest ${formatTicketCode(route.code)}…`;
       }
-      if (!onPlayer) return "That is a player's badge. Scan a quest label.";
-      const res = await lookupPlayer(scanned.code);
+      const res = await lookupPlayer(route.code);
       if (!res.player) return res.error ?? "Lookup failed.";
-      onPlayer(res.player);
-      return `Added ${res.player.name}. Scan the next badge.`;
+      onPlayer!(res.player);
+      return addedMessage(res.player.name);
     },
-    [bareKind, onPlayer, onQuest],
+    [bareKind, onPlayer, onQuest, addedMessage],
   );
 
   if (!open) {

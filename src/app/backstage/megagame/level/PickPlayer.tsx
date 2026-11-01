@@ -7,6 +7,7 @@ export default function PickPlayer() {
   const router = useRouter();
   return (
     <PlayerAdder
+      single
       onAdd={(p) =>
         router.push(`/backstage/megagame/level?u=${encodeURIComponent(p.id)}`)
       }
