@@ -935,7 +935,9 @@ describe("recentVoids", () => {
     expect(completionWhere).toContain(
       '"quest_completions"."voided_at" is not null',
     );
-    expect(completionWhere).toContain('"confirmations"."voided_at" is null');
+    expect(completionWhere).toContain(
+      '("confirmations"."voided_at" is null or "quest_completions"."voided_at" < "confirmations"."voided_at")',
+    );
     const levelWhere = dialect.sqlToQuery(
       arg(chainOf(db.select, 2), "where") as SQL,
     );
@@ -951,10 +953,8 @@ describe("exportEventTable", () => {
       {
         id: "c1",
         questId: "q1",
-        questCode: "A2C4EF",
         requestedUserIds: ["u1"],
         confirmedBy: "v1",
-        confirmedByName: "Vol",
         createdAt: at,
         voidedAt: null,
         voidedBy: null,
@@ -962,21 +962,44 @@ describe("exportEventTable", () => {
       },
     ]);
     const out = await exportEventTable("confirmations");
-    expect(out.columns[0]).toBe("id");
-    expect(out.columns).toContain("quest_code");
+    expect(out.columns).toEqual([
+      "id",
+      "quest_id",
+      "requested_user_ids",
+      "confirmed_by",
+      "created_at",
+      "voided_at",
+      "voided_by",
+      "void_reason",
+    ]);
     expect(out.rows).toEqual([
-      ["c1", "q1", "A2C4EF", ["u1"], "v1", "Vol", at, null, null, null],
+      ["c1", "q1", ["u1"], "v1", at, null, null, null],
     ]);
     const c = chainOf(db.select, 0);
     expect(c.calls.some((call) => call[0] === "where")).toBe(false);
   });
 
-  it("has a column per field for completions and level events", async () => {
-    queue([], []);
-    const completions = await exportEventTable("quest_completions");
-    const levels = await exportEventTable("level_events");
-    expect(completions.columns).toContain("confirmation_id");
-    expect(levels.columns).toContain("override_reason");
-    expect(levels.columns).toContain("source");
+  it("exports only the table's own columns, with nothing joined in", async () => {
+    queue([], [], []);
+    const outs = [
+      await exportEventTable("confirmations"),
+      await exportEventTable("quest_completions"),
+      await exportEventTable("level_events"),
+    ];
+    for (const i of [0, 1, 2]) {
+      const c = chainOf(db.select, i);
+      expect(
+        c.calls.some(
+          (call) => call[0] === "innerJoin" || call[0] === "leftJoin",
+        ),
+      ).toBe(false);
+    }
+    for (const out of outs) {
+      expect(out.columns.filter((k) => k.endsWith("_name"))).toEqual([]);
+      expect(out.columns).not.toContain("quest_code");
+    }
+    expect(outs[1].columns).toContain("confirmation_id");
+    expect(outs[2].columns).toContain("override_reason");
+    expect(outs[2].columns).toContain("source");
   });
 });

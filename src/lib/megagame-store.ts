@@ -1110,9 +1110,9 @@ export type VoidRow = {
 };
 
 /**
- * Whole confirmations undone, single completions voided out of a live
- * confirmation, and volunteer level-ups undone, newest first. Picker rows
- * voided by a class switch are left out.
+ * Whole confirmations undone, single completions voided before their
+ * confirmation was (if it was), and volunteer level-ups undone, newest first.
+ * Picker rows voided by a class switch are left out.
  */
 export async function recentVoids(limit = 20): Promise<VoidRow[]> {
   const { confirmations, questCompletions, quests, levelEvents } = schema;
@@ -1154,7 +1154,10 @@ export async function recentVoids(limit = 20): Promise<VoidRow[]> {
       .where(
         and(
           isNotNull(questCompletions.voidedAt),
-          isNull(confirmations.voidedAt),
+          or(
+            isNull(confirmations.voidedAt),
+            lt(questCompletions.voidedAt, confirmations.voidedAt),
+          ),
         ),
       )
       .orderBy(desc(questCompletions.voidedAt))
@@ -1197,13 +1200,12 @@ export async function recentVoids(limit = 20): Promise<VoidRow[]> {
     .slice(0, limit);
 }
 
-/** Every row of an event table, voided ones included, oldest first, with names joined. */
+/** Every row of an event table, voided ones included, oldest first. */
 export async function exportEventTable(
   table: EventTable,
 ): Promise<{ columns: string[]; rows: unknown[][] }> {
-  const { confirmations, questCompletions, quests, levelEvents } = schema;
+  const { confirmations, questCompletions, levelEvents } = schema;
   const db = getDb();
-  const named = alias(schema.user, "named");
   const keys = (fields: Record<string, unknown>) => Object.keys(fields);
   const snake = (k: string) =>
     k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
@@ -1218,10 +1220,8 @@ export async function exportEventTable(
     const fields = {
       id: confirmations.id,
       questId: confirmations.questId,
-      questCode: quests.code,
       requestedUserIds: confirmations.requestedUserIds,
       confirmedBy: confirmations.confirmedBy,
-      confirmedByName: named.name,
       createdAt: confirmations.createdAt,
       voidedAt: confirmations.voidedAt,
       voidedBy: confirmations.voidedBy,
@@ -1230,8 +1230,6 @@ export async function exportEventTable(
     const rows = await db
       .select(fields)
       .from(confirmations)
-      .innerJoin(quests, eq(quests.id, confirmations.questId))
-      .leftJoin(named, eq(named.id, confirmations.confirmedBy))
       .orderBy(asc(confirmations.createdAt));
     return shape(fields, rows);
   }
@@ -1240,9 +1238,7 @@ export async function exportEventTable(
       id: questCompletions.id,
       confirmationId: questCompletions.confirmationId,
       questId: questCompletions.questId,
-      questCode: quests.code,
       userId: questCompletions.userId,
-      userName: named.name,
       confirmedAt: questCompletions.confirmedAt,
       voidedAt: questCompletions.voidedAt,
       voidedBy: questCompletions.voidedBy,
@@ -1251,21 +1247,16 @@ export async function exportEventTable(
     const rows = await db
       .select(fields)
       .from(questCompletions)
-      .innerJoin(quests, eq(quests.id, questCompletions.questId))
-      .leftJoin(named, eq(named.id, questCompletions.userId))
       .orderBy(asc(questCompletions.confirmedAt));
     return shape(fields, rows);
   }
-  const awarder = alias(schema.user, "awarder");
   const fields = {
     id: levelEvents.id,
     userId: levelEvents.userId,
-    userName: named.name,
     class: levelEvents.class,
     level: levelEvents.level,
     source: levelEvents.source,
     awardedBy: levelEvents.awardedBy,
-    awardedByName: awarder.name,
     awardedAt: levelEvents.awardedAt,
     checksPassed: levelEvents.checksPassed,
     overrideReason: levelEvents.overrideReason,
@@ -1278,8 +1269,6 @@ export async function exportEventTable(
   const rows = await db
     .select(fields)
     .from(levelEvents)
-    .leftJoin(named, eq(named.id, levelEvents.userId))
-    .leftJoin(awarder, eq(awarder.id, levelEvents.awardedBy))
     .orderBy(asc(levelEvents.awardedAt));
   return shape(fields, rows);
 }
