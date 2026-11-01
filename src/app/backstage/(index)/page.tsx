@@ -8,6 +8,7 @@ import {
   type LucideIcon,
   MailIcon,
   MicIcon,
+  SwordsIcon,
   TicketIcon,
   UserIcon,
   UsersIcon,
@@ -83,6 +84,13 @@ const TOOLS: {
     name: "Speaker committee",
     blurb: "Session proposals from grading through scheduling.",
     perm: "schedule.manage",
+  },
+  {
+    href: "/backstage/megagame",
+    icon: SwordsIcon,
+    name: "Megagame",
+    blurb: "Confirm quest completions and record level-ups.",
+    perm: "megagame.verify",
   },
   {
     href: "/backstage/budget",
