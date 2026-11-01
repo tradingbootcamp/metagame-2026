@@ -24,11 +24,12 @@ describe("referral codes", () => {
     expect(referralCodeOf("0O1IL2U3")).toBe("001112V3");
   });
 
-  it("lets weekend tickets refer but not day passes", () => {
+  it("lets every ticket refer but Night Market booths", () => {
     expect(canRefer("Standard")).toBe(true);
     expect(canRefer("Family & Friends Pack — Standard")).toBe(true);
     expect(canRefer(null)).toBe(true);
-    expect(canRefer("Friday Day Pass")).toBe(false);
+    expect(canRefer("Saturday Day Pass")).toBe(true);
+    expect(canRefer("Metagame Night Market Booth")).toBe(false);
   });
 });
 

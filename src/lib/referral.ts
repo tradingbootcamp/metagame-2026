@@ -28,9 +28,9 @@ export function referralCodeOf(value: string | null | undefined): string {
 /** The link a ticket holder shares. */
 export const inviteHref = (code: string) => `/invite/${code}`;
 
-/** Weekend tickets refer; day passes don't. `tier` is a stored tier label. */
+/** Every ticket refers except Night Market booths. `tier` is a stored tier label. */
 export function canRefer(tier: string | null): boolean {
-  return !/day pass/i.test(tier ?? "");
+  return !/night market/i.test(tier ?? "");
 }
 
 /** Dollars a Stripe coupon takes off a `fullUsd` ticket. */
