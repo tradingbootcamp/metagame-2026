@@ -58,6 +58,7 @@ const TH = "border-b border-line px-2 py-1.5 text-left font-semibold text-navy";
 const THN = `${TH} text-right`;
 const TD = "border-b border-line px-2 py-1.5 align-top";
 const TDN = `${TD} text-right tabular-nums`;
+const BAR = `${TD} hidden align-middle sm:table-cell`;
 const BOX = "overflow-x-auto rounded-xl border border-line bg-white p-2";
 const PICK =
   "rounded-full border px-3 py-1 text-sm whitespace-nowrap transition-colors";
@@ -233,7 +234,7 @@ export default async function DashboardPage(
               <tr>
                 <th className={TH}>Quest class</th>
                 <th className={THN}>Completions</th>
-                <th className={`${TH} w-1/3`}>
+                <th className={`${TH} hidden w-1/3 sm:table-cell`}>
                   <span className="sr-only">Bar</span>
                 </th>
               </tr>
@@ -243,7 +244,7 @@ export default async function DashboardPage(
                 <tr key={c ?? "any"}>
                   <td className={TD}>{classLabel(c)}</td>
                   <td className={TDN}>{n}</td>
-                  <td className={TD}>
+                  <td className={BAR}>
                     <InlineBar value={n} max={classMax} />
                   </td>
                 </tr>
@@ -263,7 +264,7 @@ export default async function DashboardPage(
                   <th className={TH}>Quest</th>
                   <th className={TH}>Class</th>
                   <th className={THN}>Completions</th>
-                  <th className={`${TH} w-1/4`}>
+                  <th className={`${TH} hidden w-1/4 sm:table-cell`}>
                     <span className="sr-only">Bar</span>
                   </th>
                 </tr>
@@ -289,7 +290,7 @@ export default async function DashboardPage(
                     </td>
                     <td className={TD}>{classLabel(q.class)}</td>
                     <td className={TDN}>{q.n}</td>
-                    <td className={TD}>
+                    <td className={BAR}>
                       <InlineBar value={q.n} max={questMax} />
                     </td>
                   </tr>
@@ -309,7 +310,7 @@ export default async function DashboardPage(
                 <tr>
                   <th className={TH}>Volunteer</th>
                   <th className={THN}>Completions</th>
-                  <th className={`${TH} w-1/3`}>
+                  <th className={`${TH} hidden w-1/3 sm:table-cell`}>
                     <span className="sr-only">Bar</span>
                   </th>
                 </tr>
@@ -319,7 +320,7 @@ export default async function DashboardPage(
                   <tr key={v.userId ?? "deleted"}>
                     <td className={TD}>{v.name ?? "Deleted account"}</td>
                     <td className={TDN}>{v.n}</td>
-                    <td className={TD}>
+                    <td className={BAR}>
                       <InlineBar value={v.n} max={volunteerMax} />
                     </td>
                   </tr>

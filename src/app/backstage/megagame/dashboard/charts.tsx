@@ -47,9 +47,10 @@ export function StackedBars({
   const gap = slot > 6 ? 2 : 0;
   return (
     <figure className="flex flex-col gap-1">
-      <div className="flex items-end gap-2">
-        <span className="w-8 shrink-0 text-right text-xs text-ink/50">
-          {max}
+      <div className="flex gap-2">
+        <span className="flex w-8 shrink-0 flex-col justify-between text-right text-xs text-ink/50">
+          <span>{max}</span>
+          <span>0</span>
         </span>
         <svg
           viewBox={`0 0 ${W} ${H}`}
