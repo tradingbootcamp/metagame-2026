@@ -1,6 +1,8 @@
 import {
+  BookOpenIcon,
   CalendarIcon,
   DatabaseIcon,
+  DicesIcon,
   DollarSignIcon,
   KeyIcon,
   LinkIcon,
@@ -15,7 +17,6 @@ import {
 import Link from "next/link";
 import { connection } from "next/server";
 import SignIn from "../SignIn";
-import { Card } from "../ui";
 import { teamAccess } from "@/lib/access";
 import { toolAccess } from "@/lib/admin-auth";
 import type { Permission } from "@/lib/permissions";
@@ -100,11 +101,26 @@ const TOOLS: {
     perm: ["api_keys.self", "api_keys.manage"],
   },
   {
+    href: "/backstage/api-docs",
+    icon: BookOpenIcon,
+    name: "API docs",
+    blurb: "Every admin API endpoint, plus a guide to hand to an agent.",
+    perm: "api_docs.view",
+  },
+  {
     href: "/backstage/schema",
     icon: DatabaseIcon,
     name: "Database schema",
     blurb: "ER diagram and column-by-column reference for the Postgres schema.",
     perm: "schema.view",
+  },
+  {
+    href: "/backstage/dice-lab",
+    icon: DicesIcon,
+    name: "Dice lab",
+    blurb:
+      "Arrange the hero dice and export transparent PNG or SVG assets for print.",
+    perm: "misc.dice_lab",
   },
 ];
 
@@ -118,26 +134,31 @@ export default async function AdminIndexPage() {
   const tools = TOOLS.filter((t) => [t.perm].flat().some((p) => held.has(p)));
 
   return (
-    <Card title="Tools">
-      <ul className="divide-y divide-line">
+    <>
+      <h1 className="font-bebas mb-4 text-2xl tracking-wide text-navy">
+        Tools
+      </h1>
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {tools.map((t) => (
-          <li key={t.href} className="flex gap-3 py-3">
-            <t.icon
-              aria-hidden="true"
-              className="mt-0.5 size-5 shrink-0 text-navy/70"
-            />
-            <div>
-              <Link
-                href={t.href}
-                className="font-semibold text-navy underline-offset-2 hover:text-meeple hover:underline"
-              >
-                {t.name}
-              </Link>
-              <p className="text-sm text-ink/60">{t.blurb}</p>
-            </div>
+          <li key={t.href}>
+            <Link
+              href={t.href}
+              className="group flex h-full gap-3 rounded-xl border border-line bg-white p-4 shadow-sm transition-colors hover:border-navy"
+            >
+              <t.icon
+                aria-hidden="true"
+                className="mt-0.5 size-5 shrink-0 text-navy/70 group-hover:text-meeple"
+              />
+              <div>
+                <span className="font-semibold text-navy group-hover:text-meeple">
+                  {t.name}
+                </span>
+                <p className="text-sm text-ink/60">{t.blurb}</p>
+              </div>
+            </Link>
           </li>
         ))}
       </ul>
-    </Card>
+    </>
   );
 }

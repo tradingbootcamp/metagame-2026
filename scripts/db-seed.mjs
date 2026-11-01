@@ -19,11 +19,11 @@
 //   admin@metagame.games       role admin (superuser bypass)
 //   grants@metagame.games      per-user grants: tickets.view, links.manage
 //   host@metagame.games        "Team" and "Schedule team" roles; lead host of
-//                              three published sessions
+//                              three published sessions; level 1 Pirate
 //   team@metagame.games        "Team" role only; claimed comp ticket
 //   schedule@metagame.games    "Schedule team" role only; claimed comp ticket
 //   attendee@metagame.games    claimed ticket (so the built-in Attendee role),
-//                              RSVPs, bookmarks
+//                              RSVPs, bookmarks; level 5 Wizard, level 3 Alien
 //   newcomer@metagame.games    unclaimed purchase under their email
 //   banned@metagame.games      banned
 //   first.last@metagame.games  a crowd of 100 in the mix the invite flow makes:
@@ -165,10 +165,14 @@ async function seedMigrationLedger() {
 const users = {
   admin: { id: "seed-admin", name: "Seed Admin", role: "admin" },
   grants: { id: "seed-grants", name: "Seed Grants" },
-  host: { id: "seed-host", name: "Seed Host" },
+  host: { id: "seed-host", name: "Seed Host", levels: { pirate: 1 } },
   team: { id: "seed-team", name: "Seed Team" },
   schedule: { id: "seed-schedule", name: "Seed Schedule" },
-  attendee: { id: "seed-attendee", name: "Seed Attendee" },
+  attendee: {
+    id: "seed-attendee",
+    name: "Seed Attendee",
+    levels: { wizard: 5, alien: 3 },
+  },
   newcomer: { id: "seed-newcomer", name: "Seed Newcomer" },
   banned: {
     id: "seed-banned",
@@ -980,6 +984,9 @@ counts.user = await upsert(
     role: u.role ?? "user",
     banned: u.banned ?? false,
     ban_reason: u.ban_reason ?? null,
+    wizard_level: u.levels?.wizard ?? 0,
+    pirate_level: u.levels?.pirate ?? 0,
+    alien_level: u.levels?.alien ?? 0,
   })),
 );
 counts.account = await upsert(

@@ -8,6 +8,7 @@ const LABELS: Record<AccountTab, string> = {
   profile: "Profile",
   tickets: "Tickets",
   sessions: "Sessions",
+  megagame: "Megagame",
 };
 
 export default function AccountTabs({
@@ -42,21 +43,27 @@ export default function AccountTabs({
 
   return (
     <Tabs.Root value={tab} onValueChange={select}>
+      {/* Phones have no room for it beside four tabs, so it sits above them. */}
+      {trailing && (
+        <div className="mb-4 flex justify-end sm:hidden">{trailing}</div>
+      )}
       <Tabs.List
         aria-label="Account"
-        className="mb-10 flex max-w-[960px] gap-6 border-b border-line"
+        className="mb-10 flex max-w-[960px] gap-3 border-b border-line max-sm:[scrollbar-width:none] max-sm:overflow-x-auto sm:gap-6"
       >
         {tabs.map((t) => (
           <Tabs.Trigger
             key={t}
             value={t}
-            className="-mb-px border-b-2 border-transparent pb-2.5 font-grotesk text-lg font-bold text-ink/50 transition-colors outline-none hover:text-navy focus-visible:text-navy data-[state=active]:border-meeple data-[state=active]:text-navy"
+            className="-mb-px border-b-2 border-transparent pb-2.5 font-grotesk text-[15px] font-bold text-ink/50 transition-colors outline-none hover:text-navy focus-visible:text-navy data-[state=active]:border-meeple data-[state=active]:text-navy sm:text-lg"
           >
             {LABELS[t]}
           </Tabs.Trigger>
         ))}
         {trailing && (
-          <div className="ml-auto self-center pb-2.5">{trailing}</div>
+          <div className="ml-auto self-center pb-2.5 max-sm:hidden">
+            {trailing}
+          </div>
         )}
       </Tabs.List>
       {tabs.map((t) => (

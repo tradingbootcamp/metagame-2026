@@ -33,13 +33,7 @@ export default function ChildcarePage() {
             whether or not they&apos;re signing up for childcare.
           </p>
           <Button asChild variant="navy" className="mt-5">
-            <a
-              href={CHILD_REGISTRATION_FORM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Register your children
-            </a>
+            <a href={CHILD_REGISTRATION_FORM_URL}>Register your children</a>
           </Button>
           <p className="mt-5">
             Our 2026 schedule is still in progress, but you can take a look at{" "}

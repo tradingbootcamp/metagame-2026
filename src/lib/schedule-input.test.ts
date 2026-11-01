@@ -5,6 +5,7 @@ import {
   parseSessionFields,
   type Parsed,
 } from "./schedule-input";
+import { endMinutes, wallAt } from "./schedule";
 
 /** The field an invalid parse blames, or null when it passed. */
 const blamed = (parsed: Parsed<unknown>) => (parsed.ok ? null : parsed.field);
@@ -60,6 +61,43 @@ describe("parseSessionFields", () => {
         description: null,
       },
     });
+  });
+
+  it("takes any start time, early mornings and off-slot minutes included", () => {
+    for (const [startsAt, endsAt] of [
+      ["2026-11-07T09:00", "2026-11-07T13:15"],
+      ["2026-11-05T07:10", "2026-11-05T08:20"],
+      ["2026-11-09T12:00", "2026-11-09T23:59"],
+    ]) {
+      expect(parseSessionFields({ title: "Shift", startsAt, endsAt }).ok).toBe(
+        true,
+      );
+    }
+    expect(
+      blamed(
+        parseSessionFields({
+          title: "Shift",
+          startsAt: "2026-11-07T23:30",
+          endsAt: "2026-11-08T00:30",
+        }),
+      ),
+    ).toBe("endsAt");
+  });
+
+  it("round-trips a session ending at midnight through the form's values", () => {
+    const start = wallAt("2026-11-07", 23 * 60);
+    const end = wallAt("2026-11-07", 24 * 60);
+    expect(end).toBe("2026-11-08T00:00");
+    const parsed = parseSessionFields({
+      title: "Late",
+      startsAt: start,
+      endsAt: end,
+    });
+    if (!parsed.ok) throw new Error(parsed.error);
+    const { startsAt, endsAt } = parsed.value;
+    expect(endMinutes(startsAt!.toISOString(), endsAt!.toISOString())).toBe(
+      24 * 60,
+    );
   });
 
   it("names the field at fault", () => {
@@ -149,6 +187,38 @@ describe("airtableRfpRecordId", () => {
   });
 });
 
+describe("session flags", () => {
+  const base = { title: "Chess" };
+  it("are off unless given, as an unticked checkbox sends nothing", () => {
+    expect(parseSessionFields(base)).toMatchObject({
+      ok: true,
+      value: { rsvpIsCommitment: false, sponsored: false },
+    });
+  });
+  it("take a ticked checkbox or a JSON boolean", () => {
+    expect(
+      parseSessionFields({ ...base, rsvpIsCommitment: "on", sponsored: true }),
+    ).toMatchObject({
+      ok: true,
+      value: { rsvpIsCommitment: true, sponsored: true },
+    });
+    expect(
+      parseSessionFields({ ...base, rsvpIsCommitment: false, sponsored: "" }),
+    ).toMatchObject({
+      ok: true,
+      value: { rsvpIsCommitment: false, sponsored: false },
+    });
+  });
+  it("reject anything else", () => {
+    expect(blamed(parseSessionFields({ ...base, sponsored: "yes" }))).toBe(
+      "sponsored",
+    );
+    expect(blamed(parseSessionFields({ ...base, rsvpIsCommitment: 1 }))).toBe(
+      "rsvpIsCommitment",
+    );
+  });
+});
+
 describe("shepherdUserId", () => {
   const base = { title: "Chess" };
   it("is left as stored when not mentioned", () => {
@@ -179,6 +249,7 @@ describe("parseHostSessionFields", () => {
       needs: "A big table",
       maxCapacity: "20",
       minCapacity: "4",
+      rsvpIsCommitment: "on",
     });
     expect(r.ok && r.value).toEqual({
       title: "Dice Night",
@@ -188,7 +259,13 @@ describe("parseHostSessionFields", () => {
       needs: "A big table",
       maxCapacity: 20,
       minCapacity: 4,
+      rsvpIsCommitment: true,
     });
+  });
+
+  it("reads an unchecked commitment box as false", () => {
+    const r = parseHostSessionFields({ title: "Dice Night" });
+    expect(r.ok && r.value.rsvpIsCommitment).toBe(false);
   });
 
   it("drops placement, status and slug even when they are sent", () => {
@@ -200,6 +277,7 @@ describe("parseHostSessionFields", () => {
       endsAt: "2026-11-06T15:00",
       locationId: "00000000-0000-0000-0000-000000000000",
       shepherdUserId: "u_1",
+      sponsored: "on",
     });
     expect(r.ok && Object.keys(r.value).sort()).toEqual([
       "ages",
@@ -208,6 +286,7 @@ describe("parseHostSessionFields", () => {
       "maxCapacity",
       "minCapacity",
       "needs",
+      "rsvpIsCommitment",
       "title",
     ]);
   });

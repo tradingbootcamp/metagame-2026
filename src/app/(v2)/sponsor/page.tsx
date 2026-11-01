@@ -342,8 +342,6 @@ export default function SponsorPage() {
           packages are flexible. If you&rsquo;re interested, fill out our{" "}
           <a
             href={SPONSOR_FORM_URL}
-            target="_blank"
-            rel="noopener noreferrer"
             className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
           >
             Sponsor Interest Form

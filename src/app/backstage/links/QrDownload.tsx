@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Options } from "qr-code-styling";
 import { cn } from "@/lib/utils";
+import { LINK_QR_STYLES } from "@/lib/qr-styles";
 import { selectClass, selectStyle } from "../ui";
 
 const SIZES = [
@@ -11,44 +12,7 @@ const SIZES = [
   { px: 2048, label: "2048 px (print)" },
 ] as const;
 
-const STYLES = {
-  square: { label: "Square", dots: "square", eye: "square", eyeDot: "square" },
-  dots: { label: "Dots", dots: "dots", eye: "extra-rounded", eyeDot: "dot" },
-  rounded: {
-    label: "Rounded",
-    dots: "rounded",
-    eye: "extra-rounded",
-    eyeDot: "square",
-  },
-  blobby: {
-    label: "Blobby",
-    dots: "extra-rounded",
-    eye: "extra-rounded",
-    eyeDot: "dot",
-  },
-  classy: {
-    label: "Classy",
-    dots: "classy-rounded",
-    eye: "extra-rounded",
-    eyeDot: "dot",
-  },
-  logo: {
-    label: "Logo",
-    dots: "dots",
-    eye: "extra-rounded",
-    eyeDot: "dot",
-    image: "/images/logo_square.png",
-  },
-} as const satisfies Record<
-  string,
-  {
-    label: string;
-    dots: NonNullable<Options["dotsOptions"]>["type"];
-    eye: NonNullable<Options["cornersSquareOptions"]>["type"];
-    eyeDot: NonNullable<Options["cornersDotOptions"]>["type"];
-    image?: string;
-  }
->;
+const STYLES = LINK_QR_STYLES;
 type Style = keyof typeof STYLES;
 
 const NAVY = "#173059";

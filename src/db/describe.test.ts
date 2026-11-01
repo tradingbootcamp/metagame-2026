@@ -19,6 +19,8 @@ describe("describeSchema", () => {
       "account",
       "apikey",
       "bookmarks",
+      "budget_ignored_lines",
+      "budget_import_runs",
       "locations",
       "profiles",
       "role_permissions",
@@ -34,6 +36,7 @@ describe("describeSchema", () => {
       "user_permission_grants",
       "user_roles",
       "verification",
+      "xero_connections",
     ]);
   });
 
@@ -150,6 +153,7 @@ describe("describeSchema", () => {
       "Tickets",
       "Schedule",
       "Grading",
+      "Budget",
     ]);
     expect(info.groups.flatMap((g) => g.tables.map((t) => t.name))).toEqual([
       "user",
@@ -170,6 +174,9 @@ describe("describeSchema", () => {
       "bookmarks",
       "session_grades",
       "session_grade_space_options",
+      "xero_connections",
+      "budget_import_runs",
+      "budget_ignored_lines",
     ]);
   });
 });

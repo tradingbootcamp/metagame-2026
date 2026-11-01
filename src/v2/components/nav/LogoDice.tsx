@@ -8,7 +8,7 @@ import { letterPaths } from "@/v2/lib/dice-letter-paths";
 // highlight in the drawing. `highlight` toggles that illusion off.
 // Recolor via CSS vars: --ld-top, --ld-left, --ld-right, --ld-ink, --ld-pip, --ld-hi.
 
-const LETTER_PATHS = letterPaths({ slot: 52, r: 48 });
+export const LETTER_PATHS = letterPaths({ slot: 52, r: 48 });
 
 // Reading order M-E-T-A-G-A-M-E across the dice; left faces stay blue and
 // right faces orange, so the letters alternate color in reading order.
@@ -21,7 +21,7 @@ const DICE: { left: string; right: string; pips: number }[] = [
 
 // Face-local pip centers on a 512×512 top face (the "2" runs along the local
 // diagonal, which projects to a horizontal pair).
-const PIP_LAYOUTS: Record<number, [number, number][]> = {
+export const PIP_LAYOUTS: Record<number, [number, number][]> = {
   2: [
     [140, 140],
     [372, 372],
@@ -36,15 +36,15 @@ const PIP_LAYOUTS: Record<number, [number, number][]> = {
   ],
 };
 
-const S = 512; // cube edge in projected units; faces are 512×512 local space
-const H = 0.8660254 * S; // horizontal half-width of the hexagon silhouette
+export const S = 512; // cube edge in projected units; faces are 512×512 local space
+export const H = 0.8660254 * S; // horizontal half-width of the hexagon silhouette
 
 // Isometric projection: each face maps its 512×512 local space onto a
 // parallelogram of the cube silhouette (SVG matrix = [x-basis, y-basis, origin]).
 const K = 0.8660254;
-const TOP_MATRIX = `matrix(${K} -0.5 ${K} 0.5 ${-H} ${-S / 2})`;
-const LEFT_MATRIX = `matrix(${K} 0.5 0 1 ${-H} ${-S / 2})`;
-const RIGHT_MATRIX = `matrix(${K} -0.5 0 1 0 0)`;
+export const TOP_MATRIX = `matrix(${K} -0.5 ${K} 0.5 ${-H} ${-S / 2})`;
+export const LEFT_MATRIX = `matrix(${K} 0.5 0 1 ${-H} ${-S / 2})`;
+export const RIGHT_MATRIX = `matrix(${K} -0.5 0 1 0 0)`;
 
 // Each face insets independently from its exterior (silhouette) edges and its
 // interior (shared-channel) edges, so rim thickness and channel width are
@@ -59,9 +59,9 @@ const M_TOP = 34; // top face's two interior edges, so it sits clear of the lett
 const KF = (512 - M_INT - M_EXT) / 512;
 const KX = (512 - M_SIDE - M_EXT) / 512;
 const KT = (512 - M_TOP - M_EXT) / 512;
-const INSET_TOP = `translate(${M_TOP} ${M_EXT}) scale(${KT})`;
-const INSET_LEFT = `translate(${M_EXT} ${M_INT}) scale(${KX} ${KF})`;
-const INSET_RIGHT = `translate(${M_SIDE} ${M_INT}) scale(${KX} ${KF})`;
+export const INSET_TOP = `translate(${M_TOP} ${M_EXT}) scale(${KT})`;
+export const INSET_LEFT = `translate(${M_EXT} ${M_INT}) scale(${KX} ${KF})`;
+export const INSET_RIGHT = `translate(${M_SIDE} ${M_INT}) scale(${KX} ${KF})`;
 
 // Highlight copies mirror horizontally between the two faces so the implied
 // light comes from one consistent direction across the cube edge.
@@ -85,7 +85,7 @@ const VERTS: [number, number][] = [
   [-H, S / 2],
   [-H, -S / 2],
 ];
-const HEX = VERTS.map(([vx, vy], i) => {
+export const HEX = VERTS.map(([vx, vy], i) => {
   const [px, py] = VERTS[(i + VERTS.length - 1) % VERTS.length];
   const [nx, ny] = VERTS[(i + 1) % VERTS.length];
   const unit = (dx: number, dy: number) => {

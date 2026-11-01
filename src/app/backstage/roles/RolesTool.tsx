@@ -13,7 +13,14 @@ import { fieldClass, smallButtonClass } from "../ui";
 import type { Role } from "@/lib/permission-store";
 import { InfoTip } from "../InfoTip";
 import { LevelBadge } from "../PermissionLevel";
-import { GROUP_NOTES, permissionGroups, PERMISSIONS } from "@/lib/permissions";
+import {
+  describeSource,
+  expand,
+  GROUP_NOTES,
+  permissionGroups,
+  PERMISSIONS,
+  type Permission,
+} from "@/lib/permissions";
 import { Button } from "@/v2/components/ui/button";
 import {
   Dialog,
@@ -23,6 +30,11 @@ import {
 } from "@/v2/components/ui/dialog";
 
 const STICKY = "sticky left-0 z-10 bg-white";
+
+/** The stored permission that implies `key` for this role, if any. */
+const implier = (role: Role, key: Permission) =>
+  role.permissions.find((p) => p !== key && expand([p]).has(key));
+
 const RULE = "border-r border-line";
 
 function RoleDialog({
@@ -238,21 +250,35 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
                         <LevelBadge level={level} />
                       </span>
                     </td>
-                    {roles.map((r) => (
-                      <td key={r.id} className="px-3 py-2 align-top">
-                        <input
-                          type="checkbox"
-                          aria-label={`${r.name}: ${label}`}
-                          checked={r.permissions.includes(key)}
-                          disabled={pending}
-                          onChange={(e) => {
-                            const on = e.currentTarget.checked;
-                            run(() => setRolePermission(r.id, key, on));
-                          }}
-                          className="size-4 accent-meeple"
-                        />
-                      </td>
-                    ))}
+                    {roles.map((r) => {
+                      const stored = r.permissions.includes(key);
+                      // An implied box is locked even when also stored, so the
+                      // direct grant survives if the implier is later removed.
+                      const by = implier(r, key);
+                      return (
+                        <td key={r.id} className="px-3 py-2 align-top">
+                          <span
+                            title={
+                              by &&
+                              describeSource({ kind: "implied", by }) +
+                                (stored ? "; also granted directly." : "")
+                            }
+                          >
+                            <input
+                              type="checkbox"
+                              aria-label={`${r.name}: ${label}`}
+                              checked={stored || by !== undefined}
+                              disabled={pending || by !== undefined}
+                              onChange={(e) => {
+                                const on = e.currentTarget.checked;
+                                run(() => setRolePermission(r.id, key, on));
+                              }}
+                              className="size-4 accent-meeple"
+                            />
+                          </span>
+                        </td>
+                      );
+                    })}
                   </tr>
                 );
               }),

@@ -17,11 +17,15 @@ import { can } from "./access";
 import { getAuth } from "./auth";
 import type { HostSessionFields } from "./schedule-input";
 import {
+  clashDescription,
   fromPacificWall,
   movedTimes,
   outsideHours,
+  roomAllowsOverlap,
   summarizeRsvps,
+  toRoomClash,
   type Attendance,
+  type RoomClash,
   type RsvpStatus,
   type ScheduleAccount,
   type ViewerPlans,
@@ -107,6 +111,8 @@ export async function loadSchedule(): Promise<Schedule> {
       ages: s.ages,
       needs: s.needs,
       status: s.status,
+      rsvpIsCommitment: s.rsvpIsCommitment,
+      sponsored: s.sponsored,
       airtableRfpRecordId: s.airtableRfpRecordId,
       hosts: hostsBySession.get(s.id) ?? [],
       shepherd: shepherdBySession.get(s.id) ?? null,
@@ -129,10 +135,28 @@ export type SessionInput = Omit<
   hostIds: string[];
 };
 
-/** Inserts or, with an id, replaces the session and its host list. */
-export async function upsertSession(input: SessionInput): Promise<string> {
+/**
+ * Inserts or, with an id, replaces the session and its host list. Refuses a
+ * clash in its room unless `allowOverlap`; a clash let through comes back.
+ * Only a change of time or room is checked, so editing the rest of a session
+ * that already overlaps doesn't ask again.
+ */
+export async function upsertSession(
+  input: SessionInput,
+  { allowOverlap = false }: { allowOverlap?: boolean } = {},
+): Promise<{ id: string; clash: RoomClash | null }> {
   const db = getDb();
   const { id, hostIds, ...row } = input;
+  const clash =
+    row.startsAt && row.endsAt && (await placementChanged(id, row))
+      ? await assertSlotFree(
+          id ?? null,
+          row.startsAt,
+          row.endsAt,
+          row.locationId,
+          allowOverlap,
+        )
+      : null;
   let sessionId: string;
   if (id) {
     const [updated] = await db
@@ -166,7 +190,28 @@ export async function upsertSession(input: SessionInput): Promise<string> {
   }
   // A raised capacity frees seats for the waitlist.
   if (id) await promoteWaitlist(sessionId);
-  return sessionId;
+  return { id: sessionId, clash };
+}
+
+async function placementChanged(
+  id: string | undefined,
+  next: Pick<SessionInput, "startsAt" | "endsAt" | "locationId">,
+): Promise<boolean> {
+  if (!id) return true;
+  const [stored] = await getDb()
+    .select({
+      startsAt: sessions.startsAt,
+      endsAt: sessions.endsAt,
+      locationId: sessions.locationId,
+    })
+    .from(sessions)
+    .where(eq(sessions.id, id));
+  return (
+    !stored ||
+    stored.locationId !== next.locationId ||
+    stored.startsAt?.getTime() !== next.startsAt?.getTime() ||
+    stored.endsAt?.getTime() !== next.endsAt?.getTime()
+  );
 }
 
 /** The session's hosts as user ids, lead first. */
@@ -221,6 +266,7 @@ export async function updateSessionAsHost(
       minCapacity: fields.minCapacity,
       ages: fields.ages,
       needs: fields.needs,
+      rsvpIsCommitment: fields.rsvpIsCommitment,
     })
     .where(eq(sessions.id, sessionId))
     .returning({ id: sessions.id });
@@ -229,11 +275,16 @@ export async function updateSessionAsHost(
   await promoteWaitlist(sessionId);
 }
 
-/** Moves a session to a room and start time, keeping its length; refuses a clash in that room. */
+/**
+ * Moves a session to a room and start time, keeping its length unless `end`
+ * is given; refuses a clash unless `allowOverlap`.
+ */
 export async function moveSessionTo(
   id: string,
   start: Date,
   locationId: string | null,
+  allowOverlap = false,
+  end?: Date,
 ): Promise<void> {
   const db = getDb();
   const [row] = await db
@@ -241,43 +292,82 @@ export async function moveSessionTo(
     .from(sessions)
     .where(eq(sessions.id, id));
   if (!row) throw new Error("That session no longer exists.");
-  const { startsAt, endsAt } = movedTimes(
-    {
-      startsAt: row.startsAt?.toISOString() ?? null,
-      endsAt: row.endsAt?.toISOString() ?? null,
-    },
-    start,
-  );
-  await assertSlotFree(id, startsAt, endsAt, locationId);
+  const { startsAt, endsAt } = end
+    ? { startsAt: start, endsAt: end }
+    : movedTimes(
+        {
+          startsAt: row.startsAt?.toISOString() ?? null,
+          endsAt: row.endsAt?.toISOString() ?? null,
+        },
+        start,
+      );
+  if (endsAt <= startsAt) throw new Error("End must be after start.");
+  await assertSlotFree(id, startsAt, endsAt, locationId, allowOverlap);
   await db
     .update(sessions)
     .set({ startsAt, endsAt, locationId })
     .where(eq(sessions.id, id));
 }
 
-/** Throws when the times fall outside schedule hours or overlap another session in the room. */
+/** A save refused for double-booking a room; the caller may offer to override. */
+export class OverlapError extends Error {
+  constructor(readonly clash: RoomClash) {
+    super(`That overlaps ${clashDescription(clash)}.`);
+  }
+}
+
+/**
+ * Throws when the times run past midnight, or overlap another session in a
+ * room that forbids it unless `allowOverlap`. Returns the clash let through.
+ */
 export async function assertSlotFree(
   id: string | null,
   startsAt: Date,
   endsAt: Date,
   locationId: string | null,
-): Promise<void> {
+  allowOverlap = false,
+): Promise<RoomClash | null> {
   const outside = outsideHours(startsAt, endsAt);
   if (outside) throw new Error(outside.error);
-  if (!locationId) return;
-  const [clash] = await getDb()
-    .select({ title: sessions.title })
-    .from(sessions)
-    .where(
+  if (!locationId) return null;
+  const clash = await roomClash(id, startsAt, endsAt, locationId);
+  if (clash && !allowOverlap) throw new OverlapError(clash);
+  return clash;
+}
+
+/** Another session these times overlap in a room that forbids overlap, if any. */
+export async function roomClash(
+  id: string | null,
+  startsAt: Date,
+  endsAt: Date,
+  locationId: string,
+): Promise<RoomClash | null> {
+  const [row] = await getDb()
+    .select({
+      room: locations.name,
+      visibility: locations.visibility,
+      title: sessions.title,
+      startsAt: sessions.startsAt,
+      endsAt: sessions.endsAt,
+    })
+    .from(locations)
+    .leftJoin(
+      sessions,
       and(
-        eq(sessions.locationId, locationId),
+        eq(sessions.locationId, locations.id),
         id ? ne(sessions.id, id) : undefined,
         lt(sessions.startsAt, endsAt),
         gt(sessions.endsAt, startsAt),
       ),
     )
+    .where(eq(locations.id, locationId))
     .limit(1);
-  if (clash) throw new Error(`That overlaps "${clash.title}" in that room.`);
+  if (!row || roomAllowsOverlap(row.visibility)) return null;
+  if (!row.title || !row.startsAt || !row.endsAt) return null;
+  return toRoomClash(
+    { title: row.title, startsAt: row.startsAt, endsAt: row.endsAt },
+    row.room,
+  );
 }
 
 /** Accounts whose name or email contains the query. */

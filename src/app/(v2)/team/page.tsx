@@ -48,9 +48,7 @@ export default function TeamPage() {
         Want to join the team? Let us know here:
       </p>
       <Button asChild variant="navy" size="lg" className="mt-6 text-lg">
-        <a href={JOIN_TEAM_FORM_URL} target="_blank" rel="noopener noreferrer">
-          Get involved
-        </a>
+        <a href={JOIN_TEAM_FORM_URL}>Get involved</a>
       </Button>
     </ContentPage>
   );

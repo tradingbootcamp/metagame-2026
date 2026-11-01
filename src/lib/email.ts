@@ -331,6 +331,68 @@ export async function sendContactEmail({
   return true;
 }
 
+export type FormBackup = {
+  /** The form's name, e.g. "Volunteer application". */
+  form: string;
+  /** The Airtable table the row was meant for. */
+  table: string;
+  /** Why Airtable didn't take it. */
+  reason: string;
+  /** The person's email, when they gave one. */
+  replyTo?: string;
+  answers: { label: string; value: string }[];
+  files?: { name: string; data: string }[];
+};
+
+/**
+ * A form submission Airtable didn't take (src/v2/forms), sent to the team
+ * inbox so nothing is lost: someone adds it to the table by hand and fixes
+ * whatever broke. Resolves false when Resend isn't configured.
+ */
+export async function sendFormBackupEmail({
+  form,
+  table,
+  reason,
+  replyTo,
+  answers,
+  files = [],
+}: FormBackup): Promise<boolean> {
+  const resend = getResend();
+  if (!resend) {
+    console.warn(
+      `[email] Resend not configured — form backup not sent:\n${JSON.stringify({ form, table, reason, answers }, null, 2)}`,
+    );
+    return false;
+  }
+  const rows = answers
+    .map(
+      ({ label, value }) =>
+        `<tr><td style="padding: 4px 12px 4px 0; color: #888; vertical-align: top;">${escapeHtml(label)}</td><td style="padding: 4px 0; white-space: pre-wrap;">${escapeHtml(value)}</td></tr>`,
+    )
+    .join("");
+  const note = `Airtable didn't take this ${form.toLowerCase()}, so it came here instead. Please add it to table ${table} by hand, then check the form: ${reason}`;
+  const { error } = await resend.emails.send({
+    from: `Metagame Website <${TEAM}>`,
+    to: [TEAM],
+    ...(replyTo ? { replyTo: [replyTo] } : {}),
+    subject: `[Form backup] ${form}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
+        <h1 style="color: #333; font-size: 22px;">${escapeHtml(form)}: not saved to Airtable</h1>
+        <p style="color: #666; font-size: 14px;">${escapeHtml(note)}</p>
+        <table style="border-collapse: collapse; margin: 20px 0; font-size: 15px;">${rows}</table>
+      </div>
+    `,
+    text: `${form}: not saved to Airtable\n\n${note}\n\n${answers.map(({ label, value }) => `${label}: ${value}`).join("\n")}`,
+    attachments: files.map((f) => ({
+      filename: f.name,
+      content: Buffer.from(f.data, "base64"),
+    })),
+  });
+  if (error) throw new Error(error.message);
+  return true;
+}
+
 export type SignInCodeEmail = {
   to: string;
   code: string;

@@ -76,10 +76,11 @@ jobs:
       # and keeping the token out means a malicious postinstall can't read it.
       # AIRTABLE_API_KEY is Sensitive on Vercel, which `vercel pull` won't
       # download, so the build gets it from a repo secret instead.
+      # DEPLOYMENT_ID: see vercel-production.yml.
       - name: Build
         env:
           AIRTABLE_API_KEY: ${{ secrets.AIRTABLE_API_KEY }}
-        run: vercel build
+        run: DEPLOYMENT_ID="${HEAD_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" vercel build
 
       # After Build so node_modules exist; before Deploy so the schema is ahead
       # of the code. Reads DATABASE_URL from the env `vercel pull` wrote, and

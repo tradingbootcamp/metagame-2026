@@ -1,5 +1,5 @@
 {
-  "id": "2850adb2-aa1d-46e9-8dc0-3de949a37556",
+  "id": "49bf294d-cd41-4a6e-9a26-15f723b1c219",
   "prevId": "bf086776-6f5f-4fe9-8e6c-fe5424b3c6e7",
   "version": "7",
   "dialect": "postgresql",
@@ -477,6 +477,27 @@
           "primaryKey": false,
           "notNull": false
         },
+        "wizard_level": {
+          "name": "wizard_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "pirate_level": {
+          "name": "pirate_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "alien_level": {
+          "name": "alien_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -503,7 +524,20 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "user_wizard_level_range": {
+          "name": "user_wizard_level_range",
+          "value": "\"user\".\"wizard_level\" between 0 and 5"
+        },
+        "user_pirate_level_range": {
+          "name": "user_pirate_level_range",
+          "value": "\"user\".\"pirate_level\" between 0 and 5"
+        },
+        "user_alien_level_range": {
+          "name": "user_alien_level_range",
+          "value": "\"user\".\"alien_level\" between 0 and 5"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.verification": {
@@ -767,18 +801,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "referral_code": {
-          "name": "referral_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "referred_by_payment_id": {
-          "name": "referred_by_payment_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -839,21 +861,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "tickets_referred_by_payment_id_idx": {
-          "name": "tickets_referred_by_payment_id_idx",
-          "columns": [
-            {
-              "expression": "referred_by_payment_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -874,15 +881,6 @@
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
-        },
-        "tickets_referred_by_payment_id_tickets_payment_id_fk": {
-          "name": "tickets_referred_by_payment_id_tickets_payment_id_fk",
-          "tableFrom": "tickets",
-          "tableTo": "tickets",
-          "columnsFrom": ["referred_by_payment_id"],
-          "columnsTo": ["payment_id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -891,11 +889,6 @@
           "name": "tickets_ticketCode_unique",
           "nullsNotDistinct": false,
           "columns": ["ticket_code"]
-        },
-        "tickets_referralCode_unique": {
-          "name": "tickets_referralCode_unique",
-          "nullsNotDistinct": false,
-          "columns": ["referral_code"]
         }
       },
       "policies": {},

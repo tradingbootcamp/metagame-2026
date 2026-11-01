@@ -83,13 +83,23 @@ export const PERMISSIONS = {
     description:
       "Rooms marked volunteer-only, such as ops desks, alongside the public ones.",
   },
+  // Read-only API access, e.g. for pulling needs into a supplies list.
+  "schedule.view": {
+    audience: "team",
+    group: "Schedule",
+    level: "view",
+    label: "View schedule data",
+    description:
+      "Every session, draft or not, with its needs, over the API. Not RSVP lists.",
+    implies: ["schedule.preview", "schedule.volunteer_rooms"],
+  },
   "schedule.manage": {
     audience: "team",
     group: "Schedule",
     level: "edit",
     label: "Edit schedule",
     description: "On the admin grid and over the API.",
-    implies: ["schedule.preview", "schedule.volunteer_rooms"],
+    implies: ["schedule.view"],
   },
   "promo.view": {
     audience: "team",
@@ -145,12 +155,21 @@ export const PERMISSIONS = {
     label: "View sent emails",
     description: "The announcements and other emails we've sent, as a catalog.",
   },
+  "api_docs.view": {
+    audience: "team",
+    group: "API keys",
+    level: "view",
+    label: "API docs",
+    description:
+      "The admin API reference and agent guide at /backstage/api-docs.",
+  },
   "api_keys.self": {
     audience: "team",
     group: "API keys",
     level: "edit",
     label: "Own API keys",
     description: "Mint and revoke your own API keys from /backstage/api-keys.",
+    implies: ["api_docs.view"],
   },
   "schema.view": {
     audience: "team",
@@ -166,6 +185,14 @@ export const PERMISSIONS = {
     label: "Grade submissions",
     description: "The speaker committee's rubric at /grade.",
   },
+  "misc.dice_lab": {
+    audience: "team",
+    group: "Misc",
+    level: "view",
+    label: "Dice lab",
+    description:
+      "Arrange the hero dice and export them as PNG/SVG assets, at /backstage/dice-lab.",
+  },
   "roles.manage": {
     audience: "team",
     group: "Sensitive",
@@ -180,6 +207,7 @@ export const PERMISSIONS = {
     label: "All API keys",
     description:
       "Mint and revoke anyone's API keys; keys for admins stay admin-only.",
+    implies: ["api_docs.view"],
   },
   "users.delete": {
     audience: "team",

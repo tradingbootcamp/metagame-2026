@@ -86,7 +86,7 @@ function compUtm(promo: Stripe.PromotionCode): Utm {
 }
 
 /**
- * A `promo` (typed in the buy modal or carried by a /buy/CODE link) and a
+ * A `promo` (typed in the buy modal or carried by a /ticket/CODE link) and a
  * referral `ref` resolve to the one bigger discount, locked in so Stripe shows
  * no code box; the tier's own code counts as the promo during early-bird,
  * except on the unlisted `code=own` link. With neither, the box is shown.
@@ -126,7 +126,8 @@ async function promoParams(
  *   | ?tier=supporter&chip=<usd> | ?tier=day-pass&day=<friday|saturday|sunday>
  *   [&utm_source=…&utm_medium=…&utm_campaign=…&first_visit=…&posthog_id=…&posthog_session_id=…]
  * Creates a hosted Checkout Session and redirects to it. The buy modal
- * (/#buy, where /buy, /buy/<code> and /invite/<ref> land) links here.
+ * (/#buy, where /invite/<ref> lands) links here, and /ticket and /ticket/<code>
+ * redirect here (next.config.ts).
  */
 export async function GET(request: Request) {
   const stripe = getStripe();

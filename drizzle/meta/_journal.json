@@ -173,8 +173,22 @@
     {
       "idx": 24,
       "version": "7",
-      "when": 1793303162219,
-      "tag": "0024_ticket_referrals",
+      "when": 1793303005909,
+      "tag": "0024_shallow_namora",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793403467237,
+      "tag": "0025_session_commitment_sponsor",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793507627898,
+      "tag": "0026_ticket_referrals",
       "breakpoints": true
     }
   ]

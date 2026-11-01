@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { loadProfileView } from "./data";
 import { canSeeSchedule, scheduleViewer } from "../../schedule/data";
 import { currentSession } from "@/lib/auth";
+import { loadMegagameLevels } from "@/lib/megagame-store";
 import { loadSchedule } from "@/lib/schedule-store";
 import {
   PUBLIC_AUDIENCE,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/user-profile";
 import AccountWall from "@/v2/components/AccountWall";
 import ContentPage from "@/v2/components/ContentPage";
+import ClassBadges from "@/v2/components/megagame/ClassBadges";
 import UserSessions from "@/v2/components/schedule/UserSessions";
 
 // An attendee's profile. Signed-in only, and everything on it is either
@@ -51,10 +53,11 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
   if (!view) notFound();
   const { profile, access } = view;
 
-  const [schedule, linkable, viewer] = await Promise.all([
+  const [schedule, linkable, viewer, levels] = await Promise.all([
     loadSchedule(),
     canSeeSchedule(),
     scheduleViewer(),
+    loadMegagameLevels(id),
   ]);
   const { sessions, locations } = userSessions(
     id,
@@ -95,6 +98,7 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
           {profile.pronouns && (
             <p className="text-base text-ink/70">{profile.pronouns}</p>
           )}
+          <ClassBadges levels={levels} />
           {profile.website && (
             <a
               href={profile.website}

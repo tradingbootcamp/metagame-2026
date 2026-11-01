@@ -225,6 +225,13 @@ export function SubmissionGroup({
                 </Link>
                 <span className="block truncate text-sm text-ink/55">
                   {row.host || "—"}
+                  {" · "}
+                  <Link
+                    href={`/account/sessions/${row.id}`}
+                    className="text-navy hover:text-meeple hover:underline"
+                  >
+                    Edit session
+                  </Link>
                 </span>
               </span>
               {picker(row, "grader", "Grader")}

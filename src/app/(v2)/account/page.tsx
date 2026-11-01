@@ -6,6 +6,8 @@ import { GiTheaterCurtains } from "react-icons/gi";
 import { PasswordForm, ProfileForm, SignOutButton } from "./AccountForms";
 import AccountTabs from "./AccountTabs";
 import AvatarForm from "./AvatarForm";
+import MegagamePanel from "./MegagamePanel";
+import MegagameSummary from "./MegagameSummary";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel from "./TicketsPanel";
 import { parseAccountTab } from "./tabs";
@@ -15,6 +17,7 @@ import { accountSessions } from "@/lib/account-sessions";
 import { can, teamAccess } from "@/lib/access";
 import { currentSession, hasPassword } from "@/lib/auth";
 import { prefillDiscord } from "@/lib/discord-handle";
+import { loadMegagameLevels } from "@/lib/megagame-store";
 import {
   loadRsvpCounts,
   loadSchedule,
@@ -55,6 +58,7 @@ export default async function AccountPage({
     linkable,
     admin,
     backstage,
+    levels,
   ] = await Promise.all([
     getDb()
       .select()
@@ -69,6 +73,7 @@ export default async function AccountPage({
     canSeeSchedule(),
     can("schedule.manage"),
     teamAccess().then((a) => a?.team ?? false),
+    loadMegagameLevels(user.id),
   ]);
   // Referral codes are minted the first time their holder looks.
   await mintReferralCodes(rows, user.id, email);
@@ -95,6 +100,7 @@ export default async function AccountPage({
         panels={{
           profile: (
             <div className="flex max-w-[960px] flex-col gap-10">
+              <MegagameSummary levels={levels} />
               <AvatarForm
                 imageUrl={profile?.imageUrl ?? null}
                 name={user.name}
@@ -141,6 +147,7 @@ export default async function AccountPage({
               )}
             />
           ),
+          megagame: <MegagamePanel levels={levels} />,
         }}
       />
     </div>
