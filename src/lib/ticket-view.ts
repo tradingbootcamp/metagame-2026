@@ -23,8 +23,6 @@ export type TicketView = {
   referralCode: string | null;
   /** Paid tickets bought with this one's referral code. */
   referrals: number;
-  /** Bought with someone's referral code. */
-  referred: boolean;
 };
 
 export function ticketView(
@@ -50,6 +48,5 @@ export function ticketView(
         ? formatReferralCode(t.referralCode)
         : null,
     referrals,
-    referred: t.referredByPaymentId !== null,
   };
 }

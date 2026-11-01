@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { STANDARD_USD } from "@/lib/family-pack";
+import { useState } from "react";
+import { FAMILY_PACK } from "@/lib/family-pack";
 import {
   REFERRAL_CODE_LENGTH,
   REFERRAL_PARAM,
-  referralCodeOf,
   normalizeReferralCode,
 } from "@/lib/referral";
-import { PROMO_PARAM, promoCode } from "@/lib/tracking-links";
-import { readPromo, readReferral, withUtm } from "@/lib/utm";
+import { PROMO_PARAM } from "@/lib/tracking-links";
+import { readPromo, withUtm } from "@/lib/utm";
 import { stripeCheckoutHref } from "@/v2/lib/tickets";
 import { Button } from "@/v2/components/ui/button";
 import { Input } from "@/v2/components/ui/input";
@@ -21,87 +20,27 @@ import {
 } from "@/v2/components/ui/dialog";
 import { HEADING } from "../styles";
 
-// What /api/checkout/stripe/preview reports for the codes as typed.
-type Preview = {
-  full: number;
-  ref: {
-    entered: boolean;
-    valid: boolean;
-    name: string | null;
-    usdOff: number | null;
-  };
-  promo: {
-    entered: boolean;
-    valid: boolean;
-    unavailable: boolean;
-    code: string | null;
-    label: string | null;
-    usdOff: number | null;
-  };
-  applied: "promo" | "referral" | null;
-  usdOff: number;
-  usdPay: number;
-};
-
 const FIELD_LABEL =
   "font-space-mono text-[12px] tracking-[0.12em] text-cream/70 uppercase";
 
-/** The code a link carried, else the one a past link stored. */
 function initialCodes(): { ref: string; promo: string } {
   if (typeof window === "undefined") return { ref: "", promo: "" };
   const params = new URLSearchParams(window.location.search);
-  return {
-    ref: referralCodeOf(params.get(REFERRAL_PARAM)) || readReferral(),
-    promo: promoCode(params.get(PROMO_PARAM)) || readPromo(),
-  };
+  return { ref: params.get(REFERRAL_PARAM) ?? "", promo: readPromo() };
 }
 
 /**
- * The stop before Stripe for a Standard ticket: a referral code and a
- * discount code, with the price they'll get. Stripe locks in whichever
- * discount is bigger, and the referral is recorded either way. Opened from
- * the "Use a referral code" link under the Standard tile and by /invite/<ref> links.
+ * The stop before Stripe for a Standard ticket with a referral code, opened by
+ * "Use a referral code" and /invite/<ref> links. Checkout applies the bigger of
+ * the referral and the discount code, and records the referral either way.
  */
 export default function BuyModal({ onClose }: { onClose: () => void }) {
   const [codes, setCodes] = useState(initialCodes);
-  const [preview, setPreview] = useState<Preview | null>(null);
-  const [checking, setChecking] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const ref = normalizeReferralCode(codes.ref);
   const promo = codes.promo.trim();
   const refShort = ref.length > 0 && ref.length !== REFERRAL_CODE_LENGTH;
-
-  // Debounced so the price follows the typing; checkout resolves it again.
-  useEffect(() => {
-    const controller = new AbortController();
-    const t = setTimeout(() => {
-      setChecking(true);
-      fetch("/api/checkout/stripe/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ref, promo }),
-        signal: controller.signal,
-      })
-        .then((r) => r.json())
-        .then((d: Preview) => {
-          setPreview(d);
-          setChecking(false);
-        })
-        .catch((err) => {
-          if (err?.name === "AbortError") return;
-          setChecking(false);
-        });
-    }, 350);
-    return () => {
-      controller.abort();
-      clearTimeout(t);
-    };
-  }, [ref, promo]);
-
-  const full = preview?.full ?? STANDARD_USD;
-  const pay = preview?.usdPay ?? full;
-  const settled = preview !== null && !checking;
 
   function checkout() {
     setBusy(true);
@@ -117,20 +56,12 @@ export default function BuyModal({ onClose }: { onClose: () => void }) {
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
       <DialogContent className="flex max-w-[460px] flex-col gap-5 p-6 sm:p-8">
-        <div className="flex items-center justify-between gap-2 pr-6">
-          <DialogTitle className={`${HEADING} text-[clamp(24px,6vw,30px)]`}>
-            Standard ticket
-          </DialogTitle>
-          <span className="flex items-center gap-2 text-lg">
-            {pay < full && (
-              <span className="text-cream/45 line-through">${full}</span>
-            )}
-            <span className="font-semibold text-tan">${pay}</span>
-          </span>
-        </div>
+        <DialogTitle className={`${HEADING} pr-6 text-[clamp(24px,6vw,30px)]`}>
+          Standard ticket
+        </DialogTitle>
         <DialogDescription className="text-base text-cream/80">
-          Full weekend admission. Got a code from a friend, or a discount code?
-          Enter it here before checkout.
+          A friend&apos;s referral code gets you a Standard ticket for $
+          {FAMILY_PACK.usd}, and you both get the bring-a-friend swag.
         </DialogDescription>
 
         <form
@@ -154,17 +85,11 @@ export default function BuyModal({ onClose }: { onClose: () => void }) {
               disabled={busy}
               className="font-mono"
             />
-            <span className="min-h-5 text-sm text-cream/70">
-              {refShort
-                ? `Referral codes are ${REFERRAL_CODE_LENGTH} characters.`
-                : !ref
-                  ? "From a friend's ticket page. You pay the Family & Friends price and you both get the bring-a-friend swag."
-                  : settled && preview.ref.valid
-                    ? `Referral from ${preview.ref.name ?? "a friend"} recorded${preview.ref.usdOff ? ` — $${preview.ref.usdOff} off` : ""}.`
-                    : settled
-                      ? "We don't recognize that referral code."
-                      : "Checking…"}
-            </span>
+            {refShort && (
+              <span className="text-sm text-cream/70">
+                Referral codes are {REFERRAL_CODE_LENGTH} characters.
+              </span>
+            )}
           </label>
 
           <label className="flex flex-col gap-1.5">
@@ -182,28 +107,14 @@ export default function BuyModal({ onClose }: { onClose: () => void }) {
             />
           </label>
 
-          {!ref && !promo ? (
-            <p className="text-sm text-cream/80">
-              The biggest discount applies.
-            </p>
-          ) : (
-            settled && (
-              <p className="text-sm text-cream/80">
-                {preview.applied === "promo"
-                  ? `Your discount code applies: $${preview.usdOff} off.`
-                  : preview.applied === "referral"
-                    ? `Referral price applies: $${preview.usdOff} off.`
-                    : "No discount applied."}
-              </p>
-            )
-          )}
+          <p className="text-sm text-cream/80">The biggest discount applies.</p>
 
           <Button
             type="submit"
             disabled={busy || refShort}
             className="h-12 w-full text-base"
           >
-            {busy ? "Opening checkout…" : `Continue to checkout · $${pay}`}
+            {busy ? "Opening checkout…" : "Continue to checkout"}
           </Button>
         </form>
       </DialogContent>

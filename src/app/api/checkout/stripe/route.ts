@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { isEarlyBirdActive } from "@/lib/early-bird";
+import { sendAdminErrorEmail } from "@/lib/email";
 import { resolveStandardDiscounts } from "@/lib/referral-checkout";
 import { getStripe } from "@/lib/stripe";
 import {
@@ -108,7 +109,7 @@ async function promoParams(
     params.get("code") !== "own" && isEarlyBirdActive()
       ? ticket.promoCode
       : undefined;
-  const { session, metadata, promo, pick } = await resolveStandardDiscounts(
+  const { session, metadata, promo, applied } = await resolveStandardDiscounts(
     stripe,
     { promo: linked || earlyBird, ref: params.get("ref") },
     ticket.prices.full.usd,
@@ -116,8 +117,7 @@ async function promoParams(
   return {
     session,
     metadata,
-    utm:
-      linked && promo && pick.applied === "promo" ? compUtm(promo.promo) : {},
+    utm: linked && promo && applied === "promo" ? compUtm(promo.promo) : {},
   };
 }
 
@@ -151,21 +151,39 @@ export async function GET(request: Request) {
     const utm = pickUtm((k) => params.get(k));
     // UTMs on the link itself win over the ones a comp code implies.
     const tagged = Object.keys(utm).some((k) => k.startsWith("utm_"));
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items: [{ price: purchase.price, quantity: 1 }],
-      ...promo?.session,
-      metadata: {
-        ...purchase.metadata,
-        ...promo?.metadata,
-        ...(tagged ? {} : promo?.utm),
-        ...utm,
-      },
-      custom_fields: CUSTOM_FIELDS,
-      name_collection: { individual: { enabled: true, optional: false } },
-      success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/#tickets`,
-    });
+    const create = (
+      discount: Pick<
+        Stripe.Checkout.SessionCreateParams,
+        "discounts" | "allow_promotion_codes"
+      > = {},
+    ) =>
+      stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [{ price: purchase.price, quantity: 1 }],
+        ...discount,
+        metadata: {
+          ...purchase.metadata,
+          ...promo?.metadata,
+          ...(tagged ? {} : promo?.utm),
+          ...utm,
+        },
+        custom_fields: CUSTOM_FIELDS,
+        name_collection: { individual: { enabled: true, optional: false } },
+        success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/#tickets`,
+      });
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await create(promo?.session);
+    } catch (err) {
+      // A dead coupon or code mustn't block the sale: open the code box instead.
+      if (!promo?.session.discounts) throw err;
+      console.error("[checkout/stripe] discount rejected, retrying:", err);
+      await sendAdminErrorEmail(
+        `Checkout discount rejected (${JSON.stringify(promo.session.discounts)}); buyer sent to the open code box: ${err instanceof Error ? err.message : String(err)}`,
+      ).catch((e) => console.error("[checkout/stripe] alert failed:", e));
+      session = await create({ allow_promotion_codes: true });
+    }
     if (!session.url) throw new Error(`session ${session.id} has no url`);
     return NextResponse.redirect(session.url, 303);
   } catch (err) {

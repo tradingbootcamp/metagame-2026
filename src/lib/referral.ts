@@ -1,9 +1,4 @@
 // Client-safe half of the referral system; the SQL lives in referral-store.ts.
-//
-// Anyone holding a weekend ticket gets a referral code on /account. A friend
-// who buys a Standard ticket with it pays the Family & Friends price, and both
-// tickets count for the bring-a-friend swag. The referral is recorded whatever
-// discount the buyer ends up with, so a better comp code never costs the swag.
 
 import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { normalizeTicketCode } from "@/lib/ticket-code-format";
@@ -54,30 +49,15 @@ export function couponUsdOff(
   return 0;
 }
 
-export type DiscountPick = {
-  /** Which discount checkout locks in; null leaves Stripe's code box open. */
-  applied: "promo" | "referral" | null;
-  usdOff: number;
-  usdPay: number;
-};
-
 /**
- * One discount applies per checkout, so the bigger one wins. A referral with
- * no coupon configured still records the referral; it just doesn't discount.
+ * One discount applies per checkout: the bigger wins, the promo on a tie.
+ * `promoUsdOff` is null without a live promo code; a referral with no coupon
+ * configured is worth 0.
  */
 export function pickDiscount(
-  fullUsd: number,
   promoUsdOff: number | null,
-  referralUsdOff: number | null,
-): DiscountPick {
-  const promo = promoUsdOff ?? 0;
-  const referral = referralUsdOff ?? 0;
-  const applied =
-    promoUsdOff != null && promo >= referral
-      ? "promo"
-      : referralUsdOff != null && referral > 0
-        ? "referral"
-        : null;
-  const usdOff = applied === "promo" ? promo : applied ? referral : 0;
-  return { applied, usdOff, usdPay: Math.max(0, fullUsd - usdOff) };
+  referralUsdOff: number,
+): "promo" | "referral" | null {
+  if (promoUsdOff !== null && promoUsdOff >= referralUsdOff) return "promo";
+  return referralUsdOff > 0 ? "referral" : null;
 }

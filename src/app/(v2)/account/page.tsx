@@ -76,8 +76,10 @@ export default async function AccountPage({
     loadMegagameLevels(user.id),
   ]);
   // Referral codes are minted the first time their holder looks.
-  await mintReferralCodes(rows, user.id, email);
-  const referrals = await referralCounts(rows.map((t) => t.paymentId));
+  const [, referrals] = await Promise.all([
+    mintReferralCodes(rows, user.id, email),
+    referralCounts(rows.map((t) => t.paymentId)),
+  ]);
   const tickets = rows.map((t) =>
     ticketView(t, user.id, email, referrals.get(t.paymentId) ?? 0),
   );

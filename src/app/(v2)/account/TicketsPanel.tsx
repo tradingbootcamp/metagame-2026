@@ -149,11 +149,6 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                 >
                   {b.text}
                 </span>
-                {t.referred && (
-                  <span className="rounded bg-tan/30 px-1.5 py-0.5 text-xs font-semibold text-ink">
-                    Referred by a friend
-                  </span>
-                )}
                 {shareable(t) && !holdsOne && (
                   <Button
                     size="sm"

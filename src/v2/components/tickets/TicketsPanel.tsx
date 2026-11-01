@@ -18,7 +18,7 @@ import {
 } from "@/v2/lib/tickets";
 import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
-import { withPromo, withReferral, withUtm } from "@/lib/utm";
+import { withPromo, withUtm } from "@/lib/utm";
 import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import {
   subscribeCurrency,
@@ -54,7 +54,7 @@ const FULL_PRICE_HREF = stripeCheckoutHref({ tier: "standard", code: "own" });
 // UTMs and any promo code live in localStorage, so they're added at click time
 // (not render) to keep the server-rendered href stable.
 const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-  e.currentTarget.href = withReferral(withPromo(withUtm(href)));
+  e.currentTarget.href = withPromo(withUtm(href));
 };
 
 // "buy" is the referral-code step; /invite/<ref> redirects to /#buy.
@@ -214,7 +214,7 @@ export default function TicketsPanel({
           ))}
         {/* Full price, no promo auto-applied: for after the deadline, or for
             anyone bringing their own code. A referral code goes through the
-            buy modal instead. */}
+            buy modal. */}
         {standard &&
           (isBtc ? (
             <Button

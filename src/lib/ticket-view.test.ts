@@ -39,7 +39,6 @@ describe("ticketView", () => {
       transferred: false,
       referralCode: null,
       referrals: 0,
-      referred: false,
     });
   });
 
@@ -48,7 +47,6 @@ describe("ticketView", () => {
     expect(ticketView(r, ...ada, 2)).toMatchObject({
       referralCode: "ABCD-EFGH",
       referrals: 2,
-      referred: true,
     });
     expect(
       ticketView({ ...r, ownerUserId: "u2" }, "u2", "bob@example.com"),

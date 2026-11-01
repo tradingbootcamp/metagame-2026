@@ -1,5 +1,4 @@
 import posthog from "posthog-js";
-import { REFERRAL_PARAM, referralCodeOf } from "@/lib/referral";
 import { PROMO_PARAM, promoCode } from "@/lib/tracking-links";
 
 // Last-touch attribution: the UTMs from the most recent tracking link a visitor
@@ -31,8 +30,6 @@ const FIRST_VISIT_KEY = "first-visit";
 // A promo code from the landing URL (a poster QR, /go/<slug>?promo=CODE). Kept
 // until a later link sets another; it's applied to Standard checkout.
 const PROMO_STORAGE_KEY = "promo-code";
-// A referral code from an /invite/<code> link, likewise kept for the buy modal.
-const REFERRAL_STORAGE_KEY = "referral-code";
 const MAX_LEN = 200;
 
 /** The UTM values `get` returns, trimmed and capped; blanks and non-strings dropped. */
@@ -73,8 +70,6 @@ export function captureUtm(search: string): void {
     }
     const promo = promoCode(params.get(PROMO_PARAM));
     if (promo) localStorage.setItem(PROMO_STORAGE_KEY, promo);
-    const ref = referralCodeOf(params.get(REFERRAL_PARAM));
-    if (ref) localStorage.setItem(REFERRAL_STORAGE_KEY, ref);
   } catch {
     // Storage blocked — attribution is best-effort.
   }
@@ -88,7 +83,7 @@ export function captureUtm(search: string): void {
 export function stripUtmFromUrl(): void {
   const url = new URL(window.location.href);
   const had = [...url.searchParams.keys()].filter(
-    (k) => k.startsWith("utm_") || k === PROMO_PARAM || k === REFERRAL_PARAM,
+    (k) => k.startsWith("utm_") || k === PROMO_PARAM,
   );
   if (had.length === 0) return;
   for (const k of had) url.searchParams.delete(k);
@@ -141,23 +136,6 @@ export function readPromo(): string {
   } catch {
     return "";
   }
-}
-
-export function readReferral(): string {
-  try {
-    return referralCodeOf(localStorage.getItem(REFERRAL_STORAGE_KEY));
-  } catch {
-    return "";
-  }
-}
-
-/** `href` with the stored referral code set, so checkout credits the referrer. Client-only. */
-export function withReferral(href: string): string {
-  const ref = readReferral();
-  if (!ref) return href;
-  const url = new URL(href, "http://localhost");
-  url.searchParams.set(REFERRAL_PARAM, ref);
-  return url.pathname + url.search + url.hash;
 }
 
 /** `href` with the stored promo code set, so checkout pre-applies it. Client-only. */

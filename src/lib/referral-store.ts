@@ -3,15 +3,9 @@ import { getDb, schema } from "@/db";
 import { canRefer, REFERRAL_CODE_LENGTH } from "@/lib/referral";
 import { randomCode, withFreshTicketCode } from "@/lib/ticket-code";
 import { holdsTicket } from "@/lib/ticket-holder";
-import type { TicketRow } from "@/lib/ticket-store";
+import { visible, type TicketRow } from "@/lib/ticket-store";
 
-const { tickets, user } = schema;
-
-// Sandbox purchases land in the same table; production never shows them.
-const visible =
-  process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
-    ? eq(tickets.test, false)
-    : undefined;
+const { tickets } = schema;
 
 const randomReferralCode = () => randomCode(REFERRAL_CODE_LENGTH);
 
@@ -76,61 +70,45 @@ export async function referralCounts(
   return new Map(rows.map((r) => [r.referrer!, r.n]));
 }
 
-export type Referrer = {
-  paymentId: string;
-  /** First name of whoever's on the ticket, for "Referred by Alex". */
-  name: string | null;
-};
-
-/** The paid ticket behind a referral code; null when there isn't one. */
-export async function lookupReferrer(code: string): Promise<Referrer | null> {
+/** The paid ticket behind a referral code, by payment id; null when there isn't one. */
+export async function lookupReferrer(code: string): Promise<string | null> {
   const [row] = await getDb()
-    .select({
-      paymentId: tickets.paymentId,
-      purchaserName: tickets.purchaserName,
-      ownerName: user.name,
-    })
+    .select({ paymentId: tickets.paymentId })
     .from(tickets)
-    .leftJoin(user, eq(user.id, tickets.ownerUserId))
     .where(
       and(visible, eq(tickets.referralCode, code), eq(tickets.status, "paid")),
     )
     .limit(1);
-  if (!row) return null;
-  const name = (row.ownerName || row.purchaserName || "")
-    .trim()
-    .split(/\s+/)[0];
-  return { paymentId: row.paymentId, name: name || null };
+  return row?.paymentId ?? null;
 }
 
 /**
- * Who bought with whose code, for the admin table: each ticket's referrer
- * code and how many it referred. Rows outside `rows` show as "another ticket".
+ * Who bought with whose code, for the admin table: the referrer's ticket code
+ * for each paid referred ticket, and how many each ticket referred.
  */
 export async function referralFacts(rows: TicketRow[]): Promise<{
-  referredBy: Map<string, string | null>;
+  referredBy: Map<string, string>;
   referrals: Map<string, number>;
 }> {
-  const ids = rows.map((t) => t.paymentId);
-  const codes = new Map(rows.map((t) => [t.paymentId, t.ticketCode]));
-  const missing = [
-    ...new Set(
-      rows
-        .map((t) => t.referredByPaymentId)
-        .filter((id): id is string => id !== null && !codes.has(id)),
-    ),
-  ];
-  if (missing.length > 0) {
-    const found = await getDb()
-      .select({ paymentId: tickets.paymentId, ticketCode: tickets.ticketCode })
-      .from(tickets)
-      .where(inArray(tickets.paymentId, missing));
-    for (const t of found) codes.set(t.paymentId, t.ticketCode);
-  }
-  const referredBy = new Map(
-    rows
-      .filter((t) => t.referredByPaymentId !== null)
-      .map((t) => [t.paymentId, codes.get(t.referredByPaymentId!) ?? null]),
+  const referred = rows.filter(
+    (t) => t.status === "paid" && t.referredByPaymentId !== null,
   );
-  return { referredBy, referrals: await referralCounts(ids) };
+  const referrerIds = [...new Set(referred.map((t) => t.referredByPaymentId!))];
+  const [codes, referrals] = await Promise.all([
+    referrerIds.length === 0
+      ? []
+      : getDb()
+          .select({
+            paymentId: tickets.paymentId,
+            ticketCode: tickets.ticketCode,
+          })
+          .from(tickets)
+          .where(inArray(tickets.paymentId, referrerIds)),
+    referralCounts(rows.map((t) => t.paymentId)),
+  ]);
+  const code = new Map(codes.map((r) => [r.paymentId, r.ticketCode]));
+  const referredBy = new Map(
+    referred.map((t) => [t.paymentId, code.get(t.referredByPaymentId!)!]),
+  );
+  return { referredBy, referrals };
 }

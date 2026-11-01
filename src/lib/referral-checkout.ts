@@ -5,19 +5,14 @@ import {
   pickDiscount,
   REFERRAL_USD_OFF,
   referralCodeOf,
-  type DiscountPick,
 } from "@/lib/referral";
-import { lookupReferrer, type Referrer } from "@/lib/referral-store";
+import { lookupReferrer } from "@/lib/referral-store";
 import { promoCode } from "@/lib/tracking-links";
 
-export type PromoLookup = {
-  promo: Stripe.PromotionCode;
-  usdOff: number;
-  label: string | null;
-};
+type PromoLookup = { promo: Stripe.PromotionCode; usdOff: number };
 
 /** An active Stripe promotion code and what it takes off a `fullUsd` ticket. */
-export async function lookupPromo(
+async function lookupPromo(
   stripe: Stripe,
   code: string,
   fullUsd: number,
@@ -30,26 +25,18 @@ export async function lookupPromo(
     limit: 1,
     expand: ["data.promotion.coupon"],
   });
-  if (!promo) return null;
-  const coupon = promo.promotion?.coupon;
+  const coupon = promo?.promotion?.coupon;
   const expanded = coupon && typeof coupon === "object" ? coupon : null;
+  if (!promo || expanded?.valid === false) return null;
   return {
     promo,
     usdOff: expanded ? couponUsdOff(expanded, fullUsd) : 0,
-    label: expanded?.name ?? null,
   };
 }
 
 export type StandardDiscounts = {
-  /** The code as typed, "" when none; `promo` is null when it isn't live. */
-  promoInput: string;
   promo: PromoLookup | null;
-  /** The referral code in stored form, "" when none or malformed. */
-  referralCode: string;
-  referrer: Referrer | null;
-  /** The referral's own discount, null while no coupon is configured. */
-  referralUsdOff: number | null;
-  pick: DiscountPick;
+  applied: "promo" | "referral" | null;
   session: Pick<
     Stripe.Checkout.SessionCreateParams,
     "discounts" | "allow_promotion_codes"
@@ -59,26 +46,24 @@ export type StandardDiscounts = {
 
 /**
  * Resolves a Standard checkout's referral and promo code into the one discount
- * Stripe will lock in (the bigger), or the open code box when neither applies.
- * The referral rides along in metadata either way, so the webhook records it
- * whatever the buyer paid.
+ * Stripe will lock in, or the open code box when neither applies. The referral
+ * rides along in metadata either way, so the webhook records it.
  */
 export async function resolveStandardDiscounts(
-  stripe: Stripe | null,
+  stripe: Stripe,
   input: { promo?: string | null; ref?: string | null },
   fullUsd: number,
 ): Promise<StandardDiscounts> {
   const promoInput = promoCode(input.promo);
   const referralCode = referralCodeOf(input.ref);
 
-  let promo: PromoLookup | null = null;
-  if (promoInput && stripe) {
-    promo = await lookupPromo(stripe, promoInput, fullUsd);
-    if (!promo)
-      console.warn(`[checkout/stripe] no active ${promoInput} promotion code`);
-  }
+  const promo = promoInput
+    ? await lookupPromo(stripe, promoInput, fullUsd)
+    : null;
+  if (promoInput && !promo)
+    console.warn(`[checkout/stripe] no active ${promoInput} promotion code`);
 
-  let referrer: Referrer | null = null;
+  let referrer: string | null = null;
   if (referralCode) {
     try {
       referrer = await lookupReferrer(referralCode);
@@ -88,35 +73,26 @@ export async function resolveStandardDiscounts(
   }
 
   const couponId = env.FAMILY_REFERRAL_COUPON_ID;
-  const referralUsdOff = couponId ? REFERRAL_USD_OFF : null;
   if (referrer && !couponId)
     console.warn(
       "[checkout/stripe] FAMILY_REFERRAL_COUPON_ID unset — referral recorded without a discount",
     );
 
-  const pick = pickDiscount(
-    fullUsd,
+  const applied = pickDiscount(
     promo ? promo.usdOff : null,
-    referrer ? referralUsdOff : null,
+    referrer && couponId ? REFERRAL_USD_OFF : 0,
   );
-  const session: StandardDiscounts["session"] =
-    pick.applied === "promo"
-      ? { discounts: [{ promotion_code: promo!.promo.id }] }
-      : pick.applied === "referral"
-        ? { discounts: [{ coupon: couponId! }] }
-        : { allow_promotion_codes: true };
-  const metadata: Record<string, string> = referrer
-    ? { referred_by: referrer.paymentId, referral_code: referralCode }
-    : {};
-
   return {
-    promoInput,
     promo,
-    referralCode,
-    referrer,
-    referralUsdOff,
-    pick,
-    session,
-    metadata,
+    applied,
+    session:
+      applied === "promo"
+        ? { discounts: [{ promotion_code: promo!.promo.id }] }
+        : applied === "referral"
+          ? { discounts: [{ coupon: couponId! }] }
+          : { allow_promotion_codes: true },
+    metadata: referrer
+      ? { referred_by: referrer, referral_code: referralCode }
+      : {},
   };
 }

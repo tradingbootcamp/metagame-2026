@@ -93,12 +93,7 @@ export default async function AdminTicketsPage(
         amountCents: t.amountCents,
         couponCode: t.couponCode,
         referralCode: t.referralCode && formatReferralCode(t.referralCode),
-        referredBy:
-          referrer === undefined
-            ? null
-            : referrer
-              ? formatTicketCode(referrer)
-              : "another ticket",
+        referredBy: referrer ? formatTicketCode(referrer) : null,
         referrals: referrals.get(t.paymentId) ?? 0,
       },
       people: ticketPeople(t, accounts, byEmail),

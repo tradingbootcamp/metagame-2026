@@ -43,36 +43,13 @@ describe("couponUsdOff", () => {
 });
 
 describe("pickDiscount", () => {
-  it("locks in the bigger of promo and referral", () => {
-    expect(pickDiscount(425, 212.5, REFERRAL_USD_OFF)).toEqual({
-      applied: "promo",
-      usdOff: 212.5,
-      usdPay: 212.5,
-    });
-    expect(pickDiscount(425, 20, REFERRAL_USD_OFF)).toEqual({
-      applied: "referral",
-      usdOff: 50,
-      usdPay: 375,
-    });
-  });
-
-  it("prefers the promo on a tie, so the code's own tracking applies", () => {
-    expect(pickDiscount(425, 50, 50).applied).toBe("promo");
+  it("locks in the bigger of promo and referral, the promo on a tie", () => {
+    expect(pickDiscount(212.5, REFERRAL_USD_OFF)).toBe("promo");
+    expect(pickDiscount(20, REFERRAL_USD_OFF)).toBe("referral");
+    expect(pickDiscount(50, 50)).toBe("promo");
   });
 
   it("leaves the code box open with neither", () => {
-    expect(pickDiscount(425, null, null)).toEqual({
-      applied: null,
-      usdOff: 0,
-      usdPay: 425,
-    });
-  });
-
-  it("records a referral without a coupon as no discount", () => {
-    expect(pickDiscount(425, null, 0).applied).toBe(null);
-  });
-
-  it("never pays below zero", () => {
-    expect(pickDiscount(425, 425, null).usdPay).toBe(0);
+    expect(pickDiscount(null, 0)).toBe(null);
   });
 });

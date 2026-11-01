@@ -32,7 +32,7 @@ const { tickets, verification } = schema;
 
 // Sandbox purchases land in the same table; production never shows them.
 // NEXT_PUBLIC_ because deploys go out prebuilt (see src/lib/tickets.ts).
-const visible =
+export const visible =
   process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
     ? eq(tickets.test, false)
     : undefined;

@@ -126,7 +126,7 @@ export default function TicketsTable({
           type="search"
           value={q}
           onChange={(e) => update({ q: e.target.value })}
-          placeholder="Search by name, email, coupon or referral code"
+          placeholder="Search by name, email or coupon code"
           className={`${fieldClass} max-w-sm`}
         />
         <span className="text-sm text-ink/60">
@@ -440,9 +440,6 @@ function TicketDetail({ ticket: { t, people } }: { ticket: AdminTicket }) {
         </Field>
         <Field label="Source">
           <span className="capitalize">{t.source}</span>
-        </Field>
-        <Field label="Swag">
-          {swagReason(t) ?? <span className="text-cream/40">—</span>}
         </Field>
         <Field label="Referral code">
           {t.referralCode ? (
