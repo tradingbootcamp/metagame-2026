@@ -20,6 +20,7 @@ import {
   overlapWarning,
   planConflicts,
   rsvpPrompt,
+  slotLabel,
   type PlanConflict,
   type LocationVisibility,
   type ScheduleSession,
@@ -48,6 +49,18 @@ const session = (over: Partial<ScheduleSession>): ScheduleSession => ({
 });
 
 const at = (iso: string) => new Date(iso);
+
+describe("slotLabel", () => {
+  it("includes the period by default", () => {
+    expect(slotLabel(9 * 60 + 30)).toBe("9:30 AM");
+    expect(slotLabel(12 * 60)).toBe("12:00 PM");
+  });
+
+  it("drops the period for the grid gutter", () => {
+    expect(slotLabel(9 * 60 + 30, { period: false })).toBe("9:30");
+    expect(slotLabel(21 * 60, { period: false })).toBe("9:00");
+  });
+});
 
 describe("movedTimes", () => {
   it("keeps a placed session's length", () => {

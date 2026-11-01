@@ -382,12 +382,15 @@ export function formatPacificDay(iso: string): string {
   }).format(new Date(iso));
 }
 
-export function slotLabel(slotStart: number): string {
+export function slotLabel(
+  slotStart: number,
+  { period = true }: { period?: boolean } = {},
+): string {
   const h = Math.floor(slotStart / 60);
   const m = slotStart % 60;
-  const period = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${pad(m)} ${period}`;
+  if (!period) return `${h12}:${pad(m)}`;
+  return `${h12}:${pad(m)} ${h >= 12 ? "PM" : "AM"}`;
 }
 
 /** "14:30" from minutes since midnight. */
