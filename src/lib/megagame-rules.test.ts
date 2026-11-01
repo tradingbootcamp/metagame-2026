@@ -9,6 +9,7 @@ import {
   bucketStart,
   checkLevelUp,
   checkQuestWindow,
+  playerQuestStatus,
   questWindowIsValid,
   deriveLevels,
   LEVEL_REQUIREMENTS,
@@ -697,5 +698,49 @@ describe("bucketSeries", () => {
     expect(
       bucketSeries(at, new Date("2026-11-07T09:00:00.000Z"), "5m"),
     ).toEqual([]);
+  });
+});
+
+describe("playerQuestStatus", () => {
+  const wizardQuest = { class: "wizard", minLevel: 2, maxLevel: null };
+  const levels = { wizard: 2, pirate: 0, alien: 0 };
+
+  it("is ok with no warnings for an in-window player with a ticket", () => {
+    expect(
+      playerQuestStatus({
+        quest: wizardQuest,
+        levels,
+        completed: false,
+        hasTicket: true,
+      }),
+    ).toEqual({ kind: "ok", warnings: [] });
+  });
+
+  it("blocks a player who already completed the quest, whatever else holds", () => {
+    expect(
+      playerQuestStatus({
+        quest: wizardQuest,
+        levels: NO_LEVELS,
+        completed: true,
+        hasTicket: false,
+      }),
+    ).toEqual({ kind: "completed" });
+  });
+
+  it("warns, without blocking, outside the window and without a ticket", () => {
+    expect(
+      playerQuestStatus({
+        quest: wizardQuest,
+        levels: { wizard: 1, pirate: 0, alien: 0 },
+        completed: false,
+        hasTicket: false,
+      }),
+    ).toEqual({
+      kind: "ok",
+      warnings: [
+        "Level 1 wizard; this quest asks for level 2 or higher.",
+        "No claimed ticket.",
+      ],
+    });
   });
 });

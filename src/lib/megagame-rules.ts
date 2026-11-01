@@ -198,6 +198,26 @@ export function checkQuestWindow(
   return { ok: warnings.length === 0, warnings };
 }
 
+/**
+ * One player's row on a quest page. A live completion is the only hard
+ * block; the lock window and a missing ticket only warn.
+ */
+export type PlayerQuestStatus =
+  | { kind: "completed" }
+  | { kind: "ok"; warnings: string[] };
+
+export function playerQuestStatus(input: {
+  quest: QuestWindow;
+  levels: MegagameLevels;
+  completed: boolean;
+  hasTicket: boolean;
+}): PlayerQuestStatus {
+  if (input.completed) return { kind: "completed" };
+  const warnings = checkQuestWindow(input.quest, input.levels).warnings;
+  if (!input.hasTicket) warnings.push("No claimed ticket.");
+  return { kind: "ok", warnings };
+}
+
 /** A level window needs a class. The phase 3 CSV importer calls this per row. */
 export function questWindowIsValid(quest: QuestWindow): boolean {
   return (
