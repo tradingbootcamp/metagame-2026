@@ -152,19 +152,27 @@ export async function GET(request: Request) {
     const utm = pickUtm((k) => params.get(k));
     // UTMs on the link itself win over the ones a comp code implies.
     const tagged = Object.keys(utm).some((k) => k.startsWith("utm_"));
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      line_items: [{ price: purchase.price, quantity: 1 }],
-      ...promo?.session,
-      metadata: {
-        ...purchase.metadata,
-        ...(tagged ? {} : promo?.utm),
-        ...utm,
-      },
-      custom_fields: CUSTOM_FIELDS,
-      name_collection: { individual: { enabled: true, optional: false } },
-      success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/#tickets`,
+    const create = (discount: typeof promo) =>
+      stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [{ price: purchase.price, quantity: 1 }],
+        ...discount?.session,
+        metadata: {
+          ...purchase.metadata,
+          ...(tagged ? {} : discount?.utm),
+          ...utm,
+        },
+        custom_fields: CUSTOM_FIELDS,
+        name_collection: { individual: { enabled: true, optional: false } },
+        success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/#tickets`,
+      });
+    const session = await create(promo).catch((err) => {
+      // Stripe refuses a code it can't apply here (used up, expired, another
+      // product, first-time only); the buyer gets the code box instead.
+      if (!promo?.session.discounts) throw err;
+      console.warn("[checkout/stripe] code refused, showing the box:", err);
+      return create({ session: { allow_promotion_codes: true }, utm: {} });
     });
     if (!session.url) throw new Error(`session ${session.id} has no url`);
     return NextResponse.redirect(session.url, 303);

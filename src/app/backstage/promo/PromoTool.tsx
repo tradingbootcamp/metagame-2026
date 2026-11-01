@@ -2,13 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { FaStripeS } from "react-icons/fa";
-import {
-  listCodes,
-  mint,
-  setActive,
-  type ListedCode,
-  type MintState,
-} from "./actions";
+import { listCodes, mint, setActive, type MintState } from "./actions";
 import {
   buttonClass,
   fieldClass,
@@ -18,7 +12,7 @@ import {
   useCopy,
 } from "../ui";
 import { PURPOSES, type MintResult } from "@/lib/promo-codes";
-import type { Coupon } from "@/lib/promo-codes-stripe";
+import type { Coupon, StripeCode } from "@/lib/promo-codes-stripe";
 import type { PromoMode } from "@/lib/stripe-promo";
 
 // New codes start at $80 off, not a free ticket.
@@ -53,7 +47,7 @@ export default function PromoTool({
   const [purpose, setPurpose] = useState("");
   const [unlimited, setUnlimited] = useState(false);
   const [customCode, setCustomCode] = useState("");
-  const [lists, setLists] = useState<ListedCode[] | null>(null);
+  const [lists, setLists] = useState<StripeCode[] | null>(null);
   const [listsBusy, setListsBusy] = useState(false);
   const [listsError, setListsError] = useState<string | null>(null);
 
@@ -299,7 +293,6 @@ export default function PromoTool({
             <Result
               key={state.minted.code}
               minted={state.minted}
-              checkout={!!state.checkout}
               origin={origin}
             />
           )}
@@ -415,16 +408,9 @@ function CopyButtons({
   );
 }
 
-function Result({
-  minted,
-  checkout,
-  origin,
-}: {
-  minted: MintResult;
-  checkout: boolean;
-  origin: string;
-}) {
+function Result({ minted, origin }: { minted: MintResult; origin: string }) {
   const { prior } = minted;
+  const checkout = minted.active;
   return (
     <div
       className={`mt-6 rounded-lg border p-4 ${
@@ -489,7 +475,7 @@ function Existing({
   canArchive,
   onLoad,
 }: {
-  lists: ListedCode[] | null;
+  lists: StripeCode[] | null;
   busy: boolean;
   error: string | null;
   origin: string;
@@ -511,7 +497,7 @@ function Existing({
     !q ||
     `${c.name} ${c.email} ${c.code} ${c.purpose}`.toLowerCase().includes(q);
 
-  const toggle = async (c: ListedCode) => {
+  const toggle = async (c: StripeCode) => {
     const active = !c.active;
     if (
       !active &&
@@ -637,7 +623,7 @@ function StripeRow({
   acting,
   onToggle,
 }: {
-  code: ListedCode;
+  code: StripeCode;
   origin: string;
   acting: boolean;
   /** Absent for view-only users, who get no archive control. */
@@ -666,7 +652,7 @@ function StripeRow({
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <CopyButtons code={c.code} origin={origin} checkout={c.checkout} />
+        <CopyButtons code={c.code} origin={origin} checkout={c.active} />
         {onToggle && (
           <button
             type="button"

@@ -5,10 +5,7 @@ import { CUSTOM_CODE_RE, PromoError, type MintResult } from "@/lib/promo-codes";
 import {
   listStripeCodes,
   mintStripeCode,
-  redeemableCode,
   setStripeCodeActive,
-  standardAccepts,
-  standardProduct,
   type StripeCode,
 } from "@/lib/promo-codes-stripe";
 
@@ -17,12 +14,7 @@ export type MintState = {
   /** Field the error belongs to, when it's one field's fault. */
   field?: string;
   minted?: MintResult;
-  /** Whether /ticket/<code> will apply it, so the tool can offer that link. */
-  checkout?: boolean;
 };
-
-/** A listed code, plus whether /ticket/<code> will apply it. */
-export type ListedCode = StripeCode & { checkout: boolean };
 
 const str = (formData: FormData, key: string) =>
   String(formData.get(key) ?? "").trim();
@@ -64,7 +56,7 @@ export async function mint(
       couponId: str(formData, "couponId") || undefined,
       issuedBy: admin.name,
     });
-    return { minted, checkout: await checkoutTakes(minted.code) };
+    return { minted };
   } catch (err) {
     if (err instanceof PromoError && err.code === "collision")
       return { field: "customCode", error: err.message };
@@ -72,29 +64,9 @@ export async function mint(
   }
 }
 
-// The code already exists by now, so a failed check hides the link rather
-// than failing the mint.
-async function checkoutTakes(code: string): Promise<boolean> {
-  try {
-    const found = await redeemableCode(code);
-    return !!found && standardAccepts(found.discount, await standardProduct());
-  } catch (err) {
-    console.error("[promo] checkout check failed", err);
-    return false;
-  }
-}
-
-export async function listCodes(): Promise<ListedCode[]> {
+export async function listCodes(): Promise<StripeCode[]> {
   if (!(await requireAccess("promo.view"))) throw new Error(EXPIRED);
-  const [codes, standard] = await Promise.all([
-    listStripeCodes(),
-    standardProduct(),
-  ]);
-  return codes.map((c) => ({
-    ...c,
-    checkout:
-      c.redeemable && !!c.discount && standardAccepts(c.discount, standard),
-  }));
+  return listStripeCodes();
 }
 
 export async function setActive(

@@ -2,7 +2,6 @@ import "server-only";
 import {
   discountText,
   redeemableCode,
-  standardAccepts,
   standardProduct,
   type CodeDiscount,
 } from "@/lib/promo-codes-stripe";
@@ -16,7 +15,8 @@ export function posterAccepts(
   standard: string,
 ): boolean {
   return (
-    standardAccepts(discount, standard) &&
+    !discount.restricted &&
+    (!discount.products || discount.products.includes(standard)) &&
     (discount.percentOff ?? 0) <= POSTER_PROMO_MAX.percent &&
     (discount.amountOff ?? 0) <= POSTER_PROMO_MAX.usd
   );
