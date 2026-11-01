@@ -9,7 +9,8 @@ import { matchAnswer } from "@/lib/megagame-rules";
 /**
  * A helper only: the volunteer decides. Answers stay hidden until revealed.
  * What was typed is logged when the volunteer presses Enter or leaves the
- * field, so half-typed words are not recorded.
+ * field, not on each keystroke. Leaving the field includes tapping "Reveal
+ * answers" or switching apps, so an unfinished answer can be logged then.
  */
 export default function AnswerChecker({
   questCode,
