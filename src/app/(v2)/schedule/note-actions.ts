@@ -93,7 +93,7 @@ async function target(noteId: string) {
 /** Pin a new note up, at a spot the board measured as fractions of itself. */
 export async function pinNote(
   locationId: string,
-  input: { body: unknown; x: number; y: number },
+  input: { body: unknown; x: number; y: number; color?: unknown },
 ): Promise<NoteState> {
   const who = await poster();
   if (typeof who !== "string") return who;
@@ -122,7 +122,12 @@ export async function pinNote(
       locationId,
       authorUserId: who,
       body: parsed.body,
-      color: pickNoteColor(Math.floor(Math.random() * NOTE_COLORS.length)),
+      // The composer shows the note in the colour it will be, so it sends
+      // one; anything else falls back to the random pick. Cosmetic either
+      // way — the author can recolour it the moment it's up.
+      color: isNoteColor(input.color)
+        ? input.color
+        : pickNoteColor(Math.floor(Math.random() * NOTE_COLORS.length)),
       x: input.x,
       y: input.y,
     });

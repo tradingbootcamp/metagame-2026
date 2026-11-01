@@ -21,6 +21,8 @@ import {
   canDeleteNote,
   canEditNote,
   canMoveNote,
+  NOTE_COLORS,
+  pickNoteColor,
   type BoardData,
   type BoardNote,
   type NoteColor,
@@ -82,7 +84,9 @@ const without = (list: BoardNote[], id: string) =>
   list.filter((n) => n.id !== id);
 
 type Pending =
-  | { kind: "new"; locationId: string; spot: Spot }
+  // The colour is drawn when the composer opens, not when the note saves, so
+  // the dialog can wear the paper it is about to become.
+  | { kind: "new"; locationId: string; spot: Spot; color: NoteColor }
   | { kind: "open"; noteId: string }
   | null;
 
@@ -154,9 +158,16 @@ export default function BoardNotes({
     }));
   }, []);
 
-  async function create(locationId: string, spot: Spot, body: string) {
+  async function create(
+    locationId: string,
+    spot: Spot,
+    body: string,
+    color: NoteColor,
+  ) {
     setError(null);
-    const result = await safely(() => pinNote(locationId, { body, ...spot }));
+    const result = await safely(() =>
+      pinNote(locationId, { body, color, ...spot }),
+    );
     if (result.note) adopt(result.note);
     return result;
   }
@@ -212,7 +223,14 @@ export default function BoardNotes({
         canMove: (note) => board.canPost && canMoveNote(editorOf(note)),
         open: (noteId) => setPending({ kind: "open", noteId }),
         compose: (locationId, spot) =>
-          setPending({ kind: "new", locationId, spot }),
+          setPending({
+            kind: "new",
+            locationId,
+            spot,
+            color: pickNoteColor(
+              Math.floor(Math.random() * NOTE_COLORS.length),
+            ),
+          }),
         commit,
       }}
     >
@@ -246,9 +264,10 @@ export default function BoardNotes({
           // holds no ticket, and the action allows them without one.
           canDelete={!!openNote && canDeleteNote(editor)}
           onClose={() => setPending(null)}
-          onSubmit={(body) =>
+          draftColor={pending.kind === "new" ? pending.color : undefined}
+          onSubmit={(body, color) =>
             pending.kind === "new"
-              ? create(pending.locationId, pending.spot, body)
+              ? create(pending.locationId, pending.spot, body, color)
               : rewrite(pending.noteId, body)
           }
           onRecolour={

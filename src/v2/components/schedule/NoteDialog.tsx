@@ -17,12 +17,16 @@ import { HEADING } from "../styles";
 // text to rewrite and the pin to pull out. Client state rather than a route,
 // so a note needs no URL of its own.
 
-// <Input>'s look, on a textarea.
+// The note's ink is written out at each use: Tailwind's JIT needs the literal
+// in the class name, so a constant could not reach the markup anyway.
+
+// A sheet of the note's paper: the textarea has to disappear into it.
 const TEXTAREA =
-  "min-h-[160px] w-full resize-y rounded-lg border-[1.5px] border-cream/25 bg-navy2 px-4 py-3 text-base text-cream transition-colors outline-none placeholder:text-cream/40 focus:border-tan disabled:opacity-60";
+  "min-h-[200px] w-full resize-y rounded-[2px] border border-[#1b1530]/25 bg-white/35 px-4 py-3 text-base text-[#1b1530] transition-colors outline-none placeholder:text-[#1b1530]/40 focus:border-[#1b1530]/55 disabled:opacity-60";
 
 export default function NoteDialog({
   note,
+  draftColor,
   canEdit,
   canDelete,
   onClose,
@@ -32,14 +36,21 @@ export default function NoteDialog({
 }: {
   /** Null while composing a new note. */
   note: BoardNote | null;
+  /** The colour a new note will be pinned up as; ignored once it exists. */
+  draftColor?: NoteColor;
   canEdit: boolean;
   canDelete: boolean;
   onClose: () => void;
-  onSubmit: (body: string) => Promise<NoteState>;
+  onSubmit: (body: string, color: NoteColor) => Promise<NoteState>;
   onRecolour?: (color: NoteColor) => Promise<NoteState>;
   onDelete?: () => Promise<NoteState>;
 }) {
   const [body, setBody] = useState(note?.body ?? "");
+  // A note that exists wears its stored colour; a draft carries the one it
+  // will be pinned up as, which the picker can change before it is.
+  const [drafted, setDrafted] = useState<NoteColor>(draftColor ?? "butter");
+  const color = note?.color ?? drafted;
+  const skin = NOTE_STYLES[color];
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, start] = useTransition();
@@ -64,9 +75,10 @@ export default function NoteDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         aria-describedby={undefined}
-        className="flex max-h-[90dvh] max-w-[520px] flex-col gap-4 overflow-y-auto px-7 py-7"
+        style={{ background: skin.background, borderColor: skin.borderColor }}
+        className="flex max-h-[90dvh] max-w-[520px] flex-col gap-4 overflow-y-auto rounded-[2px] border px-7 py-7 shadow-[0_6px_24px_rgba(27,21,48,0.45)]"
       >
-        <DialogTitle className={`${HEADING} text-[22px] text-cream`}>
+        <DialogTitle className={`${HEADING} text-[22px] text-[#1b1530]`}>
           {note ? "Note" : "Pin up a note"}
         </DialogTitle>
 
@@ -81,39 +93,52 @@ export default function NoteDialog({
               className={TEXTAREA}
             />
             <span
-              className={`self-end text-xs ${over ? "text-meeple" : "text-cream/45"}`}
+              className={`self-end text-xs ${over ? "text-meeple" : "text-[#1b1530]/50"}`}
             >
               {body.trim().length}/{NOTE_BODY_MAX}
             </span>
           </div>
         ) : (
-          <p className="text-base break-words whitespace-pre-wrap text-cream/90">
+          <p className="text-base break-words whitespace-pre-wrap text-[#1b1530]">
             {note?.body}
           </p>
         )}
 
         {note && (
-          <p className="text-sm text-cream/60">Pinned by {note.author.name}</p>
+          <p className="text-sm text-[#1b1530]/65">
+            Pinned by {note.author.name}
+          </p>
         )}
 
-        {note && onRecolour && canEdit && (
+        {canEdit && (!note || onRecolour) && (
           <div className="flex flex-col gap-2">
-            <span className="text-xs tracking-[0.12em] text-cream/55 uppercase">
+            <span className="text-xs tracking-[0.12em] text-[#1b1530]/60 uppercase">
               Colour
             </span>
             <div className="flex flex-wrap gap-2">
-              {NOTE_COLORS.map((color) => (
+              {NOTE_COLORS.map((swatch) => (
                 <button
-                  key={color}
+                  key={swatch}
                   type="button"
                   disabled={busy}
-                  aria-label={color}
-                  aria-pressed={note.color === color}
-                  onClick={() => act(() => onRecolour(color), false)}
-                  style={NOTE_STYLES[color]}
-                  className={`h-8 w-8 rounded-[3px] border-2 transition-transform hover:-translate-y-px ${
-                    note.color === color
-                      ? "ring-2 ring-cream ring-offset-2 ring-offset-navy"
+                  aria-label={swatch}
+                  aria-pressed={color === swatch}
+                  // A draft just repaints; a pinned note saves as it goes.
+                  onClick={() =>
+                    note && onRecolour
+                      ? act(() => onRecolour(swatch), false)
+                      : setDrafted(swatch)
+                  }
+                  style={{
+                    ...NOTE_STYLES[swatch],
+                    // The ring sits on the note's own paper, not a dark panel.
+                    ...(color === swatch
+                      ? { "--tw-ring-offset-color": skin.background }
+                      : {}),
+                  }}
+                  className={`h-8 w-8 rounded-[2px] border transition-transform hover:-translate-y-px ${
+                    color === swatch
+                      ? "ring-2 ring-[#1b1530] ring-offset-2"
                       : ""
                   }`}
                 />
@@ -128,7 +153,7 @@ export default function NoteDialog({
           </p>
         )}
         {saved && !error && (
-          <p aria-live="polite" className="text-sm text-cream/60">
+          <p aria-live="polite" className="text-sm text-[#1b1530]/65">
             Saved.
           </p>
         )}
@@ -162,7 +187,7 @@ export default function NoteDialog({
                   type="button"
                   disabled={busy}
                   onClick={() => setConfirmDelete(true)}
-                  className="text-sm text-cream/55 underline underline-offset-4 hover:text-cream"
+                  className="text-sm text-[#1b1530]/60 underline underline-offset-4 hover:text-[#1b1530]"
                 >
                   Delete
                 </button>
@@ -183,7 +208,7 @@ export default function NoteDialog({
                 type="button"
                 size="sm"
                 disabled={busy || over || body.trim().length === 0}
-                onClick={() => act(() => onSubmit(body), !note)}
+                onClick={() => act(() => onSubmit(body, color), !note)}
               >
                 {busy ? "Saving…" : note ? "Save" : "Pin it up"}
               </Button>
