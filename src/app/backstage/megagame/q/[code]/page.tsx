@@ -128,7 +128,7 @@ async function CheckAndConfirm({
             </p>
           </div>
         ) : (
-          <AnswerChecker answers={quest.answers} />
+          <AnswerChecker questCode={quest.code} answers={quest.answers} />
         )}
       </Section>
 

@@ -698,6 +698,19 @@ export async function recordLevelUp(
   return { status: "retry" };
 }
 
+export type QuestAttemptInput = {
+  questId: string;
+  enteredBy: string;
+  enteredAnswer: string;
+  correct: boolean;
+};
+
+export async function recordQuestAttempt(
+  input: QuestAttemptInput,
+): Promise<void> {
+  await getDb().insert(schema.questAttempts).values(input);
+}
+
 export type VoidLevelEventResult =
   | { status: "voided" | "already-voided"; level: number }
   | { status: "not-found" | "not-volunteer" };

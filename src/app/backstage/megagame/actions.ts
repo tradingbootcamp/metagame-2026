@@ -9,6 +9,8 @@ import { parseQuestCsv } from "@/lib/megagame-quest-csv";
 import {
   checkLevelUp,
   isCompleteMegagameCode,
+  matchAnswer,
+  normalizeAnswer,
   normalizeMegagameCode,
 } from "@/lib/megagame-rules";
 import {
@@ -21,6 +23,7 @@ import {
   importQuests,
   playersByIds,
   recordLevelUp,
+  recordQuestAttempt,
   searchPlayers,
   voidCompletion,
   voidConfirmation,
@@ -126,6 +129,32 @@ export async function confirmCompletions(
   }
   revalidatePath(TOOL, "layout");
   redirect(`${TOOL}/q/${quest.code}?c=${id}`);
+}
+
+const MAX_ANSWER_CHARS = 200;
+
+/** Logs what the volunteer typed into the checker. The match is judged here, not by the browser. */
+export async function logAnswerAttempt(
+  questCode: string,
+  answer: string,
+): Promise<{ correct?: boolean; error?: string }> {
+  const access = await verify();
+  if (!access) return { error: EXPIRED };
+  if (typeof questCode !== "string" || typeof answer !== "string") {
+    return { error: STALE };
+  }
+  const entered = answer.trim().slice(0, MAX_ANSWER_CHARS);
+  if (normalizeAnswer(entered) === "") return {};
+  const quest = await findQuestByCode(questCode);
+  if (quest?.kind !== "answer") return { error: "That quest was not found." };
+  const { matched } = matchAnswer(entered, quest.answers);
+  await recordQuestAttempt({
+    questId: quest.id,
+    enteredBy: access.userId,
+    enteredAnswer: entered,
+    correct: matched,
+  });
+  return { correct: matched };
 }
 
 export type UndoState = { error?: string; done?: boolean };

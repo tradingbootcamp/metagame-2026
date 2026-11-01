@@ -75,6 +75,7 @@ import {
   recentConfirmations,
   recordLevelUp,
   recordPickerJoin,
+  recordQuestAttempt,
   searchPlayers,
   voidCompletion,
   voidConfirmation,
@@ -568,6 +569,24 @@ describe("recordLevelUp", () => {
       status: "invalid",
     });
     expect(db.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("recordQuestAttempt", () => {
+  it("inserts one attempt row", async () => {
+    await recordQuestAttempt({
+      questId: "q1",
+      enteredBy: "v1",
+      enteredAnswer: "Fire!",
+      correct: true,
+    });
+    expect(db.insert).toHaveBeenCalledWith(schema.questAttempts);
+    expect(arg(chainOf(db.insert, 0), "values")).toEqual({
+      questId: "q1",
+      enteredBy: "v1",
+      enteredAnswer: "Fire!",
+      correct: true,
+    });
   });
 });
 

@@ -19,6 +19,7 @@ const { auth, store, blob, nav } = vi.hoisted(() => ({
     recordLevelUp: vi.fn(),
     voidLevelEvent: vi.fn(),
     importQuests: vi.fn(),
+    recordQuestAttempt: vi.fn(),
   },
   blob: {
     LARGE_IMAGE_MAX_BYTES: 900 * 1024,
@@ -42,6 +43,7 @@ import {
   findPlayers,
   importQuestCsv,
   levelUp,
+  logAnswerAttempt,
   lookupPlayer,
   undoCompletion,
   undoConfirmation,
@@ -452,5 +454,79 @@ describe("importQuestCsv", () => {
       },
     ]);
     expect(revalidatePath).toHaveBeenCalledWith("/backstage/megagame/quests");
+  });
+});
+
+describe("logAnswerAttempt", () => {
+  const quest = {
+    id: QUEST,
+    code: "A2C4EF",
+    kind: "answer",
+    answers: ["Fire", "Flame"],
+  };
+
+  it("needs megagame.verify and writes nothing without it", async () => {
+    holds();
+    expect(await logAnswerAttempt("A2C4EF", "fire")).toEqual({
+      error: auth.EXPIRED,
+    });
+    expect(store.findQuestByCode).not.toHaveBeenCalled();
+    expect(store.recordQuestAttempt).not.toHaveBeenCalled();
+  });
+
+  it("records the answer as typed, judged against the stored answers", async () => {
+    store.findQuestByCode.mockResolvedValue(quest);
+    expect(await logAnswerAttempt("A2C4EF", "  FLAME! ")).toEqual({
+      correct: true,
+    });
+    expect(store.recordQuestAttempt).toHaveBeenCalledWith({
+      questId: QUEST,
+      enteredBy: "v1",
+      enteredAnswer: "FLAME!",
+      correct: true,
+    });
+  });
+
+  it("records a wrong answer as incorrect", async () => {
+    store.findQuestByCode.mockResolvedValue(quest);
+    expect(await logAnswerAttempt("A2C4EF", "water")).toEqual({
+      correct: false,
+    });
+    expect(store.recordQuestAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ enteredAnswer: "water", correct: false }),
+    );
+  });
+
+  it("skips blank input and answers with nothing to match", async () => {
+    store.findQuestByCode.mockResolvedValue(quest);
+    expect(await logAnswerAttempt("A2C4EF", " -- ")).toEqual({});
+    expect(store.recordQuestAttempt).not.toHaveBeenCalled();
+  });
+
+  it("cuts an over-long answer before storing it", async () => {
+    store.findQuestByCode.mockResolvedValue(quest);
+    await logAnswerAttempt("A2C4EF", "x".repeat(1000));
+    const [row] = store.recordQuestAttempt.mock.calls[0];
+    expect(row.enteredAnswer).toHaveLength(200);
+  });
+
+  it("refuses an unknown quest or one checked by evidence", async () => {
+    store.findQuestByCode.mockResolvedValue(null);
+    expect(await logAnswerAttempt("A2C4EF", "fire")).toEqual({
+      error: "That quest was not found.",
+    });
+    store.findQuestByCode.mockResolvedValue({ ...quest, kind: "evidence" });
+    expect(await logAnswerAttempt("A2C4EF", "fire")).toEqual({
+      error: "That quest was not found.",
+    });
+    expect(store.recordQuestAttempt).not.toHaveBeenCalled();
+  });
+
+  it("refuses input that is not a string", async () => {
+    store.findQuestByCode.mockResolvedValue(quest);
+    expect(
+      await logAnswerAttempt("A2C4EF", { toString: () => "fire" } as never),
+    ).toEqual({ error: "This form is out of date. Reload and try again." });
+    expect(store.recordQuestAttempt).not.toHaveBeenCalled();
   });
 });

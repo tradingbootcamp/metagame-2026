@@ -2,13 +2,33 @@
 
 import { useState } from "react";
 import { fieldClass, smallButtonClass } from "../ui";
+import { logAnswerAttempt } from "./actions";
+import { attemptLog } from "./attempt-log";
 import { matchAnswer } from "@/lib/megagame-rules";
 
-/** A helper only: the volunteer decides. Answers stay hidden until revealed. */
-export default function AnswerChecker({ answers }: { answers: string[] }) {
+/**
+ * A helper only: the volunteer decides. Answers stay hidden until revealed.
+ * What was typed is logged when the volunteer presses Enter or leaves the
+ * field, so half-typed words are not recorded.
+ */
+export default function AnswerChecker({
+  questCode,
+  answers,
+}: {
+  questCode: string;
+  answers: string[];
+}) {
   const [entered, setEntered] = useState("");
   const [revealed, setRevealed] = useState(false);
+  const [log] = useState(attemptLog);
   const match = matchAnswer(entered, answers);
+
+  const record = () => {
+    if (log.take(entered)) {
+      // A failed log must not get in the volunteer's way.
+      logAnswerAttempt(questCode, entered).catch(() => {});
+    }
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -22,6 +42,14 @@ export default function AnswerChecker({ answers }: { answers: string[] }) {
         spellCheck={false}
         value={entered}
         onChange={(e) => setEntered(e.target.value)}
+        onBlur={record}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            record();
+          }
+        }}
+        enterKeyHint="done"
         className={fieldClass}
       />
       {entered.trim() !== "" && (
