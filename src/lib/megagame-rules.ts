@@ -95,7 +95,7 @@ export type LevelUpInput = {
   class: MegagameClass;
   /** The level being awarded. */
   level: number;
-  /** The player's current levels, from `deriveLevels`. */
+  /** The player's current levels, from the user table's level columns. */
   levels: MegagameLevels;
   /** Non-voided completions this player has in that class. */
   completionsInClass: number;
@@ -115,17 +115,9 @@ function listLevels(levels: number[]): string {
   return `${levels.slice(0, -1).join(", ")} and ${levels.at(-1)}`;
 }
 
-/**
- * The longest run of skipped levels written out one by one. A longer run is
- * written as a range, so a very large level from a request cannot make this
- * build a huge list.
- */
-const MAX_LISTED_SKIPS = 10;
-
-/** "Skips level 2." / "Skips levels 1, 2 and 3." / "Skips levels 1 to 400." */
+/** "Skips level 2." / "Skips levels 1, 2 and 3." Levels above MAX_LEVEL never get here. */
 function skipWarning(from: number, to: number): string {
   if (from === to) return `Skips level ${from}.`;
-  if (to - from + 1 > MAX_LISTED_SKIPS) return `Skips levels ${from} to ${to}.`;
   const skipped: number[] = [];
   for (let n = from; n <= to; n += 1) skipped.push(n);
   return `Skips levels ${listLevels(skipped)}.`;
@@ -142,6 +134,9 @@ export function checkLevelUp(
 
   if (!Number.isInteger(level) || level < 1) {
     errors.push("A level must be a whole number of 1 or more.");
+  } else if (level > MAX_LEVEL) {
+    // Matches the check constraints on the user table's level columns.
+    errors.push(`Level ${level} is above the maximum of ${MAX_LEVEL}.`);
   } else if (level <= current) {
     errors.push(
       `Already a level ${current} ${cls}; a new level must be higher.`,
@@ -149,9 +144,6 @@ export function checkLevelUp(
   }
 
   if (errors.length === 0) {
-    if (level > MAX_LEVEL) {
-      warnings.push(`Level ${level} is above the ${MAX_LEVEL}-level chart.`);
-    }
     if (level > current + 1) {
       warnings.push(skipWarning(current + 1, level - 1));
     }
@@ -257,9 +249,10 @@ export function bucketIntervalSql(size: string): string {
 }
 
 // Shared origin for date_bin, so the JavaScript buckets and the SQL buckets
-// line up. Every size divides a day evenly, so any UTC midnight gives the same
-// boundaries.
-export const BUCKET_ORIGIN = new Date(Date.UTC(2026, 0, 1));
+// line up. Con days are Pacific, so this is midnight Pacific standard time
+// (UTC-8). Every size divides a day evenly, so only the origin's time of day
+// matters.
+export const BUCKET_ORIGIN = new Date(Date.UTC(2026, 0, 1, 8));
 
 export function bucketStart(at: Date, size: BucketSize): Date {
   const ms = BUCKET_MINUTES[size] * 60_000;

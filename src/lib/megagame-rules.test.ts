@@ -233,7 +233,7 @@ describe("checkLevelUp transitions", () => {
     }
   });
 
-  it("warns rather than refuses above the chart", () => {
+  it("refuses a level above the maximum", () => {
     const got = checkLevelUp(
       {
         class: "wizard",
@@ -243,9 +243,24 @@ describe("checkLevelUp transitions", () => {
       },
       [],
     );
-    expect(got.ok).toBe(true);
-    expect(got.warnings).toHaveLength(1);
-    expect(got.warnings[0]).toContain(String(MAX_LEVEL));
+    expect(got).toEqual({
+      ok: false,
+      errors: [`Level ${MAX_LEVEL + 1} is above the maximum of ${MAX_LEVEL}.`],
+      warnings: [],
+    });
+  });
+
+  it("accepts the maximum level itself", () => {
+    const got = checkLevelUp(
+      {
+        class: "wizard",
+        level: MAX_LEVEL,
+        levels: at(MAX_LEVEL - 1),
+        completionsInClass: 0,
+      },
+      [],
+    );
+    expect(got).toEqual({ ok: true, errors: [], warnings: [] });
   });
 
   it("warns about one skipped level", () => {
@@ -265,40 +280,34 @@ describe("checkLevelUp transitions", () => {
     expect(got.warnings).toEqual(["Skips levels 1, 2 and 3."]);
   });
 
-  it("puts the above-the-chart warning before the skip warning", () => {
+  it("refuses a level above the maximum without skip warnings", () => {
+    for (const level of [MAX_LEVEL + 2, 400]) {
+      const got = checkLevelUp(
+        { class: "wizard", level, levels: at(1), completionsInClass: 0 },
+        [],
+      );
+      expect(got).toEqual({
+        ok: false,
+        errors: [`Level ${level} is above the maximum of ${MAX_LEVEL}.`],
+        warnings: [],
+      });
+    }
+  });
+
+  it("lists every skipped level up to the maximum", () => {
     const got = checkLevelUp(
       {
         class: "wizard",
-        level: MAX_LEVEL + 2,
-        levels: at(MAX_LEVEL),
+        level: MAX_LEVEL,
+        levels: at(0),
         completionsInClass: 0,
       },
       [],
     );
-    expect(got.warnings).toHaveLength(2);
-    expect(got.warnings[0]).toContain(String(MAX_LEVEL));
-    expect(got.warnings[1]).toBe(`Skips level ${MAX_LEVEL + 1}.`);
+    expect(got.warnings).toEqual(["Skips levels 1, 2, 3 and 4."]);
   });
 
-  it("still lists ten skipped levels one by one", () => {
-    const got = checkLevelUp(
-      { class: "wizard", level: 11, levels: at(0), completionsInClass: 0 },
-      [],
-    );
-    expect(got.warnings).toContain(
-      "Skips levels 1, 2, 3, 4, 5, 6, 7, 8, 9 and 10.",
-    );
-  });
-
-  it("writes a longer run of skipped levels as a range", () => {
-    const got = checkLevelUp(
-      { class: "wizard", level: 12, levels: at(0), completionsInClass: 0 },
-      [],
-    );
-    expect(got.warnings).toContain("Skips levels 1 to 11.");
-  });
-
-  it("handles a huge level without building a list of every level", () => {
+  it("refuses a huge level quickly", () => {
     const started = Date.now();
     const got = checkLevelUp(
       {
@@ -309,8 +318,8 @@ describe("checkLevelUp transitions", () => {
       },
       [],
     );
-    expect(got.ok).toBe(true);
-    expect(got.warnings).toContain("Skips levels 1 to 999999999.");
+    expect(got.ok).toBe(false);
+    expect(got.warnings).toEqual([]);
     expect(Date.now() - started).toBeLessThan(1000);
   });
 
@@ -595,9 +604,9 @@ describe("bucketStart", () => {
     const expected: Record<string, string> = {
       "5m": "2026-11-07T10:05:00.000Z",
       "30m": "2026-11-07T10:00:00.000Z",
-      "3h": "2026-11-07T09:00:00.000Z",
-      "6h": "2026-11-07T06:00:00.000Z",
-      "1d": "2026-11-07T00:00:00.000Z",
+      "3h": "2026-11-07T08:00:00.000Z",
+      "6h": "2026-11-07T08:00:00.000Z",
+      "1d": "2026-11-07T08:00:00.000Z",
     };
     for (const [size, want] of Object.entries(expected)) {
       expect(iso(bucketStart(at, size as BucketSize)), size).toBe(want);
@@ -614,9 +623,18 @@ describe("bucketStart", () => {
   });
 
   it("floors downwards before the origin too", () => {
-    expect(BUCKET_ORIGIN.toISOString()).toBe("2026-01-01T00:00:00.000Z");
-    expect(iso(bucketStart(new Date("2025-12-31T23:58:00.000Z"), "15m"))).toBe(
-      "2025-12-31T23:45:00.000Z",
+    expect(iso(bucketStart(new Date("2026-01-01T07:58:00.000Z"), "15m"))).toBe(
+      "2026-01-01T07:45:00.000Z",
+    );
+  });
+
+  it("starts days at midnight Pacific standard time", () => {
+    expect(BUCKET_ORIGIN.toISOString()).toBe("2026-01-01T08:00:00.000Z");
+    expect(iso(bucketStart(new Date("2026-11-08T07:59:00.000Z"), "1d"))).toBe(
+      "2026-11-07T08:00:00.000Z",
+    );
+    expect(iso(bucketStart(new Date("2026-11-08T08:00:00.000Z"), "1d"))).toBe(
+      "2026-11-08T08:00:00.000Z",
     );
   });
 });
