@@ -18,7 +18,7 @@ import {
 } from "@/v2/lib/tickets";
 import { FAMILY_PACK, STANDARD_USD } from "@/lib/family-pack";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
-import { withPromo, withUtm } from "@/lib/utm";
+import { withPromo, withReferral, withUtm } from "@/lib/utm";
 import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import {
   subscribeCurrency,
@@ -49,15 +49,15 @@ const TILE_NOTE =
 const subscribeNever = () => () => {};
 
 const EARLY_BIRD_HREF = stripeCheckoutHref({ tier: "standard" });
+const FULL_PRICE_HREF = stripeCheckoutHref({ tier: "standard", code: "own" });
 
 // UTMs and any promo code live in localStorage, so they're added at click time
 // (not render) to keep the server-rendered href stable.
 const addUtm = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-  e.currentTarget.href = withPromo(withUtm(href));
+  e.currentTarget.href = withReferral(withPromo(withUtm(href)));
 };
 
-// "buy" is the Standard ticket's code step; /buy, /buy/<code> and
-// /invite/<ref> all redirect to /#buy (next.config.ts).
+// "buy" is the referral-code step; /invite/<ref> redirects to /#buy.
 const HASH_MODALS = [
   "buy",
   "supporter",
@@ -212,8 +212,9 @@ export default function TicketsPanel({
               </a>
             </Button>
           ))}
-        {/* Full price: USD goes through the buy modal, where a referral or
-            discount code is entered before Stripe; BTC through its own modal. */}
+        {/* Full price, no promo auto-applied: for after the deadline, or for
+            anyone bringing their own code. A referral code goes through the
+            buy modal instead. */}
         {standard &&
           (isBtc ? (
             <Button
@@ -228,18 +229,32 @@ export default function TicketsPanel({
               </span>
             </Button>
           ) : (
-            <Button
-              type="button"
-              variant="raised"
-              id="buy"
-              onClick={() => setOpenModal("buy")}
-              className={`${TILE} scroll-mt-24`}
-            >
-              <span className={TILE_LABEL}>Standard</span>
-              <span className={`${HEADING} text-[30px] leading-none text-tan`}>
-                ${standard.prices.full.usd}
-              </span>
-            </Button>
+            <div className="flex flex-col items-center gap-2">
+              <Button asChild variant="raised" className={TILE}>
+                <a
+                  href={FULL_PRICE_HREF}
+                  onClick={addUtm(FULL_PRICE_HREF)}
+                  onAuxClick={addUtm(FULL_PRICE_HREF)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className={TILE_LABEL}>Standard</span>
+                  <span
+                    className={`${HEADING} text-[30px] leading-none text-tan`}
+                  >
+                    ${standard.prices.full.usd}
+                  </span>
+                </a>
+              </Button>
+              <button
+                type="button"
+                id="buy"
+                onClick={() => setOpenModal("buy")}
+                className="scroll-mt-24 font-space-mono text-[12px] tracking-[0.06em] text-cream/70 underline underline-offset-4 hover:text-tan"
+              >
+                Use a referral code
+              </button>
+            </div>
           ))}
         <Button
           type="button"

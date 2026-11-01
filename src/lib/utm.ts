@@ -151,6 +151,15 @@ export function readReferral(): string {
   }
 }
 
+/** `href` with the stored referral code set, so checkout credits the referrer. Client-only. */
+export function withReferral(href: string): string {
+  const ref = readReferral();
+  if (!ref) return href;
+  const url = new URL(href, "http://localhost");
+  url.searchParams.set(REFERRAL_PARAM, ref);
+  return url.pathname + url.search + url.hash;
+}
+
 /** `href` with the stored promo code set, so checkout pre-applies it. Client-only. */
 export function withPromo(href: string): string {
   const promo = readPromo();

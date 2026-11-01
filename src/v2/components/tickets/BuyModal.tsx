@@ -60,7 +60,7 @@ function initialCodes(): { ref: string; promo: string } {
  * The stop before Stripe for a Standard ticket: a referral code and a
  * discount code, with the price they'll get. Stripe locks in whichever
  * discount is bigger, and the referral is recorded either way. Opened from
- * the Standard tile and by /buy, /buy/<code> and /invite/<ref> links.
+ * the "Use a referral code" link under the Standard tile and by /invite/<ref> links.
  */
 export default function BuyModal({ onClose }: { onClose: () => void }) {
   const [codes, setCodes] = useState(initialCodes);
