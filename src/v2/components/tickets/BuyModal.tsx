@@ -168,40 +168,34 @@ export default function BuyModal({ onClose }: { onClose: () => void }) {
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className={FIELD_LABEL}>Discount code</span>
+            <span className={FIELD_LABEL}>Other discount code</span>
             <Input
               value={codes.promo}
               onChange={(e) =>
                 setCodes((c) => ({ ...c, promo: e.target.value }))
               }
-              placeholder="Student, aid, comp or other code"
               autoComplete="off"
               spellCheck={false}
               maxLength={100}
               disabled={busy}
               className="font-mono"
             />
-            <span className="min-h-5 text-sm text-cream/70">
-              {!promo
-                ? "Optional. If it beats the referral price, it applies instead; the referral still counts."
-                : settled && preview.promo.valid
-                  ? `${preview.promo.code}: $${preview.promo.usdOff ?? 0} off${preview.promo.label ? ` (${preview.promo.label})` : ""}.`
-                  : settled && preview.promo.unavailable
-                    ? "We'll check this code at checkout."
-                    : settled
-                      ? "That code isn't active."
-                      : "Checking…"}
-            </span>
           </label>
 
-          {settled && (
+          {!ref && !promo ? (
             <p className="text-sm text-cream/80">
-              {preview.applied === "promo"
-                ? `Your discount code applies: $${preview.usdOff} off.`
-                : preview.applied === "referral"
-                  ? `Referral price applies: $${preview.usdOff} off.`
-                  : "No discount applied yet. You can also enter a code at checkout."}
+              The biggest discount applies.
             </p>
+          ) : (
+            settled && (
+              <p className="text-sm text-cream/80">
+                {preview.applied === "promo"
+                  ? `Your discount code applies: $${preview.usdOff} off.`
+                  : preview.applied === "referral"
+                    ? `Referral price applies: $${preview.usdOff} off.`
+                    : "No discount applied."}
+              </p>
+            )
           )}
 
           <Button
