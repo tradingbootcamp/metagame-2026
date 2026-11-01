@@ -228,7 +228,7 @@ async function ConfirmationResult({
       )}
       {outcome.notRecorded.length > 0 && (
         <p className="text-sm text-meeple">
-          Not recorded, account no longer exists:{" "}
+          Not recorded, or undone since:{" "}
           {outcome.notRecorded.map(nameOf).join(", ")}.
         </p>
       )}
