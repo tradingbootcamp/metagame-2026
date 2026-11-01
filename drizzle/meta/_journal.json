@@ -176,6 +176,13 @@
       "when": 1793303005909,
       "tag": "0024_shallow_namora",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793563821047,
+      "tag": "0025_wild_fantastic_four",
+      "breakpoints": true
     }
   ]
 }
