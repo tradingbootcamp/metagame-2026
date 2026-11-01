@@ -299,7 +299,11 @@ export default async function SessionDetails({ slug }: { slug: string }) {
       {editor && (
         <p className="mt-6 text-sm">
           <Link
-            href={`/account/sessions/${session.id}`}
+            href={
+              editor.via === "team"
+                ? `/backstage/schedule?edit=${encodeURIComponent(session.slug)}`
+                : `/account/sessions/${session.id}`
+            }
             className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
           >
             Edit this session
