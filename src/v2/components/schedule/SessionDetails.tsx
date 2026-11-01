@@ -304,11 +304,6 @@ export default async function SessionDetails({ slug }: { slug: string }) {
           >
             Edit this session
           </Link>
-          <span className="text-[#1b1530]/55">
-            {editor.via === "host"
-              ? " — you’re a host"
-              : " — you can edit any session"}
-          </span>
         </p>
       )}
 
