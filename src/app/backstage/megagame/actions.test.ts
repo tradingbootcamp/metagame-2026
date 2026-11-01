@@ -7,6 +7,7 @@ const { auth, store, blob, nav } = vi.hoisted(() => ({
   },
   store: {
     findPlayerByCode: vi.fn(),
+    findQuestByCode: vi.fn(),
     searchPlayers: vi.fn(),
     playersByIds: vi.fn(),
     confirmQuest: vi.fn(),
@@ -69,6 +70,8 @@ const ada = {
   levels: { wizard: 1, pirate: 0, alien: 0 },
   code: "B3D5F7",
 };
+/** What a lookup sends to the browser: no badge code and no levels. */
+const adaHit = { id: "u1", name: "Ada", pronouns: null, imageUrl: null };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -104,8 +107,8 @@ describe("gating", () => {
   it("checks megagame.verify for the lookups", async () => {
     store.findPlayerByCode.mockResolvedValue(ada);
     store.searchPlayers.mockResolvedValue([ada]);
-    expect(await lookupPlayer("b3d-5f7")).toEqual({ player: ada });
-    expect(await findPlayers("Ad")).toEqual({ players: [ada] });
+    expect(await lookupPlayer("b3d-5f7")).toEqual({ player: adaHit });
+    expect(await findPlayers("Ad")).toEqual({ players: [adaHit] });
     expect(auth.requireAccess).toHaveBeenCalledWith("megagame.verify");
   });
 
@@ -123,6 +126,20 @@ describe("confirmCompletions", () => {
       {},
       form({ id, questId: QUEST, questCode: "a2c4ef", player: players }),
     );
+
+  beforeEach(() => {
+    store.findQuestByCode.mockResolvedValue({ id: QUEST, code: "A2C4EF" });
+  });
+
+  it("refuses a quest code that does not name the posted quest, before writing", async () => {
+    store.findQuestByCode.mockResolvedValue({ id: ID, code: "A2C4EF" });
+    expect(await submit(["u1"])).toEqual({
+      error: "This form is out of date. Reload and try again.",
+    });
+    store.findQuestByCode.mockResolvedValue(null);
+    expect((await submit(["u1"])).error).toMatch(/out of date/);
+    expect(store.confirmQuest).not.toHaveBeenCalled();
+  });
 
   it("records as the signed-in volunteer and opens the result by its id", async () => {
     store.confirmQuest.mockResolvedValue({ status: "ok" });
@@ -220,6 +237,14 @@ describe("undoCompletion", () => {
       reason: "dup",
     });
   });
+
+  it("reports a completion that is unknown or already undone", async () => {
+    holds("megagame.verify", "megagame.manage");
+    store.voidCompletion.mockResolvedValue(false);
+    expect((await undoCompletion({}, form({ id: ID }))).error).toMatch(
+      /not found or already undone/i,
+    );
+  });
 });
 
 describe("levelUp", () => {
@@ -314,6 +339,18 @@ describe("levelUp", () => {
     expect(await submit()).toEqual({
       awarded: { eventId: ID, class: "wizard", level: 2 },
     });
+  });
+
+  it("does not upload the photo again on a retry", async () => {
+    store.findLevelEvent.mockResolvedValue({ id: ID });
+    store.recordLevelUp.mockResolvedValue({ status: "retry" });
+    await submit({
+      photo: new File(["x"], "card.webp", { type: "image/webp" }),
+    });
+    expect(blob.uploadImage).not.toHaveBeenCalled();
+    expect(store.recordLevelUp).toHaveBeenCalledWith(
+      expect.objectContaining({ cardPhotoUrl: null }),
+    );
   });
 
   it("refuses an unknown player", async () => {

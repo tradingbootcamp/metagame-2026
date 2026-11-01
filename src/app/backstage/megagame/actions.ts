@@ -16,6 +16,7 @@ import {
   confirmationOutcome,
   findLevelEvent,
   findPlayerByCode,
+  findQuestByCode,
   playersByIds,
   recordLevelUp,
   searchPlayers,
@@ -51,9 +52,22 @@ async function mayUndo(access: Access, recordedBy: string | null) {
 
 // ---- Player lookup ----
 
+/** What a lookup sends to the browser; spec 3.1 limits name search to these. */
+export type PlayerHit = Pick<
+  PlayerSummary,
+  "id" | "name" | "pronouns" | "imageUrl"
+>;
+
+const toHit = ({ id, name, pronouns, imageUrl }: PlayerSummary): PlayerHit => ({
+  id,
+  name,
+  pronouns,
+  imageUrl,
+});
+
 export async function lookupPlayer(
   input: string,
-): Promise<{ player?: PlayerSummary; error?: string }> {
+): Promise<{ player?: PlayerHit; error?: string }> {
   if (!(await verify())) return { error: EXPIRED };
   const code = normalizeMegagameCode(input);
   if (!isCompleteMegagameCode(code))
@@ -61,14 +75,15 @@ export async function lookupPlayer(
   const player = await findPlayerByCode(code);
   if (!player)
     return { error: `No player has code ${formatTicketCode(code)}.` };
-  return { player };
+  return { player: toHit(player) };
 }
 
 export async function findPlayers(
   query: string,
-): Promise<{ players?: PlayerSummary[]; error?: string }> {
+): Promise<{ players?: PlayerHit[]; error?: string }> {
   if (!(await verify())) return { error: EXPIRED };
-  return { players: await searchPlayers(String(query).slice(0, 100)) };
+  const players = await searchPlayers(String(query).slice(0, 100));
+  return { players: players.map(toHit) };
 }
 
 // ---- Quest confirmations ----
@@ -84,7 +99,8 @@ export async function confirmCompletions(
   const id = str(formData, "id");
   const questId = str(formData, "questId");
   if (!isUuid(id) || !isUuid(questId)) return { error: STALE };
-  const code = normalizeMegagameCode(str(formData, "questCode"));
+  const quest = await findQuestByCode(str(formData, "questCode"));
+  if (quest?.id !== questId) return { error: STALE };
   const players = formData
     .getAll("player")
     .map(String)
@@ -107,7 +123,7 @@ export async function confirmCompletions(
       return { error: STALE };
   }
   revalidatePath(TOOL, "layout");
-  redirect(`${TOOL}/q/${code}?c=${id}`);
+  redirect(`${TOOL}/q/${quest.code}?c=${id}`);
 }
 
 export type UndoState = { error?: string; done?: boolean };
@@ -142,11 +158,14 @@ export async function undoCompletion(
   if (!access) return { error: EXPIRED };
   const id = str(formData, "id");
   if (!isUuid(id)) return { error: STALE };
-  await voidCompletion({
+  const voided = await voidCompletion({
     id,
     voidedBy: access.userId,
     reason: optional(formData, "reason"),
   });
+  if (!voided) {
+    return { error: "That completion was not found or already undone." };
+  }
   revalidatePath(TOOL, "layout");
   return { done: true };
 }
@@ -180,7 +199,8 @@ export async function levelUp(
   let warnings: string[] = [];
   // A retry of a recorded event would fail the checks against the level it
   // already set, so it goes straight to the store, which tells retries apart.
-  if (!(await findLevelEvent(id))) {
+  const retry = (await findLevelEvent(id)) !== null;
+  if (!retry) {
     const check = checkLevelUp({
       class: cls,
       level,
@@ -196,7 +216,7 @@ export async function levelUp(
 
   let cardPhotoUrl: string | null = null;
   const photo = formData.get("photo");
-  if (photo instanceof File && photo.size > 0) {
+  if (!retry && photo instanceof File && photo.size > 0) {
     try {
       cardPhotoUrl = await uploadImage(
         "megagame-cards",

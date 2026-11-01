@@ -1,38 +1,45 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { fieldClass, smallButtonClass } from "../ui";
-import { findPlayers, lookupPlayer } from "./actions";
+import { findPlayers, lookupPlayer, type PlayerHit } from "./actions";
 import CodeEntry from "./CodeEntry";
-import type { PlayerSummary } from "@/lib/megagame-store";
+import { latestRequest } from "./latest";
 
 /** Add a player by badge code or by name. Never creates accounts. */
 export default function PlayerAdder({
   onAdd,
   codeLabel = "Player code",
 }: {
-  onAdd: (player: PlayerSummary) => void;
+  onAdd: (player: PlayerHit) => void;
   codeLabel?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<PlayerSummary[]>([]);
+  const [hits, setHits] = useState<PlayerHit[]>([]);
   const [pending, start] = useTransition();
+  const search = useRef(latestRequest());
 
   useEffect(() => {
     const q = query.trim();
     if (q.length < 2) return;
     const timer = setTimeout(() => {
+      const isCurrent = search.current.begin();
       start(async () => {
         const res = await findPlayers(q);
+        if (!isCurrent()) return;
         if (res.error) setError(res.error);
         setHits(res.players ?? []);
       });
     }, 300);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      search.current.cancel();
+    };
   }, [query]);
 
-  const add = (player: PlayerSummary) => {
+  const add = (player: PlayerHit) => {
+    search.current.cancel();
     setError(null);
     setQuery("");
     setHits([]);
@@ -115,7 +122,11 @@ export default function PlayerAdder({
   );
 }
 
-export function Avatar({ player }: { player: PlayerSummary }) {
+export function Avatar({
+  player,
+}: {
+  player: Pick<PlayerHit, "name" | "imageUrl">;
+}) {
   if (player.imageUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- already avatar-sized
