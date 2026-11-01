@@ -25,6 +25,7 @@ export const QUEST_CSV_COLUMNS = [
   "hint",
   "min_level",
   "max_level",
+  "active",
 ] as const;
 type Column = (typeof QUEST_CSV_COLUMNS)[number];
 const REQUIRED: readonly Column[] = ["title", "kind"];
@@ -45,6 +46,8 @@ export type QuestImportRow = {
   hint: string | null;
   minLevel: number | null;
   maxLevel: number | null;
+  /** Null when blank: an update leaves the quest as it was, an insert makes it active. */
+  active: boolean | null;
 };
 
 export type QuestCsvResult = { rows: QuestImportRow[]; errors: string[] };
@@ -123,6 +126,15 @@ function parseLevel(raw: string): number | null | "bad" {
   const n = Number(raw);
   return n >= 1 && n <= MAX_LEVEL ? n : "bad";
 }
+
+const ACTIVE_VALUES: Record<string, boolean> = {
+  true: true,
+  yes: true,
+  "1": true,
+  false: false,
+  no: false,
+  "0": false,
+};
 
 export function parseQuestCsv(text: string): QuestCsvResult {
   const { records, unclosedQuoteLine } = parseRecords(text);
@@ -208,6 +220,11 @@ export function parseQuestCsv(text: string): QuestCsvResult {
         fail("a level window needs a class.");
     }
 
+    const rawActive = get("active").toLowerCase();
+    const active = rawActive === "" ? null : ACTIVE_VALUES[rawActive];
+    if (active === undefined)
+      fail("active must be true, false, yes, no, 1 or 0.");
+
     let code: string | null = null;
     if (get("code") !== "") {
       const normalized = normalizeMegagameCode(get("code"));
@@ -235,6 +252,7 @@ export function parseQuestCsv(text: string): QuestCsvResult {
       hint,
       minLevel: minLevel as number | null,
       maxLevel: maxLevel as number | null,
+      active: active ?? null,
     });
   }
   return errors.length > 0 ? { rows: [], errors } : { rows, errors };

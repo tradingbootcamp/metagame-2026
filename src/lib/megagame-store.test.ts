@@ -126,7 +126,11 @@ describe("listQuests", () => {
 });
 
 describe("importQuests", () => {
-  const row = (code: string | null, title: string) => ({
+  const row = (
+    code: string | null,
+    title: string,
+    active: boolean | null = null,
+  ) => ({
     code,
     title,
     class: "wizard" as const,
@@ -136,7 +140,13 @@ describe("importQuests", () => {
     hint: null,
     minLevel: 1,
     maxLevel: 2,
+    active,
   });
+  /** What reaches the insert: a blank active is left to the column default. */
+  const inserted = (r: ReturnType<typeof row>) => {
+    const { active, ...rest } = r;
+    return active === null ? rest : { ...rest, active };
+  };
 
   it("upserts rows that carry a code and counts the ones that existed", async () => {
     queue([{ code: "A2C4EF" }], []);
@@ -145,9 +155,9 @@ describe("importQuests", () => {
     ).toEqual({ created: 1, updated: 1 });
     expect(db.insert).toHaveBeenCalledTimes(1);
     const c = chainOf(db.insert, 0);
-    expect(arg(c, "values")).toEqual([
-      { ...row("A2C4EF", "Old") },
-      { ...row("B3D5F7", "New") },
+    expect(arg(c, "values")).toStrictEqual([
+      inserted(row("A2C4EF", "Old")),
+      inserted(row("B3D5F7", "New")),
     ]);
     const conflict = arg(c, "onConflictDoUpdate") as {
       target: unknown;
@@ -213,6 +223,45 @@ describe("importQuests", () => {
     for (let i = 0; i < 5; i++) freshInsert(() => []);
     await expect(importQuests([row(null, "A")])).rejects.toThrow();
     expect(db.insert).toHaveBeenCalledTimes(5);
+  });
+
+  it("sets active on upsert only for rows that give it", async () => {
+    queue([{ code: "A2C4EF" }, { code: "C4E6G8" }]);
+    expect(
+      await importQuests([
+        row("A2C4EF", "Withdrawn", false),
+        row("B3D5F7", "Untouched"),
+        row("C4E6G8", "Back", true),
+      ]),
+    ).toEqual({ created: 1, updated: 2 });
+    expect(db.insert).toHaveBeenCalledTimes(2);
+    const withActive = chainOf(db.insert, 0);
+    expect(arg(withActive, "values")).toStrictEqual([
+      inserted(row("A2C4EF", "Withdrawn", false)),
+      inserted(row("C4E6G8", "Back", true)),
+    ]);
+    const set1 = (
+      arg(withActive, "onConflictDoUpdate") as { set: Record<string, unknown> }
+    ).set;
+    expect(render(set1.active)).toBe("excluded.active");
+    const without = chainOf(db.insert, 1);
+    expect(arg(without, "values")).toStrictEqual([
+      inserted(row("B3D5F7", "Untouched")),
+    ]);
+    const set2 = (
+      arg(without, "onConflictDoUpdate") as { set: Record<string, unknown> }
+    ).set;
+    expect(Object.keys(set2)).not.toContain("active");
+  });
+
+  it("inserts a code-less row as active unless it says otherwise", async () => {
+    freshInsert();
+    await importQuests([row(null, "A"), row(null, "B", false)]);
+    const values = arg(chainOf(db.insert, 0), "values") as {
+      active?: boolean;
+    }[];
+    expect(values[0]).not.toHaveProperty("active");
+    expect(values[1].active).toBe(false);
   });
 
   it("writes nothing for an empty list", async () => {

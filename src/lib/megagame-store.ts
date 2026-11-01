@@ -123,9 +123,13 @@ export async function listQuests(): Promise<Quest[]> {
 
 const FRESH_CODE_ATTEMPTS = 5;
 
+/** A blank active is dropped so the insert takes the column default. */
+const questValues = ({ active, ...rest }: QuestImportRow) =>
+  active === null ? rest : { ...rest, active };
+
 /**
- * Rows with a code replace that quest's fields (active is left alone); rows
- * without one become new quests under fresh codes.
+ * Rows with a code replace that quest's fields (active only when the row
+ * gives it); rows without one become new quests under fresh codes.
  */
 export async function importQuests(
   rows: readonly QuestImportRow[],
@@ -145,23 +149,33 @@ export async function importQuests(
         ),
       );
     updated = existing.length;
-    await db
-      .insert(quests)
-      .values(coded.map((r) => ({ ...r, code: r.code as string })))
-      .onConflictDoUpdate({
-        target: quests.code,
-        set: {
-          title: sql`excluded.title`,
-          class: sql`excluded.class`,
-          kind: sql`excluded.kind`,
-          answers: sql`excluded.answers`,
-          evidence: sql`excluded.evidence`,
-          hint: sql`excluded.hint`,
-          minLevel: sql`excluded.min_level`,
-          maxLevel: sql`excluded.max_level`,
-          updatedAt: sql`now()`,
-        },
-      });
+    // A blank active leaves the stored value alone, so those rows go in a
+    // separate upsert whose update does not touch the column.
+    const upsert = (batch: QuestImportRow[], withActive: boolean) =>
+      db
+        .insert(quests)
+        .values(
+          batch.map((r) => ({ ...questValues(r), code: r.code as string })),
+        )
+        .onConflictDoUpdate({
+          target: quests.code,
+          set: {
+            title: sql`excluded.title`,
+            class: sql`excluded.class`,
+            kind: sql`excluded.kind`,
+            answers: sql`excluded.answers`,
+            evidence: sql`excluded.evidence`,
+            hint: sql`excluded.hint`,
+            minLevel: sql`excluded.min_level`,
+            maxLevel: sql`excluded.max_level`,
+            ...(withActive ? { active: sql`excluded.active` } : {}),
+            updatedAt: sql`now()`,
+          },
+        });
+    const withActive = coded.filter((r) => r.active !== null);
+    const withoutActive = coded.filter((r) => r.active === null);
+    if (withActive.length > 0) await upsert(withActive, true);
+    if (withoutActive.length > 0) await upsert(withoutActive, false);
   }
 
   // One insert for all of them; a code that turns out to be taken is the
@@ -178,7 +192,7 @@ export async function importQuests(
       do code = randomTicketCode();
       while (taken.has(code));
       taken.add(code);
-      return { ...r, code };
+      return { ...questValues(r), code };
     });
     const inserted = await db
       .insert(quests)

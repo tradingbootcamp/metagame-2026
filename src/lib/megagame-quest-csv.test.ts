@@ -47,6 +47,7 @@ describe("parseQuestCsv", () => {
           hint: "Look up",
           minLevel: 2,
           maxLevel: 3,
+          active: null,
         },
         {
           code: null,
@@ -58,6 +59,7 @@ describe("parseQuestCsv", () => {
           hint: null,
           minLevel: null,
           maxLevel: null,
+          active: null,
         },
       ],
     });
@@ -178,5 +180,42 @@ describe("parseQuestCsv", () => {
       ",,,answer,x,,,,",
     ].join("\n");
     expect(parseQuestCsv(text).errors).toEqual(["Line 4: title is required."]);
+  });
+
+  it("reads the optional active column, blank meaning leave as is", () => {
+    const text = [
+      "code,title,kind,answers,active",
+      "A2C4EF,A,answer,x,true",
+      "B3D5F7,B,answer,x,No",
+      "C4E6G8,C,answer,x,YES",
+      "D5F7H9,D,answer,x,0",
+      "E6G8J0,E,answer,x,1",
+      "F7H9K1,F,answer,x,FALSE",
+      "G8J0M2,G,answer,x,",
+      ",H,answer,x, no ",
+    ].join("\n");
+    const { rows, errors } = parseQuestCsv(text);
+    expect(errors).toEqual([]);
+    expect(rows.map((r) => r.active)).toEqual([
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      null,
+      false,
+    ]);
+  });
+
+  it("leaves active as is when the column is missing", () => {
+    const { rows } = parseQuestCsv("title,kind,answers\nQ,answer,x");
+    expect(rows[0].active).toBeNull();
+  });
+
+  it("refuses an active value it does not recognize", () => {
+    expect(
+      parseQuestCsv("title,kind,answers,active\nQ,answer,x,maybe").errors,
+    ).toEqual(["Line 2: active must be true, false, yes, no, 1 or 0."]);
   });
 });

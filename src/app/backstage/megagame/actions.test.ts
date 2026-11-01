@@ -451,6 +451,7 @@ describe("importQuestCsv", () => {
         hint: null,
         minLevel: null,
         maxLevel: null,
+        active: null,
       },
     ]);
     expect(revalidatePath).toHaveBeenCalledWith("/backstage/megagame/quests");

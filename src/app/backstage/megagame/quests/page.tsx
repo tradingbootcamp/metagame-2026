@@ -30,8 +30,8 @@ export default async function QuestsPage() {
         <div className="flex flex-col gap-2 text-sm text-ink/70">
           <p>
             The first row names the columns: code, title, class, kind, answers,
-            evidence, hint, min_level and max_level. Only title and kind are
-            required, and the columns can come in any order.
+            evidence, hint, min_level, max_level and active. Only title and kind
+            are required, and the columns can come in any order.
           </p>
           <p>
             Kind is answer or evidence. Separate several accepted answers with a
@@ -42,6 +42,11 @@ export default async function QuestsPage() {
             Leave the code blank to add a new quest with a fresh code. Give an
             existing code to replace that quest&rsquo;s details. Pasting the
             same code-less rows twice adds them twice.
+          </p>
+          <p>
+            Active is true or false (yes/no and 1/0 also work). Set it to false
+            on an existing code to withdraw that quest. A blank active leaves an
+            existing quest as it was and makes a new quest active.
           </p>
         </div>
       </Section>
