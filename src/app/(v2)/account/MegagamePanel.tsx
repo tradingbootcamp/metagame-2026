@@ -9,6 +9,7 @@ import {
   type MegagameClass,
   type MegagameLevels,
 } from "@/lib/megagame-levels";
+import { formatTicketCode } from "@/lib/ticket-code-format";
 import ClassBadges from "@/v2/components/megagame/ClassBadges";
 import FactionPatch from "@/v2/components/megagame/FactionPatch";
 import GuildSeal from "@/v2/components/megagame/GuildSeal";
@@ -27,7 +28,13 @@ const BRIEFS: Record<MegagameClass, string> = {
 const BRIEF =
   "text-[15px] leading-snug text-ink/80 transition duration-200 sm:pointer-fine:translate-y-1 sm:pointer-fine:opacity-0 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100";
 
-export default function MegagamePanel({ levels }: { levels: MegagameLevels }) {
+export default function MegagamePanel({
+  levels,
+  playerCode,
+}: {
+  levels: MegagameLevels;
+  playerCode: string;
+}) {
   const [state, action, pending] = useActionState<ClassState, FormData>(
     chooseMegagameClass,
     {},
@@ -35,6 +42,17 @@ export default function MegagamePanel({ levels }: { levels: MegagameLevels }) {
   const joined = activeClasses(levels).length > 0;
   return (
     <div className="flex max-w-[960px] flex-col gap-10">
+      <section className="flex flex-col gap-1">
+        <h2 className="font-grotesk text-2xl font-bold text-navy">
+          Your player code
+        </h2>
+        <p className="font-space-mono text-3xl font-bold tracking-[0.12em] text-navy">
+          {formatTicketCode(playerCode)}
+        </p>
+        <p className="text-sm text-ink/70">
+          Read this out to a megagame volunteer when you finish a quest.
+        </p>
+      </section>
       {joined && (
         <section className="flex flex-col gap-4">
           <h2 className="font-grotesk text-2xl font-bold text-navy">
