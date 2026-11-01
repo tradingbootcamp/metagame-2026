@@ -11,6 +11,7 @@ import PlayerRows from "../../PlayerRows";
 import Section from "../../Section";
 import UndoForm from "../../UndoForm";
 import { isUuid } from "../../uuid";
+import { windowText } from "../../format";
 import { toolAccess } from "@/lib/admin-auth";
 import { CLASS_LABELS, isMegagameClass } from "@/lib/megagame-levels";
 import { normalizeMegagameCode } from "@/lib/megagame-rules";
@@ -26,15 +27,6 @@ import { formatTicketCode } from "@/lib/ticket-code-format";
 const TOOL = "/backstage/megagame";
 const LINK =
   "font-semibold text-navy underline underline-offset-2 hover:text-meeple";
-
-function windowText(q: Quest): string | null {
-  if (q.minLevel != null && q.maxLevel != null) {
-    return `Levels ${q.minLevel} to ${q.maxLevel}`;
-  }
-  if (q.minLevel != null) return `Level ${q.minLevel} and up`;
-  if (q.maxLevel != null) return `Up to level ${q.maxLevel}`;
-  return null;
-}
 
 export default async function QuestPage(
   props: PageProps<"/backstage/megagame/q/[code]">,

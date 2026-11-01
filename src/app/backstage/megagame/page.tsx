@@ -42,9 +42,10 @@ export default async function MegagameHome(
     notice = `No player has code ${formatTicketCode(normalizeMegagameCode(added))}.`;
   }
 
-  const [rows, recent] = await Promise.all([
+  const [rows, recent, manager] = await Promise.all([
     loadPlayerRows(ids, null),
     recentConfirmations(access.userId),
+    toolAccess("megagame.manage"),
   ]);
 
   return (
@@ -110,12 +111,22 @@ export default async function MegagameHome(
         )}
       </Section>
 
-      <Link
-        href={`${TOOL}/level`}
-        className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
-      >
-        Record a level-up →
-      </Link>
+      <div className="flex flex-col gap-3">
+        <Link
+          href={`${TOOL}/level`}
+          className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
+        >
+          Record a level-up →
+        </Link>
+        {manager && (
+          <Link
+            href={`${TOOL}/quests`}
+            className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
+          >
+            Import quests and download QR codes →
+          </Link>
+        )}
+      </div>
     </>
   );
 }

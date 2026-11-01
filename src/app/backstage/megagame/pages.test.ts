@@ -11,6 +11,7 @@ const { auth, store, data } = vi.hoisted(() => ({
     playersByIds: vi.fn(),
     completionsInClass: vi.fn(),
     levelEventsFor: vi.fn(),
+    listQuests: vi.fn(),
   },
   data: { loadPlayerRows: vi.fn() },
 }));
@@ -20,11 +21,15 @@ vi.mock("./data", () => data);
 vi.mock("./actions", () => ({}));
 vi.mock("next/server", () => ({ connection: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
+vi.mock("@/lib/site-origin", () => ({
+  siteOriginFromHeaders: vi.fn(async () => "https://x.test"),
+}));
 
 import SignIn from "../SignIn";
 import MegagameHome from "./page";
 import LevelUpPage from "./level/page";
 import QuestPage from "./q/[code]/page";
+import QuestsPage from "./quests/page";
 
 const C = "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b";
 const props = <T>(params: T, searchParams: Record<string, string>) =>
@@ -73,5 +78,27 @@ describe("megagame pages without megagame.verify", () => {
     const el = await LevelUpPage(props({}, { u: "u1" }));
     expect(auth.toolAccess).toHaveBeenCalledWith("megagame.verify");
     expectSignInOnly(el, "/backstage/megagame/level?u=u1");
+  });
+});
+
+describe("quest management page", () => {
+  it("needs megagame.manage and loads nothing without it", async () => {
+    const el = await QuestsPage();
+    expect(auth.toolAccess).toHaveBeenCalledWith("megagame.manage");
+    expectSignInOnly(el, "/backstage/megagame/quests");
+  });
+
+  it("is refused to a volunteer holding only megagame.verify", async () => {
+    auth.toolAccess.mockImplementation(async (p: string) =>
+      p === "megagame.verify" ? { name: "Vol", userId: "v1" } : null,
+    );
+    expectSignInOnly(await QuestsPage(), "/backstage/megagame/quests");
+  });
+
+  it("loads the quests for a manager", async () => {
+    auth.toolAccess.mockResolvedValue({ name: "Boss", userId: "m1" });
+    store.listQuests.mockResolvedValue([]);
+    await QuestsPage();
+    expect(store.listQuests).toHaveBeenCalled();
   });
 });
