@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { reportError } from "@/lib/error-report";
 import type Stripe from "stripe";
 import { isEarlyBirdActive } from "@/lib/early-bird";
 import { getStripe } from "@/lib/stripe";
@@ -170,6 +171,11 @@ export async function GET(request: Request) {
     return NextResponse.redirect(session.url, 303);
   } catch (err) {
     console.error("[checkout/stripe] session create failed:", err);
+    await reportError({
+      source: "Stripe checkout",
+      summary: "Couldn't start a checkout session; the buyer saw an error",
+      error: err,
+    });
     return new NextResponse(
       "Couldn't start checkout. Please go back and try again.",
       { status: 502 },
