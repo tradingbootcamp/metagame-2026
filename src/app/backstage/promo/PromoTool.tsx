@@ -24,6 +24,8 @@ const STRIPE_ACCOUNT = "acct_1QeQd1CtO443EG3n";
 
 const codeUrl = (origin: string, path: "buy" | "ticket", code: string) =>
   `${origin.replace(/\/$/, "")}/${path}/${code}`;
+const usable = (active: boolean, redeemed: number, max: number | null) =>
+  active && (max == null || redeemed < max);
 
 const initial: MintState = {};
 
@@ -397,7 +399,7 @@ function CopyButtons({
         <button
           type="button"
           onClick={() => checkoutCopy.copy(codeUrl(origin, "ticket", code))}
-          title="Opens Standard checkout with this code; if Stripe won't take it, the buyer gets the code box"
+          title="Goes straight to Standard checkout with the code applied"
           className={`${smallButtonClass} inline-flex items-center gap-1.5`}
         >
           <FaStripeS aria-hidden className="text-[#635BFF]" />
@@ -410,6 +412,7 @@ function CopyButtons({
 
 function Result({ minted, origin }: { minted: MintResult; origin: string }) {
   const { prior } = minted;
+  const checkout = usable(minted.active, prior?.redeemed ?? 0, minted.max);
   return (
     <div
       className={`mt-6 rounded-lg border p-4 ${
@@ -445,17 +448,13 @@ function Result({ minted, origin }: { minted: MintResult; origin: string }) {
       <p className="font-mono text-sm break-all text-ink/70 select-all">
         {codeUrl(origin, "buy", minted.code)}
       </p>
-      {minted.active && (
+      {checkout && (
         <p className="font-mono text-sm break-all text-ink/70 select-all">
           {codeUrl(origin, "ticket", minted.code)}
         </p>
       )}
       <div className="mt-2 flex flex-wrap gap-2">
-        <CopyButtons
-          code={minted.code}
-          origin={origin}
-          checkout={minted.active}
-        />
+        <CopyButtons code={minted.code} origin={origin} checkout={checkout} />
       </div>
       <p className="mt-3 text-xs text-ink/60">
         {minted.max == null
@@ -655,7 +654,11 @@ function StripeRow({
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <CopyButtons code={c.code} origin={origin} checkout={c.active} />
+        <CopyButtons
+          code={c.code}
+          origin={origin}
+          checkout={usable(c.active, c.redeemed, c.max)}
+        />
         {onToggle && (
           <button
             type="button"

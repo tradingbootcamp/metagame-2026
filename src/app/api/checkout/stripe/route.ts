@@ -152,36 +152,19 @@ export async function GET(request: Request) {
     const utm = pickUtm((k) => params.get(k));
     // UTMs on the link itself win over the ones a comp code implies.
     const tagged = Object.keys(utm).some((k) => k.startsWith("utm_"));
-    const create = (discount: typeof promo) =>
-      stripe.checkout.sessions.create({
-        mode: "payment",
-        line_items: [{ price: purchase.price, quantity: 1 }],
-        ...discount?.session,
-        metadata: {
-          ...purchase.metadata,
-          ...(tagged ? {} : discount?.utm),
-          ...utm,
-        },
-        custom_fields: CUSTOM_FIELDS,
-        name_collection: { individual: { enabled: true, optional: false } },
-        success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${origin}/#tickets`,
-      });
-    const session = await create(promo).catch(async (err) => {
-      // Stripe refuses a linked code it can't apply here (used up, expired,
-      // another product); carry on as if the link had none. Transient errors
-      // still fail, so a comp link never silently becomes full price.
-      const refused =
-        (err as { type?: string })?.type === "StripeInvalidRequestError";
-      if (!refused || !params.get("promo")?.trim() || !purchase.ticket)
-        throw err;
-      console.warn(
-        "[checkout/stripe] linked code refused, retrying without:",
-        err,
-      );
-      const unlinked = new URLSearchParams(params);
-      unlinked.delete("promo");
-      return create(await promoParams(stripe, purchase.ticket, unlinked));
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [{ price: purchase.price, quantity: 1 }],
+      ...promo?.session,
+      metadata: {
+        ...purchase.metadata,
+        ...(tagged ? {} : promo?.utm),
+        ...utm,
+      },
+      custom_fields: CUSTOM_FIELDS,
+      name_collection: { individual: { enabled: true, optional: false } },
+      success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/#tickets`,
     });
     if (!session.url) throw new Error(`session ${session.id} has no url`);
     return NextResponse.redirect(session.url, 303);
