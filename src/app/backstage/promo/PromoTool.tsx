@@ -397,7 +397,7 @@ function CopyButtons({
         <button
           type="button"
           onClick={() => checkoutCopy.copy(codeUrl(origin, "ticket", code))}
-          title="Goes straight to Stripe checkout with the code applied"
+          title="Opens Standard checkout with this code; if Stripe won't take it, the buyer gets the code box"
           className={`${smallButtonClass} inline-flex items-center gap-1.5`}
         >
           <FaStripeS aria-hidden className="text-[#635BFF]" />
@@ -410,7 +410,6 @@ function CopyButtons({
 
 function Result({ minted, origin }: { minted: MintResult; origin: string }) {
   const { prior } = minted;
-  const checkout = minted.active;
   return (
     <div
       className={`mt-6 rounded-lg border p-4 ${
@@ -446,13 +445,17 @@ function Result({ minted, origin }: { minted: MintResult; origin: string }) {
       <p className="font-mono text-sm break-all text-ink/70 select-all">
         {codeUrl(origin, "buy", minted.code)}
       </p>
-      {checkout && (
+      {minted.active && (
         <p className="font-mono text-sm break-all text-ink/70 select-all">
           {codeUrl(origin, "ticket", minted.code)}
         </p>
       )}
       <div className="mt-2 flex flex-wrap gap-2">
-        <CopyButtons code={minted.code} origin={origin} checkout={checkout} />
+        <CopyButtons
+          code={minted.code}
+          origin={origin}
+          checkout={minted.active}
+        />
       </div>
       <p className="mt-3 text-xs text-ink/60">
         {minted.max == null

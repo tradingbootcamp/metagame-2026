@@ -167,12 +167,21 @@ export async function GET(request: Request) {
         success_url: `${origin}/thanks?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/#tickets`,
       });
-    const session = await create(promo).catch((err) => {
-      // Stripe refuses a code it can't apply here (used up, expired, another
-      // product, first-time only); the buyer gets the code box instead.
-      if (!promo?.session.discounts) throw err;
-      console.warn("[checkout/stripe] code refused, showing the box:", err);
-      return create({ session: { allow_promotion_codes: true }, utm: {} });
+    const session = await create(promo).catch(async (err) => {
+      // Stripe refuses a linked code it can't apply here (used up, expired,
+      // another product); carry on as if the link had none. Transient errors
+      // still fail, so a comp link never silently becomes full price.
+      const refused =
+        (err as { type?: string })?.type === "StripeInvalidRequestError";
+      if (!refused || !params.get("promo")?.trim() || !purchase.ticket)
+        throw err;
+      console.warn(
+        "[checkout/stripe] linked code refused, retrying without:",
+        err,
+      );
+      const unlinked = new URLSearchParams(params);
+      unlinked.delete("promo");
+      return create(await promoParams(stripe, purchase.ticket, unlinked));
     });
     if (!session.url) throw new Error(`session ${session.id} has no url`);
     return NextResponse.redirect(session.url, 303);
