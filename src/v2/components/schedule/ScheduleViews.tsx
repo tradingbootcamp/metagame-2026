@@ -101,7 +101,7 @@ export function DayTabs({
   onSelect: (key: string) => void;
 }) {
   // Five days (the team sees setup and teardown) don't fit a phone with full
-  // names and dates, so narrow screens get "Thu" style tabs then.
+  // names beside dates, so narrow screens get "Thu" over the date then.
   const tight = days.length > 3;
   return (
     <div role="tablist" aria-label="Conference day" className={TOGGLE}>
@@ -124,7 +124,7 @@ export function DayTabs({
             d.name
           )}
           <span
-            className={`ml-1.5 text-sm whitespace-nowrap opacity-70 ${tight ? "hidden sm:inline-block" : "inline-block"}`}
+            className={`whitespace-nowrap opacity-70 ${tight ? "block text-[11px] leading-tight sm:ml-1.5 sm:inline-block sm:text-sm sm:leading-normal" : "ml-1.5 inline-block text-sm"}`}
           >
             {d.dateLabel}
           </span>
