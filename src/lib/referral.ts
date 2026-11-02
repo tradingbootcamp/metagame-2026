@@ -6,7 +6,7 @@ import { normalizeTicketCode } from "@/lib/ticket-code-format";
 // Eight characters (ticket codes are six) so the two can't be mistaken.
 export const REFERRAL_CODE_LENGTH = 8;
 
-/** Query param a referral link carries: /invite/<code> → /?ref=<code>#buy. */
+/** Query param a referral link carries: /invite/<code> → /?ref=<code>#tickets. */
 export const REFERRAL_PARAM = "ref";
 
 /** What a referred friend saves: they pay what a pack member pays. */

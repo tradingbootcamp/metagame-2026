@@ -76,7 +76,7 @@ export function captureUtm(search: string): void {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(utm));
       localStorage.removeItem(LEGACY_STORAGE_KEY);
     }
-    localStorage.removeItem(PROMO_STORAGE_KEY);
+    localStorage.removeItem(PROMO_STORAGE_KEY); // where codes used to persist
     const ref = referralCodeOf(params.get(REFERRAL_PARAM));
     if (ref) sessionStorage.setItem(REFERRAL_STORAGE_KEY, ref);
     const promo =

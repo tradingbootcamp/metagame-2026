@@ -64,7 +64,7 @@ function CopyButton({
 }: {
   text: () => string;
   label: string;
-  Icon: typeof CopyIcon;
+  Icon: typeof LinkIcon;
 }) {
   const { status, copy } = useCopy();
   const Shown = status === "copied" ? CheckIcon : Icon;
@@ -90,8 +90,7 @@ function InviteCode({ code, referrals }: { code: string; referrals: number }) {
   return (
     <span className="flex basis-full flex-wrap items-center gap-x-1.5 gap-y-1 pt-1 text-sm text-ink/70">
       Invite a friend:
-      <span className="font-mono text-ink">{code}</span>
-      <CopyButton text={() => code} label="Copy code" Icon={CopyIcon} />
+      <span className="font-mono text-ink">{href}</span>
       <CopyButton
         text={() => `${window.location.origin}${href}`}
         label="Copy invite link"

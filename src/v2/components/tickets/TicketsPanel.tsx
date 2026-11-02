@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import BtcModal from "@/v2/components/tickets/BtcModal";
-import BuyModal from "@/v2/components/tickets/BuyModal";
+import DiscountModal from "@/v2/components/tickets/DiscountModal";
 import DayPassModal from "@/v2/components/tickets/DayPassModal";
 import DiscountRateModal from "@/v2/components/tickets/DiscountRateModal";
 import FamilyPackModal from "@/v2/components/tickets/FamilyPackModal";
@@ -344,7 +344,7 @@ export default function TicketsPanel({
           </VolunteerFormLink>
         </Button>
       </div>
-      {discountOpen && <BuyModal onClose={() => setDiscountOpen(false)} />}
+      {discountOpen && <DiscountModal onClose={() => setDiscountOpen(false)} />}
       {openModal === "supporter" && <SupporterModal onClose={closeModal} />}
       {openModal === "day-pass" && <DayPassModal onClose={closeModal} />}
       {openModal === "discount-rate" && (

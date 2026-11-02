@@ -23,7 +23,7 @@ type Saving = { full: number; usdOff: number | null } | "checking";
  * (from a promo or invite link): shows what it saves and lets the buyer swap
  * or clear it. Whatever's in the box goes to checkout.
  */
-export default function BuyModal({ onClose }: { onClose: () => void }) {
+export default function DiscountModal({ onClose }: { onClose: () => void }) {
   const [code, setCode] = useState(readPromo);
   const [saving, setSaving] = useState<Saving>("checking");
   const [busy, setBusy] = useState(false);
