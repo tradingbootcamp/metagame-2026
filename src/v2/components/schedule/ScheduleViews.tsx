@@ -7,6 +7,7 @@ import {
   cellSessions,
   formatPacificTime,
   heightPx,
+  titleLines,
   hostNames,
   laneInset,
   NO_ROOM,
@@ -187,7 +188,7 @@ function SessionBlock<S extends ViewSession>({
   const title = `${session.title}${session.hosts.length ? " — " + hostNames(session) : ""}`;
   const body = (
     <>
-      <BlockSummary session={session} />
+      <BlockSummary session={session} titleLines={titleLines(session)} />
       {badge?.(session)}
     </>
   );

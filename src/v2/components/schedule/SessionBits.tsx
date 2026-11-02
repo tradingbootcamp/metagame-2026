@@ -76,12 +76,15 @@ export const blockStyle = (s: { category: Category | null }): CSSProperties =>
 /** Flag tags, title, age mark and hosts, as a grid block shows them. */
 export function BlockSummary({
   session,
+  titleLines = 3,
 }: {
   session: Flagged & {
     title: string;
     ages: Ages | null;
     hosts: { name: string }[];
   };
+  /** How many title lines fit the block; longer titles are clamped. */
+  titleLines?: number;
 }) {
   return (
     <>
@@ -92,7 +95,9 @@ export function BlockSummary({
         </span>
       )}
       <span className="flex items-start gap-1 text-[13px] leading-tight font-semibold">
-        <span className="line-clamp-3">{session.title}</span>
+        <span className="line-clamp-3" style={{ WebkitLineClamp: titleLines }}>
+          {session.title}
+        </span>
         <SessionMarks session={session} />
       </span>
       {session.hosts.length > 0 && (
