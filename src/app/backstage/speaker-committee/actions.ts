@@ -2,12 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import type { PipelineResult } from "@/app/grade/actions";
 import { can } from "@/lib/access";
+import { pickerAccounts, pickGrader } from "@/lib/grader-pick";
 import { durationMinutes } from "@/lib/rfp-fields";
+import { toRow } from "@/lib/rfp-pipeline";
 import {
   getRfpSession,
   placeRfpSession,
   unplaceRfpSession,
+  type Account,
 } from "@/lib/rfp-sessions";
 import { DEFAULT_DRAFT_MINUTES, END_GAP_MINUTES } from "@/lib/schedule";
 import { explainDbError, moveSessionTo } from "@/lib/schedule-store";
@@ -90,4 +94,37 @@ export async function unschedule(sessionId: string): Promise<Result> {
   }
   revalidatePath(PATH);
   return {};
+}
+
+/** Accounts for the grader picker: the committee until two characters are typed. */
+export async function findGradeAccounts(query: string): Promise<Account[]> {
+  if (!(await can("submissions.grade"))) return [];
+  return pickerAccounts(query);
+}
+
+/**
+ * Sets or clears a session's grader; any account will do. One pick over
+ * possibly several grade rows: it replaces the open assignments, and
+ * submitted grades are never thrown away.
+ */
+export async function setGrader(
+  sessionId: string,
+  userId: string | null,
+): Promise<PipelineResult> {
+  if (!(await can("submissions.grade"))) return { error: EXPIRED };
+
+  let picked: Awaited<ReturnType<typeof pickGrader>>;
+  try {
+    picked = await pickGrader(sessionId, userId);
+  } catch (err) {
+    console.error("[speaker-committee] grader save failed:", err);
+    return explainDbError(err);
+  }
+  if (!picked.after) return { error: "That session no longer exists." };
+
+  // Deliberately not revalidating the board: re-sorting the list under the
+  // cursor mid-edit is worse than it being one refresh stale.
+  revalidatePath(`/grade/${sessionId}`);
+  const row = toRow(picked.after);
+  return { value: row.grader, valueId: row.graderId, note: picked.note };
 }

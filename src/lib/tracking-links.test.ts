@@ -5,6 +5,7 @@ import {
   isAllowedDestination,
   matchSitePage,
   normalizeSlug,
+  parseLinkFields,
   slugify,
   snapToOption,
   suggestSlug,
@@ -167,5 +168,66 @@ describe("snapToOption", () => {
     expect(snapToOption("Board Game Arena ", ["Puzzle World"])).toBe(
       "Board Game Arena",
     );
+  });
+});
+
+describe("parseLinkFields", () => {
+  const origin = "https://metagame.games";
+  const options: LinkOptions = {
+    source: ["Poster"],
+    medium: ["print"],
+    campaign: ["metagame-2025", "metagame-2026"],
+    placement: [],
+  };
+  const input = {
+    destination: "https://metagame.games/buy/ELYSIAN",
+    slug: " Elysian ",
+    source: "flyer",
+    medium: "PRINT",
+    placement: "Elysian",
+    internalName: "Flyer · Elysian",
+  };
+
+  it("snaps UTMs, normalizes the slug and defaults the campaign", () => {
+    expect(parseLinkFields(input, options, origin)).toEqual({
+      ok: true,
+      fields: {
+        destination: input.destination,
+        slug: "elysian",
+        source: "flyer",
+        medium: "print",
+        campaign: "metagame-2026",
+        placement: "Elysian",
+        internalName: "Flyer · Elysian",
+      },
+    });
+  });
+
+  it("reads FormData entries the same way", () => {
+    const form = new FormData();
+    for (const [k, v] of Object.entries(input)) form.set(k, v);
+    form.set("campaign", "Metagame-2025");
+    const parsed = parseLinkFields(Object.fromEntries(form), options, origin);
+    expect(parsed.ok && parsed.fields.campaign).toBe("metagame-2025");
+  });
+
+  it.each([
+    ["destination", { destination: "http://metagame.games/" }],
+    ["source", { source: "" }],
+    ["medium", { medium: "x".repeat(101) }],
+    ["campaign", { campaign: "metagame-2027" }],
+    ["placement", { placement: " " }],
+    ["slug", { slug: "vp" }],
+  ])("pins a problem on %s", (field, change) => {
+    const parsed = parseLinkFields({ ...input, ...change }, options, origin);
+    expect(parsed).toMatchObject({ ok: false, field });
+  });
+
+  it("refuses every destination under a malformed site origin, without throwing", () => {
+    expect(parseLinkFields(input, options, "metagame.games")).toEqual({
+      ok: false,
+      field: "destination",
+      error: "Destination must be an https link on metagame.games.",
+    });
   });
 });

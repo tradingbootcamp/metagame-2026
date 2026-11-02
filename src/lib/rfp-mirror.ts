@@ -42,24 +42,28 @@ export const verdictField = (state: MirrorState): Fields => ({
   Verdict: label(VERDICT_LABELS, state.verdict),
 });
 
-/** Committee names the "Rubric: Grader" select lacks. */
-const NOT_GRADER_OPTIONS = new Set(["Jisk", "Julian Wise"]);
-
-/**
- * "Rubric: Grader" for the attributed grader. Anyone the select doesn't list
- * is written as its "Other" option.
- */
-export function graderField(grader: { email: string } | null): Fields {
-  if (grader === null) return { "Rubric: Grader": "Unassigned" };
-  const name = committeeName(grader.email);
-  return {
-    "Rubric: Grader": name && !NOT_GRADER_OPTIONS.has(name) ? name : "Other",
-  };
-}
-
 /** A PATCH of its own, with typecast on or off. */
 export type Write = { fields: Fields; typecast: boolean };
 export type MirrorGroup = Fields | Write | null;
+
+/**
+ * "Rubric: Grader" for the attributed grader, by committee name else display
+ * name. Typecast is on, so a grader the select doesn't list — the committee
+ * members it never had an option for included — is added to it as it saves.
+ * A grader with no name to add falls back to the select's "Other", so the
+ * cell never keeps naming whoever graded before.
+ */
+export function graderWrite(
+  grader: { email: string; name: string } | null,
+): Write | null {
+  if (grader === null) {
+    return { fields: { "Rubric: Grader": "Unassigned" }, typecast: true };
+  }
+  const name = committeeName(grader.email) ?? (grader.name.trim() || null);
+  // An email would become a Grader option.
+  const option = !name || name.includes("@") ? "Other" : name;
+  return { fields: { "Rubric: Grader": option }, typecast: true };
+}
 
 /**
  * "Shepherd" for an account, by committee name else display name. Typecast is

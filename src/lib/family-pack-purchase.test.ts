@@ -116,6 +116,12 @@ describe("family pack fulfillment", () => {
       recordPurchase.mock.calls.map(([p]) => p.ticketCode),
     );
   });
+  it("records every admission after the first as referred by the first", async () => {
+    await recordFamilyPack(session(3), "Paid");
+    expect(recordTicket.mock.calls.map(([, opts]) => opts?.referredBy)).toEqual(
+      [undefined, "pi_pack:ticket:1", "pi_pack:ticket:1"],
+    );
+  });
   it("retains admission identities through pending, paid and replay events", async () => {
     await recordFamilyPack(session(), "Pending");
     const before = recordPurchase.mock.calls.map(([r]) => [r.id, r.ticketCode]);

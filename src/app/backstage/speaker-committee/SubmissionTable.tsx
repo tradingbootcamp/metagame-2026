@@ -1,12 +1,13 @@
 import Link from "next/link";
+import { formatPacificDay, formatPacificTime } from "@/lib/schedule";
 import InfoTip from "@/app/grade/InfoTip";
 import InlineSelect from "@/app/grade/InlineSelect";
-import ShepherdPicker from "@/app/grade/ShepherdPicker";
+import AccountPicker, { type PickerField } from "@/app/grade/AccountPicker";
 import {
   MEGAGAME_INTEGRATION_INFO,
   PIPELINE_COLORS,
   SHEPHERD_INFO,
-  SPEAKER_TIER_INFO,
+  slotLinkable,
   type PipelineField,
   type Row,
 } from "@/lib/rfp-pipeline";
@@ -25,8 +26,8 @@ export const SORTS = [
   "verdict",
   "next",
   "shepherd",
-  "tier",
   "megagame",
+  "scheduled",
 ] as const;
 export type SortKey = (typeof SORTS)[number];
 
@@ -38,9 +39,15 @@ export type SortState = {
   base: Record<string, string>;
 };
 
-/** Pill options per pipeline column. */
+/** Pill options per pipeline column, and what the Scheduled column needs. */
 export type TableMeta = {
   options: Record<PipelineField, readonly string[]>;
+  /** Location id → name, for the room a placed session sits in. */
+  rooms: Record<string, string>;
+  /** Pre-launch the session pages 404, so the time reads as plain text. */
+  linkSessions: boolean;
+  /** Saving needs submissions.grade; the board itself only needs schedule.manage. */
+  editable: boolean;
 };
 
 function SortLink({
@@ -95,9 +102,11 @@ export function SubmissionGroup({
 }) {
   if (rows.length === 0) return null;
 
+  // Speaker tier is edited on the proposal page, not here: the row had grown
+  // too wide to read.
   const cols = lead
-    ? "lg:grid-cols-[1.5rem_minmax(0,1fr)_repeat(6,6.5rem)]"
-    : "lg:grid-cols-[minmax(0,1fr)_repeat(6,6.5rem)]";
+    ? "lg:grid-cols-[1.5rem_minmax(0,1fr)_repeat(5,6.5rem)_9rem]"
+    : "lg:grid-cols-[minmax(0,1fr)_repeat(5,6.5rem)_9rem]";
 
   const cell = (label: string, control: React.ReactNode) => (
     <span className="flex min-w-0 items-center gap-1.5">
@@ -120,20 +129,53 @@ export function SubmissionGroup({
         value={value}
         options={meta.options[field]}
         colors={PIPELINE_COLORS[field]}
+        readOnly={!meta.editable}
       />,
     );
-  const shepherd = (row: Row) =>
-    cell(
-      "Shepherd",
-      <ShepherdPicker
+  const scheduled = (row: Row) => {
+    if (!row.placed || !row.startsAt) {
+      return cell(
+        "Scheduled",
+        <span className="text-sm text-ink/40">Not yet scheduled</span>,
+      );
+    }
+    const when = `${formatPacificDay(row.startsAt)} ${formatPacificTime(row.startsAt)}`;
+    const room = row.locationId ? meta.rooms[row.locationId] : null;
+    const draft = row.status !== "published";
+    const linked = slotLinkable(row, meta.linkSessions);
+    return cell(
+      "Scheduled",
+      <span className="min-w-0 text-sm">
+        {linked ? (
+          <Link
+            href={`/schedule/${row.slug}`}
+            className="block truncate text-navy hover:text-meeple hover:underline"
+          >
+            {when}
+          </Link>
+        ) : (
+          <span className="block truncate text-ink/70">{when}</span>
+        )}
+        <span className="block truncate text-xs text-ink/50">
+          {draft && "Draft · "}
+          {room ?? "No room"}
+        </span>
+      </span>,
+    );
+  };
+  const picker = (row: Row, field: PickerField, label: string) => {
+    const userId = field === "grader" ? row.graderId : row.shepherdId;
+    const name = field === "grader" ? row.grader : row.shepherd;
+    return cell(
+      label,
+      <AccountPicker
         sessionId={row.id}
-        value={
-          row.shepherdId && row.shepherd
-            ? { userId: row.shepherdId, label: row.shepherd }
-            : null
-        }
+        field={field}
+        value={userId && name ? { userId, label: name } : null}
+        readOnly={!meta.editable}
       />,
     );
+  };
 
   return (
     <section>
@@ -161,13 +203,10 @@ export function SubmissionGroup({
             <InfoTip text={SHEPHERD_INFO} />
           </span>
           <span className="flex items-center whitespace-nowrap">
-            <SortLink column="tier" label="Tier" state={state} />
-            <InfoTip text={SPEAKER_TIER_INFO} />
-          </span>
-          <span className="flex items-center whitespace-nowrap">
             <SortLink column="megagame" label="Megagame" state={state} />
             <InfoTip text={MEGAGAME_INTEGRATION_INFO} />
           </span>
+          <SortLink column="scheduled" label="Scheduled" state={state} />
         </div>
 
         <ul className="divide-y divide-line">
@@ -186,19 +225,26 @@ export function SubmissionGroup({
                 </Link>
                 <span className="block truncate text-sm text-ink/55">
                   {row.host || "—"}
+                  {" · "}
+                  <Link
+                    href={`/account/sessions/${row.id}`}
+                    className="text-navy hover:text-meeple hover:underline"
+                  >
+                    Edit session
+                  </Link>
                 </span>
               </span>
-              {pill(row, "grader", row.grader, "Grader")}
+              {picker(row, "grader", "Grader")}
               {pill(row, "verdict", row.verdict, "Verdict")}
               {pill(row, "nextSteps", row.nextSteps, "Next steps")}
-              {shepherd(row)}
-              {pill(row, "speakerTier", row.speakerTier, "Speaker tier")}
+              {picker(row, "shepherd", "Shepherd")}
               {pill(
                 row,
                 "megagameIntegration",
                 row.megagameIntegration,
                 "Megagame",
               )}
+              {scheduled(row)}
             </li>
           ))}
         </ul>

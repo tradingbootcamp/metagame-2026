@@ -1,7 +1,9 @@
 # Emails
 
-Hand-pasted EmailOctopus templates. Nothing in the app reads these files; after
-editing one, paste it into EmailOctopus again (the `.min.html` variant for the
+Hand-pasted EmailOctopus templates. The app only reads them to list them on
+`/backstage/emails` (`src/lib/sent-emails.ts`; the `.min.html` and `.txt`
+variants hang off their `.html`); sending is still manual. After editing one,
+paste it into EmailOctopus again (the `.min.html` variant for the
 announcements, which sit near Gmail's ~102 KB clipping limit).
 
 ## EmailOctopus facts

@@ -6,6 +6,8 @@ import { GiTheaterCurtains } from "react-icons/gi";
 import { PasswordForm, ProfileForm, SignOutButton } from "./AccountForms";
 import AccountTabs from "./AccountTabs";
 import AvatarForm from "./AvatarForm";
+import MegagamePanel from "./MegagamePanel";
+import MegagameSummary from "./MegagameSummary";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel from "./TicketsPanel";
 import { parseAccountTab } from "./tabs";
@@ -15,11 +17,13 @@ import { accountSessions } from "@/lib/account-sessions";
 import { can, teamAccess } from "@/lib/access";
 import { currentSession, hasPassword } from "@/lib/auth";
 import { prefillDiscord } from "@/lib/discord-handle";
+import { loadMegagameLevels } from "@/lib/megagame-store";
 import {
   loadRsvpCounts,
   loadSchedule,
   loadViewerPlans,
 } from "@/lib/schedule-store";
+import { mintReferralCodes, referrerNames } from "@/lib/referral-store";
 import { emailKey, ticketsForUser } from "@/lib/ticket-store";
 import { ticketView } from "@/lib/ticket-view";
 import { Button } from "@/v2/components/ui/button";
@@ -32,9 +36,9 @@ export const metadata: Metadata = {
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ notice?: string; tab?: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
-  const { notice, tab } = await searchParams;
+  const { tab } = await searchParams;
   const initialTab = parseAccountTab(tab);
   const session = await currentSession();
   if (!session)
@@ -54,6 +58,7 @@ export default async function AccountPage({
     linkable,
     admin,
     backstage,
+    levels,
   ] = await Promise.all([
     getDb()
       .select()
@@ -68,17 +73,31 @@ export default async function AccountPage({
     canSeeSchedule(),
     can("schedule.manage"),
     teamAccess().then((a) => a?.team ?? false),
+    loadMegagameLevels(user.id),
   ]);
-  const tickets = rows.map((t) => ticketView(t, user.id, email));
+  // Referral codes are minted the first time their holder looks.
+  const [, referrers] = await Promise.all([
+    mintReferralCodes(rows, user.id, email).catch((err) =>
+      console.error("[account] referral codes not minted:", err),
+    ),
+    referrerNames(
+      rows.flatMap((t) =>
+        t.referredByPaymentId ? [t.referredByPaymentId] : [],
+      ),
+    ),
+  ]);
+  const tickets = rows.map((t) =>
+    ticketView(
+      t,
+      user.id,
+      email,
+      (t.referredByPaymentId && referrers.get(t.referredByPaymentId)) || null,
+    ),
+  );
 
   return (
     // Same measure and top clearance as ContentPage, without its title block.
     <div className="mx-auto max-w-[1180px] px-8 pt-28 pb-20">
-      {notice === "welcome-back" && (
-        <p className="mb-8 text-base text-ink/70">
-          Looks like you already had an account, so we signed you in.
-        </p>
-      )}
       <AccountTabs
         initial={initialTab}
         trailing={
@@ -94,6 +113,7 @@ export default async function AccountPage({
         panels={{
           profile: (
             <div className="flex max-w-[960px] flex-col gap-10">
+              <MegagameSummary levels={levels} />
               <AvatarForm
                 imageUrl={profile?.imageUrl ?? null}
                 name={user.name}
@@ -101,6 +121,7 @@ export default async function AccountPage({
               <div className="grid gap-12 md:grid-cols-2">
                 <ProfileForm
                   email={user.email}
+                  profileHref={`/u/${encodeURIComponent(user.id)}`}
                   initialValues={{
                     name: user.name,
                     pronouns: profile?.pronouns ?? "",
@@ -139,6 +160,7 @@ export default async function AccountPage({
               )}
             />
           ),
+          megagame: <MegagamePanel levels={levels} />,
         }}
       />
     </div>

@@ -3,9 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import GradeForm from "./GradeForm";
 import InfoTip from "../InfoTip";
 import InlineSelect from "../InlineSelect";
+import ToolSignIn from "@/components/ToolSignIn";
+import { can } from "@/lib/access";
 import { swatch } from "@/lib/airtable-colors";
 import { GRADE_KEYS, SPACE_OPTIONS_FIELD } from "@/lib/grade-input";
-import { gradeAccess, graderUserId } from "@/lib/grader-auth";
 import {
   MEGAGAME_INTEREST_LABELS,
   RUBRIC_GRADE_LABELS,
@@ -197,28 +198,22 @@ function gradeRows(grade: Grade, fields: readonly FormField[]): DisplayRow[] {
 }
 
 export default async function SubmissionPage(props: PageProps<"/grade/[id]">) {
-  const access = await gradeAccess();
-  if (!access?.identity) redirect("/grade");
-
   const { id } = await props.params;
+  const account = await can("submissions.grade");
+  if (!account) {
+    return <ToolSignIn title="Speaker committee" next={`/grade/${id}`} />;
+  }
+
   const rfpSession = await findRfpSession(id);
   if (!rfpSession) notFound();
   // Record ids and slugs still resolve, but the session id is the address.
   if (id !== rfpSession.sessionId) redirect(`/grade/${rfpSession.sessionId}`);
 
-  const [me, spaces] = await Promise.all([
-    graderUserId(access),
-    spaceOptionLocations(),
-  ]);
+  const me = account.user.id;
+  const spaces = await spaceOptionLocations();
   const spaceOptions = Object.fromEntries(spaces.map((s) => [s.id, s.label]));
   const mine = rfpSession.grades.find((g) => g.grader.userId === me) ?? null;
   const others = rfpSession.grades.filter((g) => g !== mine);
-  const blocked =
-    me === null
-      ? access.identity.kind === "grader"
-        ? `${access.identity.name} has no account yet, so a grade can't be saved under that name. Sign in with your account to grade.`
-        : "Sign in with your account to grade: a grade has to be someone's."
-      : null;
 
   const row = toRow(rfpSession);
   const picture = rfpSession.hosts[0]?.imageUrl ?? null;
@@ -228,18 +223,16 @@ export default async function SubmissionPage(props: PageProps<"/grade/[id]">) {
   );
   const contactRows = rowsFor(contactOf(rfpSession), SHEPHERD_CONTACT_FIELDS);
   const { row: session } = rfpSession;
-  // The committee board takes accounts only; the shared password stops at /grade.
-  const back =
-    access.via === "account"
-      ? { href: "/backstage/speaker-committee", label: "← Speaker committee" }
-      : { href: "/grade", label: "← All proposals" };
 
   return (
     // The layout is wide for the overview's columns; a proposal reads better
     // narrower.
     <div className="mx-auto max-w-4xl space-y-8">
-      <Link href={back.href} className="text-sm text-ink/55 hover:text-meeple">
-        {back.label}
+      <Link
+        href="/backstage/speaker-committee"
+        className="text-sm text-ink/55 hover:text-meeple"
+      >
+        ← Speaker committee
       </Link>
 
       <header className="flex items-start gap-4">
@@ -371,7 +364,6 @@ export default async function SubmissionPage(props: PageProps<"/grade/[id]">) {
           </>
         }
         phase={rfpSession.phase}
-        blocked={blocked}
         notesFields={SHEPHERD_NOTES_FIELDS}
       />
     </div>

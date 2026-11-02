@@ -24,14 +24,31 @@ export type PipelineField = (typeof PIPELINE_FIELDS)[number];
 export type Row = {
   /** The session id. */
   id: string;
+  /** For the session page the Scheduled column links to. */
+  slug: string;
   title: string;
   /** The hosts' names; empty when none has one. */
   host: string;
   phase: RfpSession["phase"];
   /** On the grid: has a start time. */
   placed: boolean;
-  /** The latest-assigned grader's committee name, as the Grader column shows. */
+  /** Where it sits on the grid, ISO like ScheduleSession; null until placed. */
+  startsAt: string | null;
+  endsAt: string | null;
+  locationId: string | null;
+  /**
+   * Placing a proposal doesn't publish it, and /schedule/<slug> only resolves
+   * published sessions — so this decides whether the slot can be linked.
+   */
+  status: RfpSession["row"]["status"];
+  /**
+   * The attributed grader's label, as the Grader column shows: whoever graded
+   * most recently, else the latest assignment. Any account, not only the
+   * committee.
+   */
   grader: string | null;
+  /** That grader's account, for the Grader picker. */
+  graderId: string | null;
   graderIds: string[];
   shepherd: string | null;
   shepherdId: string | null;
@@ -44,6 +61,15 @@ export type Row = {
   /** The Megagame integration label; null is undecided. */
   megagameIntegration: string | null;
 };
+
+/**
+ * Whether a row's slot can link to its session page. Placing a proposal from
+ * the committee board doesn't publish it, and /schedule/<slug> resolves out of
+ * publicSchedule(), which keeps only published sessions — so a placed draft
+ * would 404.
+ */
+export const slotLinkable = (row: Row, scheduleReachable: boolean) =>
+  scheduleReachable && row.placed && row.status === "published";
 
 /** A name worth showing: null when the account only has its email. */
 export const shownName = (name: string) => (name.includes("@") ? null : name);
@@ -64,11 +90,17 @@ export const hostNames = (hosts: { name: string }[]) =>
 export function toRow(s: RfpSession): Row {
   return {
     id: s.sessionId,
+    slug: s.slug,
     title: s.title,
     host: hostNames(s.hosts),
     phase: s.phase,
     placed: s.row.startsAt !== null,
+    startsAt: s.row.startsAt?.toISOString() ?? null,
+    endsAt: s.row.endsAt?.toISOString() ?? null,
+    locationId: s.row.locationId,
+    status: s.row.status,
     grader: s.grader ? committeeLabel(s.grader) : null,
+    graderId: s.grader?.userId ?? null,
     graderIds: s.grades.map((g) => g.grader.userId),
     shepherd: s.shepherd ? committeeLabel(s.shepherd) : null,
     shepherdId: s.shepherd?.userId ?? null,
@@ -150,7 +182,7 @@ export const PIPELINE_COLORS: Record<PipelineField, Record<string, string>> = {
     "5. Shepherd meeting": "blueLight1",
     "6. Add to schedule": "blueBright",
     "7. None! We're good :) ": "grayLight2",
-    "N/A": "grayLight2",
+    "Not adding to schedule": "grayLight2",
   },
   speakerTier: {
     "Free ticket + flights + housing": "blueLight2",

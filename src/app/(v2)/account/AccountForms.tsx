@@ -46,9 +46,11 @@ export type ProfileValues = {
 
 export function ProfileForm({
   email,
+  profileHref,
   initialValues,
 }: {
   email: string;
+  profileHref: string;
   initialValues: ProfileValues;
 }) {
   const [state, action, pending] = useActionState(updateProfile, initial);
@@ -116,15 +118,27 @@ export function ProfileForm({
           className={TEXTAREA}
         />
       </label>
-      <label className="flex items-center gap-2.5 text-base text-ink">
-        <input
-          type="checkbox"
-          name="isPublic"
-          defaultChecked={v.isPublic}
-          className="size-4 accent-meeple"
-        />
-        Show my profile to other attendees
-      </label>
+      <div className="flex flex-col gap-1">
+        <label className="flex items-center gap-2.5 text-base text-ink">
+          <input
+            type="checkbox"
+            name="isPublic"
+            defaultChecked={v.isPublic}
+            className="size-4 accent-meeple"
+          />
+          Show my profile to other attendees
+        </label>
+        <p className="text-sm text-ink/60">
+          Your page at{" "}
+          <a href={profileHref} className="underline underline-offset-2">
+            {profileHref}
+          </a>{" "}
+          shows your name, pronouns, photo, bio, link and the sessions
+          you&rsquo;re hosting. Never your email, Discord handle or RSVPs, and
+          never to the open web — it takes an account to open, and the
+          organisers can see it either way.
+        </p>
+      </div>
       <Button type="submit" disabled={pending} className="self-start">
         {pending ? "Saving…" : "Save profile"}
       </Button>

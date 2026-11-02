@@ -341,7 +341,7 @@ export type PurchaseRecord = {
   networkFeeBtc?: number;
   settledFiatValue?: number;
   btcNetwork?: "On-chain" | "Lightning";
-  utm?: Utm; // last-touch attribution: latest landing UTMs, first visit, PostHog id
+  utm?: Utm; // last-touch attribution: latest landing UTMs, first visit, PostHog ids
 };
 
 /**

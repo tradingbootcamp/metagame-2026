@@ -19,11 +19,11 @@
 //   admin@metagame.games       role admin (superuser bypass)
 //   grants@metagame.games      per-user grants: tickets.view, links.manage
 //   host@metagame.games        "Team" and "Schedule team" roles; lead host of
-//                              three published sessions
+//                              three published sessions; level 1 Pirate
 //   team@metagame.games        "Team" role only; claimed comp ticket
 //   schedule@metagame.games    "Schedule team" role only; claimed comp ticket
 //   attendee@metagame.games    claimed ticket (so the built-in Attendee role),
-//                              RSVPs, bookmarks
+//                              RSVPs, bookmarks; level 5 Wizard, level 3 Alien
 //   newcomer@metagame.games    unclaimed purchase under their email
 //   banned@metagame.games      banned
 //   first.last@metagame.games  a crowd of 100 in the mix the invite flow makes:
@@ -165,10 +165,14 @@ async function seedMigrationLedger() {
 const users = {
   admin: { id: "seed-admin", name: "Seed Admin", role: "admin" },
   grants: { id: "seed-grants", name: "Seed Grants" },
-  host: { id: "seed-host", name: "Seed Host" },
+  host: { id: "seed-host", name: "Seed Host", levels: { pirate: 1 } },
   team: { id: "seed-team", name: "Seed Team" },
   schedule: { id: "seed-schedule", name: "Seed Schedule" },
-  attendee: { id: "seed-attendee", name: "Seed Attendee" },
+  attendee: {
+    id: "seed-attendee",
+    name: "Seed Attendee",
+    levels: { wizard: 5, alien: 3 },
+  },
   newcomer: { id: "seed-newcomer", name: "Seed Newcomer" },
   banned: {
     id: "seed-banned",
@@ -275,11 +279,12 @@ const profile = (u) => {
   };
 };
 
-// Lighthaven's rooms, as the schedule shows them; hidden ones stay for
-// placement. Images are Vercel Blob URLs in prod and stay null here.
+// Lighthaven's rooms, as the schedule shows them, with prod's visibility: the
+// hidden ones are team-only there too and stay for placement. Images are
+// Vercel Blob URLs in prod, null here.
 // prettier-ignore
 const ROOMS = [
-  ["foodtruck", "Food Truck Parking", null, "Behind E", 0],
+  ["foodtruck", "Food Truck Parking", null, "Behind E", 0, "hidden"],
   ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1],
   ["eigen", "Eigen Hall", 40, "Building E, 1st floor", 2],
   ["cantor", "Cantor's Diagonal", 60, "Building C", 3],
@@ -287,14 +292,15 @@ const ROOMS = [
   ["courtyard", "Central Courtyard", 200, "The center of campus", 5],
   ["thingspace", "Thingspace", 20, "Building A, 2nd floor", 6],
   ["attic", "Bayes Attic", 35, "Building B, top floor", 8],
-  ["gardens", "The Gardens", 80, "Outdoors, behind E", 9],
+  ["gardens", "The Gardens", 80, "Outdoors, behind E", 9, "hidden"],
   ["ground", "Bayes Ground", 40, "Building B, 1st floor", 11],
-  ["exobrain", "Exobrain", 30, "Building E, 2nd floor", 12],
-  ["d2", "1D2", null, "Building D, 1st floor", 13],
-  ["caprica", "New Caprica", null, "Building B, 2nd floor", 14],
-  ["d1", "1D1", 6, "Building D, 1st floor", 100, false],
-  ["gyroscope", "Gyroscope", 30, "Building E, 2nd floor", 100, false, false],
-  ["other", "Other", null, null, 100, false, false],
+  ["exobrain", "Exobrain", 30, "Building E, 2nd floor", 12, "hidden"],
+  ["d2", "1D2", null, "Building D, 1st floor", 13, "hidden"],
+  ["caprica", "New Caprica", null, "Building B, 2nd floor", 14, "hidden"],
+  ["d1", "1D1", 6, "Building D, 1st floor", 100, "hidden"],
+  ["gyroscope", "Gyroscope", 30, "Building E, 2nd floor", 100, "hidden", false],
+  ["other", "Other", null, null, 100, "hidden", false],
+  ["questboard", "Quest Board", null, null, 100, "volunteer", false],
 ];
 const locations = Object.fromEntries(
   ROOMS.map(
@@ -305,7 +311,7 @@ const locations = Object.fromEntries(
         capacity,
         campus_location,
         display_order,
-        show = true,
+        visibility = "public",
         synced = true,
       ],
       k,
@@ -317,7 +323,7 @@ const locations = Object.fromEntries(
         capacity,
         campus_location,
         display_order,
-        show_in_schedule: show,
+        visibility,
         airtable_record_id: synced
           ? `recSEEDLOC${String(k + 1).padStart(7, "0")}`
           : null,
@@ -980,6 +986,9 @@ counts.user = await upsert(
     role: u.role ?? "user",
     banned: u.banned ?? false,
     ban_reason: u.ban_reason ?? null,
+    wizard_level: u.levels?.wizard ?? 0,
+    pirate_level: u.levels?.pirate ?? 0,
+    alien_level: u.levels?.alien ?? 0,
   })),
 );
 counts.account = await upsert(
@@ -1006,7 +1015,9 @@ const roleRows = await Promise.all(
       name: "Team",
       permissions: [
         "links.manage",
+        "promo.create",
         "promo.manage",
+        "promo.view",
         "schedule.manage",
         "schedule.preview",
         "schedule.rsvps",

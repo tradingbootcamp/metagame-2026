@@ -1,8 +1,11 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   pgTable,
+  smallint,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -20,21 +23,34 @@ export const timestamps = {
     .$onUpdate(() => new Date()),
 };
 
-export const user = pgTable("user", {
-  id: text().primaryKey(),
-  name: text().notNull(),
-  email: text().notNull().unique(),
-  emailVerified: boolean().notNull().default(false),
-  image: text(),
-  // Better Auth admin plugin. `role` is "user" or "admin" for now; the plugin
-  // refuses to let users change it themselves. Admin is the break-glass
-  // superuser that gates every team tool until the permission system lands.
-  role: text().notNull().default("user"),
-  banned: boolean().notNull().default(false),
-  banReason: text(),
-  banExpires: timestamp({ withTimezone: true }),
-  ...timestamps,
-});
+export const user = pgTable(
+  "user",
+  {
+    id: text().primaryKey(),
+    name: text().notNull(),
+    email: text().notNull().unique(),
+    emailVerified: boolean().notNull().default(false),
+    image: text(),
+    // Better Auth admin plugin. `role` is "user" or "admin" for now; the plugin
+    // refuses to let users change it themselves. Admin is the break-glass
+    // superuser that gates every team tool until the permission system lands.
+    role: text().notNull().default("user"),
+    banned: boolean().notNull().default(false),
+    banReason: text(),
+    banExpires: timestamp({ withTimezone: true }),
+    // Megagame class levels, 0–5. Ours, not Better Auth's: it doesn't know these
+    // columns, so its update-user endpoint can't set them.
+    wizardLevel: smallint().notNull().default(0),
+    pirateLevel: smallint().notNull().default(0),
+    alienLevel: smallint().notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [
+    check("user_wizard_level_range", sql`${t.wizardLevel} between 0 and 5`),
+    check("user_pirate_level_range", sql`${t.pirateLevel} between 0 and 5`),
+    check("user_alien_level_range", sql`${t.alienLevel} between 0 and 5`),
+  ],
+);
 
 export const session = pgTable(
   "session",

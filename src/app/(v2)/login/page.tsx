@@ -10,18 +10,23 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
+// Sign in and sign up are the same form: it asks for the email first and
+// takes it from there.
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string | string[]; by?: string | string[] }>;
+  searchParams: Promise<{ next?: string | string[] }>;
 }) {
-  const { next, by } = await searchParams;
+  const { next } = await searchParams;
   const target = safeNextPath(Array.isArray(next) ? next[0] : next);
   if (await currentSession()) redirect(target);
 
   return (
-    <ContentPage eyebrow="Account" title="Sign in">
-      <AuthForm mode="signin" next={target} startByCode={by === "code"} />
+    <ContentPage
+      title="Sign in"
+      intro={<p>Enter your email to sign in or create an account.</p>}
+    >
+      <AuthForm next={target} />
     </ContentPage>
   );
 }

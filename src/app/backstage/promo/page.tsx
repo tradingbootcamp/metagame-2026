@@ -11,8 +11,10 @@ export default async function AdminPromoPage() {
   // static at build time.
   await connection();
 
-  const access = await toolAccess("promo.manage");
+  const access = await toolAccess("promo.view");
   if (!access) return <SignIn next="/backstage/promo" />;
+  const canMint = Boolean(await toolAccess("promo.create"));
+  const canArchive = Boolean(await toolAccess("promo.manage"));
 
   // A missing/unreadable coupon list disables the form with a message rather
   // than breaking the page.
@@ -34,6 +36,8 @@ export default async function AdminPromoPage() {
       couponError={couponError}
       mode={promoMode()}
       origin={await siteOriginFromHeaders()}
+      canMint={canMint}
+      canArchive={canArchive}
     />
   );
 }

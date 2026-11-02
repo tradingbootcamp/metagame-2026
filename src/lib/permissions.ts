@@ -24,6 +24,8 @@ export const PERMISSIONS = {
     label: "View users",
     description:
       "The account list and each one's roles, permissions and tickets.",
+    // Strictly more than the profile page, so the /u link from here works.
+    implies: ["profiles.view"],
   },
   "users.create": {
     audience: "team",
@@ -41,6 +43,16 @@ export const PERMISSIONS = {
     label: "Edit users",
     description: "Change other accounts' roles and per-user permissions.",
     implies: ["users.view"],
+  },
+  // Attendee, not team: team audience opens the whole /backstage index via
+  // hasTeamPermission(), and this is meant for volunteers on the door.
+  "profiles.view": {
+    audience: "attendee",
+    group: "Profiles",
+    level: "view",
+    label: "View profiles",
+    description:
+      "Anyone's /u profile page, including the ones not shown to other attendees.",
   },
   "tickets.view": {
     audience: "team",
@@ -63,20 +75,54 @@ export const PERMISSIONS = {
     label: "RSVP names",
     description: "RSVP names on a session page, not just the counts.",
   },
+  "schedule.volunteer_rooms": {
+    audience: "attendee",
+    group: "Schedule",
+    level: "view",
+    label: "Volunteer rooms",
+    description:
+      "Rooms marked volunteer-only, such as ops desks, alongside the public ones.",
+  },
+  // Read-only API access, e.g. for pulling needs into a supplies list.
+  "schedule.view": {
+    audience: "team",
+    group: "Schedule",
+    level: "view",
+    label: "View schedule data",
+    description:
+      "Every session, draft or not, with its needs, over the API. Not RSVP lists.",
+    implies: ["schedule.preview", "schedule.volunteer_rooms"],
+  },
   "schedule.manage": {
     audience: "team",
     group: "Schedule",
     level: "edit",
     label: "Edit schedule",
     description: "On the admin grid and over the API.",
-    implies: ["schedule.preview"],
+    implies: ["schedule.view"],
+  },
+  "promo.view": {
+    audience: "team",
+    group: "Promo codes",
+    level: "view",
+    label: "View promo codes",
+    description: "The comp and discount codes that exist, with their uses.",
+  },
+  "promo.create": {
+    audience: "team",
+    group: "Promo codes",
+    level: "edit",
+    label: "Mint promo codes",
+    description: "Mint new codes on Stripe or BTC.",
+    implies: ["promo.view"],
   },
   "promo.manage": {
     audience: "team",
     group: "Promo codes",
     level: "edit",
-    label: "Promo codes",
-    description: "Comp and discount codes on Stripe or BTC.",
+    label: "Manage promo codes",
+    description: "Archive and restore codes, on top of minting them.",
+    implies: ["promo.create"],
   },
   "links.manage": {
     audience: "team",
@@ -102,12 +148,28 @@ export const PERMISSIONS = {
       "Approve or reject proposals, add plans, run imports and connect Xero.",
     implies: ["budget.view"],
   },
+  "emails.view": {
+    audience: "team",
+    group: "Emails",
+    level: "view",
+    label: "View sent emails",
+    description: "The announcements and other emails we've sent, as a catalog.",
+  },
+  "api_docs.view": {
+    audience: "team",
+    group: "API keys",
+    level: "view",
+    label: "API docs",
+    description:
+      "The admin API reference and agent guide at /backstage/api-docs.",
+  },
   "api_keys.self": {
     audience: "team",
     group: "API keys",
     level: "edit",
     label: "Own API keys",
     description: "Mint and revoke your own API keys from /backstage/api-keys.",
+    implies: ["api_docs.view"],
   },
   "schema.view": {
     audience: "team",
@@ -123,6 +185,14 @@ export const PERMISSIONS = {
     label: "Grade submissions",
     description: "The speaker committee's rubric at /grade.",
   },
+  "misc.dice_lab": {
+    audience: "team",
+    group: "Misc",
+    level: "view",
+    label: "Dice lab",
+    description:
+      "Arrange the hero dice and export them as PNG/SVG assets, at /backstage/dice-lab.",
+  },
   "roles.manage": {
     audience: "team",
     group: "Sensitive",
@@ -137,6 +207,7 @@ export const PERMISSIONS = {
     label: "All API keys",
     description:
       "Mint and revoke anyone's API keys; keys for admins stay admin-only.",
+    implies: ["api_docs.view"],
   },
   "users.delete": {
     audience: "team",

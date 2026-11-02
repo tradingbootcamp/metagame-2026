@@ -148,6 +148,35 @@ button:not(:disabled) {
 }
 
 /* Hero puzzle: a section divider clicked for the wrong game (src/v2/puzzle). */
+/* Megagame faction patches come alive on hover (src/v2/components/megagame). */
+@keyframes mg-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -7px;
+  }
+}
+@keyframes mg-throb {
+  0%,
+  100% {
+    scale: 1;
+  }
+  50% {
+    scale: 1.45;
+  }
+}
+@keyframes mg-pulse {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 @keyframes shake {
   10%,
   90% {

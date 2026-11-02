@@ -12,7 +12,7 @@ export default function AdminScheduleLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ToolLayout title="Schedule" href="/backstage/schedule">
+    <ToolLayout title="Schedule" href="/backstage/schedule" fluid>
       {children}
     </ToolLayout>
   );

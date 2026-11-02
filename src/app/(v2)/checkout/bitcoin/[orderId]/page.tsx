@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { FaEnvelope } from "react-icons/fa";
 import ContentPage from "@/v2/components/ContentPage";
 import ContactLink from "@/v2/components/contact/ContactLink";
+import PartifulInvite from "@/v2/components/tickets/PartifulInvite";
 import { Button } from "@/v2/components/ui/button";
 
 // OpenNode charge lifecycle, narrowed to what we surface here.
@@ -121,6 +122,9 @@ export default function BitcoinCheckoutPage() {
               Your Metagame 2026 ticket is confirmed. We&rsquo;ll follow up by
               email with the details.
             </p>
+            <div className="mt-3">
+              <PartifulInvite />
+            </div>
           </div>
         )}
 

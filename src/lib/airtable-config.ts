@@ -23,4 +23,12 @@ export const airtableConfig = {
   trackingLinksTableId: "tblcujqHGF3UeD4wU",
   /** "Discord Outreach CRM" table — server names double as tracking-link placements. */
   discordOutreachTableId: "tbl5BLBZKuUTuB0Bw",
+  /** Megagame puzzle & game submissions (the /megagame/build journey). */
+  megagameSubmissionsTableId: "tblYNXIIhWqMpQwVO",
+  /** Volunteer applications; financial aid applications land here too. */
+  volunteersTableId: "tblwgd6l8wPe42gf7",
+  /** Children registered for the weekend (the /childcare/register journey). */
+  childrenTableId: "tblsysyESXwF1ai6R",
+  /** Night Market booth applications (the /night-market/apply journey). */
+  nightMarketBoothsTableId: "tblr5fkV7iqgtGBtk",
 } as const;

@@ -32,7 +32,7 @@ export default async function AdminSchemaLayout({
             </Link>
             {access && <ViewToggle />}
           </nav>
-          <SessionBar />
+          <SessionBar next="/backstage/schema" />
         </div>
       </header>
       {/* Pages pick their own width: the diagram is full-bleed, the list is a column. */}

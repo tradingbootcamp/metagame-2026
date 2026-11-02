@@ -4,17 +4,18 @@ import SessionDetails, {
   sessionMetadata,
   SESSION_TITLE_ID,
 } from "@/v2/components/schedule/SessionDetails";
-import { prelaunchGate } from "../data";
+import { scheduleGate } from "../data";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  await prelaunchGate();
+  if ((await scheduleGate()) !== "ok") return { robots: { index: false } };
   return sessionMetadata((await params).slug);
 }
 
 export default async function SessionPage({ params }: Props) {
-  await prelaunchGate();
+  // The layout shows the wall; the modal just doesn't open over it.
+  if ((await scheduleGate()) !== "ok") return null;
   return (
     <RouteModal labelledBy={SESSION_TITLE_ID}>
       <SessionDetails slug={(await params).slug} />

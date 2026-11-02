@@ -13,12 +13,15 @@ import {
 import { getDb, schema } from "@/db";
 import { safeNextPath } from "@/lib/next-path";
 
-export type AuthMode = "signin" | "signup";
-
+// Email first, then whatever that address calls for:
+//   email ─lookup─┬─ has a password ──▶ password  (or ask for a code)
+//                 ├─ no password yet ──▶ code      (sent straight away)
+//                 └─ no account ───────▶ new       (confirm, then code)
+//   code ─verify─▶ set-password (optional) ─▶ next
 export type AuthState = {
-  step: "email" | "code" | "password";
+  step: "email" | "password" | "code" | "new" | "set-password";
   email: string;
-  /** The password step is replacing an existing password, not adding a first one. */
+  /** The set-password step is replacing an existing password, not adding a first one. */
   replacing?: boolean;
   error?: string;
   notice?: string;
@@ -26,19 +29,21 @@ export type AuthState = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FRESH_SESSION_MS = 10 * 60 * 1000;
-const WELCOME_BACK =
-  "Looks like you already had an account, so we signed you in.";
 
 const apiCode = (e: unknown) =>
   e instanceof APIError ? e.body?.code : undefined;
 
-async function userExists(email: string): Promise<boolean> {
-  const rows = await getDb()
+/** The account under this address, if any, and whether it has a password. */
+async function lookup(
+  email: string,
+): Promise<{ exists: boolean; password: boolean }> {
+  const [row] = await getDb()
     .select({ id: schema.user.id })
     .from(schema.user)
     .where(eq(schema.user.email, email))
     .limit(1);
-  return rows.length > 0;
+  if (!row) return { exists: false, password: false };
+  return { exists: true, password: await hasPassword(row.id) };
 }
 
 async function sendCode(email: string): Promise<string | undefined> {
@@ -52,22 +57,24 @@ async function sendCode(email: string): Promise<string | undefined> {
   }
 }
 
-// One action for both /login and /signup; `intent` says which button was
-// pressed and `mode` which page it came from.
+async function toCodeStep(email: string, notice?: string): Promise<AuthState> {
+  const error = await sendCode(email);
+  if (error) return { step: "email", email, error };
+  return { step: "code", email, notice };
+}
+
+// One action for the whole form; `intent` says which button was pressed.
 export async function authenticate(
   prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
   const intent = String(formData.get("intent") ?? "");
-  const mode: AuthMode =
-    formData.get("mode") === "signup" ? "signup" : "signin";
   const email = String(formData.get("email") ?? prev.email)
     .trim()
     .toLowerCase();
   const next = safeNextPath(formData.get("next"));
 
   if (intent === "skip") redirect(next);
-  if (intent === "restart") return { step: "email", email };
 
   if (intent === "set-password") {
     const session = await currentSession();
@@ -86,7 +93,7 @@ export async function authenticate(
     }
     const replacing = await hasPassword(session.user.id);
     const fail = (error: string): AuthState => ({
-      step: "password",
+      step: "set-password",
       email,
       replacing,
       error,
@@ -113,20 +120,23 @@ export async function authenticate(
     return { step: "email", email, error: "Enter a valid email address." };
   }
 
-  if (intent === "code" || intent === "resend") {
-    const error = await sendCode(email);
-    if (error) return { step: "email", email, error };
-    return {
-      step: "code",
+  if (intent === "lookup") {
+    const { exists, password } = await lookup(email);
+    if (!exists) return { step: "new", email };
+    if (password) return { step: "password", email };
+    return toCodeStep(
       email,
-      notice: intent === "resend" ? "Sent a new code." : undefined,
-    };
+      "This account has no password yet, so we emailed you a code.",
+    );
   }
+
+  if (intent === "code") return toCodeStep(email);
+  if (intent === "resend") return toCodeStep(email, "Sent a new code.");
 
   if (intent === "password") {
     const password = String(formData.get("password") ?? "");
     if (!password)
-      return { step: "email", email, error: "Enter your password." };
+      return { step: "password", email, error: "Enter your password." };
     try {
       await getAuth().api.signInEmail({
         body: { email, password },
@@ -136,20 +146,15 @@ export async function authenticate(
       if (apiCode(e) === "EMAIL_NOT_VERIFIED") {
         // Nobody has proved they own this address yet, so its password can't
         // be trusted. Signing in by code also clears that password.
-        const error = await sendCode(email);
-        if (error) return { step: "email", email, error };
-        return {
-          step: "code",
+        return toCodeStep(
           email,
-          notice:
-            "This address hasn't been verified yet, so we emailed you a code instead.",
-        };
+          "This address hasn't been verified yet, so we emailed you a code instead.",
+        );
       }
       return {
-        step: "email",
+        step: "password",
         email,
-        error:
-          "Wrong email or password. No password yet? Sign in with a code instead.",
+        error: "That password didn't match. Forgot it? Email yourself a code.",
       };
     }
     redirect(next);
@@ -160,10 +165,9 @@ export async function authenticate(
     if (otp.length !== 6) {
       return { step: "code", email, error: "Enter the 6-digit code." };
     }
-    // Checked before the sign-in, which creates the user when it's new.
-    const existing = mode === "signup" && (await userExists(email));
     let userId: string;
     try {
+      // Creates the account when the address is new.
       const result = await getAuth().api.signInEmailOTP({
         body: { email, otp },
         headers: await headers(),
@@ -179,19 +183,13 @@ export async function authenticate(
             : "That code didn't match.";
       return { step: "code", email, error };
     }
-    // Signing up: offer a password right away, unless this turned out to be an
-    // existing account that already has one. Signing in by code with a
-    // password on file is usually "I forgot it", so offer a new one then too.
-    const has = await hasPassword(userId);
-    if (mode === "signup" ? !has : has) {
-      return {
-        step: "password",
-        email,
-        replacing: has,
-        notice: existing ? WELCOME_BACK : undefined,
-      };
-    }
-    redirect(existing ? `/account?notice=welcome-back` : next);
+    // Signed in. Offer a password: a first one for new and password-less
+    // accounts, a replacement where a code was the way past a forgotten one.
+    return {
+      step: "set-password",
+      email,
+      replacing: await hasPassword(userId),
+    };
   }
 
   return prev;

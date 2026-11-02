@@ -9,6 +9,7 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import { toolAccess } from "@/lib/admin-auth";
+import { editSessionAccess } from "@/lib/session-ownership";
 import { currentSession } from "@/lib/auth";
 import { airtableRfpLink, gradeLink } from "@/lib/rfp-links";
 import { gradingSummary } from "@/lib/rfp-sessions";
@@ -16,11 +17,16 @@ import {
   formatPacificDay,
   formatPacificTime,
   hostNames,
+  planConflicts,
   type Ages,
   type Category,
 } from "@/lib/schedule";
 import { loadSessionRsvps, loadViewerPlans } from "@/lib/schedule-store";
-import { loadPublicSchedule, loadRawSchedule } from "@/app/(v2)/schedule/data";
+import {
+  loadPublicSchedule,
+  loadRawSchedule,
+  rsvpTicket,
+} from "@/app/(v2)/schedule/data";
 import SessionPlans from "@/v2/components/schedule/SessionPlans";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
 import { HEADING } from "@/v2/components/styles";
@@ -141,7 +147,7 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
   );
 }
 
-/** Callers must apply prelaunchGate() first. */
+/** Callers must gate on scheduleGate() first. */
 export default async function SessionDetails({ slug }: { slug: string }) {
   const [{ session, room }, account, admin] = await Promise.all([
     findSession(slug),
@@ -149,14 +155,24 @@ export default async function SessionDetails({ slug }: { slug: string }) {
     toolAccess("schedule.manage"),
   ]);
   const viewerId = account?.user.id ?? null;
-  const [rsvps, plans] = await Promise.all([
+  const [rsvps, plans, editor, raw, shown, ticket] = await Promise.all([
     loadSessionRsvps(session.id),
     viewerId ? loadViewerPlans(viewerId) : null,
+    // PublicSession carries host names but no ids, so ownership is its own read.
+    viewerId ? editSessionAccess(session.id) : null,
+    // Host ids and shepherds aren't public, so clashes read the raw schedule.
+    viewerId ? loadRawSchedule() : null,
+    viewerId ? loadPublicSchedule() : null,
+    rsvpTicket(),
   ]);
+  // Only sessions this viewer can see, as loadMySessionIds does.
+  const visible = new Set(shown?.sessions.map((s) => s.id));
 
   const tags = [
     session.category ? CATEGORY_LABEL[session.category] : null,
     session.ages ? AGES_LABEL[session.ages] : null,
+    session.rsvpIsCommitment ? "Limited spots" : null,
+    session.sponsored ? "Sponsor" : null,
   ].filter(Boolean) as string[];
   const cap = session.maxCapacity;
 
@@ -249,7 +265,20 @@ export default async function SessionDetails({ slug }: { slug: string }) {
         <SessionPlans
           sessionId={session.id}
           capacity={cap}
+          commitment={session.rsvpIsCommitment}
+          open={session.rsvpsOpen}
+          conflicts={
+            viewerId && plans && raw
+              ? planConflicts(
+                  session,
+                  raw.sessions.filter((s) => visible.has(s.id)),
+                  viewerId,
+                  plans.rsvps,
+                )
+              : []
+          }
           rsvps={rsvps}
+          ticket={ticket}
           plan={
             plans && {
               status: plans.rsvps[session.id] ?? null,
@@ -274,6 +303,21 @@ export default async function SessionDetails({ slug }: { slug: string }) {
           </p>
         )}
       </section>
+
+      {editor && (
+        <p className="mt-6 text-sm">
+          <Link
+            href={
+              editor.via === "team"
+                ? `/backstage/schedule?edit=${encodeURIComponent(session.slug)}`
+                : `/account/sessions/${session.id}`
+            }
+            className="font-semibold text-navy underline underline-offset-2 hover:text-meeple"
+          >
+            Edit this session
+          </Link>
+        </p>
+      )}
 
       {admin && <AdminDetails sessionId={session.id} />}
     </>

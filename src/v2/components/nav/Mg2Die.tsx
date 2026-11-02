@@ -5,24 +5,32 @@
 // icon size. 24×24 + currentColor inherits the rail's weight + resting/active states.
 type IconProps = { size?: number; strokeWidth?: number; className?: string };
 
-const CUBE = "M12 4.3 L19.7 8.6 L19.7 17.3 L12 21.6 L4.3 17.3 L4.3 8.6 Z";
-const SEAMS = "M4.3 8.6 L12 13 M19.7 8.6 L12 13 M12 13 L12 21.6";
+export const CUBE =
+  "M12 4.3 L19.7 8.6 L19.7 17.3 L12 21.6 L4.3 17.3 L4.3 8.6 Z";
+export const SEAMS = "M4.3 8.6 L12 13 M19.7 8.6 L12 13 M12 13 L12 21.6";
 
 // Unit-square → face-plane transforms (u across, v down the face).
-const LEFT_FACE = "matrix(7.7,4.3,0,8.6,4.3,8.6)";
-const RIGHT_FACE = "matrix(7.7,-4.3,0,8.6,12,13)";
+export const LEFT_FACE = "matrix(7.7,4.3,0,8.6,4.3,8.6)";
+export const RIGHT_FACE = "matrix(7.7,-4.3,0,8.6,12,13)";
+export const PIPS: [number, number][] = [
+  [9.8, 8.3],
+  [14.2, 8.9],
+];
+export const PIP_R = 0.85;
+// Face-local letter anchor (centred, central baseline) and em size.
+export const LETTER = { x: 0.5, y: 0.56, size: 0.66 };
 
 function FaceLetter({ transform, char }: { transform: string; char: string }) {
   return (
     <g transform={transform}>
       <text
-        x="0.5"
-        y="0.56"
+        x={LETTER.x}
+        y={LETTER.y}
         textAnchor="middle"
         dominantBaseline="central"
         fontFamily="var(--font-space-grotesk), sans-serif"
         fontWeight="800"
-        fontSize="0.66"
+        fontSize={LETTER.size}
         fill="currentColor"
       >
         {char}
@@ -55,8 +63,9 @@ export default function Mg2Die({
         <path d={SEAMS} />
       </g>
       {/* top face: two pips */}
-      <circle cx="9.8" cy="8.3" r="0.85" fill="currentColor" />
-      <circle cx="14.2" cy="8.9" r="0.85" fill="currentColor" />
+      {PIPS.map(([cx, cy]) => (
+        <circle key={cx} cx={cx} cy={cy} r={PIP_R} fill="currentColor" />
+      ))}
       {/* left + right faces: M, G sheared onto their planes */}
       <FaceLetter transform={LEFT_FACE} char="M" />
       <FaceLetter transform={RIGHT_FACE} char="G" />

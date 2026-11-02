@@ -3,7 +3,7 @@ import type { GradeValues } from "./grade-input";
 import type { MirrorState } from "./rfp-sessions";
 import {
   gradeFields,
-  graderField,
+  graderWrite,
   mirror,
   nextStepsField,
   sessionFields,
@@ -52,24 +52,36 @@ describe("gradeFields", () => {
   });
 });
 
-describe("graderField", () => {
-  it("names a committee member as the select does", () => {
-    expect(graderField({ email: "jbromels@gmail.com" })).toEqual({
-      "Rubric: Grader": "John Bromels",
+describe("graderWrite", () => {
+  it("uses the committee name, else the display name, with typecast on", () => {
+    expect(graderWrite({ email: "jbromels@gmail.com", name: "John" })).toEqual({
+      fields: { "Rubric: Grader": "John Bromels" },
+      typecast: true,
+    });
+    expect(
+      graderWrite({ email: "ja.kopczynski@gmail.com", name: "Jan" }),
+    ).toEqual({ fields: { "Rubric: Grader": "Jisk" }, typecast: true });
+    expect(graderWrite({ email: "new@example.com", name: "Pat" })).toEqual({
+      fields: { "Rubric: Grader": "Pat" },
+      typecast: true,
     });
   });
 
-  it("writes Other for anyone the Grader select doesn't list", () => {
-    expect(graderField({ email: "ja.kopczynski@gmail.com" })).toEqual({
-      "Rubric: Grader": "Other",
+  it("writes Other for a grader whose only name is an email or blank", () => {
+    expect(graderWrite({ email: "x@y.z", name: "x@y.z" })).toEqual({
+      fields: { "Rubric: Grader": "Other" },
+      typecast: true,
     });
-    expect(graderField({ email: "new@example.com" })).toEqual({
-      "Rubric: Grader": "Other",
+    expect(graderWrite({ email: "x@y.z", name: " " })).toEqual({
+      fields: { "Rubric: Grader": "Other" },
+      typecast: true,
     });
   });
 
   it("marks nobody Unassigned", () => {
-    expect(graderField(null)).toEqual({ "Rubric: Grader": "Unassigned" });
+    expect(graderWrite(null)?.fields).toEqual({
+      "Rubric: Grader": "Unassigned",
+    });
   });
 });
 

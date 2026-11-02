@@ -5,12 +5,15 @@ import { setSchedulePane } from "./actions";
 import { schedulePaneOn } from "./pane";
 import ScheduleBoard, { type Group, type QueueRow } from "./ScheduleBoard";
 import {
+  byShepherd,
   compare,
   groupLabel,
+  GROUPINGS,
   myCounts,
   stepsOf,
   tabRows,
   TABS,
+  type Grouping,
   type Tab,
   type TabKey,
 } from "./pipeline";
@@ -23,6 +26,7 @@ import {
   type SortState,
   type TableMeta,
 } from "./SubmissionTable";
+import { canSeeSchedule } from "@/app/(v2)/schedule/data";
 import { smallButtonClass } from "@/app/backstage/ui";
 import ToolSignIn from "@/components/ToolSignIn";
 import { can } from "@/lib/access";
@@ -44,10 +48,12 @@ const first = (value: string | string[] | undefined) =>
 function PipelineTabs({
   active,
   mode,
+  grouping,
   counts,
 }: {
   active: TabKey;
   mode: Mode;
+  grouping: Grouping;
   counts: Record<TabKey, number>;
 }) {
   return (
@@ -65,7 +71,10 @@ function PipelineTabs({
           return (
             <li key={t.key} className={i > 0 ? "-ml-1.5" : ""}>
               <Link
-                href={{ pathname: PATH, query: { who: mode, tab: t.key } }}
+                href={{
+                  pathname: PATH,
+                  query: { who: mode, tab: t.key, group: grouping },
+                }}
                 aria-current={on ? "page" : undefined}
                 style={{ clipPath: shape }}
                 className={`flex items-center gap-1.5 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
@@ -111,11 +120,17 @@ export default async function SpeakerCommitteePage(
   }
   const me = account.user.id;
 
-  const [rfpSessions, committee, pane] = await Promise.all([
-    listRfpSessions(),
-    committeeAccounts(),
-    schedulePaneOn(),
-  ]);
+  // The schedule comes along on every tab now: each row names the slot it
+  // sits in, which needs the room names.
+  const [rfpSessions, committee, pane, schedule, canLink, grader] =
+    await Promise.all([
+      listRfpSessions(),
+      committeeAccounts(),
+      schedulePaneOn(),
+      loadSchedule(),
+      canSeeSchedule(),
+      can("submissions.grade"),
+    ]);
   const rows = rfpSessions.map(toRow);
 
   const params = await props.searchParams;
@@ -134,15 +149,22 @@ export default async function SpeakerCommitteePage(
   const sort = (SORTS.find((s) => s === first(params.sort)) ??
     "proposal") as SortKey;
   const dir = first(params.dir) === "desc" ? "desc" : "asc";
+  const grouping: Grouping =
+    first(params.group) === "shepherd" ? "shepherd" : "step";
   const state: SortState = {
     sort,
     dir,
     q: rawQuery,
-    base: { who: mode, tab: tab.key },
+    base: { who: mode, tab: tab.key, group: grouping },
   };
 
   const meta: TableMeta = {
     options: pipelineOptions(committee.map((a) => a.committeeName)),
+    rooms: Object.fromEntries(schedule.locations.map((l) => [l.id, l.name])),
+    linkSessions: canLink,
+    // The pills save through the grading actions, so a scheduler who can't
+    // grade sees them but can't open them.
+    editable: grader !== null,
   };
 
   const visible = tabRows(rows, tab, me, mineOnly)
@@ -160,7 +182,10 @@ export default async function SpeakerCommitteePage(
         {MODES.map((m) => (
           <Link
             key={m.key}
-            href={{ pathname: PATH, query: { who: m.key, tab: tab.key } }}
+            href={{
+              pathname: PATH,
+              query: { who: m.key, tab: tab.key, group: grouping },
+            }}
             className={`rounded-full px-3.5 py-1.5 text-sm transition-colors ${
               m.key === mode
                 ? "bg-navy text-cream"
@@ -188,23 +213,52 @@ export default async function SpeakerCommitteePage(
           </button>
         </form>
       </nav>
-      <PipelineTabs active={tab.key} mode={mode} counts={myCounts(rows, me)} />
-      <p className="text-sm text-ink/60">{tab.blurb}</p>
+      <PipelineTabs
+        active={tab.key}
+        mode={mode}
+        grouping={grouping}
+        counts={myCounts(rows, me)}
+      />
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="text-sm text-ink/60">{tab.blurb}</p>
+        {/* Only All groups; every other tab is one step already. */}
+        {tab.key === "all" && (
+          <nav aria-label="Grouping" className="flex items-center gap-1.5">
+            {GROUPINGS.map((g) => (
+              <Link
+                key={g.key}
+                href={{
+                  pathname: PATH,
+                  query: { who: mode, tab: tab.key, group: g.key },
+                }}
+                aria-current={g.key === grouping ? "true" : undefined}
+                className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
+                  g.key === grouping
+                    ? "bg-navy/10 text-navy"
+                    : "text-ink/50 hover:bg-ink/6 hover:text-ink/70"
+                }`}
+              >
+                {g.label}
+              </Link>
+            ))}
+          </nav>
+        )}
+      </div>
     </div>
   );
 
   // The grid shows on the schedule tab, or beside every tab with the pane on.
   const withGrid = tab.key === "schedule" || pane;
-  const [schedule, rsvps] = withGrid
-    ? await Promise.all([loadSchedule(), loadRsvpCounts()])
-    : [null, null];
+  const rsvps = withGrid ? await loadRsvpCounts() : null;
 
   const groups: { title: string; rows: Row[] }[] =
     tab.key === "all"
-      ? stepsOf(visible).map((step) => ({
-          title: groupLabel(step),
-          rows: visible.filter((s) => s.nextSteps === step),
-        }))
+      ? grouping === "shepherd"
+        ? byShepherd(visible)
+        : stepsOf(visible).map((step) => ({
+            title: groupLabel(step),
+            rows: visible.filter((s) => s.nextSteps === step),
+          }))
       : tab.key === "schedule"
         ? [
             {
@@ -221,6 +275,7 @@ export default async function SpeakerCommitteePage(
       <form action={PATH} className="flex gap-2">
         <input type="hidden" name="who" value={mode} />
         <input type="hidden" name="tab" value={tab.key} />
+        <input type="hidden" name="group" value={grouping} />
         <input type="hidden" name="sort" value={sort} />
         <input type="hidden" name="dir" value={dir} />
         <input
@@ -249,7 +304,7 @@ export default async function SpeakerCommitteePage(
     </>
   );
 
-  if (schedule && rsvps) {
+  if (rsvps) {
     const byId = new Map(rfpSessions.map((s) => [s.sessionId, s]));
     const forGrid = (r: Row): QueueRow => {
       const row = byId.get(r.id)?.row;

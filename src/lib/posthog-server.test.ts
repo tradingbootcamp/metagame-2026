@@ -11,7 +11,11 @@ const paid: PurchaseRecord = {
   ticketType: "Standard",
   amount: 325,
   couponCode: "EARLYBIRD",
-  utm: { utm_source: "podcast", posthog_id: "ph_abc" },
+  utm: {
+    utm_source: "podcast",
+    posthog_id: "ph_abc",
+    posthog_session_id: "sess_1",
+  },
 };
 
 describe("purchaseEvent", () => {
@@ -28,6 +32,7 @@ describe("purchaseEvent", () => {
       },
     });
     expect(event?.properties).not.toHaveProperty("posthog_id");
+    expect(event?.properties).not.toHaveProperty("posthog_session_id");
     expect(JSON.stringify(event)).not.toContain("buyer@example.com");
   });
   it("skips purchases that haven't settled", () => {
@@ -38,6 +43,12 @@ describe("purchaseEvent", () => {
     expect(purchaseEvent({ ...paid, test: true })?.event).toBe(
       "ticket_purchased_test",
     );
+  });
+  it("stamps the purchase with the session it was bought from", () => {
+    expect(purchaseEvent(paid)?.properties.$session_id).toBe("sess_1");
+    expect(
+      purchaseEvent({ ...paid, utm: { posthog_id: "ph_abc" } })?.properties,
+    ).not.toHaveProperty("$session_id");
   });
   it("falls back to the purchase id without a browser id", () => {
     expect(purchaseEvent({ ...paid, utm: {} })?.distinct_id).toBe(

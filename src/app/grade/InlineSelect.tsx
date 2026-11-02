@@ -19,6 +19,7 @@ export default function InlineSelect({
   value,
   options,
   colors,
+  readOnly = false,
 }: {
   sessionId: string;
   field: PipelineField;
@@ -26,6 +27,8 @@ export default function InlineSelect({
   value: string | null;
   options: readonly string[];
   colors: Record<string, string>;
+  /** Shows the pill without a menu, for a viewer who can't change it. */
+  readOnly?: boolean;
 }) {
   const [current, setCurrent] = useState(value ?? "");
   const [failed, setFailed] = useState<string | null>(null);
@@ -58,6 +61,20 @@ export default function InlineSelect({
       if (result.value !== undefined) setCurrent(result.value ?? "");
       setNote(result.note ?? null);
     });
+  }
+
+  if (readOnly) {
+    return (
+      <span
+        title={current || "Not set"}
+        style={tone ?? undefined}
+        className={`block w-full truncate rounded-full py-1 pr-5 pl-2.5 text-xs font-medium ${
+          tone ? "" : "bg-ink/6 text-ink/55"
+        }`}
+      >
+        {current || "—"}
+      </span>
+    );
   }
 
   return (

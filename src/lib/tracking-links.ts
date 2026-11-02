@@ -170,6 +170,72 @@ export function isAllowedDestination(
   return true;
 }
 
+export type LinkFields = Omit<NewTrackingLink, "createdBy">;
+export type LinkProblem = { field: string; error: string };
+
+const hostOf = (origin: string) => {
+  try {
+    return new URL(origin).host;
+  } catch {
+    return origin;
+  }
+};
+
+/**
+ * Validation shared by the /backstage/links form and the JSON API, so the two
+ * can't drift. `raw` is FormData entries or a JSON body; a blank campaign
+ * takes the default. The slug still needs its taken-check.
+ */
+export function parseLinkFields(
+  raw: Record<string, unknown>,
+  options: LinkOptions,
+  origin: string,
+): { ok: true; fields: LinkFields } | ({ ok: false } & LinkProblem) {
+  const str = (key: string) => {
+    const v = raw[key];
+    return typeof v === "string" ? v.trim() : "";
+  };
+  const destination = str("destination");
+  if (!isAllowedDestination(destination, origin)) {
+    return {
+      ok: false,
+      field: "destination",
+      error: `Destination must be an https link on ${hostOf(origin)}.`,
+    };
+  }
+  const utm = {} as Record<UtmSelectField, string>;
+  for (const field of UTM_SELECT_FIELDS) {
+    const given = str(field);
+    const value =
+      field === "campaign" && !given
+        ? defaultCampaign(options)
+        : snapToOption(given, options[field]);
+    if (!value) return { ok: false, field, error: "Required." };
+    if (value.length > UTM_VALUE_MAX)
+      return {
+        ok: false,
+        field,
+        error: `At most ${UTM_VALUE_MAX} characters.`,
+      };
+    if (!OPEN_SELECTS.has(field) && !options[field].includes(value))
+      return { ok: false, field, error: `Pick a ${field} from the list.` };
+    utm[field] = value;
+  }
+  const slug = normalizeSlug(str("slug"));
+  if (!slug) return { ok: false, field: "slug", error: "Required." };
+  const slugProblem = validateSlug(slug);
+  if (slugProblem) return { ok: false, field: "slug", error: slugProblem };
+  return {
+    ok: true,
+    fields: {
+      slug,
+      destination,
+      ...utm,
+      internalName: str("internalName").slice(0, 120),
+    },
+  };
+}
+
 /** Destination with this link's UTMs, replacing any it already carried. Other params and the fragment survive. */
 export function buildDestinationUrl(
   link: Pick<

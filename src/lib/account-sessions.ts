@@ -2,6 +2,8 @@ import {
   formatPacificDay,
   formatPacificTime,
   isPlaced,
+  planConflicts,
+  type PlanConflict,
   type RsvpStatus,
   type ScheduleLocation,
   type ScheduleSession,
@@ -24,6 +26,10 @@ export type AccountSessionRow = {
   rsvp: RsvpStatus | null;
   bookmarked: boolean;
   full: boolean;
+  commitment: boolean;
+  /** RSVPs are open; otherwise the button is greyed out. */
+  open: boolean;
+  conflicts: PlanConflict[];
 };
 
 export type AccountSessions = {
@@ -78,6 +84,9 @@ export function accountSessions(
     full:
       s.maxCapacity !== null &&
       (goingCounts[s.id]?.going ?? 0) >= s.maxCapacity,
+    commitment: s.rsvpIsCommitment,
+    open: s.rsvpsOpen,
+    conflicts: planConflicts(s, sessions, userId, plans.rsvps),
   });
   const sorted = [...sessions].sort(byTime);
   const published = sorted.filter((s) => s.status === "published");

@@ -10,6 +10,7 @@ import {
   sessionBySlug,
   sessionToRaw,
 } from "@/lib/schedule-api";
+import { overlapWarning } from "@/lib/schedule";
 import { parseSessionFields, type Raw } from "@/lib/schedule-input";
 import { removeSession, upsertSession } from "@/lib/schedule-store";
 
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 type Ctx = RouteContext<"/api/admin/schedule/sessions/[slug]">;
 
 export async function GET(_request: Request, ctx: Ctx) {
-  const access = await authorize();
+  const access = await authorize("schedule.view");
   if (access instanceof Response) return access;
   const session = await sessionBySlug((await ctx.params).slug);
   return session ? json({ session }) : error("No such session.", 404);
@@ -59,18 +60,25 @@ async function write(
   );
   if ("error" in shepherd) return error(shepherd.error, 400, shepherd.field);
 
+  let saved;
   try {
-    await upsertSession({
-      id: current.id,
-      ...parsed.value,
-      hostIds: hosts.ids,
-      shepherdUserId: shepherd.id,
-    });
+    saved = await upsertSession(
+      {
+        id: current.id,
+        ...parsed.value,
+        hostIds: hosts.ids,
+        shepherdUserId: shepherd.id,
+      },
+      { allowOverlap: true },
+    );
   } catch (err) {
     return failed(err);
   }
   done();
-  return json({ session: await sessionBySlug(parsed.value.slug) });
+  return json({
+    session: await sessionBySlug(parsed.value.slug),
+    warnings: saved.clash ? [overlapWarning(saved.clash)] : [],
+  });
 }
 
 export async function DELETE(_request: Request, ctx: Ctx) {

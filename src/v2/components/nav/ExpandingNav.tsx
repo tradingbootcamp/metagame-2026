@@ -9,10 +9,17 @@ import {
 } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ADMIN_LINK, HOME_SECTIONS, NAV_LINKS } from "./links";
+import {
+  ACCOUNT_LINK,
+  ADMIN_LINK,
+  HOME_SECTIONS,
+  LOGIN_LINK,
+  NAV_LINKS,
+  type NavLink,
+} from "./links";
 import { NavLogo, Pips, TopIcon } from "./LogoDice";
 import { useHomeSection } from "./useHomeSection";
-import { useIsAdmin } from "./useIsAdmin";
+import { useAccountStatus } from "./useAccountStatus";
 import { useMediaQuery } from "./useMediaQuery";
 
 // Collapsed, this is just the single MG die in the corner. Desktop: clicking it
@@ -43,13 +50,16 @@ const withDelay = (parts: string[], delayMs: number) =>
 // nav (/credits, /thanks, …), which get the Home link but no "current" mark.
 // On "/" the hash sections (tickets, get-involved) take over from Home as
 // scroll-spy reaches them.
-function useActiveLink(section: string | null): string | null {
+function useActiveLink(
+  links: readonly NavLink[],
+  section: string | null,
+): string | null {
   const pathname = usePathname();
   if (pathname === "/") {
-    return NAV_LINKS.some((l) => l.id === section) ? section : "home";
+    return links.some((l) => l.id === section) ? section : "home";
   }
   return (
-    NAV_LINKS.find((l) => l.id !== "home" && pathname.startsWith(l.href))?.id ??
+    links.find((l) => l.id !== "home" && pathname.startsWith(l.href))?.id ??
     null
   );
 }
@@ -58,6 +68,9 @@ function useActiveLink(section: string | null): string | null {
 // sections, deduped where a section is also a nav link.
 const TOP_FACES = [
   ...NAV_LINKS,
+  ADMIN_LINK,
+  LOGIN_LINK,
+  ACCOUNT_LINK,
   ...HOME_SECTIONS.filter((s) => !NAV_LINKS.some((l) => l.id === s.id)),
 ].map(({ id, icon }) => ({ id, icon }));
 
@@ -131,9 +144,14 @@ function registerGrow() {
 export default function ExpandingNav() {
   const desktop = useMediaQuery("(min-width: 768px)");
   const section = useHomeSection();
-  const active = useActiveLink(section);
   const onHome = usePathname() === "/";
-  const links = useIsAdmin() ? [...NAV_LINKS, ADMIN_LINK] : NAV_LINKS;
+  const account = useAccountStatus();
+  const links: readonly NavLink[] = [
+    ...NAV_LINKS,
+    ...(account?.admin ? [ADMIN_LINK] : []),
+    ...(account ? [account.signedIn ? ACCOUNT_LINK : LOGIN_LINK] : []),
+  ];
+  const active = useActiveLink(links, section);
   // The die's top face: on "/" the section under the viewport centre, else
   // the current page's icon, or home's pips off-nav.
   const topIcon = section ?? active ?? "home";
@@ -172,7 +190,7 @@ export default function ExpandingNav() {
   const [prevActive, setPrevActive] = useState(topIcon);
   const [fromLeft, setFromLeft] = useState(true);
   if (topIcon !== prevActive) {
-    const idx = (id: string) => NAV_LINKS.findIndex((s) => s.id === id);
+    const idx = (id: string) => links.findIndex((s) => s.id === id);
     setFromLeft(idx(topIcon) > idx(prevActive));
     setPrevActive(topIcon);
   }

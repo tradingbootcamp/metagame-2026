@@ -1,7 +1,7 @@
 "use server";
 
 import { EXPIRED, requireAccess } from "@/lib/admin-auth";
-import { PromoError, type MintResult } from "@/lib/promo-codes";
+import { CUSTOM_CODE_RE, PromoError, type MintResult } from "@/lib/promo-codes";
 import {
   listStripeCodes,
   mintStripeCode,
@@ -26,7 +26,7 @@ export async function mint(
   _prev: MintState,
   formData: FormData,
 ): Promise<MintState> {
-  const admin = await requireAccess("promo.manage");
+  const admin = await requireAccess("promo.create");
   if (!admin) return { error: EXPIRED };
 
   const name = str(formData, "name");
@@ -39,7 +39,7 @@ export async function mint(
   const unlimited = formData.get("unlimited") === "on";
   const maxUses = unlimited ? null : Number(str(formData, "uses")) || 1;
   const customCode = str(formData, "customCode");
-  if (customCode && !/^[A-Za-z0-9-]+$/.test(customCode))
+  if (customCode && !CUSTOM_CODE_RE.test(customCode))
     return {
       field: "customCode",
       error: "Letters, digits, and dashes only.",
@@ -65,7 +65,7 @@ export async function mint(
 }
 
 export async function listCodes(): Promise<StripeCode[]> {
-  if (!(await requireAccess("promo.manage"))) throw new Error(EXPIRED);
+  if (!(await requireAccess("promo.view"))) throw new Error(EXPIRED);
   return listStripeCodes();
 }
 

@@ -10,9 +10,13 @@ export const PURPOSES = [
   "Financial aid",
   "Friend/Family",
   "Easter Egg",
+  "Flyer",
 ] as const;
 
 export const PROMO_SOURCE = "comp-tool";
+
+/** What a custom code may be spelled with. */
+export const CUSTOM_CODE_RE = /^[A-Za-z0-9-]+$/;
 
 export type MintInput = {
   name: string;
@@ -34,7 +38,11 @@ export type Prior = {
 };
 
 export type MintResult = {
+  /** The Stripe promotion code's id (promo_…). */
+  id: string;
   code: string;
+  active: boolean;
+  couponId: string;
   name: string;
   email: string;
   reused: boolean;

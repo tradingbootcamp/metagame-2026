@@ -5,6 +5,7 @@
 import {
   AGES,
   CATEGORIES,
+  LOCATION_VISIBILITIES,
   STATUSES,
   fromPacificWall,
   outsideHours,
@@ -15,7 +16,8 @@ import {
   type Status,
 } from "./schedule";
 
-export type Raw = Record<string, unknown>;
+import type { Raw } from "./admin-api";
+export type { Raw };
 
 export type Invalid = { field: string; error: string };
 export type Parsed<T> = { ok: true; value: T } | ({ ok: false } & Invalid);
@@ -34,6 +36,9 @@ export type SessionFields = {
   ages: Ages | null;
   needs: string | null;
   status: Status;
+  rsvpIsCommitment: boolean;
+  sponsored: boolean;
+  rsvpsOpen: boolean;
   /** Undefined when the input doesn't mention it, so it's left as stored. */
   airtableRfpRecordId?: string | null;
   /** Undefined when the input doesn't mention it, so it's left as stored. */
@@ -44,6 +49,24 @@ export type LocationFields = Omit<
   ScheduleLocation,
   "id" | "thumbnailUrl" | "imageUrl"
 >;
+
+/**
+ * What a session's own host may change. Placement, status and slug are the
+ * team's: a host must not be able to move themselves into a better room, put
+ * an unpublished session on the public schedule, or break existing links by
+ * renaming. Kept apart from SessionFields so the wider parser can't be
+ * reached from the host form by accident.
+ */
+export type HostSessionFields = {
+  title: string;
+  description: string | null;
+  category: Category | null;
+  maxCapacity: number | null;
+  minCapacity: number | null;
+  ages: Ages | null;
+  needs: string | null;
+  rsvpIsCommitment: boolean;
+};
 
 const str = (raw: Raw, key: string) => {
   const v = raw[key];
@@ -68,7 +91,71 @@ function int(raw: Raw, key: string): number | null {
   return /^-?\d+$/.test(s) ? Number(s) : Number.NaN;
 }
 
+/**
+ * A checkbox: FormData sends "on" when ticked and nothing when not, JSON a
+ * boolean. Absent is false; anything else is null.
+ */
+function flag(raw: Raw, key: string): boolean | null {
+  const v = raw[key];
+  if (v === undefined || v === null || v === false || v === "") return false;
+  if (v === true || v === "on" || v === "true") return true;
+  return v === "false" ? false : null;
+}
+
 /** `startsAt`/`endsAt` are Pacific wall-clock strings, "2026-11-06T14:00". */
+/** The host-editable subset. Anything else in `raw` is ignored, not rejected. */
+export function parseHostSessionFields(raw: Raw): Parsed<HostSessionFields> {
+  const title = str(raw, "title");
+  if (!title) return { ok: false, field: "title", error: "Required." };
+
+  const maxCapacity = int(raw, "maxCapacity");
+  const minCapacity = int(raw, "minCapacity");
+  if (Number.isNaN(maxCapacity))
+    return { ok: false, field: "maxCapacity", error: "Whole number." };
+  if (Number.isNaN(minCapacity))
+    return { ok: false, field: "minCapacity", error: "Whole number." };
+  if (maxCapacity !== null && maxCapacity < 1)
+    return { ok: false, field: "maxCapacity", error: "At least one seat." };
+  if (minCapacity !== null && maxCapacity !== null && minCapacity > maxCapacity)
+    return {
+      ok: false,
+      field: "minCapacity",
+      error: "Minimum can't exceed the maximum.",
+    };
+
+  const categoryRaw = str(raw, "category");
+  const category = oneOf(categoryRaw, CATEGORIES);
+  if (categoryRaw && !category)
+    return {
+      ok: false,
+      field: "category",
+      error: `One of ${CATEGORIES.join(", ")}.`,
+    };
+
+  const agesRaw = str(raw, "ages");
+  const ages = oneOf(agesRaw, AGES);
+  if (agesRaw && !ages)
+    return { ok: false, field: "ages", error: `One of ${AGES.join(", ")}.` };
+
+  const rsvpIsCommitment = flag(raw, "rsvpIsCommitment");
+  if (rsvpIsCommitment === null)
+    return { ok: false, field: "rsvpIsCommitment", error: "true or false." };
+
+  return {
+    ok: true,
+    value: {
+      title,
+      description: optional(raw, "description"),
+      category,
+      maxCapacity,
+      minCapacity,
+      ages,
+      needs: optional(raw, "needs"),
+      rsvpIsCommitment,
+    },
+  };
+}
+
 export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
   const title = str(raw, "title");
   if (!title) return { ok: false, field: "title", error: "Required." };
@@ -141,6 +228,18 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
     };
   }
 
+  const rsvpIsCommitment = flag(raw, "rsvpIsCommitment");
+  if (rsvpIsCommitment === null)
+    return { ok: false, field: "rsvpIsCommitment", error: "true or false." };
+  const sponsored = flag(raw, "sponsored");
+  if (sponsored === null)
+    return { ok: false, field: "sponsored", error: "true or false." };
+  // Defaults on, unlike the other flags, so JSON that omits it leaves RSVPs
+  // open; the form pairs the box with a hidden "" so unticked closes them.
+  const rsvpsOpen = "rsvpsOpen" in raw ? flag(raw, "rsvpsOpen") : true;
+  if (rsvpsOpen === null)
+    return { ok: false, field: "rsvpsOpen", error: "true or false." };
+
   let airtableRfpRecordId: string | null | undefined;
   if ("airtableRfpRecordId" in raw) {
     airtableRfpRecordId = optional(raw, "airtableRfpRecordId");
@@ -184,6 +283,9 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
       ages,
       needs: optional(raw, "needs"),
       status: status ?? "draft",
+      rsvpIsCommitment,
+      sponsored,
+      rsvpsOpen,
       airtableRfpRecordId,
       shepherdUserId,
     },
@@ -199,7 +301,15 @@ export function parseLocationFields(raw: Raw): Parsed<LocationFields> {
   const displayOrder = int(raw, "displayOrder") ?? 100;
   if (Number.isNaN(displayOrder))
     return { ok: false, field: "displayOrder", error: "Whole number." };
-  const show = raw.showInSchedule;
+  const visibilityRaw = str(raw, "visibility");
+  const visibility = oneOf(visibilityRaw, LOCATION_VISIBILITIES);
+  if (visibilityRaw && !visibility) {
+    return {
+      ok: false,
+      field: "visibility",
+      error: `One of ${LOCATION_VISIBILITIES.join(", ")}.`,
+    };
+  }
   return {
     ok: true,
     value: {
@@ -208,8 +318,7 @@ export function parseLocationFields(raw: Raw): Parsed<LocationFields> {
       campusLocation: optional(raw, "campusLocation"),
       description: optional(raw, "description"),
       displayOrder,
-      // "on" is the checkbox; the API sends a boolean.
-      showInSchedule: show === true || show === "on" || show === "true",
+      visibility: visibility ?? "hidden",
     },
   };
 }

@@ -2,7 +2,13 @@ import { buildDays } from "@/lib/schedule";
 import ContentPage from "@/v2/components/ContentPage";
 import { ModalHost } from "@/v2/components/RouteModal";
 import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
-import { loadPublicSchedule, prelaunchGate } from "./data";
+import AccountWall from "@/v2/components/AccountWall";
+import { loadMySessionIds, loadPublicSchedule, scheduleGate } from "./data";
+
+const CLOSED =
+  "The schedule isn’t public yet. Session hosts and the Metagame team can preview it — if you’re one of them and this is all you see, ask us to turn it on for your account.";
+const SIGNED_OUT =
+  "The schedule isn’t public yet. If you’re a session host or on the Metagame team, sign in to preview it.";
 
 // The schedule stays mounted under /schedule/<slug>, whose page is just the
 // session modal on top of it.
@@ -11,8 +17,20 @@ export default async function ScheduleLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await prelaunchGate();
-  const { locations, sessions } = await loadPublicSchedule();
+  const gate = await scheduleGate();
+  if (gate !== "ok") {
+    return (
+      <AccountWall
+        title="Schedule"
+        body={gate === "closed" ? CLOSED : SIGNED_OUT}
+        next={gate === "signed-out" ? "/schedule" : null}
+      />
+    );
+  }
+  const [{ locations, sessions }, mine] = await Promise.all([
+    loadPublicSchedule(),
+    loadMySessionIds(),
+  ]);
   return (
     <ModalHost closeHref="/schedule">
       <ContentPage
@@ -26,7 +44,11 @@ export default async function ScheduleLayout({
         }
         wide
       >
-        <PublicSchedule days={buildDays(sessions)} locations={locations} />
+        <PublicSchedule
+          days={buildDays(sessions)}
+          locations={locations}
+          mine={mine}
+        />
       </ContentPage>
       {children}
     </ModalHost>

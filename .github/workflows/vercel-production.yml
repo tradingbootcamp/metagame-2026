@@ -65,8 +65,11 @@ jobs:
       # where repo code executes. VERCEL_TOKEN is deliberately absent here:
       # `vercel build` only needs the settings `vercel pull` wrote to .vercel/,
       # and keeping the token out means a malicious postinstall can't read it.
+      # DEPLOYMENT_ID feeds next.config's `deploymentId` (skew protection).
+      # Vercel needs it unique per project, so the run id goes in alongside
+      # the commit; max 32 chars.
       - name: Build
-        run: vercel build --prod
+        run: DEPLOYMENT_ID="${SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" vercel build --prod
 
       # After Build so node_modules exist; before Deploy so the schema is ahead
       # of the code. Reads DATABASE_URL from the env `vercel pull` wrote, and

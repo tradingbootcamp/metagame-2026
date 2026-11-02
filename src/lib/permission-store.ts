@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import {
   isPermission,
@@ -8,19 +8,61 @@ import {
 } from "./permissions";
 import { hasClaimedTicket } from "./ticket-store";
 
-const { roles, rolePermissions, userRoles, userPermissionGrants, user } =
-  schema;
+const {
+  roles,
+  rolePermissions,
+  userRoles,
+  userPermissionGrants,
+  user,
+  sessionHosts,
+} = schema;
 
 // Built-in roles attach themselves instead of being assigned: Attendee is
-// anyone with a claimed ticket. They're ordinary rows, so the roles grid sets
-// what they carry, but they can't be renamed, deleted or ticked on a person.
-// Until the row exists (first load of /backstage/roles) the defaults apply.
+// anyone with a claimed ticket, Session host anyone listed as a host on a
+// session. They're ordinary rows, so the roles grid sets what they carry, but
+// they can't be renamed, deleted or ticked on a person; a user_roles row for
+// one (from before it was built in) is ignored. Until the row exists (first
+// load of /backstage/roles) the defaults apply.
 export const ATTENDEE_ROLE = "Attendee";
-const ATTENDEE_AUTO = "has a ticket";
-const ATTENDEE_DEFAULTS: Permission[] = ["schedule.rsvps"];
-const BUILTIN: Record<string, string> = { [ATTENDEE_ROLE]: ATTENDEE_AUTO };
+export const HOST_ROLE = "Session host";
 
-export const isBuiltinRole = (name: string) => Object.hasOwn(BUILTIN, name);
+type Builtin = {
+  /** Completes "Granted to anyone who …". */
+  auto: string;
+  defaults: Permission[];
+  holds: (userId: string) => Promise<boolean>;
+};
+
+const BUILTIN: Record<string, Builtin> = {
+  [ATTENDEE_ROLE]: {
+    auto: "has a ticket",
+    defaults: ["schedule.rsvps"],
+    holds: hasClaimedTicket,
+  },
+  [HOST_ROLE]: {
+    auto: "hosts a session",
+    defaults: ["schedule.preview"],
+    holds: hostsASession,
+  },
+};
+
+// Case-insensitive, so a "Session host" role made by hand before it was built
+// in is the one that becomes automatic rather than a second row beside it.
+const builtinKey = (name: string): string | null =>
+  Object.keys(BUILTIN).find((k) => k.toLowerCase() === name.toLowerCase()) ??
+  null;
+
+export const isBuiltinRole = (name: string) => builtinKey(name) !== null;
+
+/** On any session's host list, lead or co-host. */
+async function hostsASession(userId: string): Promise<boolean> {
+  const [row] = await getDb()
+    .select({ sessionId: sessionHosts.sessionId })
+    .from(sessionHosts)
+    .where(eq(sessionHosts.userId, userId))
+    .limit(1);
+  return row !== undefined;
+}
 
 export type Role = {
   id: string;
@@ -32,29 +74,28 @@ export type Role = {
   auto?: string;
 };
 
+const sameName = (name: string) => sql`lower(${roles.name}) = lower(${name})`;
+
 async function ensureBuiltinRoles(): Promise<void> {
   const db = getDb();
-  const [exists] = await db
-    .select({ id: roles.id })
-    .from(roles)
-    .where(eq(roles.name, ATTENDEE_ROLE))
-    .limit(1);
-  if (exists) return;
-  const [made] = await db
-    .insert(roles)
-    .values({ name: ATTENDEE_ROLE })
-    .onConflictDoNothing()
-    .returning({ id: roles.id });
-  if (made && ATTENDEE_DEFAULTS.length > 0) {
-    await db
-      .insert(rolePermissions)
-      .values(
-        ATTENDEE_DEFAULTS.map((permission) => ({
-          roleId: made.id,
-          permission,
-        })),
-      )
-      .onConflictDoNothing();
+  for (const [name, { defaults }] of Object.entries(BUILTIN)) {
+    const [exists] = await db
+      .select({ id: roles.id })
+      .from(roles)
+      .where(sameName(name))
+      .limit(1);
+    if (exists) continue;
+    const [made] = await db
+      .insert(roles)
+      .values({ name })
+      .onConflictDoNothing()
+      .returning({ id: roles.id });
+    if (made && defaults.length > 0) {
+      await db
+        .insert(rolePermissions)
+        .values(defaults.map((permission) => ({ roleId: made.id, permission })))
+        .onConflictDoNothing();
+    }
   }
 }
 
@@ -75,18 +116,24 @@ export async function listRoles(): Promise<Role[]> {
       .innerJoin(user, eq(user.id, userRoles.userId))
       .orderBy(asc(user.name)),
   ]);
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    permissions: perms
-      .filter((p) => p.roleId === r.id)
-      .map((p) => p.permission)
-      .filter(isPermission),
-    holders: holders
-      .filter((h) => h.roleId === r.id)
-      .map(({ id, name, email }) => ({ id, name, email })),
-    ...(isBuiltinRole(r.name) ? { auto: BUILTIN[r.name] } : {}),
-  }));
+  return rows.map((r) => {
+    const builtin = builtinKey(r.name);
+    return {
+      id: r.id,
+      name: r.name,
+      permissions: perms
+        .filter((p) => p.roleId === r.id)
+        .map((p) => p.permission)
+        .filter(isPermission),
+      // A built-in role's holders are whoever meets its rule, not these rows.
+      holders: builtin
+        ? []
+        : holders
+            .filter((h) => h.roleId === r.id)
+            .map(({ id, name, email }) => ({ id, name, email })),
+      ...(builtin ? { auto: BUILTIN[builtin].auto } : {}),
+    };
+  });
 }
 
 async function refuseBuiltin(id: string): Promise<void> {
@@ -155,7 +202,7 @@ export async function userAccess(
   admin: boolean,
 ): Promise<AccessInput & { roleIds: string[] }> {
   const db = getDb();
-  const [held, grants, ticketed, attendee] = await Promise.all([
+  const [held, grants, auto] = await Promise.all([
     db
       .select({
         id: roles.id,
@@ -171,16 +218,16 @@ export async function userAccess(
       .select({ permission: userPermissionGrants.permission })
       .from(userPermissionGrants)
       .where(eq(userPermissionGrants.userId, userId)),
-    hasClaimedTicket(userId),
-    attendeeRole(),
+    builtinRoles(userId),
   ]);
   const byRole = new Map<string, { name: string; permissions: string[] }>();
   for (const row of held) {
+    // Assigned by hand before the role was built in: its rule decides now.
+    if (isBuiltinRole(row.name)) continue;
     const role = byRole.get(row.id) ?? { name: row.name, permissions: [] };
     if (row.permission) role.permissions.push(row.permission);
     byRole.set(row.id, role);
   }
-  const auto = ticketed ? [attendee] : [];
   return {
     admin,
     roles: [...byRole.values(), ...auto],
@@ -189,18 +236,36 @@ export async function userAccess(
   };
 }
 
-/** The Attendee role's permissions, or the defaults until its row exists. */
-async function attendeeRole(): Promise<AccessInput["roles"][number]> {
-  const rows = await getDb()
-    .select({ permission: rolePermissions.permission })
-    .from(roles)
-    .leftJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
-    .where(eq(roles.name, ATTENDEE_ROLE));
-  const permissions =
-    rows.length === 0
-      ? ATTENDEE_DEFAULTS
-      : rows.map((r) => r.permission).filter((p): p is string => p !== null);
-  return { name: ATTENDEE_ROLE, permissions, auto: ATTENDEE_AUTO };
+/**
+ * The built-in roles this account meets the rule for, each with its row's
+ * permissions, or the defaults until the row exists.
+ */
+async function builtinRoles(
+  userId: string,
+): Promise<AccessInput["roles"][number][]> {
+  const out: AccessInput["roles"][number][] = [];
+  await Promise.all(
+    Object.entries(BUILTIN).map(async ([name, { auto, defaults, holds }]) => {
+      const [held, rows] = await Promise.all([
+        holds(userId),
+        getDb()
+          .select({ permission: rolePermissions.permission })
+          .from(roles)
+          .leftJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
+          .where(sameName(name)),
+      ]);
+      if (!held) return;
+      const permissions =
+        rows.length === 0
+          ? defaults
+          : rows
+              .map((r) => r.permission)
+              .filter((p): p is string => p !== null);
+      out.push({ name, permissions, auto });
+    }),
+  );
+  // Promise.all settles in any order; keep the listing stable.
+  return out.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Roles per user, for the users table. */
@@ -215,11 +280,14 @@ export async function rolesFor(
     .innerJoin(roles, eq(roles.id, userRoles.roleId))
     .where(inArray(userRoles.userId, userIds))
     .orderBy(asc(roles.name));
-  for (const r of rows)
+  for (const r of rows) {
+    // Stale: a built-in role is held by rule, not by row.
+    if (isBuiltinRole(r.name)) continue;
     out.set(r.userId, [
       ...(out.get(r.userId) ?? []),
       { id: r.id, name: r.name },
     ]);
+  }
   return out;
 }
 

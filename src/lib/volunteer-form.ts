@@ -1,23 +1,19 @@
-import { VOLUNTEER_FORM_URL } from "@/v2/lib/links";
+import { VOLUNTEER_APPLY_PATH } from "@/v2/lib/links";
 
-// The Airtable form only reads attribution from `prefill_<Field Name>` params,
-// and its tracking fields stay visible unless the URL also hides them. Keys are
-// the Airtable field names — renaming a field there silently drops it.
-const UTM_FIELDS = {
-  utm_source: "UTM Source",
-  utm_medium: "UTM Medium",
-  utm_campaign: "UTM Campaign",
-} as const;
+// The volunteer short link (/volunteer-form) forwards to the journey with the
+// UTMs the volunteer table records. The page stores them on arrival
+// (UtmCapture), and the application sends them to Airtable's UTM fields.
+const UTM_PARAMS = ["utm_source", "utm_medium", "utm_campaign"] as const;
 
 const MAX_LEN = 200;
 
-/** The volunteer form with its tracking fields hidden and prefilled from `params`' utm_* values. */
+/** The volunteer journey's path, carrying `params`' utm_* values. */
 export function volunteerFormUrl(params: URLSearchParams): string {
-  const url = new URL(VOLUNTEER_FORM_URL);
-  for (const [param, field] of Object.entries(UTM_FIELDS)) {
-    const value = params.get(param)?.trim().slice(0, MAX_LEN);
-    if (value) url.searchParams.set(`prefill_${field}`, value);
-    url.searchParams.set(`hide_${field}`, "true");
+  const out = new URLSearchParams();
+  for (const key of UTM_PARAMS) {
+    const value = params.get(key)?.trim().slice(0, MAX_LEN);
+    if (value) out.set(key, value);
   }
-  return url.toString();
+  const query = out.toString();
+  return query ? `${VOLUNTEER_APPLY_PATH}?${query}` : VOLUNTEER_APPLY_PATH;
 }

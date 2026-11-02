@@ -25,7 +25,7 @@ describe("family pack checkout", () => {
     getStripe.mockReturnValue({ checkout: { sessions: { create } } });
     create.mockResolvedValue({ url: "https://checkout.stripe.com/c/pay/test" });
   });
-  it.each([4, 5, 6])(
+  it.each([2, 3, 4, 5, 6])(
     "charges %i tickets at the server price and rejects discount stacking",
     async (count) => {
       const response = await POST(
@@ -49,7 +49,7 @@ describe("family pack checkout", () => {
       expect(session.metadata.quantity).toBe(String(count));
     },
   );
-  it.each([3, 7])(
+  it.each([0, 1, 7])(
     "does not create checkout for %i attendees",
     async (count) => {
       expect((await POST(request(count))).status).toBe(400);

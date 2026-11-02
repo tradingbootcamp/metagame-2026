@@ -13,11 +13,12 @@ export default function ContentPage({
   title: string;
   intro?: React.ReactNode;
   children: React.ReactNode;
+  /** Full viewport width (minus the gutter) instead of the reading measure. */
   wide?: boolean;
 }) {
   return (
     <div
-      className={`mx-auto px-8 pt-28 pb-20 ${wide ? "max-w-[1600px]" : "max-w-[1180px]"}`}
+      className={`mx-auto px-8 pt-28 pb-20 ${wide ? "max-w-none" : "max-w-[1180px]"}`}
     >
       <header className="mb-10 max-w-[820px]">
         {eyebrow && <p className={`${EYEBROW} mb-2 text-meeple`}>{eyebrow}</p>}
