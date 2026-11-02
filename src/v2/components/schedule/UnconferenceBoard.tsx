@@ -45,11 +45,21 @@ const BOARD_MIN = { width: 232, height: 12 * TILE_PX, tile: TILE_PX };
 const offset = (fraction: number, tile: number): string =>
   `calc(${fraction * 100}% - ${fraction * tile}px)`;
 
-// A pin, as the cursor, hotspot at its point. Inline so there is no asset to
-// ship or 404; the stroke is the note ink so it reads on the cork.
+// A pin, as the cursor, hotspot on its point. Inline so there is no asset to
+// ship or 404. Written with plain "#": encodeURIComponent escapes it once,
+// and pre-escaping it here would double-encode into a string no browser
+// reads as a colour. The pale outer stroke keeps it legible on cork and on
+// any of the six papers.
+const PIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+<g fill="none" stroke="#fdf6e8" stroke-width="3.5" stroke-linecap="round"><path d="M5 23 L13 15"/><circle cx="17.5" cy="10.5" r="6"/></g>
+<path d="M5 23 L13 15" stroke="#1b1530" stroke-width="1.75" stroke-linecap="round"/>
+<circle cx="17.5" cy="10.5" r="6" fill="#e0607f" stroke="#1b1530" stroke-width="1.5"/>
+<circle cx="15.4" cy="8.4" r="1.7" fill="#ffffff" opacity="0.85"/>
+</svg>`;
+
 const PIN_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><g fill="none" stroke="%231b1530" stroke-width="1.5"><path d="M6 22 L12.5 15.5" stroke-linecap="round"/><circle cx="17" cy="11" r="6" fill="%23f8ccd9"/><circle cx="15" cy="9" r="1.8" fill="%23ffffff" stroke="none" opacity="0.8"/></g></svg>`,
-)}") 6 22, crosshair`;
+  PIN_SVG,
+)}") 5 23, crosshair`;
 
 /** How long the pin rests before the board offers to take a note there. */
 const DWELL_MS = 450;
