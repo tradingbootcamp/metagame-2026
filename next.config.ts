@@ -30,10 +30,10 @@ const nextConfig: NextConfig = {
       "./assets/posters/overlays/*.png",
       "./assets/posters/fonts/*.ttf",
     ],
-    // The sent-email catalog reads emails/ at request time. Keys are globs,
-    // so `[slug]` can't be spelled out.
-    "/backstage/emails": ["./emails/*"],
-    "/backstage/emails/**": ["./emails/*"],
+    // The email catalog reads emails/ (sent) and emails/drafts/ at request
+    // time. Keys are globs, so `[slug]` can't be spelled out.
+    "/backstage/emails": ["./emails/*", "./emails/drafts/*"],
+    "/backstage/emails/**": ["./emails/*", "./emails/drafts/*"],
   },
   // public/ files are served max-age=0 by default, so the hero backdrop
   // revalidated on every visit. Filenames are stable; bump them if the
