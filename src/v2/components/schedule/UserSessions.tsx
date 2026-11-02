@@ -15,7 +15,6 @@ import {
   type UserSession,
   type UserSessionRole,
 } from "@/lib/user-profile";
-import { CategoryLegend } from "./PublicSchedule";
 import {
   buildColumns,
   DayTabs,
@@ -26,6 +25,7 @@ import {
   ViewToggle,
   type View,
 } from "./ScheduleViews";
+import { ScheduleLegend } from "./SessionBits";
 
 // One person's sessions, as a list or on the schedule grid. Rendered by both
 // the public /u/<id> and the team's /backstage/users/<id>; which roles appear
@@ -186,7 +186,7 @@ export default function UserSessions({
 
       {view === "grid" ? (
         <div className="flex flex-col gap-4">
-          <CategoryLegend />
+          <ScheduleLegend />
           {columns.length > 0 && day.sessions.length > 0 ? (
             <GridDay
               day={day}

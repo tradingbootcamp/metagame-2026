@@ -12,8 +12,7 @@ import {
   type PublicLocation,
   type PublicSession,
 } from "@/lib/schedule";
-import { LEGEND } from "@/v2/lib/schedule-styles";
-import { AgeMark, LIMITED_SPOTS, LimitedSpotsMark } from "./SessionBits";
+import { ScheduleLegend } from "./SessionBits";
 import {
   buildColumns,
   DayTabs,
@@ -31,36 +30,6 @@ import ScheduleSearch from "./ScheduleSearch";
 type PublicDay = Day<PublicSession>;
 
 const href = (s: PublicSession) => `/schedule/${encodeURIComponent(s.slug)}`;
-
-export function CategoryLegend() {
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
-      {LEGEND.slice(0, 4).map((entry) => (
-        <span key={entry.label} className="flex items-center gap-1.5 text-xs">
-          <span
-            aria-hidden
-            className="h-3.5 w-3.5 rounded-sm border"
-            style={entry.style}
-          />
-          {entry.label}
-        </span>
-      ))}
-      <span className="flex items-center gap-1.5 text-xs">
-        <LimitedSpotsMark />
-        <span className="sm:hidden">RSVP = commitment</span>
-        <span className="hidden sm:inline">{LIMITED_SPOTS}</span>
-      </span>
-      <span className="flex items-center gap-1.5 text-xs">
-        <AgeMark ages="adults" />
-        18+
-      </span>
-      <span className="flex items-center gap-1.5 text-xs">
-        <AgeMark ages="kids" />
-        Kid-friendly
-      </span>
-    </div>
-  );
-}
 
 /** The published schedule, a day at a time; every session links to its page. */
 export default function PublicSchedule({
@@ -172,7 +141,7 @@ export default function PublicSchedule({
         </div>
       </div>
 
-      <CategoryLegend />
+      <ScheduleLegend />
 
       {view === "moments" ? (
         <ScheduleMoments

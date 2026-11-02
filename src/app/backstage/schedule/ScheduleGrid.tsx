@@ -32,11 +32,12 @@ import {
   type ScheduleSession,
 } from "@/lib/schedule";
 import {
-  AgeMark,
   BlockSummary,
   blockStyle,
+  LegendItem,
+  ScheduleLegend,
+  SessionMarks,
 } from "@/v2/components/schedule/SessionBits";
-import { LEGEND } from "@/v2/lib/schedule-styles";
 import type { SessionDefaults } from "./SessionForm";
 
 type View = "grid" | "list";
@@ -454,7 +455,7 @@ function ListDay({
             <div className="min-w-0 flex-1">
               <div className="flex items-start gap-1.5 leading-tight font-semibold">
                 <span>{s.title}</span>
-                <AgeMark ages={s.ages} />
+                <SessionMarks session={s} />
                 {s.status === "draft" && (
                   <span className="ml-1 rounded bg-ink/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-ink/60 uppercase">
                     Draft
@@ -576,28 +577,15 @@ export default function ScheduleGrid({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            {LEGEND.slice(0, 4).map((entry) => (
-              <span
-                key={entry.label}
-                className="flex items-center gap-1.5 text-xs text-ink/70"
-              >
-                <span
-                  aria-hidden
-                  className="h-3 w-3 rounded-sm border"
-                  style={entry.style}
-                />
-                {entry.label}
-              </span>
-            ))}
-            <span className="flex items-center gap-1.5 text-xs text-ink/70">
+          <ScheduleLegend className="text-ink/70">
+            <LegendItem>
               <span
                 aria-hidden
-                className="h-3 w-3 rounded-sm border border-dashed border-ink/40 bg-ink/5"
+                className="h-3.5 w-3.5 rounded-sm border border-dashed border-ink/40 bg-ink/5"
               />
               Draft
-            </span>
-          </div>
+            </LegendItem>
+          </ScheduleLegend>
           <div
             role="group"
             aria-label="View"
