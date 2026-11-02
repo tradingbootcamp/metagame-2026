@@ -1,4 +1,5 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { ArmchairIcon } from "lucide-react";
 import { hostNames, type Ages, type Category } from "@/lib/schedule";
 import { CATEGORY_STYLES } from "@/v2/lib/schedule-styles";
 
@@ -21,25 +22,64 @@ export function AgeMark({ ages }: { ages: Ages | null }) {
   return null;
 }
 
-export function SponsorTag() {
+function Tag({ children }: { children: ReactNode }) {
   return (
     <span className="w-fit shrink-0 rounded border border-[#1b1530]/40 bg-white/70 px-1.5 py-0.5 text-[10px] leading-none font-semibold tracking-wide text-[#1b1530] uppercase">
-      Sponsor
+      {children}
     </span>
+  );
+}
+
+export function SponsorTag() {
+  return <Tag>Sponsor</Tag>;
+}
+
+export const LIMITED_SPOTS = "Limited spots: RSVP is a commitment";
+
+/**
+ * A commitment session: RSVPs claim one of a limited number of spots. Sits
+ * by the title like the age marks, on a pill so it reads on a coloured block;
+ * a vector icon rather than an emoji so it looks the same on every device.
+ */
+export function LimitedSpotsMark() {
+  return (
+    <span
+      role="img"
+      aria-label={LIMITED_SPOTS}
+      title={LIMITED_SPOTS}
+      className="inline-flex size-[18px] shrink-0 items-center justify-center rounded-full border border-[#1b1530]/40 bg-white/80 text-[#1b1530]"
+    >
+      <ArmchairIcon aria-hidden className="size-3" strokeWidth={2.25} />
+    </span>
+  );
+}
+
+export type Flagged = { rsvpIsCommitment: boolean; sponsored: boolean };
+
+/** The marks beside a session's title wherever it's listed. */
+export function SessionMarks({
+  session,
+}: {
+  session: Flagged & { ages: Ages | null };
+}) {
+  return (
+    <>
+      <AgeMark ages={session.ages} />
+      {session.rsvpIsCommitment && <LimitedSpotsMark />}
+    </>
   );
 }
 
 export const blockStyle = (s: { category: Category | null }): CSSProperties =>
   CATEGORY_STYLES[s.category ?? "other"];
 
-/** Sponsor tag, title, age mark and hosts, as a grid block shows them. */
+/** Flag tags, title, age mark and hosts, as a grid block shows them. */
 export function BlockSummary({
   session,
 }: {
-  session: {
+  session: Flagged & {
     title: string;
     ages: Ages | null;
-    sponsored: boolean;
     hosts: { name: string }[];
   };
 }) {
@@ -53,7 +93,7 @@ export function BlockSummary({
       )}
       <span className="flex items-start gap-1 text-[13px] leading-tight font-semibold">
         <span className="line-clamp-3">{session.title}</span>
-        <AgeMark ages={session.ages} />
+        <SessionMarks session={session} />
       </span>
       {session.hosts.length > 0 && (
         <span className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-[#1b1530]/70">

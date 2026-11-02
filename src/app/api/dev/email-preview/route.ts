@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 export const runtime = "nodejs";
 
 const DIR = path.join(process.cwd(), "emails");
-const SITE = "https://metagame.games";
+const SITE = /https:\/\/(www\.)?metagame\.games/g;
 
 export async function GET(req: Request) {
   if (process.env.NODE_ENV === "production") notFound();
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     return new Response(`no emails/${file}.html`, { status: 404 });
   }
   const origin = new URL(req.url).origin;
-  return new Response(html.replaceAll(SITE, origin), {
+  return new Response(html.replace(SITE, origin), {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
 }

@@ -84,6 +84,12 @@ const nextConfig: NextConfig = {
       destination: "/api/checkout/stripe?tier=standard&promo=:promo",
       permanent: false,
     },
+    // A friend's referral link: the tickets section with their code filled in.
+    {
+      source: "/invite/:ref",
+      destination: "/?ref=:ref#tickets",
+      permanent: false,
+    },
     // Shareable short links to the Partiful RSVPs.
     {
       source: CON_PARTIFUL_PATH,

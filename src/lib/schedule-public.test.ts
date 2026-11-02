@@ -27,6 +27,7 @@ const session = (over: Partial<ScheduleSession>): ScheduleSession => ({
   status: "published",
   rsvpIsCommitment: false,
   sponsored: false,
+  rsvpsOpen: true,
   airtableRfpRecordId: "rec1",
   hosts: [{ userId: "u1", name: "Ada", email: "ada@example.com" }],
   shepherd: { userId: "u9", name: "Grace", email: "grace@example.com" },
@@ -93,14 +94,17 @@ describe("publicSchedule", () => {
     expect(sessions[0].hosts).toEqual([{ name: "Ada" }]);
   });
 
-  it("carries the commitment and sponsor flags", () => {
+  it("carries the commitment, sponsor and RSVPs-open flags", () => {
     const { sessions } = publicSchedule({
       locations: [],
-      sessions: [session({ rsvpIsCommitment: true, sponsored: true })],
+      sessions: [
+        session({ rsvpIsCommitment: true, sponsored: true, rsvpsOpen: false }),
+      ],
     });
     expect(sessions[0]).toMatchObject({
       rsvpIsCommitment: true,
       sponsored: true,
+      rsvpsOpen: false,
     });
   });
 
