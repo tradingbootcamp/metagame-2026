@@ -92,16 +92,26 @@ export default function DiscountModal({ onClose }: { onClose: () => void }) {
             />
           </label>
 
-          <p className="min-h-5 text-sm text-cream/80">
-            {blank
-              ? "No code: you can still enter one at checkout."
-              : saving === "checking"
-                ? "Checking…"
-                : saving === "unknown"
-                  ? "Couldn't check that code; a valid one still applies at checkout."
-                  : saving.usdOff
-                    ? `Saves $${saving.usdOff}: $${saving.full - saving.usdOff} instead of $${saving.full}.`
-                    : "That code isn't active."}
+          <p className="flex min-h-6 flex-wrap items-baseline gap-x-2 text-sm text-cream/80">
+            {blank ? (
+              "No code: you can still enter one at checkout."
+            ) : saving === "checking" ? (
+              "Checking…"
+            ) : saving === "unknown" ? (
+              "Couldn't check that code; a valid one still applies at checkout."
+            ) : saving.usdOff ? (
+              <>
+                <span className="text-cream">${saving.usdOff} off</span>
+                <span className="text-cream/50 line-through">
+                  ${saving.full}
+                </span>
+                <span className="text-lg font-bold text-moss">
+                  ${saving.full - saving.usdOff}
+                </span>
+              </>
+            ) : (
+              "That code isn't active."
+            )}
           </p>
 
           <Button
