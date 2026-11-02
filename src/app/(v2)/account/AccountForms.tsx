@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   savePassword,
@@ -44,6 +44,19 @@ export type ProfileValues = {
   isPublic: boolean;
 };
 
+/** Whether the form's fields differ from the values it was rendered with. */
+function profileDirty(form: HTMLFormElement, v: ProfileValues): boolean {
+  const data = new FormData(form);
+  const text = (key: keyof ProfileValues) => String(data.get(key) ?? "");
+  return (
+    text("name") !== v.name ||
+    text("pronouns") !== v.pronouns ||
+    text("discordHandle") !== v.discordHandle ||
+    text("bio") !== v.bio ||
+    data.has("isPublic") !== v.isPublic
+  );
+}
+
 export function ProfileForm({
   email,
   profileHref,
@@ -54,10 +67,28 @@ export function ProfileForm({
   initialValues: ProfileValues;
 }) {
   const [state, action, pending] = useActionState(updateProfile, initial);
+  const [dirty, setDirty] = useState(false);
+  const [seen, setSeen] = useState(state);
   const v = initialValues;
 
+  if (state !== seen) {
+    setSeen(state);
+    if (state.saved) setDirty(false);
+  }
+
+  useEffect(() => {
+    if (!dirty) return;
+    const onUnload = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, [dirty]);
+
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form
+      action={action}
+      onChange={(e) => setDirty(profileDirty(e.currentTarget, v))}
+      className="flex flex-col gap-4"
+    >
       <h2 className="font-grotesk text-2xl font-bold text-navy">Profile</h2>
       <label className="flex flex-col gap-1.5">
         <span className="flex flex-col gap-0.5">
@@ -139,10 +170,25 @@ export function ProfileForm({
           organisers can see it either way.
         </p>
       </div>
-      <Button type="submit" disabled={pending} className="self-start">
-        {pending ? "Saving…" : "Save profile"}
-      </Button>
-      <Status state={state} saved="Saved." />
+      <div className="flex flex-wrap items-center gap-4">
+        <Button
+          type="submit"
+          disabled={pending}
+          className={cn(dirty && "ring-4 ring-meeple/30")}
+        >
+          {pending ? "Saving…" : dirty ? "Save changes" : "Save profile"}
+        </Button>
+        {dirty && !pending && (
+          <span
+            role="status"
+            className="flex items-center gap-1.5 text-sm font-semibold text-meeple"
+          >
+            <span aria-hidden className="size-2 rounded-full bg-meeple" />
+            Unsaved changes
+          </span>
+        )}
+      </div>
+      <Status state={dirty ? { error: state.error } : state} saved="Saved." />
     </form>
   );
 }
