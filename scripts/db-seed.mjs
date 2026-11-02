@@ -279,11 +279,12 @@ const profile = (u) => {
   };
 };
 
-// Lighthaven's rooms, as the schedule shows them; the ones the public can't
-// see stay for placement. Images are Vercel Blob URLs in prod, null here.
+// Lighthaven's rooms, as the schedule shows them, with prod's visibility: the
+// hidden ones are team-only there too and stay for placement. Images are
+// Vercel Blob URLs in prod, null here.
 // prettier-ignore
 const ROOMS = [
-  ["foodtruck", "Food Truck Parking", null, "Behind E", 0],
+  ["foodtruck", "Food Truck Parking", null, "Behind E", 0, "hidden"],
   ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1],
   ["eigen", "Eigen Hall", 40, "Building E, 1st floor", 2],
   ["cantor", "Cantor's Diagonal", 60, "Building C", 3],
@@ -291,14 +292,15 @@ const ROOMS = [
   ["courtyard", "Central Courtyard", 200, "The center of campus", 5],
   ["thingspace", "Thingspace", 20, "Building A, 2nd floor", 6],
   ["attic", "Bayes Attic", 35, "Building B, top floor", 8],
-  ["gardens", "The Gardens", 80, "Outdoors, behind E", 9],
+  ["gardens", "The Gardens", 80, "Outdoors, behind E", 9, "hidden"],
   ["ground", "Bayes Ground", 40, "Building B, 1st floor", 11],
-  ["exobrain", "Exobrain", 30, "Building E, 2nd floor", 12],
-  ["d2", "1D2", null, "Building D, 1st floor", 13],
-  ["caprica", "New Caprica", null, "Building B, 2nd floor", 14],
+  ["exobrain", "Exobrain", 30, "Building E, 2nd floor", 12, "hidden"],
+  ["d2", "1D2", null, "Building D, 1st floor", 13, "hidden"],
+  ["caprica", "New Caprica", null, "Building B, 2nd floor", 14, "hidden"],
   ["d1", "1D1", 6, "Building D, 1st floor", 100, "hidden"],
-  ["gyroscope", "Gyroscope", 30, "Building E, 2nd floor", 100, "volunteer", false],
+  ["gyroscope", "Gyroscope", 30, "Building E, 2nd floor", 100, "hidden", false],
   ["other", "Other", null, null, 100, "hidden", false],
+  ["questboard", "Quest Board", null, null, 100, "volunteer", false],
 ];
 const locations = Object.fromEntries(
   ROOMS.map(

@@ -1,21 +1,31 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { FaStar } from "react-icons/fa";
+import { toast } from "sonner";
 import {
+  onlySessions,
+  openingDayKey,
+  selectedDay,
   type Day,
   type PublicLocation,
   type PublicSession,
 } from "@/lib/schedule";
 import { LEGEND } from "@/v2/lib/schedule-styles";
+import { AgeMark, LIMITED_SPOTS, LimitedSpotsMark } from "./SessionBits";
 import {
   buildColumns,
   DayTabs,
+  EmptyPanel,
   GridDay,
   ListDay,
+  TOGGLE,
+  toggleButton,
   ViewToggle,
   type View,
 } from "./ScheduleViews";
+import ScheduleMoments from "./ScheduleMoments";
 import ScheduleSearch from "./ScheduleSearch";
 
 type PublicDay = Day<PublicSession>;
@@ -35,6 +45,18 @@ export function CategoryLegend() {
           {entry.label}
         </span>
       ))}
+      <span className="flex items-center gap-1.5 text-xs">
+        <LimitedSpotsMark />
+        {LIMITED_SPOTS}
+      </span>
+      <span className="flex items-center gap-1.5 text-xs">
+        <AgeMark ages="adults" />
+        18+
+      </span>
+      <span className="flex items-center gap-1.5 text-xs">
+        <AgeMark ages="kids" />
+        Kid-friendly
+      </span>
     </div>
   );
 }
@@ -43,12 +65,16 @@ export function CategoryLegend() {
 export default function PublicSchedule({
   days,
   locations,
+  mine,
 }: {
   days: PublicDay[];
   locations: PublicLocation[];
+  /** Ids of the viewer's own sessions; null when signed out. */
+  mine: string[] | null;
 }) {
-  const [dayIndex, setDayIndex] = useState(0);
+  const [dayKey, setDayKey] = useState(() => openingDayKey(days));
   const [view, setView] = useState<View>("grid");
+  const [onlyMine, setOnlyMine] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -60,18 +86,29 @@ export default function PublicSchedule({
   if (pathname !== seenPath) {
     setSeenPath(pathname);
     const slug = decodeURIComponent(pathname.split("/")[2] ?? "");
-    const i = slug
-      ? days.findIndex((d) => d.sessions.some((s) => s.slug === slug))
-      : -1;
-    if (i >= 0) setDayIndex(i);
+    const found = slug
+      ? days.find((d) => d.sessions.some((s) => s.slug === slug))
+      : undefined;
+    if (found) setDayKey(found.key);
   }
 
-  // Phones start on the list; deferred so server and first client render match.
+  // Phones start on moments; deferred so server and first client render match.
   useEffect(() => {
     if (!window.matchMedia("(max-width: 767px)").matches) return;
-    const t = setTimeout(() => setView("list"), 0);
+    const t = setTimeout(() => setView("moments"), 0);
     return () => clearTimeout(t);
   }, []);
+
+  // The layout isn't re-rendered when a session modal closes, so an RSVP or
+  // bookmark made in one wouldn't reach `mine` without this.
+  useEffect(() => {
+    if (onlyMine && pathname === "/schedule") router.refresh();
+  }, [onlyMine, pathname, router]);
+
+  const shownDays = useMemo(
+    () => (onlyMine && mine ? onlySessions(days, new Set(mine)) : days),
+    [days, mine, onlyMine],
+  );
 
   const columns = buildColumns(
     locations,
@@ -79,25 +116,62 @@ export default function PublicSchedule({
   );
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
-  const day = days[Math.min(dayIndex, days.length - 1)];
+  const day = selectedDay(shownDays, dayKey);
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex">
+      <div className="flex items-center gap-3">
         <ScheduleSearch
           sessions={days.flatMap((d) => d.sessions)}
           roomName={(s) => roomName(s.locationId)}
           onPick={(s) => router.push(href(s), { scroll: false })}
         />
+        {mine && (
+          <button
+            type="button"
+            aria-pressed={onlyMine}
+            onClick={() => {
+              setOnlyMine(!onlyMine);
+              toast(
+                onlyMine
+                  ? "Showing all sessions."
+                  : "Now showing only your sessions.",
+                { id: "schedule-filter" },
+              );
+            }}
+            className={`${TOGGLE} ml-auto shrink-0 items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(onlyMine, 0)}`}
+          >
+            <FaStar size={12} />
+            My sessions
+          </button>
+        )}
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
-        <DayTabs days={days} index={dayIndex} onSelect={setDayIndex} />
-        <ViewToggle view={view} onSelect={setView} />
+        {view !== "moments" && (
+          <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
+        )}
+        <ViewToggle
+          view={view}
+          onSelect={setView}
+          views={["grid", "list", "moments"]}
+        />
       </div>
 
       <CategoryLegend />
 
-      {view === "grid" && columns.length > 0 ? (
+      {view === "moments" ? (
+        <ScheduleMoments
+          days={shownDays}
+          columns={columns}
+          onOpen={(s) => router.push(href(s), { scroll: false })}
+        />
+      ) : onlyMine && day.sessions.length === 0 ? (
+        <EmptyPanel>
+          {mine?.length
+            ? `None of your sessions are on ${day.name}.`
+            : "Sessions you RSVP to, bookmark or host will show up here."}
+        </EmptyPanel>
+      ) : view === "grid" && columns.length > 0 ? (
         <GridDay day={day} columns={columns} href={href} />
       ) : (
         <ListDay day={day} roomName={roomName} href={href} />

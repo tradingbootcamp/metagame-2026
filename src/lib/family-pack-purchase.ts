@@ -70,7 +70,10 @@ export async function recordFamilyPack(
     const result = await recordPurchase(purchase);
     if (!result.stored)
       throw new Error("Family pack admissions could not be stored.");
-    await recordTicket(purchase);
+    // A pack is a referral: every admission after the first points at the first.
+    await recordTicket(purchase, {
+      referredBy: index > 0 ? tickets[0].id : undefined,
+    });
     await capturePurchase(purchase);
   }
   if (status === "Paid") {

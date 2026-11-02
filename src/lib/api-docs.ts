@@ -63,10 +63,14 @@ const SESSION_FIELDS: Field[] = [
   {
     name: "startsAt",
     type: "string | null",
-    note: 'Pacific wall-clock time, "2026-11-06T14:00" (not UTC). Set both times or neither; they must fall within that day\'s program hours.',
+    note: 'Pacific wall-clock time, "2026-11-06T14:00" (not UTC). Set both times or neither; the session must end after it starts and by midnight that day.',
   },
   { name: "endsAt", type: "string | null", note: "As startsAt." },
-  { name: "locationId", type: "string | null", note: "A location id." },
+  {
+    name: "locationId",
+    type: "string | null",
+    note: "A location id. Overlapping another session there still saves, but adds a warning to the response's `warnings` (rooms with volunteer visibility are exempt).",
+  },
   { name: "maxCapacity", type: "integer | null" },
   { name: "minCapacity", type: "integer | null" },
   { name: "ages", type: oneOf(AGES) },
@@ -79,6 +83,21 @@ const SESSION_FIELDS: Field[] = [
     name: "status",
     type: oneOf(STATUSES),
     note: 'Default "draft". Published needs both times.',
+  },
+  {
+    name: "rsvpIsCommitment",
+    type: "boolean",
+    note: "Default false. RSVPs claim a limited spot people rely on; attendees confirm first.",
+  },
+  {
+    name: "sponsored",
+    type: "boolean",
+    note: "Default false. Tags it Sponsor on the schedule.",
+  },
+  {
+    name: "rsvpsOpen",
+    type: "boolean",
+    note: "Default true. False greys out the RSVP button as “RSVPs not yet open” and refuses RSVPs.",
   },
   {
     name: "hosts",
@@ -171,7 +190,7 @@ export const TYPES: { name: string; shape: string }[] = [
   },
   {
     name: "Session",
-    shape: `{ id, slug, title, description, category, startsAt, endsAt, locationId, maxCapacity, minCapacity, ages, needs, status: ${oneOf(STATUSES)}, airtableRfpRecordId, hosts: Account[], shepherd: Account | null }. startsAt/endsAt are ISO UTC here, null while a draft is unplaced.`,
+    shape: `{ id, slug, title, description, category, startsAt, endsAt, locationId, maxCapacity, minCapacity, ages, needs, status: ${oneOf(STATUSES)}, rsvpIsCommitment, sponsored, rsvpsOpen, airtableRfpRecordId, hosts: Account[], shepherd: Account | null }. startsAt/endsAt are ISO UTC here, null while a draft is unplaced.`,
   },
   {
     name: "RfpSession",
@@ -212,7 +231,7 @@ export const API_AREAS: Area[] = [
         permission: "schedule.manage",
         summary: "Creates a session. 409 if the slug is taken.",
         body: SESSION_FIELDS,
-        response: "201 { session: Session }",
+        response: "201 { session: Session, warnings: string[] }",
       },
       {
         method: "PUT",
@@ -221,7 +240,7 @@ export const API_AREAS: Area[] = [
         summary:
           "Replaces the session: fields left out are cleared, as the form would.",
         body: SESSION_FIELDS,
-        response: "{ session: Session }",
+        response: "{ session: Session, warnings: string[] }",
       },
       {
         method: "PATCH",
@@ -230,7 +249,7 @@ export const API_AREAS: Area[] = [
         summary:
           "Changes only the fields given (title is then optional); hosts or shepherd left out are kept.",
         body: SESSION_FIELDS,
-        response: "{ session: Session }",
+        response: "{ session: Session, warnings: string[] }",
       },
       {
         method: "DELETE",

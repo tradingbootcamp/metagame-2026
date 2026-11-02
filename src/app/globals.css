@@ -158,16 +158,13 @@ button:not(:disabled) {
     translate: 0 -7px;
   }
 }
-@keyframes mg-roll {
+@keyframes mg-throb {
   0%,
   100% {
-    rotate: 0deg;
+    scale: 1;
   }
-  30% {
-    rotate: -16deg;
-  }
-  65% {
-    rotate: 12deg;
+  50% {
+    scale: 1.45;
   }
 }
 @keyframes mg-pulse {

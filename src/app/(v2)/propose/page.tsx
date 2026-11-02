@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Journey from "@/v2/components/journey/Journey";
+import AccountJourney from "@/v2/components/journey/AccountJourney";
 
 export const metadata: Metadata = {
   title: "Propose a session — Metagame 2026",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function ProposePage() {
-  return <Journey slug="propose" />;
+  return <AccountJourney slug="propose" />;
 }

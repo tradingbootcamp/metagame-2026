@@ -1,5 +1,6 @@
 import {
   buildDestinationUrl,
+  promoCode,
   isAllowedDestination,
   shortUrl,
   validateSlug,
@@ -14,6 +15,8 @@ export type PosterTracking = {
   placement: string;
   destination: string;
   redirectUrl: string;
+  /** The code a `/buy/<code>` link applies itself; the poster prints it. */
+  promo: string;
 };
 export type PosterOption = {
   value: string;
@@ -31,7 +34,18 @@ export type PosterChoice = PosterOption & {
 const HIDDEN_SLUGS = new Set(["carina", "spire"]);
 const key = (value: string) => value.trim().toLowerCase();
 
-/** A poster/print/metagame-2026 homepage link; `placement` also requires that area. */
+/** The code in a `/buy/<code>` destination, or "" for a homepage link. */
+export function linkPromo(destination: string): string {
+  const match = new URL(destination).pathname.match(/^\/buy\/([^/]+)$/);
+  if (!match) return "";
+  try {
+    return promoCode(decodeURIComponent(match[1]));
+  } catch {
+    return "";
+  }
+}
+
+/** A poster/print/metagame-2026 link to the homepage or `/buy/<code>`; `placement` also requires that area. */
 export function isPosterLink(link: TrackingLink, placement?: string): boolean {
   if (
     !link.active ||
@@ -47,11 +61,10 @@ export function isPosterLink(link: TrackingLink, placement?: string): boolean {
     return false;
   const destination = new URL(link.destination);
   // Poster attribution must not inherit person/venue-specific query parameters.
-  return (
-    destination.pathname === "/" &&
-    !destination.search &&
-    ["", "#tickets"].includes(destination.hash)
-  );
+  if (destination.search) return false;
+  if (destination.pathname === "/")
+    return ["", "#tickets"].includes(destination.hash);
+  return !destination.hash && !!linkPromo(link.destination);
 }
 
 /** One choice per poster-link placement, Generic first, then alphabetical. */
@@ -87,6 +100,7 @@ export function posterChoices(links: TrackingLink[]): PosterChoice[] {
               placement: link.placement,
               destination: link.destination,
               redirectUrl: buildDestinationUrl(link),
+              promo: linkPromo(link.destination),
             }
           : null,
       };

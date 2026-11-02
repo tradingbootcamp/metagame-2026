@@ -10,6 +10,7 @@ import {
   sessionBySlug,
   sessionToRaw,
 } from "@/lib/schedule-api";
+import { overlapWarning } from "@/lib/schedule";
 import { parseSessionFields, type Raw } from "@/lib/schedule-input";
 import { removeSession, upsertSession } from "@/lib/schedule-store";
 
@@ -59,18 +60,25 @@ async function write(
   );
   if ("error" in shepherd) return error(shepherd.error, 400, shepherd.field);
 
+  let saved;
   try {
-    await upsertSession({
-      id: current.id,
-      ...parsed.value,
-      hostIds: hosts.ids,
-      shepherdUserId: shepherd.id,
-    });
+    saved = await upsertSession(
+      {
+        id: current.id,
+        ...parsed.value,
+        hostIds: hosts.ids,
+        shepherdUserId: shepherd.id,
+      },
+      { allowOverlap: true },
+    );
   } catch (err) {
     return failed(err);
   }
   done();
-  return json({ session: await sessionBySlug(parsed.value.slug) });
+  return json({
+    session: await sessionBySlug(parsed.value.slug),
+    warnings: saved.clash ? [overlapWarning(saved.clash)] : [],
+  });
 }
 
 export async function DELETE(_request: Request, ctx: Ctx) {

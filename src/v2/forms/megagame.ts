@@ -29,6 +29,7 @@ export const megagame: FormDef = {
         {
           key: "name",
           field: "fldTqzxnASesmYX4X",
+          fill: "name",
           type: "text",
           label: "Your name",
           required: true,
@@ -38,6 +39,7 @@ export const megagame: FormDef = {
         {
           key: "email",
           field: "fldgegcVZpKUTiu7I",
+          fill: "email",
           type: "email",
           label: "Email",
           required: true,
@@ -55,6 +57,7 @@ export const megagame: FormDef = {
         {
           key: "otherContact",
           field: "fldBuhCqNVLwNhYwE",
+          fill: "discordContact",
           type: "text",
           label: "Other contact info",
           help: "Say which app, like Discord @cool_designer or Signal designer.1337.",

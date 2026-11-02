@@ -1,12 +1,22 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
-import { XIcon } from "lucide-react";
+import {
+  useActionState,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useTransition,
+  startTransition,
+} from "react";
+import { CircleAlertIcon, XIcon } from "lucide-react";
 import { deleteSession, saveSession, type FormState } from "./actions";
 import AttendancePanel from "./AttendancePanel";
+import ConfirmDialog from "./ConfirmDialog";
 import HostPicker from "./HostPicker";
 import RfpPanel from "./RfpPanel";
 import ShepherdPicker from "./ShepherdPicker";
+import { UnsavedChangesDialog, useUnsavedChanges } from "./UnsavedChanges";
 import {
   buttonClass,
   fieldClass,
@@ -17,18 +27,20 @@ import {
 import {
   AGES,
   CATEGORIES,
-  CONFERENCE_DAYS,
-  END_GAP_MINUTES,
-  endTimes,
+  clashDescription,
+  EDITOR_DAYS,
+  defaultEnd,
+  endMinutes,
+  movedEnd,
   opensAt,
-  startTimes,
   STATUSES,
   formatPacificDay,
   minutesToHHMM,
   pacificDayKey,
+  wallAt,
   pacificMinutes,
-  slotLabel,
   type Attendance,
+  type PlanConflict,
   type ScheduleLocation,
   type ScheduleSession,
   type ViewerPlans,
@@ -75,6 +87,33 @@ function Field({
   );
 }
 
+function Checkbox({
+  name,
+  label,
+  hint,
+  defaultChecked,
+}: {
+  name: string;
+  label: string;
+  hint: string;
+  defaultChecked: boolean;
+}) {
+  return (
+    <label className="flex items-start gap-2">
+      <input
+        type="checkbox"
+        name={name}
+        defaultChecked={defaultChecked}
+        className="mt-0.5 size-4 accent-meeple"
+      />
+      <span>
+        <span className="font-medium text-ink/80">{label}</span>
+        <span className="block text-xs text-ink/50">{hint}</span>
+      </span>
+    </label>
+  );
+}
+
 /** Prefill for a new session, e.g. from clicking an empty grid slot. */
 export type SessionDefaults = {
   day: string;
@@ -83,19 +122,19 @@ export type SessionDefaults = {
 };
 
 const DEFAULT_START = 10 * 60;
-const shortest = (start: number) => start + 30 - END_GAP_MINUTES;
+const MIDNIGHT = 24 * 60;
+
+/** Minutes since midnight from an "HH:MM" time input, or null when cleared. */
+function parseHHMM(value: string): number | null {
+  const m = /^(\d{2}):(\d{2})/.exec(value);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
 
 /** "11/6" from "2026-11-06". */
 function monthSlashDay(key: string): string {
   const [, m, d] = key.split("-").map(Number);
   return `${m}/${d}`;
 }
-
-/** Keeps an off-grid saved time selectable rather than silently changing it. */
-const withCurrent = (options: number[], current: number | null) =>
-  current === null || options.includes(current)
-    ? options
-    : [...options, current].sort((a, b) => a - b);
 
 /** Create (no `session`) or edit a session, in a dialog on the cream admin page. */
 export default function SessionForm({
@@ -104,6 +143,7 @@ export default function SessionForm({
   locations,
   attendance,
   viewer,
+  conflicts,
   onClose,
 }: {
   session: ScheduleSession | null;
@@ -111,6 +151,7 @@ export default function SessionForm({
   locations: ScheduleLocation[];
   attendance?: Attendance[string];
   viewer: (ViewerPlans & { userId: string }) | null;
+  conflicts: PlanConflict[];
   onClose: () => void;
 }) {
   const [day, setDay] = useState(
@@ -122,43 +163,38 @@ export default function SessionForm({
       : (defaults?.startMin ?? null),
   );
   const [end, setEnd] = useState<number | null>(
-    session?.endsAt
-      ? pacificMinutes(session.endsAt)
+    session?.startsAt && session.endsAt
+      ? endMinutes(session.startsAt, session.endsAt)
       : defaults
-        ? shortest(defaults.startMin)
+        ? defaultEnd(defaults.startMin)
         : null,
   );
+  // Set only when moving the start cut the end back to midnight.
+  const [shortened, setShortened] = useState(false);
 
-  const dayOptions: { key: string; label: string }[] = CONFERENCE_DAYS.map(
-    (d) => ({ key: d.key, label: `${d.name} ${monthSlashDay(d.key)}` }),
-  );
+  const dayOptions: { key: string; label: string }[] = EDITOR_DAYS.map((d) => ({
+    key: d.key,
+    label: `${d.name} ${monthSlashDay(d.key)}`,
+  }));
   if (day && !dayOptions.some((d) => d.key === day) && session?.startsAt) {
     dayOptions.push({ key: day, label: formatPacificDay(session.startsAt) });
   }
 
   const pickDay = (key: string) => {
     setDay(key);
-    if (!key) return;
-    // A day that opens later pushes an earlier start up to its opening.
+    if (!key || start !== null) return;
     const first = Math.max(DEFAULT_START, opensAt(key));
-    if (start === null || start < opensAt(key)) {
-      setStart(first);
-      setEnd(shortest(first));
-    }
+    setStart(first);
+    setEnd(defaultEnd(first));
   };
 
   // Moving the start keeps the duration, like a calendar drag.
-  const pickStart = (next: number) => {
-    const moved =
-      start !== null && end !== null && end > start
-        ? next + (end - start)
-        : null;
+  const pickStart = (next: number | null) => {
     setStart(next);
-    setEnd(
-      moved !== null && day && moved <= endTimes(day).at(-1)!
-        ? moved
-        : shortest(next),
-    );
+    if (next === null) return;
+    const moved = movedEnd(start, end, next);
+    setEnd(moved.end);
+    setShortened(moved.capped);
   };
 
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -168,23 +204,33 @@ export default function SessionForm({
   const [deleting, startDelete] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState<FormState | null>(null);
+  const startRef = useRef<HTMLInputElement>(null);
+  const conflict = state !== dismissed ? state.conflict : undefined;
+  const submit = (data: FormData) => startTransition(() => formAction(data));
 
   useEffect(() => {
     if (state.ok) onClose();
   }, [state, onClose]);
 
+  const { form, formRef, requestClose, confirm } = useUnsavedChanges({
+    onClose,
+    pending,
+  });
+  const formId = useId();
+
   const generalError =
     state.error && !state.field ? state.error : (deleteError ?? null);
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && requestClose()}>
       <DialogContent
         showCloseButton={false}
-        className="max-h-[92vh] max-w-[720px] overflow-y-auto border-line bg-white px-6 py-6 text-ink sm:px-8"
+        className="max-h-[92vh] max-w-[720px] scroll-pt-20 overflow-y-auto border-line bg-white px-6 py-6 text-ink sm:px-8"
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={requestClose}
           aria-label="Close"
           className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-md text-ink/40 transition-colors hover:text-ink"
         >
@@ -197,7 +243,76 @@ export default function SessionForm({
           {session ? "Edit this session." : "Add a session to the schedule."}
         </DialogDescription>
 
-        <form action={formAction} className="grid gap-4 sm:grid-cols-2">
+        <div className="sticky -top-6 z-10 -mx-6 -mt-3 mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-white px-6 py-3 sm:-mx-8 sm:px-8">
+          <div className="flex items-center gap-2">
+            {session &&
+              (confirmDelete ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    onClick={() =>
+                      startDelete(async () => {
+                        const result = await deleteSession(session.id);
+                        if (result.error) setDeleteError(result.error);
+                        else onClose();
+                      })
+                    }
+                    className={`${smallButtonClass} border-meeple text-meeple hover:bg-meeple hover:text-white`}
+                  >
+                    {deleting ? "Deleting…" : "Yes, delete it"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className={smallButtonClass}
+                  >
+                    Keep
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
+                >
+                  Delete
+                </button>
+              ))}
+            {generalError && (
+              <span className="text-sm text-meeple">{generalError}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={requestClose}
+              className={smallButtonClass}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form={formId}
+              disabled={pending}
+              className={`${buttonClass} w-auto`}
+            >
+              {pending ? "Saving…" : session ? "Save" : "Create"}
+            </button>
+          </div>
+        </div>
+
+        <form
+          id={formId}
+          ref={formRef}
+          // Submitted by hand: a form `action` resets every field once it
+          // returns, which would wipe the form behind an overlap prompt.
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit(new FormData(e.currentTarget));
+          }}
+          className="grid gap-4 sm:grid-cols-2"
+        >
           {session && <input type="hidden" name="id" value={session.id} />}
 
           <Field
@@ -269,57 +384,49 @@ export default function SessionForm({
               </select>
             </Field>
             <Field label="Starts" name="startsAt" state={state}>
-              <select
-                value={start ?? ""}
+              <input
+                ref={startRef}
+                type="time"
+                step={300}
+                value={day && start !== null ? minutesToHHMM(start) : ""}
                 disabled={!day}
-                onChange={(e) => pickStart(Number(e.target.value))}
-                className={selectClass}
-                style={selectStyle}
-              >
-                {day ? (
-                  withCurrent(startTimes(day), start).map((m) => (
-                    <option key={m} value={m}>
-                      {slotLabel(m)}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">—</option>
-                )}
-              </select>
+                onChange={(e) => pickStart(parseHHMM(e.target.value))}
+                className={fieldClass}
+              />
             </Field>
             <Field label="Ends" name="endsAt" state={state}>
-              <select
-                value={end ?? ""}
+              <input
+                type="time"
+                step={300}
+                value={day && end !== null ? minutesToHHMM(end % MIDNIGHT) : ""}
                 disabled={!day}
-                onChange={(e) => setEnd(Number(e.target.value))}
-                className={selectClass}
-                style={selectStyle}
-              >
-                {day ? (
-                  withCurrent(
-                    endTimes(day).filter((m) => start === null || m > start),
-                    end,
-                  ).map((m) => (
-                    <option key={m} value={m}>
-                      {slotLabel(m)}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">—</option>
-                )}
-              </select>
+                // No session ends at the start of its own day, so 00:00 is midnight.
+                onChange={(e) => {
+                  const next = parseHHMM(e.target.value);
+                  setEnd(next === 0 ? MIDNIGHT : next);
+                  setShortened(false);
+                }}
+                className={fieldClass}
+              />
+              {shortened && (
+                <span
+                  role="status"
+                  className="mt-1 flex items-center gap-1 text-xs text-amber-700"
+                >
+                  <CircleAlertIcon aria-hidden className="size-3.5 shrink-0" />
+                  Shortened to end at midnight.
+                </span>
+              )}
             </Field>
             <input
               type="hidden"
               name="startsAt"
-              value={
-                day && start !== null ? `${day}T${minutesToHHMM(start)}` : ""
-              }
+              value={day && start !== null ? wallAt(day, start) : ""}
             />
             <input
               type="hidden"
               name="endsAt"
-              value={day && end !== null ? `${day}T${minutesToHHMM(end)}` : ""}
+              value={day && end !== null ? wallAt(day, end) : ""}
             />
           </div>
 
@@ -392,6 +499,30 @@ export default function SessionForm({
             </Field>
           </div>
 
+          <div className="flex flex-col gap-2 text-sm sm:col-span-2">
+            <Checkbox
+              name="rsvpIsCommitment"
+              label="RSVP is a commitment"
+              hint="Attendees claim a limited spot people rely on, and confirm before they do."
+              defaultChecked={session?.rsvpIsCommitment ?? false}
+            />
+            <Checkbox
+              name="sponsored"
+              label="Sponsor session"
+              hint="Tagged “Sponsor” on the schedule."
+              defaultChecked={session?.sponsored ?? false}
+            />
+            {/* Sent even when unticked, so the form can close RSVPs; the
+                checkbox's "on" comes later in the entries and wins. */}
+            <input type="hidden" name="rsvpsOpen" value="" />
+            <Checkbox
+              name="rsvpsOpen"
+              label="RSVPs open"
+              hint="Untick to grey out the RSVP button as “RSVPs not yet open” until you’re ready."
+              defaultChecked={session?.rsvpsOpen ?? true}
+            />
+          </div>
+
           <HostPicker
             initial={session?.hosts ?? []}
             error={state.field === "hosts" ? state.error : null}
@@ -424,70 +555,38 @@ export default function SessionForm({
               className={fieldClass}
             />
           </Field>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2">
-            <div className="flex items-center gap-2">
-              {session &&
-                (confirmDelete ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={deleting}
-                      onClick={() =>
-                        startDelete(async () => {
-                          const result = await deleteSession(session.id);
-                          if (result.error) setDeleteError(result.error);
-                          else onClose();
-                        })
-                      }
-                      className={`${smallButtonClass} border-meeple text-meeple hover:bg-meeple hover:text-white`}
-                    >
-                      {deleting ? "Deleting…" : "Yes, delete it"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmDelete(false)}
-                      className={smallButtonClass}
-                    >
-                      Keep
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    className={`${smallButtonClass} hover:border-meeple hover:text-meeple`}
-                  >
-                    Delete
-                  </button>
-                ))}
-              {generalError && (
-                <span className="text-sm text-meeple">{generalError}</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className={smallButtonClass}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={pending}
-                className={`${buttonClass} w-auto`}
-              >
-                {pending ? "Saving…" : session ? "Save" : "Create"}
-              </button>
-            </div>
-          </div>
         </form>
+        <ConfirmDialog
+          open={Boolean(conflict)}
+          title="Room conflict"
+          onDismiss={() => setDismissed(state)}
+          onClosed={() => startRef.current?.focus()}
+          actions={[
+            { label: "Edit time", onClick: () => setDismissed(state) },
+            {
+              label: "Save anyway",
+              primary: true,
+              disabled: pending,
+              onClick: () => {
+                const data = new FormData(form!);
+                data.set("allowOverlap", "1");
+                setDismissed(state);
+                submit(data);
+              },
+            },
+          ]}
+        >
+          {state.conflict && (
+            <>This overlaps {clashDescription(state.conflict)}.</>
+          )}
+        </ConfirmDialog>
+        <UnsavedChangesDialog {...confirm} />
         {session && (
           <AttendancePanel
             session={session}
             attendance={attendance}
             viewer={viewer}
+            conflicts={conflicts}
           />
         )}
       </DialogContent>

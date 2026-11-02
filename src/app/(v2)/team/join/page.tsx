@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Journey from "@/v2/components/journey/Journey";
+import AccountJourney from "@/v2/components/journey/AccountJourney";
 
 export const metadata: Metadata = {
   title: "Get involved — Metagame 2026",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function JoinTeamPage() {
-  return <Journey slug="join-team" />;
+  return <AccountJourney slug="join-team" />;
 }

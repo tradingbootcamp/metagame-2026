@@ -180,8 +180,29 @@
     {
       "idx": 25,
       "version": "7",
-      "when": 1793391224739,
-      "tag": "0025_team_board",
+      "when": 1793403467237,
+      "tag": "0025_session_commitment_sponsor",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793507627898,
+      "tag": "0026_ticket_referrals",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793644043766,
+      "tag": "0027_session_rsvps_open",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793650850986,
+      "tag": "0028_team_board",
       "breakpoints": true
     }
   ]

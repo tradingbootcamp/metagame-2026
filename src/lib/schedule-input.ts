@@ -36,6 +36,9 @@ export type SessionFields = {
   ages: Ages | null;
   needs: string | null;
   status: Status;
+  rsvpIsCommitment: boolean;
+  sponsored: boolean;
+  rsvpsOpen: boolean;
   /** Undefined when the input doesn't mention it, so it's left as stored. */
   airtableRfpRecordId?: string | null;
   /** Undefined when the input doesn't mention it, so it's left as stored. */
@@ -62,6 +65,7 @@ export type HostSessionFields = {
   minCapacity: number | null;
   ages: Ages | null;
   needs: string | null;
+  rsvpIsCommitment: boolean;
 };
 
 const str = (raw: Raw, key: string) => {
@@ -85,6 +89,17 @@ function int(raw: Raw, key: string): number | null {
   const s = str(raw, key);
   if (!s) return null;
   return /^-?\d+$/.test(s) ? Number(s) : Number.NaN;
+}
+
+/**
+ * A checkbox: FormData sends "on" when ticked and nothing when not, JSON a
+ * boolean. Absent is false; anything else is null.
+ */
+function flag(raw: Raw, key: string): boolean | null {
+  const v = raw[key];
+  if (v === undefined || v === null || v === false || v === "") return false;
+  if (v === true || v === "on" || v === "true") return true;
+  return v === "false" ? false : null;
 }
 
 /** `startsAt`/`endsAt` are Pacific wall-clock strings, "2026-11-06T14:00". */
@@ -122,6 +137,10 @@ export function parseHostSessionFields(raw: Raw): Parsed<HostSessionFields> {
   if (agesRaw && !ages)
     return { ok: false, field: "ages", error: `One of ${AGES.join(", ")}.` };
 
+  const rsvpIsCommitment = flag(raw, "rsvpIsCommitment");
+  if (rsvpIsCommitment === null)
+    return { ok: false, field: "rsvpIsCommitment", error: "true or false." };
+
   return {
     ok: true,
     value: {
@@ -132,6 +151,7 @@ export function parseHostSessionFields(raw: Raw): Parsed<HostSessionFields> {
       minCapacity,
       ages,
       needs: optional(raw, "needs"),
+      rsvpIsCommitment,
     },
   };
 }
@@ -208,6 +228,18 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
     };
   }
 
+  const rsvpIsCommitment = flag(raw, "rsvpIsCommitment");
+  if (rsvpIsCommitment === null)
+    return { ok: false, field: "rsvpIsCommitment", error: "true or false." };
+  const sponsored = flag(raw, "sponsored");
+  if (sponsored === null)
+    return { ok: false, field: "sponsored", error: "true or false." };
+  // Defaults on, unlike the other flags, so JSON that omits it leaves RSVPs
+  // open; the form pairs the box with a hidden "" so unticked closes them.
+  const rsvpsOpen = "rsvpsOpen" in raw ? flag(raw, "rsvpsOpen") : true;
+  if (rsvpsOpen === null)
+    return { ok: false, field: "rsvpsOpen", error: "true or false." };
+
   let airtableRfpRecordId: string | null | undefined;
   if ("airtableRfpRecordId" in raw) {
     airtableRfpRecordId = optional(raw, "airtableRfpRecordId");
@@ -251,6 +283,9 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
       ages,
       needs: optional(raw, "needs"),
       status: status ?? "draft",
+      rsvpIsCommitment,
+      sponsored,
+      rsvpsOpen,
       airtableRfpRecordId,
       shepherdUserId,
     },

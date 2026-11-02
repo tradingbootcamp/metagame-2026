@@ -26,6 +26,7 @@ export const propose: FormDef = {
         {
           key: "name",
           field: "fldniBh49aomPd5hd",
+          fill: "name",
           type: "text",
           label: "Your name",
           required: true,
@@ -43,6 +44,7 @@ export const propose: FormDef = {
         {
           key: "email",
           field: "fldNNl1m58zR43KUB",
+          fill: "email",
           type: "email",
           label: "Email address",
           required: true,
@@ -52,6 +54,7 @@ export const propose: FormDef = {
         {
           key: "discord",
           field: "fldAlMupeupZbJUFk",
+          fill: "discord",
           type: "text",
           label: "Discord handle",
           aside: `[join our Discord](${SOCIAL_LINKS.DISCORD})`,

@@ -132,6 +132,7 @@ export const children: FormDef = {
         {
           key: "name",
           field: "fldGLpEn4Bg00bnzo",
+          fill: "name",
           type: "text",
           label: "Name",
           required: true,
@@ -149,6 +150,7 @@ export const children: FormDef = {
         {
           key: "email",
           field: "fldC3WWHFqQsm1FSl",
+          fill: "email",
           type: "email",
           label: "Email address",
           required: true,
@@ -167,6 +169,7 @@ export const children: FormDef = {
         {
           key: "discord",
           field: "fld2rv0eiORYjCylO",
+          fill: "discord",
           type: "text",
           label: "Discord handle",
           aside: `[join our Discord](${SOCIAL_LINKS.DISCORD})`,
