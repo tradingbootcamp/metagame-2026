@@ -147,7 +147,7 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
   );
 }
 
-/** Callers must gate on scheduleGate() first. */
+/** The session page body, under the schedule layout or the account modal. */
 export default async function SessionDetails({ slug }: { slug: string }) {
   const [{ session, room }, account, admin] = await Promise.all([
     findSession(slug),
