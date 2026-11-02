@@ -33,21 +33,37 @@ export function SponsorTag() {
   return <Tag>Sponsor</Tag>;
 }
 
-/** A commitment session: RSVPs claim one of a limited number of spots. */
-export function LimitedSpotsTag() {
-  return <Tag>Limited spots</Tag>;
+export const LIMITED_SPOTS = "Limited spots: RSVP is a commitment";
+
+/**
+ * A commitment session: RSVPs claim one of a limited number of spots. Sits
+ * by the title like the age marks, on a pill so it reads on a coloured block.
+ */
+export function LimitedSpotsMark() {
+  return (
+    <span
+      role="img"
+      aria-label={LIMITED_SPOTS}
+      title={LIMITED_SPOTS}
+      className="inline-flex shrink-0 items-center rounded-full border border-[#1b1530]/40 bg-white/80 px-1 text-[12px] leading-[18px]"
+    >
+      🪑
+    </span>
+  );
 }
 
 export type Flagged = { rsvpIsCommitment: boolean; sponsored: boolean };
 
-export const hasTags = (s: Flagged) => s.rsvpIsCommitment || s.sponsored;
-
-/** The flag tags a session shows wherever it's listed. */
-export function SessionTags({ session }: { session: Flagged }) {
+/** The marks beside a session's title wherever it's listed. */
+export function SessionMarks({
+  session,
+}: {
+  session: Flagged & { ages: Ages | null };
+}) {
   return (
     <>
-      {session.rsvpIsCommitment && <LimitedSpotsTag />}
-      {session.sponsored && <SponsorTag />}
+      <AgeMark ages={session.ages} />
+      {session.rsvpIsCommitment && <LimitedSpotsMark />}
     </>
   );
 }
@@ -70,17 +86,17 @@ export function BlockSummary({
 }) {
   return (
     <>
-      {/* Above the title, so a short block's overflow can't clip them. */}
-      {hasTags(session) && (
-        <span className="mb-0.5 flex flex-wrap gap-1">
-          <SessionTags session={session} />
+      {/* Above the title, so a short block's overflow can't clip it. */}
+      {session.sponsored && (
+        <span className="mb-0.5 flex">
+          <SponsorTag />
         </span>
       )}
       <span className="flex items-start gap-1 text-[13px] leading-tight font-semibold">
         <span className="line-clamp-3" style={{ WebkitLineClamp: titleLines }}>
           {session.title}
         </span>
-        <AgeMark ages={session.ages} />
+        <SessionMarks session={session} />
       </span>
       {session.hosts.length > 0 && (
         <span className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-[#1b1530]/70">
