@@ -65,8 +65,8 @@ export default function DiscountModal({ onClose }: { onClose: () => void }) {
           Standard ticket
         </DialogTitle>
         <DialogDescription className="text-base text-cream/80">
-          Here&apos;s the discount code we have saved for you. Swap in another
-          if you have one.
+          Here&apos;s the discount code we have saved for you. You can swap in
+          another before going to checkout if you have one.
         </DialogDescription>
 
         <form
