@@ -47,7 +47,8 @@ export function CategoryLegend() {
       ))}
       <span className="flex items-center gap-1.5 text-xs">
         <LimitedSpotsMark />
-        {LIMITED_SPOTS}
+        <span className="sm:hidden">RSVP = commitment</span>
+        <span className="hidden sm:inline">{LIMITED_SPOTS}</span>
       </span>
       <span className="flex items-center gap-1.5 text-xs">
         <AgeMark ages="adults" />
@@ -120,11 +121,15 @@ export default function PublicSchedule({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-3">
+      {/* On a phone the view toggle shares this row as icons, and the My
+          sessions button keeps only its star; both get their words back from
+          the sm breakpoint. */}
+      <div className="flex items-center gap-2 sm:gap-3">
         <ScheduleSearch
           sessions={days.flatMap((d) => d.sessions)}
           roomName={(s) => roomName(s.locationId)}
           onPick={(s) => router.push(href(s), { scroll: false })}
+          className="min-w-0"
         />
         {mine && (
           <button
@@ -139,22 +144,32 @@ export default function PublicSchedule({
                 { id: "schedule-filter" },
               );
             }}
+            title="Only my sessions"
             className={`${TOGGLE} ml-auto shrink-0 items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(onlyMine, 0)}`}
           >
             <FaStar size={12} />
-            My sessions
+            <span className="sr-only sm:not-sr-only">My sessions</span>
           </button>
-        )}
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        {view !== "moments" && (
-          <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
         )}
         <ViewToggle
           view={view}
           onSelect={setView}
           views={["grid", "list", "moments"]}
+          iconsOnly
+          className={`${mine ? "" : "ml-auto"} shrink-0 sm:hidden`}
         />
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {view !== "moments" && (
+          <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
+        )}
+        <div className="hidden sm:block">
+          <ViewToggle
+            view={view}
+            onSelect={setView}
+            views={["grid", "list", "moments"]}
+          />
+        </div>
       </div>
 
       <CategoryLegend />

@@ -101,6 +101,9 @@ export function DayTabs({
   selected: string;
   onSelect: (key: string) => void;
 }) {
+  // Five days (the team sees setup and teardown) don't fit a phone with full
+  // names beside dates, so narrow screens get "Thu" over the date then.
+  const tight = days.length > 3;
   return (
     <div role="tablist" aria-label="Conference day" className={TOGGLE}>
       {days.map((d, i) => (
@@ -109,11 +112,21 @@ export function DayTabs({
           type="button"
           role="tab"
           aria-selected={d.key === selected}
+          aria-label={`${d.name} ${d.dateLabel}`}
           onClick={() => onSelect(d.key)}
-          className={`px-4 py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors sm:px-6 sm:text-xl ${toggleButton(d.key === selected, i)}`}
+          className={`py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors sm:px-6 sm:text-xl ${tight ? "px-3" : "px-4"} ${toggleButton(d.key === selected, i)}`}
         >
-          {d.name}
-          <span className="ml-1.5 inline-block text-sm whitespace-nowrap opacity-70">
+          {tight ? (
+            <>
+              <span className="sm:hidden">{d.name.slice(0, 3)}</span>
+              <span className="hidden sm:inline">{d.name}</span>
+            </>
+          ) : (
+            d.name
+          )}
+          <span
+            className={`whitespace-nowrap opacity-70 ${tight ? "block text-[11px] leading-tight sm:ml-1.5 sm:inline-block sm:text-sm sm:leading-normal" : "ml-1.5 inline-block text-sm"}`}
+          >
             {d.dateLabel}
           </span>
         </button>
@@ -135,25 +148,33 @@ export function ViewToggle({
   onSelect,
   labels,
   views = ["grid", "list"],
+  iconsOnly = false,
+  className = "",
 }: {
   view: View;
   onSelect: (v: View) => void;
   labels?: Partial<Record<View, string>>;
   views?: View[];
+  /** Icons with the names for screen readers only, for a tight row. */
+  iconsOnly?: boolean;
+  className?: string;
 }) {
   return (
-    <div role="group" aria-label="View" className={TOGGLE}>
+    <div role="group" aria-label="View" className={`${TOGGLE} ${className}`}>
       {VIEWS.filter((v) => views.includes(v.id)).map(
         ({ id, label, Icon }, i) => (
           <button
             key={id}
             type="button"
             aria-pressed={view === id}
+            title={iconsOnly ? (labels?.[id] ?? label) : undefined}
             onClick={() => onSelect(id)}
             className={`flex items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(view === id, i)}`}
           >
-            <Icon size={12} />
-            {labels?.[id] ?? label}
+            <Icon size={iconsOnly ? 14 : 12} />
+            <span className={iconsOnly ? "sr-only" : undefined}>
+              {labels?.[id] ?? label}
+            </span>
           </button>
         ),
       )}
