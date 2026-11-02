@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { can } from "./access";
-import { getAuth } from "./auth";
+import { currentSession, getAuth } from "./auth";
 import type { HostSessionFields } from "./schedule-input";
 import {
   clashDescription,
@@ -613,11 +613,32 @@ export async function loadSessionPlans(sessionId: string) {
  * schedule.rsvps (the Attendee role carries it by default, so a claimed
  * ticket is enough); everyone else gets counts.
  */
+/**
+ * Ticket holders and the team see RSVP names everywhere; a session's own
+ * hosts see them on that session whether or not they hold a ticket.
+ */
+async function canSeeRsvpNames(sessionId: string): Promise<boolean> {
+  if (await can("schedule.rsvps")) return true;
+  const account = await currentSession();
+  if (!account) return false;
+  const [row] = await getDb()
+    .select({ sessionId: sessionHosts.sessionId })
+    .from(sessionHosts)
+    .where(
+      and(
+        eq(sessionHosts.sessionId, sessionId),
+        eq(sessionHosts.userId, account.user.id),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
 export async function loadSessionRsvps(
   sessionId: string,
 ): Promise<SessionRsvps> {
   const [showNames, rows] = await Promise.all([
-    can("schedule.rsvps").then(Boolean),
+    canSeeRsvpNames(sessionId),
     getDb()
       .select({ status: rsvps.status, name: publicName })
       .from(rsvps)

@@ -74,7 +74,8 @@ export const PERMISSIONS = {
     group: "Schedule",
     level: "view",
     label: "RSVP names",
-    description: "RSVP names on a session page, not just the counts.",
+    description:
+      "RSVP names on every session page, not just the counts; hosts see them on their own sessions regardless.",
   },
   "schedule.volunteer_rooms": {
     audience: "attendee",
