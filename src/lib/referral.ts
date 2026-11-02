@@ -17,11 +17,9 @@ export function formatReferralCode(code: string): string {
   return `${code.slice(0, 4)}-${code.slice(4)}`;
 }
 
-export const normalizeReferralCode = normalizeTicketCode;
-
 /** The stored form of a typed or linked code, or "" when it can't be one. */
 export function referralCodeOf(value: string | null | undefined): string {
-  const code = normalizeReferralCode(value ?? "");
+  const code = normalizeTicketCode(value ?? "");
   return code.length === REFERRAL_CODE_LENGTH ? code : "";
 }
 

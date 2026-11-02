@@ -232,7 +232,7 @@ export default function TicketsPanel({
               <a
                 href={FULL_PRICE_HREF}
                 onClick={(e) => {
-                  if (readPromo()) {
+                  if (readPromo() && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
                     e.preventDefault();
                     setDiscountOpen(true);
                   } else addUtm(FULL_PRICE_HREF)(e);

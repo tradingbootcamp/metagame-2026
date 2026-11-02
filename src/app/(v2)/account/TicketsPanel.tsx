@@ -35,23 +35,11 @@ function badge(t: TicketView): { text: string; tone: string } {
 
 /** The holder's code, to copy and pass on to whoever's attending. */
 function ShareCode({ code }: { code: string }) {
-  const { status, copy } = useCopy();
-  const Icon = status === "copied" ? CheckIcon : CopyIcon;
   return (
     <span className="flex items-center gap-1.5 text-sm text-ink/70">
       Share code to transfer:
       <span className="font-mono text-ink">{code}</span>
-      <button
-        type="button"
-        onClick={() => copy(code)}
-        aria-label={status === "copied" ? "Copied" : "Copy code"}
-        title={status === "failed" ? "Couldn't copy" : "Copy code"}
-        className="rounded p-1 text-navy/70 hover:bg-navy/10 hover:text-navy"
-      >
-        <Icon
-          className={`size-4 ${status === "failed" ? "text-meeple" : ""}`}
-        />
-      </button>
+      <CopyButton text={() => code} label="Copy code" Icon={CopyIcon} />
     </span>
   );
 }
@@ -64,7 +52,7 @@ function CopyButton({
 }: {
   text: () => string;
   label: string;
-  Icon: typeof LinkIcon;
+  Icon: typeof CopyIcon;
 }) {
   const { status, copy } = useCopy();
   const Shown = status === "copied" ? CheckIcon : Icon;

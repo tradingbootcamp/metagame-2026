@@ -14,6 +14,12 @@ export async function GET(request: Request) {
   const stripe = getStripe();
   const code = new URL(request.url).searchParams.get("code");
   const full = getTicket("standard")!.prices.full.usd;
-  const discount = stripe ? await resolveDiscount(stripe, code, full) : null;
-  return NextResponse.json({ full, usdOff: discount?.usdOff ?? null });
+  let usdOff: number | null = null;
+  try {
+    if (stripe)
+      usdOff = (await resolveDiscount(stripe, code, full))?.usdOff ?? null;
+  } catch (err) {
+    console.error("[checkout/stripe/discount] lookup failed:", err);
+  }
+  return NextResponse.json({ full, usdOff });
 }

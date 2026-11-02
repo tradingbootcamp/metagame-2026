@@ -6,6 +6,7 @@ import { REFERRAL_PARAM } from "@/lib/referral";
 import {
   referralMetadata,
   resolveDiscount,
+  type Discount,
   type DiscountParams,
 } from "@/lib/referral-checkout";
 import { getStripe } from "@/lib/stripe";
@@ -101,7 +102,7 @@ async function promoParams(
   stripe: Stripe,
   ticket: TicketTier,
   params: URLSearchParams,
-): Promise<{ session: DiscountParams; utm: Utm }> {
+): Promise<{ session: DiscountParams; utm: Utm; discount: Discount | null }> {
   const linked = params.get("promo")?.trim();
   const earlyBird =
     params.get("code") !== "own" && isEarlyBirdActive()
@@ -115,6 +116,7 @@ async function promoParams(
   return {
     session: discount?.session ?? { allow_promotion_codes: true },
     utm: linked && discount?.promo ? compUtm(discount.promo) : {},
+    discount,
   };
 }
 
@@ -143,12 +145,13 @@ export async function GET(request: Request) {
 
   const origin = resolveOrigin(request);
   try {
-    const [promo, referral] = await Promise.all([
-      purchase.ticket
-        ? promoParams(stripe, purchase.ticket, params)
-        : undefined,
-      referralMetadata(params.get(REFERRAL_PARAM)),
-    ]);
+    const promo = purchase.ticket
+      ? await promoParams(stripe, purchase.ticket, params)
+      : undefined;
+    const referral = await referralMetadata(
+      params.get(REFERRAL_PARAM),
+      promo?.discount,
+    );
     const utm = pickUtm((k) => params.get(k));
     // UTMs on the link itself win over the ones a comp code implies.
     const tagged = Object.keys(utm).some((k) => k.startsWith("utm_"));

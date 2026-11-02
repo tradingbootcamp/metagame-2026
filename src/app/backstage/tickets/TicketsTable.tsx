@@ -448,6 +448,9 @@ function TicketDetail({ ticket: { t, people } }: { ticket: AdminTicket }) {
             <span className="text-cream/40">—</span>
           )}
         </Field>
+        <Field label="Swag">
+          {swagReason(t) ?? <span className="text-cream/40">—</span>}
+        </Field>
       </dl>
     </>
   );

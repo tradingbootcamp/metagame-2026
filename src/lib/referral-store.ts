@@ -7,8 +7,6 @@ import { visible, type TicketRow } from "@/lib/ticket-store";
 
 const { tickets } = schema;
 
-const randomReferralCode = () => randomCode(REFERRAL_CODE_LENGTH);
-
 /** Whether this viewer can hand out the ticket's referral code. */
 function refers(t: TicketRow, userId: string, email: string): boolean {
   return (
@@ -31,22 +29,28 @@ export async function mintReferralCodes(
   const db = getDb();
   for (const t of rows) {
     if (t.referralCode !== null || !refers(t, userId, email)) continue;
-    const code = await withFreshTicketCode(async (code) => {
-      const [row] = await db
-        .update(tickets)
-        .set({ referralCode: code })
-        .where(
-          and(eq(tickets.paymentId, t.paymentId), isNull(tickets.referralCode)),
-        )
-        .returning({ referralCode: tickets.referralCode });
-      if (row) return row.referralCode;
-      const [existing] = await db
-        .select({ referralCode: tickets.referralCode })
-        .from(tickets)
-        .where(eq(tickets.paymentId, t.paymentId))
-        .limit(1);
-      return existing?.referralCode ?? null;
-    }, randomReferralCode);
+    const code = await withFreshTicketCode(
+      async (code) => {
+        const [row] = await db
+          .update(tickets)
+          .set({ referralCode: code })
+          .where(
+            and(
+              eq(tickets.paymentId, t.paymentId),
+              isNull(tickets.referralCode),
+            ),
+          )
+          .returning({ referralCode: tickets.referralCode });
+        if (row) return row.referralCode;
+        const [existing] = await db
+          .select({ referralCode: tickets.referralCode })
+          .from(tickets)
+          .where(eq(tickets.paymentId, t.paymentId))
+          .limit(1);
+        return existing?.referralCode ?? null;
+      },
+      () => randomCode(REFERRAL_CODE_LENGTH),
+    );
     t.referralCode = code;
   }
 }

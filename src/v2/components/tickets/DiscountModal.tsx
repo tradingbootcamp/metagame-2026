@@ -39,7 +39,9 @@ export default function DiscountModal({ onClose }: { onClose: () => void }) {
       )
         .then((res) => res.json())
         .then(setSaving)
-        .catch(() => {});
+        .catch((err) => {
+          if (err?.name !== "AbortError") setSaving({ full: 0, usdOff: null });
+        });
     }, 300);
     return () => {
       clearTimeout(timer);

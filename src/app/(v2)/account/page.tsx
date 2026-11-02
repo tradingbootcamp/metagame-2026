@@ -77,7 +77,9 @@ export default async function AccountPage({
   ]);
   // Referral codes are minted the first time their holder looks.
   const [, referrals] = await Promise.all([
-    mintReferralCodes(rows, user.id, email),
+    mintReferralCodes(rows, user.id, email).catch((err) =>
+      console.error("[account] referral codes not minted:", err),
+    ),
     referralCounts(rows.map((t) => t.paymentId)),
   ]);
   const tickets = rows.map((t) =>

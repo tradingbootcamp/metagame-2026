@@ -48,8 +48,8 @@ export const tickets = pgTable(
     ownerUserId: text().references(() => user.id, { onDelete: "set null" }),
     claimedAt: timestamp({ withTimezone: true }),
     holderUserId: text().references(() => user.id, { onDelete: "set null" }),
-    // Minted when the holder first looks for it on /account; a friend enters
-    // it at checkout. Longer than a ticket code so the two can't be confused.
+    // Minted when the holder first looks for it on /account; a friend's
+    // /invite link carries it.
     referralCode: text().unique(),
     // The ticket whose referral code this one was bought with. A fact about
     // the ticket, so it survives claims and transfers.
