@@ -265,15 +265,19 @@ export default function BoardNotes({
           canDelete={!!openNote && canDeleteNote(editor)}
           onClose={() => setPending(null)}
           draftColor={pending.kind === "new" ? pending.color : undefined}
-          onSubmit={(body, color) =>
-            pending.kind === "new"
-              ? create(pending.locationId, pending.spot, body, color)
-              : rewrite(pending.noteId, body)
-          }
-          onRecolour={
-            openNote ? (color) => recolour(openNote.id, color) : undefined
-          }
-          onDelete={openNote ? () => remove(openNote.id) : undefined}
+          // The id comes from the dialog, not from `pending`: its first save
+          // creates the note, and every save after that rewrites that one.
+          onSave={(body, color, id) => {
+            if (id) return rewrite(id, body);
+            // No id means this is the first save of a note being composed,
+            // which only ever happens under a "new" pending.
+            if (pending.kind !== "new") {
+              return Promise.resolve({ error: "That note is gone." });
+            }
+            return create(pending.locationId, pending.spot, body, color);
+          }}
+          onRecolour={(id, color) => recolour(id, color)}
+          onDelete={(id) => remove(id)}
         />
       )}
     </Context.Provider>
