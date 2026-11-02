@@ -173,6 +173,7 @@ const session = (over: Partial<ScheduleSession>): ScheduleSession => ({
   status: "published",
   rsvpIsCommitment: false,
   sponsored: false,
+  rsvpsOpen: true,
   airtableRfpRecordId: "rec1",
   hosts: [],
   shepherd: null,
