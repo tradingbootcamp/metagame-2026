@@ -153,7 +153,10 @@ export default function ExpandingNav() {
     ...(account ? [account.signedIn ? ACCOUNT_LINK : LOGIN_LINK] : []),
   ];
 
-  const active = useActiveLink(links, section);
+  // Backstage isn't in the bar, but on it the die still shows its icon and
+  // the Account menu (where it lives) reads as current.
+  const active = useActiveLink([...links, ADMIN_LINK], section);
+  const accountCurrent = active === "account" || active === "admin";
   // The die's top face: on "/" the section under the viewport centre, else
   // the current page's icon, or home's pips off-nav.
   const topIcon = section ?? active ?? "home";
@@ -322,7 +325,7 @@ export default function ExpandingNav() {
       // The backdrop's margin around the die grows a touch on hover; the open
       // bar keeps that grown size. Offsetting top/left by half keeps the die
       // fixed in place while the hexagon swells around it.
-      className={`fixed z-40 flex items-start [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px]`}
+      className={`fixed z-40 flex items-start font-[family-name:var(--font-inter)] [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px]`}
       style={{
         ["--grow" as string]: grow ? "6px" : "0px",
         transition: "--grow 350ms cubic-bezier(0.45,0,0.55,1)",
@@ -453,8 +456,8 @@ export default function ExpandingNav() {
                     <AccountMenu
                       admin={account?.admin ?? false}
                       userId={account?.userId ?? null}
-                      current={active === id}
-                      className={linkClass(active === id)}
+                      current={accountCurrent}
+                      className={linkClass(accountCurrent)}
                       style={style}
                       tabIndex={unfold ? 0 : -1}
                     />
@@ -514,8 +517,8 @@ export default function ExpandingNav() {
                     <AccountMenu
                       admin={account?.admin ?? false}
                       userId={account?.userId ?? null}
-                      current={active === id}
-                      className={linkClass(active === id)}
+                      current={accountCurrent}
+                      className={linkClass(accountCurrent)}
                       style={style}
                       tabIndex={dropDown ? 0 : -1}
                       onPick={() => setOpen(false)}
