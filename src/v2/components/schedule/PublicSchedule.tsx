@@ -12,6 +12,7 @@ import {
   type PublicLocation,
   type PublicSession,
 } from "@/lib/schedule";
+import type { BoardData } from "@/lib/unconference";
 import { LEGEND } from "@/v2/lib/schedule-styles";
 import {
   buildColumns,
@@ -24,8 +25,10 @@ import {
   ViewToggle,
   type View,
 } from "./ScheduleViews";
+import BoardNotes from "./NoteBoard";
 import ScheduleMoments from "./ScheduleMoments";
 import ScheduleSearch from "./ScheduleSearch";
+import UnconferenceBoard, { NoteList } from "./UnconferenceBoard";
 
 type PublicDay = Day<PublicSession>;
 
@@ -53,11 +56,14 @@ export default function PublicSchedule({
   days,
   locations,
   mine,
+  board,
 }: {
   days: PublicDay[];
   locations: PublicLocation[];
   /** Ids of the viewer's own sessions; null when signed out. */
   mine: string[] | null;
+  /** The unconference notes, or null when no room this viewer sees is a board. */
+  board?: BoardData | null;
 }) {
   const [dayKey, setDayKey] = useState(() => openingDayKey(days));
   const [view, setView] = useState<View>("grid");
@@ -104,8 +110,16 @@ export default function PublicSchedule({
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
   const day = selectedDay(shownDays, dayKey);
+  // A board spans the whole day and has no time, so the same notes show on
+  // every day tab in every view.
+  const boardRooms = board ? locations.filter((l) => l.layout === "board") : [];
+  // Notes aren't sessions, so they can't go through ListDay (shared with the
+  // profile pages) or Moments.
+  const noteLists = boardRooms.map((room) => (
+    <NoteList key={room.id} locationId={room.id} name={room.name} />
+  ));
 
-  return (
+  const schedule = (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3">
         <ScheduleSearch
@@ -147,11 +161,14 @@ export default function PublicSchedule({
       <CategoryLegend />
 
       {view === "moments" ? (
-        <ScheduleMoments
-          days={shownDays}
-          columns={columns}
-          onOpen={(s) => router.push(href(s), { scroll: false })}
-        />
+        <>
+          <ScheduleMoments
+            days={shownDays}
+            columns={columns}
+            onOpen={(s) => router.push(href(s), { scroll: false })}
+          />
+          {noteLists}
+        </>
       ) : onlyMine && day.sessions.length === 0 ? (
         <EmptyPanel>
           {mine?.length
@@ -159,10 +176,26 @@ export default function PublicSchedule({
             : "Sessions you RSVP to, bookmark or host will show up here."}
         </EmptyPanel>
       ) : view === "grid" && columns.length > 0 ? (
-        <GridDay day={day} columns={columns} href={href} />
+        <GridDay
+          day={day}
+          columns={columns}
+          href={href}
+          board={
+            board
+              ? ({ column }) => <UnconferenceBoard locationId={column.id} />
+              : undefined
+          }
+        />
       ) : (
-        <ListDay day={day} roomName={roomName} href={href} />
+        <>
+          <ListDay day={day} roomName={roomName} href={href} />
+          {noteLists}
+        </>
       )}
     </div>
   );
+
+  // The notes live above every view: switching view or day tab must not throw
+  // away a note that was just pinned up, since nothing revalidates the route.
+  return board ? <BoardNotes board={board}>{schedule}</BoardNotes> : schedule;
 }

@@ -17,11 +17,13 @@ import { can } from "./access";
 import { getAuth } from "./auth";
 import type { HostSessionFields } from "./schedule-input";
 import {
+  BOARD_ROOM_REFUSAL,
   clashDescription,
   fromPacificWall,
   movedTimes,
   outsideHours,
   roomAllowsOverlap,
+  roomTakesSessions,
   summarizeRsvps,
   toRoomClash,
   type Attendance,
@@ -34,7 +36,15 @@ import {
   type SessionRsvps,
 } from "./schedule";
 
-const { locations, sessions, sessionHosts, rsvps, bookmarks, user } = schema;
+const {
+  locations,
+  sessions,
+  sessionHosts,
+  rsvps,
+  bookmarks,
+  user,
+  unconferenceNotes,
+} = schema;
 
 // Matches accountLabel(): account name, else email.
 export const accountName = sql<string>`coalesce(nullif(trim(${user.name}), ''), ${user.email})`;
@@ -94,6 +104,7 @@ export async function loadSchedule(): Promise<Schedule> {
       description: l.description,
       displayOrder: l.displayOrder,
       visibility: l.visibility,
+      layout: l.layout,
       thumbnailUrl: l.thumbnailUrl,
       imageUrl: l.imageUrl,
     })),
@@ -141,12 +152,71 @@ export type SessionInput = Omit<
  * Only a change of time or room is checked, so editing the rest of a session
  * that already overlaps doesn't ask again.
  */
+/** A room refused the switch to a board because sessions are still in it. */
+export class OccupiedBoardError extends Error {
+  readonly field = "layout";
+  constructor(readonly held: number) {
+    super(
+      `${held} session${held === 1 ? " is" : "s are"} still in this room. Move ${held === 1 ? "it" : "them"} before drawing it as a bulletin board.`,
+    );
+  }
+}
+
+/** English for what a room still holds, so a refusal can name it. */
+export function roomHolds(held: {
+  sessions: number;
+  notes: number;
+}): string | null {
+  const parts = [
+    held.sessions &&
+      `${held.sessions} session${held.sessions === 1 ? "" : "s"}`,
+    held.notes && `${held.notes} note${held.notes === 1 ? "" : "s"}`,
+  ].filter(Boolean) as string[];
+  return parts.length ? parts.join(" and ") : null;
+}
+
+/**
+ * A delete refused because the room still holds something. Both cascade in
+ * the schema, so without this the room takes its sessions and its whole
+ * board with it and says nothing.
+ */
+export class OccupiedRoomError extends Error {
+  constructor(held: { sessions: number; notes: number }) {
+    super(
+      `This room still holds ${roomHolds(held)}. Deleting it would take ${
+        held.notes ? "them" : "those"
+      } too — move or remove them first.`,
+    );
+  }
+}
+
+/** A save refused because the room is a bulletin board, not a time column. */
+export class BoardRoomError extends Error {
+  readonly field = "locationId";
+  constructor() {
+    super(BOARD_ROOM_REFUSAL);
+  }
+}
+
+/** Throws when the room is drawn as a bulletin board, which holds no sessions. */
+export async function assertRoomTakesSessions(
+  locationId: string | null,
+): Promise<void> {
+  if (!locationId) return;
+  const [room] = await getDb()
+    .select({ layout: locations.layout })
+    .from(locations)
+    .where(eq(locations.id, locationId));
+  if (room && !roomTakesSessions(room.layout)) throw new BoardRoomError();
+}
+
 export async function upsertSession(
   input: SessionInput,
   { allowOverlap = false }: { allowOverlap?: boolean } = {},
 ): Promise<{ id: string; clash: RoomClash | null }> {
   const db = getDb();
   const { id, hostIds, ...row } = input;
+  await assertRoomTakesSessions(row.locationId);
   const clash =
     row.startsAt && row.endsAt && (await placementChanged(id, row))
       ? await assertSlotFree(
@@ -287,6 +357,7 @@ export async function moveSessionTo(
   end?: Date,
 ): Promise<void> {
   const db = getDb();
+  await assertRoomTakesSessions(locationId);
   const [row] = await db
     .select({ startsAt: sessions.startsAt, endsAt: sessions.endsAt })
     .from(sessions)
@@ -654,9 +725,32 @@ export async function removeSession(id: string): Promise<void> {
 
 export type LocationInput = Omit<ScheduleLocation, "id"> & { id?: string };
 
+/** How many sessions sit in a room — for refusing to turn an occupied one into a board. */
+export async function sessionsInRoom(locationId: string): Promise<number> {
+  const [row] = await getDb()
+    .select({ n: count() })
+    .from(sessions)
+    .where(eq(sessions.locationId, locationId));
+  return row?.n ?? 0;
+}
+
 export async function upsertLocation(input: LocationInput): Promise<string> {
   const db = getDb();
   const { id, ...row } = input;
+  // Turning an occupied room into a board would leave its sessions listed and
+  // searchable but drawn nowhere. Only the TRANSITION is refused: a room that
+  // is already a board can still have its name, or its place in the lineup,
+  // edited — which a blanket check wrongly blocked, with a message about
+  // "drawing it as a bulletin board" that described nothing the editor did.
+  if (id && !roomTakesSessions(row.layout)) {
+    const [before] = await db
+      .select({ layout: locations.layout })
+      .from(locations)
+      .where(eq(locations.id, id));
+    const becoming = !before || roomTakesSessions(before.layout);
+    const held = becoming ? await sessionsInRoom(id) : 0;
+    if (held > 0) throw new OccupiedBoardError(held);
+  }
   if (id) {
     const [updated] = await db
       .update(locations)
@@ -701,7 +795,26 @@ export async function setLocationImages(
  * Sessions in the room keep their row; location_id goes null. Returns the
  * image URLs so the caller can delete the files.
  */
+/** What a room still holds. Both cascade, so both have to be counted. */
+export async function roomContents(
+  id: string,
+): Promise<{ sessions: number; notes: number }> {
+  const db = getDb();
+  const [[inRoom], [pinned]] = await Promise.all([
+    db.select({ n: count() }).from(sessions).where(eq(sessions.locationId, id)),
+    db
+      .select({ n: count() })
+      .from(unconferenceNotes)
+      .where(eq(unconferenceNotes.locationId, id)),
+  ]);
+  return { sessions: inRoom?.n ?? 0, notes: pinned?.n ?? 0 };
+}
+
 export async function removeLocation(id: string): Promise<RoomImages | null> {
+  // Sessions and notes both cascade off a room. Without this the delete takes
+  // a whole bulletin board with it and says nothing about having done so.
+  const held = await roomContents(id);
+  if (held.sessions > 0 || held.notes > 0) throw new OccupiedRoomError(held);
   const [row] = await getDb()
     .delete(locations)
     .where(eq(locations.id, id))
@@ -756,12 +869,27 @@ const CONSTRAINT_MESSAGES: Record<string, { field?: string; error: string }> = {
     field: "capacity",
     error: "Capacity must be at least 1.",
   },
+  unconference_notes_body_length: {
+    field: "body",
+    error: "A note needs some text, and under 1000 characters of it.",
+  },
+  unconference_notes_x_fraction: {
+    field: "position",
+    error: "That spot is off the board.",
+  },
+  unconference_notes_y_fraction: {
+    field: "position",
+    error: "That spot is off the board.",
+  },
 };
 
-export function explainDbError(err: unknown): {
-  field?: string;
-  error: string;
-} {
+/**
+ * The message for a constraint this error names, or null. Split out for the
+ * attendee-facing writes, which must not relay a driver message of their own.
+ */
+export function constraintMessage(
+  err: unknown,
+): { field?: string; error: string } | null {
   for (
     let e: unknown = err;
     e && typeof e === "object";
@@ -772,7 +900,18 @@ export function explainDbError(err: unknown): {
       return CONSTRAINT_MESSAGES[constraint];
     }
   }
-  return { error: err instanceof Error ? err.message : String(err) };
+  return null;
+}
+
+export function explainDbError(err: unknown): {
+  field?: string;
+  error: string;
+} {
+  return (
+    constraintMessage(err) ?? {
+      error: err instanceof Error ? err.message : String(err),
+    }
+  );
 }
 
 // Sample data for an empty development database: the 2025 rooms and a

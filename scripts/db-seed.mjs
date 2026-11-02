@@ -284,7 +284,9 @@ const profile = (u) => {
 // prettier-ignore
 const ROOMS = [
   ["foodtruck", "Food Truck Parking", null, "Behind E", 0],
-  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1],
+  // The bulletin board, where anyone with a ticket pitches something. Rat
+  // Park for now; the board follows whichever room carries layout "board".
+  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1, "public", false, "board"],
   ["eigen", "Eigen Hall", 40, "Building E, 1st floor", 2],
   ["cantor", "Cantor's Diagonal", 60, "Building C", 3],
   ["glass", "Glass Hall", 35, "Building A, 1st floor", 4],
@@ -311,6 +313,7 @@ const locations = Object.fromEntries(
         display_order,
         visibility = "public",
         synced = true,
+        layout = "grid",
       ],
       k,
     ) => [
@@ -322,6 +325,7 @@ const locations = Object.fromEntries(
         campus_location,
         display_order,
         visibility,
+        layout,
         airtable_record_id: synced
           ? `recSEEDLOC${String(k + 1).padStart(7, "0")}`
           : null,
@@ -340,6 +344,29 @@ for (const { id, name } of await sql.query(
   room.id = id;
   reusedRooms.add(room);
 }
+// Pitches on the bulletin board. created_at is spelled out because the board
+// paints the OLDEST note on top, so the stack is only worth looking at when
+// the times differ. x/y are fractions of the board.
+// prettier-ignore
+const NOTES = [
+  [1801, "attendee", "butter", 0, 0, 6, 10, "Anyone up for a 3-hour game of Diplomacy? I'll bring the map and the grudges."],
+  [1802, "host", "rose", 0.5, 0, 6, 11, "Lightning talks, 5 min each, no slides. Sign up underneath this one."],
+  [1803, "attendee", "sky", 1, 0, 6, 14, "Prediction market on who wins the megagame. I have whiteboard markers."],
+  [1804, "newcomer", "mint", 0, 0.2, 6, 17, "First Metagame — would love a walking tour of campus from someone who knows it."],
+  [1805, "team", "tangerine", 0.5, 0.2, 7, 9, "Teaching Hanabi to anyone who hasn't played. Repeatedly. All weekend."],
+  [1806, "attendee", "lilac", 1, 0.35, 7, 13, "Does anyone want to co-run a Werewolf game at 10pm? Need a second moderator."],
+].map(([n, who, color, x, y, day, hour, body]) => ({
+  id: uuid(n),
+  location_id: locations.ratpark.id,
+  author_user_id: users[who].id,
+  body,
+  color,
+  x,
+  y,
+  created_at: at(day, hour),
+  updated_at: at(day, hour),
+}));
+
 const slugify = (title) =>
   `seed-${title
     .toLowerCase()
@@ -463,7 +490,7 @@ const program = [
   [113, 6, 16, 60, "attic", "other", "Sunset Tea & Unconference Pitches", "Pitch a Sunday session in sixty seconds.", "all", 25],
   [114, 6, 19, 180, "courtyard", "game", "Megagame Briefing: The Orchard Accords", "Faction leads, read your sealed envelopes.", "all", 80, { megagame_integration_level: "deep" }],
   [115, 6, 21, 120, "thingspace", "game", "Werewolf After Dark", "The classic, with a moderator who holds grudges.", "adults", 20],
-  [116, 7, 8, 60, "ratpark", "other", "Morning Run: Fog of War", "A 5k where the route is revealed one checkpoint at a time.", "all", 30],
+  [116, 7, 8, 60, "gardens", "other", "Morning Run: Fog of War", "A 5k where the route is revealed one checkpoint at a time.", "all", 30],
   [117, 7, 10, 90, "courtyard", "talk", "Why Your Board Game Prototype Is Boring", "A design critique panel, by request only.", "all", 80],
   [118, 7, 10, 120, "cantor", "game", "Escape Room: The Librarian's Lament", "Two rooms, one key, forty minutes per team.", "all", 16, { min_capacity: 4, needs: "Padlocks, a red herring" }],
   [119, 7, 10, 60, "d2", "workshop", "Teaching Kids Go", "Nine-by-nine boards, no stones thrown.", "kids", 12],
@@ -951,6 +978,11 @@ for (const table of ["session_hosts"]) {
     SEED_UUID,
   ]);
 }
+await sql.query(
+  `delete from unconference_notes where id::text like $1
+   and not (id::text = any($2::text[]))`,
+  [SEED_UUID, pgArray(NOTES.map((n) => n.id))],
+);
 await sql.query(`delete from session_grades where id::text like $1`, [
   SEED_UUID,
 ]);
@@ -1078,6 +1110,7 @@ counts.locations = await upsert(
   ["id"],
   rooms.filter((l) => !reusedRooms.has(l)),
 );
+counts.unconference_notes = await upsert("unconference_notes", ["id"], NOTES);
 counts.sessions = await upsert("sessions", ["id"], sessions);
 counts.session_hosts = await upsert(
   "session_hosts",

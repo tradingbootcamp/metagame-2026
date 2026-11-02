@@ -7,6 +7,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   unique,
@@ -81,6 +82,19 @@ export const locationVisibility = pgEnum("location_visibility", [
   "volunteer",
   "hidden",
 ]);
+// How a room's column is drawn: the usual time grid, or the free-form
+// unconference bulletin board, where vertical position carries no time.
+export const locationLayout = pgEnum("location_layout", ["grid", "board"]);
+// The post-it palette. An enum so a note can only ever carry a colour the
+// board knows how to paint.
+export const unconferenceNoteColor = pgEnum("unconference_note_color", [
+  "butter",
+  "rose",
+  "sky",
+  "mint",
+  "tangerine",
+  "lilac",
+]);
 
 export const locations = pgTable(
   "locations",
@@ -92,6 +106,7 @@ export const locations = pgTable(
     description: text(),
     displayOrder: integer().notNull().default(100),
     visibility: locationVisibility().notNull().default("hidden"),
+    layout: locationLayout().notNull().default("grid"),
     // Vercel Blob URLs; images never live in the database. The thumbnail is
     // what the schedule shows; image_url is a large copy for detail views.
     thumbnailUrl: text(),
@@ -228,5 +243,38 @@ export const bookmarks = pgTable(
   (t) => [
     primaryKey({ columns: [t.sessionId, t.userId] }),
     index("bookmarks_user_id_idx").on(t.userId),
+  ],
+);
+
+// Post-its on a board room (locations.layout = 'board'), written by any
+// ticket holder. x and y are fractions of the board so it reflows at any
+// width; y is free placement, not a time.
+export const unconferenceNotes = pgTable(
+  "unconference_notes",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    locationId: uuid()
+      .notNull()
+      .references(() => locations.id, { onDelete: "cascade" }),
+    // The shown name is read from the account, never stored here.
+    authorUserId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    body: text().notNull(),
+    color: unconferenceNoteColor().notNull(),
+    x: real().notNull().default(0),
+    y: real().notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [
+    index("unconference_notes_location_id_idx").on(t.locationId),
+    index("unconference_notes_author_user_id_idx").on(t.authorUserId),
+    // Mirrors NOTE_BODY_MAX in src/lib/unconference.ts.
+    check(
+      "unconference_notes_body_length",
+      sql`char_length(${t.body}) > 0 AND char_length(${t.body}) <= 1000`,
+    ),
+    check("unconference_notes_x_fraction", sql`${t.x} >= 0 AND ${t.x} <= 1`),
+    check("unconference_notes_y_fraction", sql`${t.y} >= 0 AND ${t.y} <= 1`),
   ],
 );

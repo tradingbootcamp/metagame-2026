@@ -18,6 +18,7 @@ import {
   outsideHours,
   overlapLanes,
   overlapWarning,
+  roomTakesSessions,
   planConflicts,
   rsvpPrompt,
   slotLabel,
@@ -587,5 +588,15 @@ describe("nowLinePx", () => {
     expect(nowLinePx(friday, 14 * 60, new Date("2026-11-07T05:30:00Z"))).toBe(
       450 * 2,
     );
+  });
+});
+
+describe("roomTakesSessions", () => {
+  // A board room's column is one full-height surface with no per-slot cells,
+  // so a session placed in one is listed and searchable but drawn nowhere in
+  // grid view. The form, the backstage grid and the store all read this rule.
+  it("refuses a board room and allows a grid one", () => {
+    expect(roomTakesSessions("board")).toBe(false);
+    expect(roomTakesSessions("grid")).toBe(true);
   });
 });
