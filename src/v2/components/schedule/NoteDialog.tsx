@@ -1,5 +1,6 @@
 "use client";
 
+import { XIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { NoteState } from "@/app/(v2)/schedule/note-actions";
 import {
@@ -137,9 +138,24 @@ export default function NoteDialog({
     <Dialog open onOpenChange={(open) => !open && finish()}>
       <DialogContent
         aria-describedby={undefined}
+        // Its own, because here the X takes the note off the board rather
+        // than dismissing the dialog — Done is what puts it away.
+        showCloseButton={false}
         style={{ background: skin.background, borderColor: skin.borderColor }}
         className="flex max-h-[90dvh] max-w-[520px] flex-col gap-4 overflow-y-auto rounded-[2px] border px-7 py-7 shadow-[0_6px_24px_rgba(27,21,48,0.45)]"
       >
+        <button
+          type="button"
+          // Nothing pinned up yet, or not the viewer's to take down: then it
+          // is only a way out, and an X that did nothing would be worse.
+          aria-label={removable && liveId ? "Take this note down" : "Close"}
+          onClick={() =>
+            removable && liveId ? setConfirmDelete(true) : finish()
+          }
+          className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-md text-[#1b1530]/45 transition-colors outline-none hover:bg-[#1b1530]/10 hover:text-[#1b1530] focus-visible:ring-2 focus-visible:ring-[#1b1530]/40"
+        >
+          <XIcon className="size-[18px]" />
+        </button>
         {/* The sheet is the prompt; the title is for screen readers only. */}
         <DialogTitle className="sr-only">
           {note ? "Note" : "A new note"}
@@ -177,76 +193,65 @@ export default function NoteDialog({
           </span>
         </div>
 
-        {canEdit && (
-          <div className="flex flex-wrap gap-2">
-            {NOTE_COLORS.map((swatch) => (
-              <button
-                key={swatch}
-                type="button"
-                aria-label={swatch}
-                aria-pressed={color === swatch}
-                // Repaints at once; writes only once there is a note to write to.
-                onClick={() => {
-                  setColor(swatch);
-                  if (liveId) act(() => onRecolour(liveId, swatch), false);
-                }}
-                style={{
-                  ...NOTE_STYLES[swatch],
-                  // The ring sits on the note's own paper, not a dark panel.
-                  ...(color === swatch
-                    ? { "--tw-ring-offset-color": skin.background }
-                    : {}),
-                }}
-                className={`h-8 w-8 rounded-[2px] border transition-transform hover:-translate-y-px ${
-                  color === swatch ? "ring-2 ring-[#1b1530] ring-offset-2" : ""
-                }`}
-              />
-            ))}
-          </div>
-        )}
-
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            {removable &&
-              liveId &&
-              (confirmDelete ? (
-                <>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => act(() => onDelete(liveId), true)}
-                  >
-                    Take it down
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="border-[#1b1530]/40 text-[#1b1530] hover:border-[#1b1530] hover:bg-[#1b1530]/10"
-                    onClick={() => setConfirmDelete(false)}
-                  >
-                    Keep it
-                  </Button>
-                </>
-              ) : (
+          <div className="flex flex-wrap gap-2">
+            {canEdit &&
+              NOTE_COLORS.map((swatch) => (
                 <button
+                  key={swatch}
                   type="button"
-                  onClick={() => setConfirmDelete(true)}
-                  className="text-sm text-[#1b1530]/60 underline underline-offset-4 hover:text-[#1b1530]"
-                >
-                  Delete
-                </button>
+                  aria-label={swatch}
+                  aria-pressed={color === swatch}
+                  // Repaints at once; writes only once there is a note to write to.
+                  onClick={() => {
+                    setColor(swatch);
+                    if (liveId) act(() => onRecolour(liveId, swatch), false);
+                  }}
+                  style={{
+                    ...NOTE_STYLES[swatch],
+                    // The ring sits on the note's own paper, not a dark panel.
+                    ...(color === swatch
+                      ? { "--tw-ring-offset-color": skin.background }
+                      : {}),
+                  }}
+                  className={`h-8 w-8 rounded-[2px] border transition-transform hover:-translate-y-px ${
+                    color === swatch
+                      ? "ring-2 ring-[#1b1530] ring-offset-2"
+                      : ""
+                  }`}
+                />
               ))}
           </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="border-[#1b1530]/40 text-[#1b1530] hover:border-[#1b1530] hover:bg-[#1b1530]/10"
-            onClick={finish}
-          >
-            Done
-          </Button>
+          {confirmDelete ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => liveId && act(() => onDelete(liveId), true)}
+              >
+                Take it down
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="border-[#1b1530]/40 text-[#1b1530] hover:border-[#1b1530] hover:bg-[#1b1530]/10"
+                onClick={() => setConfirmDelete(false)}
+              >
+                Keep it
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="border-[#1b1530]/40 text-[#1b1530] hover:border-[#1b1530] hover:bg-[#1b1530]/10"
+              onClick={finish}
+            >
+              Done
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
