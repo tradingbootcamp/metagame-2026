@@ -152,7 +152,7 @@ export function readPromo(): string {
 /** Replace the stored discount code; blank clears it. */
 export function setPromo(code: string): void {
   try {
-    const promo = promoCode(code);
+    const promo = promoCode(code.replace(/\s+/g, ""));
     if (promo) sessionStorage.setItem(PROMO_STORAGE_KEY, promo);
     else sessionStorage.removeItem(PROMO_STORAGE_KEY);
   } catch {}

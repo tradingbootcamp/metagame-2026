@@ -42,7 +42,11 @@ export async function referralMetadata(
   ref: string | null | undefined,
   discount?: Discount | null,
 ): Promise<Record<string, string>> {
-  const referrer = (await referrerOf(ref)) ?? discount?.referrer;
+  const linked = discount?.referrer;
+  const referrer =
+    linked && referralCodeOf(ref) === linked.code
+      ? linked
+      : ((await referrerOf(ref)) ?? linked);
   return referrer
     ? { referred_by: referrer.paymentId, referral_code: referrer.code }
     : {};

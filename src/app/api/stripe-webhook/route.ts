@@ -194,7 +194,7 @@ export async function POST(request: Request) {
     const promo = expanded<Stripe.PromotionCode>(
       full.discounts?.[0]?.promotion_code,
     );
-    const couponCode = promo?.code;
+    const couponCode = promo?.code ?? full.metadata?.referral_code;
 
     // Total knocked off the order (cents → dollars); omitted when nothing applied.
     const amountDiscount = full.total_details?.amount_discount
@@ -242,9 +242,7 @@ export async function POST(request: Request) {
       receiptUrl: charge?.receipt_url ?? undefined,
       discordHandle: discord ?? undefined,
       // Checkout puts the referrer on the session whatever code was used.
-      notes: full.metadata?.referral_code
-        ? `Referred with code ${full.metadata.referral_code}.`
-        : undefined,
+      notes: full.metadata?.referred_by ? "Referred by a friend." : undefined,
       utm: pickUtm((key) => full.metadata?.[key]),
       status,
       paymentMethod: "stripe",

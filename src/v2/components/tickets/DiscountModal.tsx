@@ -16,7 +16,7 @@ import { HEADING } from "../styles";
 const FIELD_LABEL =
   "font-space-mono text-[12px] tracking-[0.12em] text-cream/70 uppercase";
 
-type Saving = { full: number; usdOff: number | null } | "checking";
+type Saving = { full: number; usdOff: number | null } | "checking" | "unknown";
 
 /**
  * The stop before Stripe for a Standard ticket when the browser holds a code
@@ -40,7 +40,7 @@ export default function DiscountModal({ onClose }: { onClose: () => void }) {
         .then((res) => res.json())
         .then(setSaving)
         .catch((err) => {
-          if (err?.name !== "AbortError") setSaving({ full: 0, usdOff: null });
+          if (err?.name !== "AbortError") setSaving("unknown");
         });
     }, 300);
     return () => {
@@ -97,9 +97,11 @@ export default function DiscountModal({ onClose }: { onClose: () => void }) {
               ? "No code: you can still enter one at checkout."
               : saving === "checking"
                 ? "Checking…"
-                : saving.usdOff
-                  ? `Saves $${saving.usdOff}: $${saving.full - saving.usdOff} instead of $${saving.full}.`
-                  : "That code isn't active."}
+                : saving === "unknown"
+                  ? "Couldn't check that code; a valid one still applies at checkout."
+                  : saving.usdOff
+                    ? `Saves $${saving.usdOff}: $${saving.full - saving.usdOff} instead of $${saving.full}.`
+                    : "That code isn't active."}
           </p>
 
           <Button
