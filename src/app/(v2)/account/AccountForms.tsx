@@ -107,16 +107,6 @@ export function ProfileForm({
       className="flex flex-col gap-4"
     >
       <h2 className="font-grotesk text-2xl font-bold text-navy">Profile</h2>
-      {dirty && (
-        <p
-          role="status"
-          className="rounded-xl border border-tan bg-peach/40 px-4 py-3 text-sm text-ink"
-        >
-          <span className="font-semibold">You have unsaved changes.</span> The
-          yellow fields haven&rsquo;t been saved yet — scroll down and hit{" "}
-          <span className="font-semibold">Save profile</span> to keep them.
-        </p>
-      )}
       <label className="flex flex-col gap-1.5">
         <span className="flex flex-col gap-0.5">
           <span className={LABEL}>
