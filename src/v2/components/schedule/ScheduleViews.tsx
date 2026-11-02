@@ -96,6 +96,9 @@ export function DayTabs({
   selected: string;
   onSelect: (key: string) => void;
 }) {
+  // Five days (the team sees setup and teardown) don't fit a phone with full
+  // names and dates, so narrow screens get "Thu" style tabs then.
+  const tight = days.length > 3;
   return (
     <div role="tablist" aria-label="Conference day" className={TOGGLE}>
       {days.map((d, i) => (
@@ -104,11 +107,21 @@ export function DayTabs({
           type="button"
           role="tab"
           aria-selected={d.key === selected}
+          aria-label={`${d.name} ${d.dateLabel}`}
           onClick={() => onSelect(d.key)}
-          className={`px-4 py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors sm:px-6 sm:text-xl ${toggleButton(d.key === selected, i)}`}
+          className={`py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors sm:px-6 sm:text-xl ${tight ? "px-3" : "px-4"} ${toggleButton(d.key === selected, i)}`}
         >
-          {d.name}
-          <span className="ml-1.5 inline-block text-sm whitespace-nowrap opacity-70">
+          {tight ? (
+            <>
+              <span className="sm:hidden">{d.name.slice(0, 3)}</span>
+              <span className="hidden sm:inline">{d.name}</span>
+            </>
+          ) : (
+            d.name
+          )}
+          <span
+            className={`ml-1.5 text-sm whitespace-nowrap opacity-70 ${tight ? "hidden sm:inline-block" : "inline-block"}`}
+          >
             {d.dateLabel}
           </span>
         </button>
