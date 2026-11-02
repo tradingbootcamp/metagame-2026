@@ -44,17 +44,31 @@ export type ProfileValues = {
   isPublic: boolean;
 };
 
-/** Whether the form's fields differ from the values it was rendered with. */
-function profileDirty(form: HTMLFormElement, v: ProfileValues): boolean {
+type ProfileField = keyof ProfileValues;
+const NONE: ReadonlySet<ProfileField> = new Set();
+
+/** The fields whose current value differs from the one the form was rendered with. */
+function dirtyFields(
+  form: HTMLFormElement,
+  v: ProfileValues,
+): ReadonlySet<ProfileField> {
   const data = new FormData(form);
-  const text = (key: keyof ProfileValues) => String(data.get(key) ?? "");
-  return (
-    text("name") !== v.name ||
-    text("pronouns") !== v.pronouns ||
-    text("discordHandle") !== v.discordHandle ||
-    text("bio") !== v.bio ||
-    data.has("isPublic") !== v.isPublic
-  );
+  const text = (key: ProfileField) => String(data.get(key) ?? "");
+  const out = new Set<ProfileField>();
+  for (const key of ["name", "pronouns", "discordHandle", "bio"] as const)
+    if (text(key) !== v[key]) out.add(key);
+  if (data.has("isPublic") !== v.isPublic) out.add("isPublic");
+  return out;
+}
+
+// Unsaved fields go yellow and get a tag, since the Save button may be below
+// the fold.
+const UNSAVED_FIELD = "border-tan bg-peach/40 focus:border-tan";
+const UNSAVED_TAG =
+  "ml-2 rounded-full bg-peach px-2 py-0.5 text-xs font-semibold text-navy";
+
+function Unsaved({ on }: { on: boolean }) {
+  return on ? <span className={UNSAVED_TAG}>Unsaved</span> : null;
 }
 
 export function ProfileForm({
@@ -67,13 +81,16 @@ export function ProfileForm({
   initialValues: ProfileValues;
 }) {
   const [state, action, pending] = useActionState(updateProfile, initial);
-  const [dirty, setDirty] = useState(false);
+  const [unsaved, setUnsaved] = useState(NONE);
   const [seen, setSeen] = useState(state);
   const v = initialValues;
+  const dirty = unsaved.size > 0;
+  const field = (key: ProfileField) =>
+    cn(FIELD_LIGHT, unsaved.has(key) && UNSAVED_FIELD);
 
   if (state !== seen) {
     setSeen(state);
-    if (state.saved) setDirty(false);
+    if (state.saved) setUnsaved(NONE);
   }
 
   useEffect(() => {
@@ -86,13 +103,26 @@ export function ProfileForm({
   return (
     <form
       action={action}
-      onChange={(e) => setDirty(profileDirty(e.currentTarget, v))}
+      onChange={(e) => setUnsaved(dirtyFields(e.currentTarget, v))}
       className="flex flex-col gap-4"
     >
       <h2 className="font-grotesk text-2xl font-bold text-navy">Profile</h2>
+      {dirty && (
+        <p
+          role="status"
+          className="rounded-xl border border-tan bg-peach/40 px-4 py-3 text-sm text-ink"
+        >
+          <span className="font-semibold">You have unsaved changes.</span> The
+          yellow fields haven&rsquo;t been saved yet — scroll down and hit{" "}
+          <span className="font-semibold">Save profile</span> to keep them.
+        </p>
+      )}
       <label className="flex flex-col gap-1.5">
         <span className="flex flex-col gap-0.5">
-          <span className={LABEL}>Name</span>
+          <span className={LABEL}>
+            Name
+            <Unsaved on={unsaved.has("name")} />
+          </span>
           <span className="text-sm text-ink/60">
             On RSVPs, hosting, badge, etc.
           </span>
@@ -103,7 +133,7 @@ export function ProfileForm({
           autoComplete="name"
           required
           maxLength={80}
-          className={FIELD_LIGHT}
+          className={field("name")}
         />
       </label>
       <div className="flex flex-col gap-1.5">
@@ -112,12 +142,15 @@ export function ProfileForm({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5">
-          <span className={LABEL}>Pronouns</span>
+          <span className={LABEL}>
+            Pronouns
+            <Unsaved on={unsaved.has("pronouns")} />
+          </span>
           <Input
             name="pronouns"
             defaultValue={v.pronouns}
             maxLength={40}
-            className={FIELD_LIGHT}
+            className={field("pronouns")}
           />
         </label>
         <label className="flex flex-col gap-1.5">
@@ -131,26 +164,36 @@ export function ProfileForm({
             >
               (Join!)
             </a>
+            <Unsaved on={unsaved.has("discordHandle")} />
           </span>
           <Input
             name="discordHandle"
             defaultValue={v.discordHandle}
             maxLength={40}
-            className={FIELD_LIGHT}
+            className={field("discordHandle")}
           />
         </label>
       </div>
       <label className="flex flex-col gap-1.5">
-        <span className={LABEL}>Bio</span>
+        <span className={LABEL}>
+          Bio
+          <Unsaved on={unsaved.has("bio")} />
+        </span>
         <textarea
           name="bio"
           defaultValue={v.bio}
           maxLength={1000}
-          className={TEXTAREA}
+          className={cn(TEXTAREA, unsaved.has("bio") && UNSAVED_FIELD)}
         />
       </label>
       <div className="flex flex-col gap-1">
-        <label className="flex items-center gap-2.5 text-base text-ink">
+        <label
+          className={cn(
+            "flex items-center gap-2.5 text-base text-ink",
+            unsaved.has("isPublic") &&
+              "-mx-2 rounded-lg border border-tan bg-peach/40 px-2 py-1",
+          )}
+        >
           <input
             type="checkbox"
             name="isPublic"
@@ -158,6 +201,7 @@ export function ProfileForm({
             className="size-4 accent-meeple"
           />
           Show my profile to other attendees
+          <Unsaved on={unsaved.has("isPublic")} />
         </label>
         <p className="text-sm text-ink/60">
           Your page at{" "}
@@ -174,16 +218,12 @@ export function ProfileForm({
         <Button
           type="submit"
           disabled={pending}
-          className={cn(dirty && "ring-4 ring-meeple/30")}
+          className={cn(dirty && "ring-4 ring-tan/60")}
         >
-          {pending ? "Saving…" : dirty ? "Save changes" : "Save profile"}
+          {pending ? "Saving…" : "Save profile"}
         </Button>
         {dirty && !pending && (
-          <span
-            role="status"
-            className="flex items-center gap-1.5 text-sm font-semibold text-meeple"
-          >
-            <span aria-hidden className="size-2 rounded-full bg-meeple" />
+          <span className="text-sm font-semibold text-ink/70">
             Unsaved changes
           </span>
         )}

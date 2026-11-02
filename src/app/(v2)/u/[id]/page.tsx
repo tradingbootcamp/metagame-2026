@@ -14,6 +14,7 @@ import {
   websiteLabel,
 } from "@/lib/user-profile";
 import AccountWall from "@/v2/components/AccountWall";
+import Avatar from "@/v2/components/Avatar";
 import ContentPage from "@/v2/components/ContentPage";
 import ClassBadges from "@/v2/components/megagame/ClassBadges";
 import UserSessions from "@/v2/components/schedule/UserSessions";
@@ -105,14 +106,11 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
         </p>
       )}
       <div className="flex max-w-[820px] flex-col gap-8 sm:flex-row sm:gap-10">
-        {profile.imageUrl && (
-          // eslint-disable-next-line @next/next/no-img-element -- already avatar-sized
-          <img
-            src={profile.imageUrl}
-            alt=""
-            className="size-40 shrink-0 rounded-full object-cover"
-          />
-        )}
+        <Avatar
+          imageUrl={profile.imageUrl}
+          name={profile.name}
+          className="size-40 text-5xl"
+        />
         <dl className="flex min-w-0 flex-1 flex-col gap-5">
           <Field label="Name">
             <span className="font-grotesk text-2xl font-bold text-navy">
