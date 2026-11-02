@@ -176,6 +176,7 @@ export default function NoteDialog({
                     type="button"
                     size="sm"
                     variant="ghost"
+                    className="border-[#1b1530]/40 text-[#1b1530] hover:border-[#1b1530] hover:bg-[#1b1530]/10"
                     disabled={busy}
                     onClick={() => setConfirmDelete(false)}
                   >
@@ -198,6 +199,7 @@ export default function NoteDialog({
               type="button"
               size="sm"
               variant="ghost"
+              className="border-[#1b1530]/40 text-[#1b1530] hover:border-[#1b1530] hover:bg-[#1b1530]/10"
               disabled={busy}
               onClick={onClose}
             >
@@ -207,6 +209,7 @@ export default function NoteDialog({
               <Button
                 type="button"
                 size="sm"
+                variant="navy"
                 disabled={busy || over || body.trim().length === 0}
                 onClick={() => act(() => onSubmit(body, color), !note)}
               >
