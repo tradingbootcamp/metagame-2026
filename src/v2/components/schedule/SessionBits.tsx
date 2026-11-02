@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import { ArmchairIcon } from "lucide-react";
 import { hostNames, type Ages, type Category } from "@/lib/schedule";
 import { CATEGORY_STYLES } from "@/v2/lib/schedule-styles";
 
@@ -37,7 +38,8 @@ export const LIMITED_SPOTS = "Limited spots: RSVP is a commitment";
 
 /**
  * A commitment session: RSVPs claim one of a limited number of spots. Sits
- * by the title like the age marks, on a pill so it reads on a coloured block.
+ * by the title like the age marks, on a pill so it reads on a coloured block;
+ * a vector icon rather than an emoji so it looks the same on every device.
  */
 export function LimitedSpotsMark() {
   return (
@@ -45,9 +47,9 @@ export function LimitedSpotsMark() {
       role="img"
       aria-label={LIMITED_SPOTS}
       title={LIMITED_SPOTS}
-      className="inline-flex shrink-0 items-center rounded-full border border-[#1b1530]/40 bg-white/80 px-1 text-[12px] leading-[18px]"
+      className="inline-flex size-[18px] shrink-0 items-center justify-center rounded-full border border-[#1b1530]/40 bg-white/80 text-[#1b1530]"
     >
-      🪑
+      <ArmchairIcon aria-hidden className="size-3" strokeWidth={2.25} />
     </span>
   );
 }
