@@ -3,9 +3,11 @@
 import type { CSSProperties } from "react";
 import { useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DropdownMenu } from "radix-ui";
 import { CircleUserRound, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { signOutInPlace } from "@/app/(v2)/account/actions";
+import { notifyAccountChanged } from "./useAccountStatus";
 
 const ITEM =
   "flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-base text-cream/85 outline-none select-none data-[highlighted]:bg-cream/10 data-[highlighted]:text-cream data-[disabled]:opacity-50 md:text-sm";
@@ -35,6 +37,7 @@ export default function AccountMenu({
   onPick?: () => void;
 }) {
   const [pending, start] = useTransition();
+  const router = useRouter();
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>
@@ -88,9 +91,11 @@ export default function AccountMenu({
               e.preventDefault();
               start(async () => {
                 await signOutInPlace();
-                // A full load, so the nav re-asks who's signed in even when
-                // we're already on "/".
-                window.location.assign("/");
+                // The nav only re-asks on a path change, so tell it; the
+                // refresh re-renders whatever server content was personal.
+                notifyAccountChanged();
+                router.push("/");
+                router.refresh();
               });
             }}
           >

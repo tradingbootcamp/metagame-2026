@@ -152,23 +152,7 @@ export default function ExpandingNav() {
     ...NAV_LINKS,
     ...(account ? [account.signedIn ? ACCOUNT_LINK : LOGIN_LINK] : []),
   ];
-  const accountMenu = (
-    current: boolean,
-    className: string,
-    style: React.CSSProperties,
-    tabIndex: number,
-    onPick?: () => void,
-  ) => (
-    <AccountMenu
-      admin={account?.admin ?? false}
-      userId={account?.userId ?? null}
-      current={current}
-      className={className}
-      style={style}
-      tabIndex={tabIndex}
-      onPick={onPick}
-    />
-  );
+
   const active = useActiveLink(links, section);
   // The die's top face: on "/" the section under the viewport centre, else
   // the current page's icon, or home's pips off-nav.
@@ -462,12 +446,14 @@ export default function ExpandingNav() {
               return (
                 <li key={id}>
                   {id === "account" ? (
-                    accountMenu(
-                      active === id,
-                      linkClass(active === id),
-                      style,
-                      unfold ? 0 : -1,
-                    )
+                    <AccountMenu
+                      admin={account?.admin ?? false}
+                      userId={account?.userId ?? null}
+                      current={active === id}
+                      className={linkClass(active === id)}
+                      style={style}
+                      tabIndex={unfold ? 0 : -1}
+                    />
                   ) : (
                     <Link
                       href={href}
@@ -521,13 +507,15 @@ export default function ExpandingNav() {
               return (
                 <li key={id}>
                   {id === "account" ? (
-                    accountMenu(
-                      active === id,
-                      linkClass(active === id),
-                      style,
-                      dropDown ? 0 : -1,
-                      () => setOpen(false),
-                    )
+                    <AccountMenu
+                      admin={account?.admin ?? false}
+                      userId={account?.userId ?? null}
+                      current={active === id}
+                      className={linkClass(active === id)}
+                      style={style}
+                      tabIndex={dropDown ? 0 : -1}
+                      onPick={() => setOpen(false)}
+                    />
                   ) : (
                     <Link
                       href={href}
