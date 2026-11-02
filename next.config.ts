@@ -70,9 +70,13 @@ const nextConfig: NextConfig = {
     },
     // Key dates used to be its own page, then a home-page section; now gone.
     { source: "/key-dates", destination: "/", permanent: true },
-    // /buy/<code> hands its code to the home page, which stores it for Standard checkout.
-    { source: "/buy", destination: "/", permanent: false },
-    { source: "/buy/:promo", destination: "/?promo=:promo", permanent: false },
+    // /buy/<code> hands its code to the tickets section, which stores it for Standard checkout.
+    { source: "/buy", destination: "/#tickets", permanent: false },
+    {
+      source: "/buy/:promo",
+      destination: "/?promo=:promo#tickets",
+      permanent: false,
+    },
     // Short links into Standard checkout; /ticket/<code> pre-applies a promo code.
     {
       source: "/:path(ticket|tickets)",

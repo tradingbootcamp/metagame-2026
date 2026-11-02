@@ -102,11 +102,11 @@ it("forwards a promo code through /go and keeps it for Standard checkout", async
   // A later tracking link without a code leaves it; one with a code replaces it.
   captureUtm("?utm_source=newer");
   expect(readPromo()).toBe("POSTER20");
-  captureUtm("?promo=OTHER");
+  expect(captureUtm("?promo=OTHER")).toBe("OTHER");
   expect(readPromo()).toBe("OTHER");
   // An invite link stores the friend's code as the discount and keeps the
   // referral even when the code is swapped out.
-  captureUtm("?ref=abcd-efgh");
+  expect(captureUtm("?ref=abcd-efgh")).toBe("");
   expect(readPromo()).toBe("ABCD-EFGH");
   setPromo("POSTER20");
   expect(withCodes("/api/checkout/stripe?tier=standard&code=own")).toBe(

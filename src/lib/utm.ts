@@ -64,8 +64,10 @@ export function pickUtm(
 /**
  * Record the first visit time, and store the landing URL's UTMs over any earlier
  * set so the latest tracking link wins. A URL without UTMs leaves the set alone.
+ * Returns the code a `?promo=` link carried, so the visitor can be told it was
+ * saved; a referral's own code isn't announced.
  */
-export function captureUtm(search: string): void {
+export function captureUtm(search: string): string {
   try {
     if (!localStorage.getItem(FIRST_VISIT_KEY)) {
       localStorage.setItem(FIRST_VISIT_KEY, new Date().toISOString());
@@ -78,11 +80,13 @@ export function captureUtm(search: string): void {
     }
     const ref = referralCodeOf(params.get(REFERRAL_PARAM));
     if (ref) sessionStorage.setItem(REFERRAL_STORAGE_KEY, ref);
-    const promo =
-      promoCode(params.get(PROMO_PARAM)) || (ref && formatReferralCode(ref));
+    const linked = promoCode(params.get(PROMO_PARAM));
+    const promo = linked || (ref && formatReferralCode(ref));
     if (promo) sessionStorage.setItem(PROMO_STORAGE_KEY, promo);
+    return linked;
   } catch {
     // Storage blocked — attribution is best-effort.
+    return "";
   }
 }
 
