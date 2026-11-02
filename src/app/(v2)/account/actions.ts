@@ -285,3 +285,8 @@ export async function signOut(): Promise<void> {
   await getAuth().api.signOut({ headers: await headers() });
   redirect("/");
 }
+
+/** Signs out without redirecting; the nav menu reloads the page itself. */
+export async function signOutInPlace(): Promise<void> {
+  await getAuth().api.signOut({ headers: await headers() });
+}

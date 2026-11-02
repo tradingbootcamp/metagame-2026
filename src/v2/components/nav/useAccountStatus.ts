@@ -3,7 +3,12 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-export type AccountStatus = { signedIn: boolean; admin: boolean };
+export type AccountStatus = {
+  signedIn: boolean;
+  admin: boolean;
+  /** For the profile link; null when signed out. */
+  userId: string | null;
+};
 
 // Asked from the client so the layout around the nav stays static; null
 // until the answer arrives, so the nav needn't guess which link to show.
@@ -21,6 +26,7 @@ export function useAccountStatus(): AccountStatus | null {
           setStatus({
             signedIn: body.signedIn === true,
             admin: body.admin === true,
+            userId: typeof body.userId === "string" ? body.userId : null,
           });
       })
       .catch(() => {});
