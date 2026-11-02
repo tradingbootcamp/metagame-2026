@@ -9,7 +9,7 @@ export default function UtmCapture() {
     const promo = captureUtm(window.location.search);
     stripUtmFromUrl();
     // Not checked against Stripe here; the discount modal does that at checkout.
-    if (promo) toast(`Promo code ${promo} saved from link`);
+    if (promo) toast(`Promo code “${promo.toUpperCase()}” saved from link`);
   }, []);
   return null;
 }
