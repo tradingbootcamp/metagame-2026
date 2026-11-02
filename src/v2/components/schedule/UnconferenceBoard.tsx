@@ -45,6 +45,15 @@ const BOARD_MIN = { width: 232, height: 12 * TILE_PX, tile: TILE_PX };
 const offset = (fraction: number, tile: number): string =>
   `calc(${fraction * 100}% - ${fraction * tile}px)`;
 
+// A pin, as the cursor, hotspot at its point. Inline so there is no asset to
+// ship or 404; the stroke is the note ink so it reads on the cork.
+const PIN_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"><g fill="none" stroke="%231b1530" stroke-width="1.5"><path d="M6 22 L12.5 15.5" stroke-linecap="round"/><circle cx="17" cy="11" r="6" fill="%23f8ccd9"/><circle cx="15" cy="9" r="1.8" fill="%23ffffff" stroke="none" opacity="0.8"/></g></svg>`,
+)}") 6 22, crosshair`;
+
+/** How long the pin rests before the board offers to take a note there. */
+const DWELL_MS = 450;
+
 const preview = (body: string): string =>
   body.length > NOTE_PREVIEW_MAX
     ? `${body.slice(0, NOTE_PREVIEW_MAX - 1).trimEnd()}…`
@@ -196,6 +205,57 @@ export default function UnconferenceBoard({
     board.compose(locationId, firstFreeSpot(notes, size));
   }
 
+  // Where the pin is resting, in board pixels, once it has been still long
+  // enough to mean it. Mouse only: a touch has no hover to read.
+  const [pin, setPin] = useState<{ x: number; y: number } | null>(null);
+  const [resting, setResting] = useState(false);
+  const dwell = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // `sliding`, not the drag ref: a ref read during render is off-limits, and
+  // a note under capture keeps these handlers from firing anyway.
+  const pinnable = board.canPost && !sliding;
+
+  const stopDwell = () => {
+    if (dwell.current) clearTimeout(dwell.current);
+    dwell.current = null;
+  };
+  useEffect(() => stopDwell, []);
+
+  function trackPin(e: React.PointerEvent) {
+    if (e.pointerType !== "mouse" || !pinnable) return;
+    const rect = surface.current?.getBoundingClientRect();
+    if (!rect) return;
+    setPin({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setResting(false);
+    stopDwell();
+    dwell.current = setTimeout(() => setResting(true), DWELL_MS);
+  }
+
+  function dropPin() {
+    stopDwell();
+    setPin(null);
+    setResting(false);
+  }
+
+  /** A click on bare cork pins a note where the point was, not anywhere. */
+  function pinHere(e: React.MouseEvent) {
+    // Only the cork itself: a click on a note is that note's to handle.
+    if (e.target !== e.currentTarget || !pinnable) return;
+    const rect = surface.current?.getBoundingClientRect();
+    if (!rect) return;
+    const spanX = rect.width - TILE_PX;
+    const spanY = rect.height - TILE_PX;
+    // The point lands where the pin was, so the tile hangs below and right of
+    // it the way a real one would.
+    board.compose(
+      locationId,
+      clampNotePosition(
+        spanX > 0 ? (e.clientX - rect.left) / spanX : 0,
+        spanY > 0 ? (e.clientY - rect.top) / spanY : 0,
+      ),
+    );
+    dropPin();
+  }
+
   return (
     <div className="absolute inset-0 flex flex-col overflow-hidden bg-[#c08a55]/20">
       <div className={BAR}>
@@ -207,11 +267,29 @@ export default function UnconferenceBoard({
           <PostHint className="text-[#1b1530]/55" />
         )}
       </div>
-      <div ref={surface} className="relative min-h-0 flex-1">
+      <div
+        ref={surface}
+        onPointerMove={trackPin}
+        onPointerLeave={dropPin}
+        onClick={pinHere}
+        style={pinnable ? { cursor: PIN_CURSOR } : undefined}
+        className="relative min-h-0 flex-1"
+      >
         {notes.length === 0 && (
           <p className="px-2 py-3 text-center text-[11px] text-[#1b1530]/45">
             Nothing pinned up yet.
           </p>
+        )}
+        {/* Only after the pin has rested: following the cursor from the first
+            pixel would flicker across the board on the way to a note. */}
+        {pin && resting && (
+          <span
+            aria-hidden
+            style={{ left: pin.x + 14, top: pin.y + 6 }}
+            className="pointer-events-none absolute rounded-[2px] bg-[#1b1530] px-1.5 py-0.5 text-[10px] whitespace-nowrap text-cream shadow-sm"
+          >
+            Add a note
+          </span>
         )}
         {/* Back to front: the oldest note is last, so it paints on top. No
             z-index anywhere, including mid-drag — that order is the point. */}
