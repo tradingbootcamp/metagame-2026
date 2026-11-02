@@ -47,7 +47,8 @@ export function CategoryLegend() {
       ))}
       <span className="flex items-center gap-1.5 text-xs">
         <LimitedSpotsMark />
-        {LIMITED_SPOTS}
+        <span className="sm:hidden">RSVP = commitment</span>
+        <span className="hidden sm:inline">{LIMITED_SPOTS}</span>
       </span>
       <span className="flex items-center gap-1.5 text-xs">
         <AgeMark ages="adults" />
