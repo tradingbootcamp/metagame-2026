@@ -531,6 +531,18 @@ export function heightPx(session: Placed<Timed>): number {
   return Math.max(SLOT_PX, dur * PX_PER_MIN);
 }
 
+// A block's text metrics: p-1.5 padding, 13px/tight title lines, and one
+// 11px/tight host line kept clear below the title.
+const BLOCK_PADDING_PX = 12;
+const TITLE_LINE_PX = 16;
+const HOST_LINE_PX = 16;
+
+/** Title lines a block has room for before the hosts line; three at least. */
+export function titleLines(session: Placed<Timed>): number {
+  const room = heightPx(session) - BLOCK_PADDING_PX - HOST_LINE_PX;
+  return Math.max(3, Math.floor(room / TITLE_LINE_PX));
+}
+
 export function startsInSlot(
   session: Placed<Timed>,
   slotStart: number,

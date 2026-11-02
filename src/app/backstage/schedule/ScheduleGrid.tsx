@@ -11,6 +11,7 @@ import {
   fromPacificWall,
   heightPx,
   hostNames,
+  titleLines,
   laneInset,
   minutesToHHMM,
   movedTimes,
@@ -146,7 +147,7 @@ function SessionBlock({
         title={`${session.title}${session.hosts.length ? " — " + hostNames(session) : ""}${draft ? " (draft)" : ""}`}
         className="block h-full w-full p-1.5 pr-4 text-left"
       >
-        <BlockSummary session={session} />
+        <BlockSummary session={session} titleLines={titleLines(session)} />
         {(going > 0 || session.maxCapacity !== null) && (
           <span className="mt-0.5 block text-[11px] leading-tight text-[#1b1530]/70">
             👤 {going}
