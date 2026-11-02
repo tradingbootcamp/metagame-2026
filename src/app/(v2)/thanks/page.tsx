@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type Stripe from "stripe";
 import Link from "next/link";
 import { signupCreatedAt } from "@/lib/airtable";
 import { referrerName } from "@/lib/referral-store";
@@ -23,25 +24,33 @@ async function paidSession(sessionId: string | undefined): Promise<{
   if (!sessionId) return null;
   const stripe = getStripe();
   if (!stripe) return null;
+  let session: Stripe.Checkout.Session;
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (session.payment_status === "unpaid") return null;
-    const referredBy = session.metadata?.referred_by;
-    const referrer = referredBy
-      ? await referrerName(referredBy).catch(() => null)
-      : null;
-    const email = session.customer_details?.email;
-    if (session.metadata?.tier === FAMILY_PACK.id || !email)
-      return { buyer: null, referrer };
-    // A row older than the checkout means they were on the list already (the
-    // webhook left them alone); a newer or not-yet-written one is this purchase's.
-    const signedUp = await signupCreatedAt(email);
-    const subscribed =
-      !signedUp || signedUp.getTime() >= session.created * 1000;
-    return { buyer: subscribed ? { sessionId, email } : null, referrer };
+    session = await stripe.checkout.sessions.retrieve(sessionId);
   } catch {
     return null;
   }
+  if (session.payment_status === "unpaid") return null;
+  const [referrer, buyer] = await Promise.all([
+    session.metadata?.referred_by
+      ? referrerName(session.metadata.referred_by).catch(() => null)
+      : null,
+    newlySubscribed(session).catch(() => null),
+  ]);
+  return { buyer: buyer ? { sessionId, email: buyer } : null, referrer };
+}
+
+// The buyer's email when this purchase put them on the mailing list: a signup
+// row older than the checkout means they were on it already (the webhook left
+// them alone); a newer or not-yet-written one is this purchase's.
+async function newlySubscribed(
+  session: Stripe.Checkout.Session,
+): Promise<string | null> {
+  if (session.metadata?.tier === FAMILY_PACK.id) return null;
+  const email = session.customer_details?.email;
+  if (!email) return null;
+  const signedUp = await signupCreatedAt(email);
+  return signedUp && signedUp.getTime() < session.created * 1000 ? null : email;
 }
 
 export default async function ThanksPage({
