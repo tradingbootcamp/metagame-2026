@@ -529,15 +529,23 @@ export function heightPx(session: Placed<Timed>): number {
   return Math.max(SLOT_PX, dur * PX_PER_MIN);
 }
 
-// A block's text metrics: p-1.5 padding, 13px/tight title lines, and one
-// 11px/tight host line kept clear below the title.
+// A block's text metrics: p-1.5 padding, 13px/tight title lines, one
+// 11px/tight host line kept clear below the title, and the Sponsor tag's row
+// above it when there is one.
 const BLOCK_PADDING_PX = 12;
 const TITLE_LINE_PX = 16;
 const HOST_LINE_PX = 16;
+const TAG_ROW_PX = 18;
 
 /** Title lines a block has room for before the hosts line; three at least. */
-export function titleLines(session: Placed<Timed>): number {
-  const room = heightPx(session) - BLOCK_PADDING_PX - HOST_LINE_PX;
+export function titleLines(
+  session: Placed<Timed> & { sponsored?: boolean },
+): number {
+  const room =
+    heightPx(session) -
+    BLOCK_PADDING_PX -
+    HOST_LINE_PX -
+    (session.sponsored ? TAG_ROW_PX : 0);
   return Math.max(3, Math.floor(room / TITLE_LINE_PX));
 }
 

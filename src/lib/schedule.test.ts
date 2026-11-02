@@ -64,6 +64,10 @@ describe("titleLines", () => {
     expect(titleLines(timed(60))).toBe(5);
     expect(titleLines(timed(120))).toBe(12);
   });
+  it("gives a line up to the Sponsor tag", () => {
+    expect(titleLines({ ...timed(60), sponsored: true })).toBe(4);
+    expect(titleLines({ ...timed(30), sponsored: true })).toBe(3);
+  });
 });
 
 describe("slotLabel", () => {
