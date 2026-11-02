@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { readPromo, setPromo, withCodes, withUtm } from "@/lib/utm";
 import { stripeCheckoutHref } from "@/v2/lib/tickets";
@@ -101,6 +102,7 @@ export default function DiscountModal({ onClose }: { onClose: () => void }) {
               "Couldn't check that code; a valid one still applies at checkout."
             ) : saving.usdOff ? (
               <>
+                <Check aria-hidden className="size-4 self-center text-moss" />
                 <span className="text-cream">${saving.usdOff} off</span>
                 <span className="text-cream/50 line-through">
                   ${saving.full}
@@ -110,7 +112,10 @@ export default function DiscountModal({ onClose }: { onClose: () => void }) {
                 </span>
               </>
             ) : (
-              <span className="text-salmon">Unrecognized code</span>
+              <span className="flex items-center gap-1 text-salmon">
+                <X aria-hidden className="size-4" />
+                Unrecognized code
+              </span>
             )}
           </p>
 
