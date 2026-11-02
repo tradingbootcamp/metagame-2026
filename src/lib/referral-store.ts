@@ -82,6 +82,16 @@ export async function lookupReferrer(code: string): Promise<string | null> {
   return row?.paymentId ?? null;
 }
 
+/** How a referred buyer sees their referrer: the ticket's name, else its email. */
+export async function referrerName(paymentId: string): Promise<string | null> {
+  const [row] = await getDb()
+    .select({ name: tickets.purchaserName, email: tickets.purchaserEmail })
+    .from(tickets)
+    .where(and(visible, eq(tickets.paymentId, paymentId)))
+    .limit(1);
+  return row?.name || row?.email || null;
+}
+
 /**
  * Who bought with whose code, for the admin table: the referrer's ticket code
  * for each paid referred ticket, and how many each ticket referred.
