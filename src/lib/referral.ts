@@ -45,16 +45,3 @@ export function couponUsdOff(
     return Math.min(fullUsd, coupon.amount_off / 100);
   return 0;
 }
-
-/**
- * One discount applies per checkout: the bigger wins, the promo on a tie.
- * `promoUsdOff` is null without a live promo code; a referral with no coupon
- * configured is worth 0.
- */
-export function pickDiscount(
-  promoUsdOff: number | null,
-  referralUsdOff: number,
-): "promo" | "referral" | null {
-  if (promoUsdOff !== null && promoUsdOff >= referralUsdOff) return "promo";
-  return referralUsdOff > 0 ? "referral" : null;
-}

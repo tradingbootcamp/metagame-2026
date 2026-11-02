@@ -4,7 +4,8 @@ import { isEarlyBirdActive } from "@/lib/early-bird";
 import { sendAdminErrorEmail } from "@/lib/email";
 import { REFERRAL_PARAM } from "@/lib/referral";
 import {
-  resolveStandardDiscounts,
+  referralMetadata,
+  resolveDiscount,
   type DiscountParams,
 } from "@/lib/referral-checkout";
 import { getStripe } from "@/lib/stripe";
@@ -91,34 +92,29 @@ function compUtm(promo: Stripe.PromotionCode): Utm {
 }
 
 /**
- * A `promo` (typed in the buy modal or carried by a /ticket/CODE link) and a
- * referral `ref` resolve to the one bigger discount, locked in so Stripe shows
- * no code box; the tier's own code counts as the promo during early-bird,
- * except on the unlisted `code=own` link. With neither, the box is shown.
+ * A `promo` (from the discount modal or a /ticket/CODE link) locks in its
+ * discount so Stripe shows no code box; the tier's own code counts as the
+ * promo during early-bird, except on the unlisted `code=own` link. Without a
+ * live one, the box is shown.
  */
 async function promoParams(
   stripe: Stripe,
   ticket: TicketTier,
   params: URLSearchParams,
-): Promise<{
-  session: DiscountParams;
-  metadata: Record<string, string>;
-  utm: Utm;
-}> {
+): Promise<{ session: DiscountParams; utm: Utm }> {
   const linked = params.get("promo")?.trim();
   const earlyBird =
     params.get("code") !== "own" && isEarlyBirdActive()
       ? ticket.promoCode
       : undefined;
-  const { session, metadata, promo, applied } = await resolveStandardDiscounts(
+  const discount = await resolveDiscount(
     stripe,
-    { promo: linked || earlyBird, ref: params.get(REFERRAL_PARAM) },
+    linked || earlyBird,
     ticket.prices.full.usd,
   );
   return {
-    session,
-    metadata,
-    utm: linked && promo && applied === "promo" ? compUtm(promo.promo) : {},
+    session: discount?.session ?? { allow_promotion_codes: true },
+    utm: linked && discount?.promo ? compUtm(discount.promo) : {},
   };
 }
 
@@ -126,9 +122,10 @@ async function promoParams(
  * GET /api/checkout/stripe?tier=standard[&code=own | &promo=<code>][&ref=<referral>]
  *   | ?tier=supporter&chip=<usd> | ?tier=day-pass&day=<friday|saturday|sunday>
  *   [&utm_source=…&utm_medium=…&utm_campaign=…&first_visit=…&posthog_id=…&posthog_session_id=…]
- * Creates a hosted Checkout Session and redirects to it. The buy modal
- * (/#buy, where /invite/<ref> lands) links here, and /ticket and /ticket/<code>
- * redirect here (next.config.ts).
+ * Creates a hosted Checkout Session and redirects to it. `ref` is the
+ * referral a visitor arrived with (/invite/<code>), recorded on any tier; the
+ * tickets section links here, and /ticket and /ticket/<code> redirect here
+ * (next.config.ts).
  */
 export async function GET(request: Request) {
   const stripe = getStripe();
@@ -146,9 +143,12 @@ export async function GET(request: Request) {
 
   const origin = resolveOrigin(request);
   try {
-    const promo = purchase.ticket
-      ? await promoParams(stripe, purchase.ticket, params)
-      : undefined;
+    const [promo, referral] = await Promise.all([
+      purchase.ticket
+        ? promoParams(stripe, purchase.ticket, params)
+        : undefined,
+      referralMetadata(params.get(REFERRAL_PARAM)),
+    ]);
     const utm = pickUtm((k) => params.get(k));
     // UTMs on the link itself win over the ones a comp code implies.
     const tagged = Object.keys(utm).some((k) => k.startsWith("utm_"));
@@ -159,7 +159,7 @@ export async function GET(request: Request) {
         ...discount,
         metadata: {
           ...purchase.metadata,
-          ...promo?.metadata,
+          ...referral,
           ...(tagged ? {} : promo?.utm),
           ...utm,
         },

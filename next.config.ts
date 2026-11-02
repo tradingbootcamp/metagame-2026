@@ -84,10 +84,10 @@ const nextConfig: NextConfig = {
       destination: "/api/checkout/stripe?tier=standard&promo=:promo",
       permanent: false,
     },
-    // A friend's referral link: the home page opens the buy modal with the code in.
+    // A friend's referral link: the tickets section with their code filled in.
     {
       source: "/invite/:ref",
-      destination: "/?ref=:ref#buy",
+      destination: "/?ref=:ref#tickets",
       permanent: false,
     },
     // Shareable short links to the Partiful RSVPs.

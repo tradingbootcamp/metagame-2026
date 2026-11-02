@@ -241,7 +241,7 @@ export async function POST(request: Request) {
       amountDiscount,
       receiptUrl: charge?.receipt_url ?? undefined,
       discordHandle: discord ?? undefined,
-      // The buy modal puts the referrer on the session whatever discount won.
+      // Checkout puts the referrer on the session whatever code was used.
       notes: full.metadata?.referral_code
         ? `Referred with code ${full.metadata.referral_code}.`
         : undefined,

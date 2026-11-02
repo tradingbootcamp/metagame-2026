@@ -3,8 +3,6 @@ import {
   canRefer,
   couponUsdOff,
   formatReferralCode,
-  pickDiscount,
-  REFERRAL_USD_OFF,
   referralCodeOf,
 } from "./referral";
 
@@ -40,17 +38,5 @@ describe("couponUsdOff", () => {
     expect(couponUsdOff({ amount_off: 100000 }, 425)).toBe(425);
     expect(couponUsdOff({ amount_off: 10000, currency: "eur" }, 425)).toBe(0);
     expect(couponUsdOff({}, 425)).toBe(0);
-  });
-});
-
-describe("pickDiscount", () => {
-  it("locks in the bigger of promo and referral, the promo on a tie", () => {
-    expect(pickDiscount(212.5, REFERRAL_USD_OFF)).toBe("promo");
-    expect(pickDiscount(20, REFERRAL_USD_OFF)).toBe("referral");
-    expect(pickDiscount(50, 50)).toBe("promo");
-  });
-
-  it("leaves the code box open with neither", () => {
-    expect(pickDiscount(null, 0)).toBe(null);
   });
 });
