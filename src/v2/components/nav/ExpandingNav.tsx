@@ -274,10 +274,14 @@ export default function ExpandingNav() {
   useEffect(() => {
     if (!expanded) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      // The account menu portals out of the nav; it still counts as inside.
+      const inMenu = (target as Element).closest?.("[data-nav-menu]");
+      if (!rootRef.current?.contains(target) && !inMenu) setOpen(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      // An Escape the menu already used closes just the menu.
+      if (e.key === "Escape" && !e.defaultPrevented) setOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);

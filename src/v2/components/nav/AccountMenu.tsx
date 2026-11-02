@@ -53,6 +53,7 @@ export default function AccountMenu({
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
+          data-nav-menu=""
           align="start"
           sideOffset={6}
           className="z-50 min-w-44 rounded-lg border border-cream/15 bg-ink p-1 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
