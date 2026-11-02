@@ -147,25 +147,33 @@ export function ViewToggle({
   onSelect,
   labels,
   views = ["grid", "list"],
+  iconsOnly = false,
+  className = "",
 }: {
   view: View;
   onSelect: (v: View) => void;
   labels?: Partial<Record<View, string>>;
   views?: View[];
+  /** Icons with the names for screen readers only, for a tight row. */
+  iconsOnly?: boolean;
+  className?: string;
 }) {
   return (
-    <div role="group" aria-label="View" className={TOGGLE}>
+    <div role="group" aria-label="View" className={`${TOGGLE} ${className}`}>
       {VIEWS.filter((v) => views.includes(v.id)).map(
         ({ id, label, Icon }, i) => (
           <button
             key={id}
             type="button"
             aria-pressed={view === id}
+            title={iconsOnly ? (labels?.[id] ?? label) : undefined}
             onClick={() => onSelect(id)}
             className={`flex items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(view === id, i)}`}
           >
-            <Icon size={12} />
-            {labels?.[id] ?? label}
+            <Icon size={iconsOnly ? 14 : 12} />
+            <span className={iconsOnly ? "sr-only" : undefined}>
+              {labels?.[id] ?? label}
+            </span>
           </button>
         ),
       )}
