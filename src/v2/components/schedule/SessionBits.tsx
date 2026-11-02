@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { hostNames, type Ages, type Category } from "@/lib/schedule";
 import { CATEGORY_STYLES } from "@/v2/lib/schedule-styles";
 
@@ -21,34 +21,56 @@ export function AgeMark({ ages }: { ages: Ages | null }) {
   return null;
 }
 
-export function SponsorTag() {
+function Tag({ children }: { children: ReactNode }) {
   return (
     <span className="w-fit shrink-0 rounded border border-[#1b1530]/40 bg-white/70 px-1.5 py-0.5 text-[10px] leading-none font-semibold tracking-wide text-[#1b1530] uppercase">
-      Sponsor
+      {children}
     </span>
+  );
+}
+
+export function SponsorTag() {
+  return <Tag>Sponsor</Tag>;
+}
+
+/** A commitment session: RSVPs claim one of a limited number of spots. */
+export function LimitedSpotsTag() {
+  return <Tag>Limited spots</Tag>;
+}
+
+export type Flagged = { rsvpIsCommitment: boolean; sponsored: boolean };
+
+export const hasTags = (s: Flagged) => s.rsvpIsCommitment || s.sponsored;
+
+/** The flag tags a session shows wherever it's listed. */
+export function SessionTags({ session }: { session: Flagged }) {
+  return (
+    <>
+      {session.rsvpIsCommitment && <LimitedSpotsTag />}
+      {session.sponsored && <SponsorTag />}
+    </>
   );
 }
 
 export const blockStyle = (s: { category: Category | null }): CSSProperties =>
   CATEGORY_STYLES[s.category ?? "other"];
 
-/** Sponsor tag, title, age mark and hosts, as a grid block shows them. */
+/** Flag tags, title, age mark and hosts, as a grid block shows them. */
 export function BlockSummary({
   session,
 }: {
-  session: {
+  session: Flagged & {
     title: string;
     ages: Ages | null;
-    sponsored: boolean;
     hosts: { name: string }[];
   };
 }) {
   return (
     <>
-      {/* Above the title, so a short block's overflow can't clip it. */}
-      {session.sponsored && (
-        <span className="mb-0.5 flex">
-          <SponsorTag />
+      {/* Above the title, so a short block's overflow can't clip them. */}
+      {hasTags(session) && (
+        <span className="mb-0.5 flex flex-wrap gap-1">
+          <SessionTags session={session} />
         </span>
       )}
       <span className="flex items-start gap-1 text-[13px] leading-tight font-semibold">

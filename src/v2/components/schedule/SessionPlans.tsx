@@ -41,6 +41,12 @@ export default function SessionPlans({
 
   return (
     <>
+      {commitment && (
+        <p className="text-sm text-[#1b1530]/70">
+          Spots are limited and the host is counting on you, so only RSVP if
+          you&rsquo;ll be there.
+        </p>
+      )}
       {plan ? (
         <PlanButtons
           sessionId={sessionId}
