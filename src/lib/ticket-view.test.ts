@@ -38,6 +38,7 @@ describe("ticketView", () => {
       code: "A2C-4EF",
       transferred: false,
       referralCode: null,
+      referredBy: null,
     });
   });
 

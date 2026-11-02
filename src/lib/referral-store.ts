@@ -87,13 +87,27 @@ export async function lookupReferrer(code: string): Promise<string | null> {
 }
 
 /** How a referred buyer sees their referrer: the ticket's name, else its email. */
-export async function referrerName(paymentId: string): Promise<string | null> {
-  const [row] = await getDb()
-    .select({ name: tickets.purchaserName, email: tickets.purchaserEmail })
+export async function referrerNames(
+  paymentIds: string[],
+): Promise<Map<string, string>> {
+  if (paymentIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({
+      id: tickets.paymentId,
+      name: tickets.purchaserName,
+      email: tickets.purchaserEmail,
+    })
     .from(tickets)
-    .where(and(visible, eq(tickets.paymentId, paymentId)))
-    .limit(1);
-  return row?.name || row?.email || null;
+    .where(and(visible, inArray(tickets.paymentId, paymentIds)));
+  return new Map(
+    rows.flatMap((r) =>
+      r.name || r.email ? [[r.id, r.name || r.email!]] : [],
+    ),
+  );
+}
+
+export async function referrerName(paymentId: string): Promise<string | null> {
+  return (await referrerNames([paymentId])).get(paymentId) ?? null;
 }
 
 /**

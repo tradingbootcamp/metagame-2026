@@ -23,7 +23,7 @@ import {
   loadSchedule,
   loadViewerPlans,
 } from "@/lib/schedule-store";
-import { mintReferralCodes } from "@/lib/referral-store";
+import { mintReferralCodes, referrerNames } from "@/lib/referral-store";
 import { emailKey, ticketsForUser } from "@/lib/ticket-store";
 import { ticketView } from "@/lib/ticket-view";
 import { Button } from "@/v2/components/ui/button";
@@ -76,10 +76,24 @@ export default async function AccountPage({
     loadMegagameLevels(user.id),
   ]);
   // Referral codes are minted the first time their holder looks.
-  await mintReferralCodes(rows, user.id, email).catch((err) =>
-    console.error("[account] referral codes not minted:", err),
+  const [, referrers] = await Promise.all([
+    mintReferralCodes(rows, user.id, email).catch((err) =>
+      console.error("[account] referral codes not minted:", err),
+    ),
+    referrerNames(
+      rows.flatMap((t) =>
+        t.referredByPaymentId ? [t.referredByPaymentId] : [],
+      ),
+    ),
+  ]);
+  const tickets = rows.map((t) =>
+    ticketView(
+      t,
+      user.id,
+      email,
+      (t.referredByPaymentId && referrers.get(t.referredByPaymentId)) || null,
+    ),
   );
-  const tickets = rows.map((t) => ticketView(t, user.id, email));
 
   return (
     // Same measure and top clearance as ContentPage, without its title block.

@@ -194,6 +194,11 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                     </button>
                   </span>
                 )}
+                {t.referredBy && (
+                  <span className="basis-full text-sm text-ink/60">
+                    Referred by {t.referredBy}
+                  </span>
+                )}
                 {t.referralCode && t.status === "paid" && (
                   <InviteCode code={t.referralCode} />
                 )}
