@@ -224,11 +224,7 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
           )}
         </p>
       )}
-      {holdsOne ? (
-        <p className="text-sm text-ink/70">
-          You&apos;re all set: you have a ticket.
-        </p>
-      ) : (
+      {!holdsOne && (
         <form action={action} className="flex flex-col gap-2">
           <label
             id="code-label"
