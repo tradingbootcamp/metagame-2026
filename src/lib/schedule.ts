@@ -52,6 +52,8 @@ export type ScheduleSession = {
   /** An RSVP claims a limited spot people rely on, not just interest. */
   rsvpIsCommitment: boolean;
   sponsored: boolean;
+  /** False until the team opens RSVPs; the button is greyed out meanwhile. */
+  rsvpsOpen: boolean;
   /** The Airtable RFP Submissions row this came from. */
   airtableRfpRecordId: string | null;
   /** Billing order, lead first. */
@@ -791,6 +793,7 @@ export type PublicSession = Pick<
   | "ages"
   | "rsvpIsCommitment"
   | "sponsored"
+  | "rsvpsOpen"
 > & { startsAt: string; endsAt: string; hosts: { name: string }[] };
 
 export type PublicLocation = Pick<
@@ -851,6 +854,7 @@ export function publicSchedule(
       ages: s.ages,
       rsvpIsCommitment: s.rsvpIsCommitment,
       sponsored: s.sponsored,
+      rsvpsOpen: s.rsvpsOpen,
       hosts: s.hosts.map((h) => ({ name: publicAccountName(h) })),
     }));
   const locations = rooms.map((l) => ({

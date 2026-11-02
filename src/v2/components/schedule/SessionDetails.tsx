@@ -265,6 +265,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
           sessionId={session.id}
           capacity={cap}
           commitment={session.rsvpIsCommitment}
+          open={session.rsvpsOpen}
           conflicts={
             viewerId && plans && raw
               ? planConflicts(

@@ -14,6 +14,7 @@ export default function SessionPlans({
   sessionId,
   capacity,
   commitment,
+  open,
   conflicts,
   rsvps: initial,
   ticket,
@@ -23,6 +24,7 @@ export default function SessionPlans({
   sessionId: string;
   capacity: number | null;
   commitment: boolean;
+  open: boolean;
   conflicts: PlanConflict[];
   rsvps: SessionRsvps;
   ticket?: RsvpTicket;
@@ -46,6 +48,7 @@ export default function SessionPlans({
           bookmarked={plan.bookmarked}
           full={capacity !== null && rsvps.going >= capacity}
           commitment={commitment}
+          open={open}
           conflicts={conflicts}
           ticket={ticket}
           onSettled={(result) => result.rsvps && setRsvps(result.rsvps)}
