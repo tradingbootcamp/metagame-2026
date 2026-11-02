@@ -28,8 +28,7 @@ export default function ChildcarePage() {
             registration form below.
           </p>
           <p className="mt-3">
-            All children attending Metagame must be registered by{" "}
-            <strong className="font-semibold text-navy">October 15</strong>,
+            All children attending Metagame must be registered,
             whether or not they&apos;re signing up for childcare.
           </p>
           <Button asChild variant="navy" className="mt-5">
