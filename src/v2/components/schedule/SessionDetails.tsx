@@ -297,11 +297,6 @@ export default async function SessionDetails({ slug }: { slug: string }) {
             </p>
           }
         />
-        {plans && !rsvps.names && (
-          <p className="text-sm text-[#1b1530]/60">
-            Claim your ticket to see who&rsquo;s coming.
-          </p>
-        )}
       </section>
 
       {editor && (
