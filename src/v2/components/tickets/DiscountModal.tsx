@@ -110,7 +110,7 @@ export default function DiscountModal({ onClose }: { onClose: () => void }) {
                 </span>
               </>
             ) : (
-              "That code isn't active."
+              <span className="text-salmon">Unrecognized code</span>
             )}
           </p>
 
