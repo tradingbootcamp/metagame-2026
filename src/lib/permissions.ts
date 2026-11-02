@@ -66,7 +66,8 @@ export const PERMISSIONS = {
     group: "Schedule",
     level: "view",
     label: "Preview schedule",
-    description: "See the public schedule before it opens.",
+    description:
+      "Saw the schedule before it opened to everyone; gates nothing now.",
   },
   "schedule.rsvps": {
     audience: "attendee",

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { loadProfileView } from "./data";
-import { canSeeSchedule, scheduleViewer } from "../../schedule/data";
+import { scheduleViewer } from "../../schedule/data";
 import { currentSession } from "@/lib/auth";
 import { loadMegagameLevels } from "@/lib/megagame-store";
 import { loadSchedule } from "@/lib/schedule-store";
@@ -53,9 +53,8 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
   if (!view) notFound();
   const { profile, access } = view;
 
-  const [schedule, linkable, viewer, levels] = await Promise.all([
+  const [schedule, viewer, levels] = await Promise.all([
     loadSchedule(),
-    canSeeSchedule(),
     scheduleViewer(),
     loadMegagameLevels(id),
   ]);
@@ -119,7 +118,7 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
             sessions={sessions}
             locations={locations}
             roles={["hosting"]}
-            linkable={linkable}
+            linkable
             emptyLabel={`${profile.name} isn't hosting any sessions yet.`}
           />
         </div>

@@ -11,7 +11,6 @@ import MegagameSummary from "./MegagameSummary";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel from "./TicketsPanel";
 import { parseAccountTab } from "./tabs";
-import { canSeeSchedule } from "../schedule/data";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
 import { can, teamAccess } from "@/lib/access";
@@ -55,7 +54,6 @@ export default async function AccountPage({
     schedule,
     plans,
     counts,
-    linkable,
     admin,
     backstage,
     levels,
@@ -70,7 +68,6 @@ export default async function AccountPage({
     loadSchedule(),
     loadViewerPlans(user.id),
     loadRsvpCounts(),
-    canSeeSchedule(),
     can("schedule.manage"),
     teamAccess().then((a) => a?.team ?? false),
     loadMegagameLevels(user.id),
@@ -149,7 +146,7 @@ export default async function AccountPage({
           ),
           sessions: (
             <SessionsPanel
-              linkable={linkable}
+              linkable
               sessions={accountSessions(
                 user.id,
                 schedule.sessions,
