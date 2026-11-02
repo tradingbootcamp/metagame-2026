@@ -23,6 +23,7 @@ import PersonCard from "@/v2/components/PersonCard";
 import SectionHeading from "@/v2/components/SectionHeading";
 import SignupForm from "@/v2/components/signup/SignupForm";
 import SiteHero from "@/v2/components/SiteHero";
+import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
 import {
   EYEBROW,
   HEADING,
@@ -56,13 +57,19 @@ import HatImage from "@/v2/hat-trick/HatImage";
 import { HATS } from "@/v2/hat-trick/hats";
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
+import { connection } from "next/server";
+import { env } from "@/env";
+import { canSeeSchedule } from "@/app/(v2)/schedule/data";
+import { buildDays, publicSchedule } from "@/lib/schedule";
+import { loadSchedule } from "@/lib/schedule-store";
 import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
 import megagameChess from "../../../public/images/megagame-chess.jpg";
 import nightMarketCooks from "../../../public/images/email/night_market_cooks.jpg";
 
 // Re-render hourly so the early-bird gate flips at the deadline and the key
 // dates' "Today" stop advances without a deploy.
-export const revalidate = 3600;
+// Rendered per request while the schedule section is gated to previewers;
+// the launch PR that opens the schedule restores the page's caching.
 
 export const metadata: Metadata = {
   title: "Metagame — Nov 6-8, 2026",
@@ -261,7 +268,15 @@ const FAQS: {
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  await connection();
+  // Until launch only schedule previewers get the section, so the page can
+  // go to production for a look first. Public rooms only, no per-viewer
+  // state. CI builds with no database, hence the guard.
+  const schedule =
+    env.DATABASE_URL && (await canSeeSchedule())
+      ? publicSchedule(await loadSchedule(), "public")
+      : null;
   const earlyBird = isEarlyBirdActive();
   return (
     <>
@@ -326,6 +341,35 @@ export default function Home() {
       </section>
 
       <CardSuitsDivider />
+
+      {/* schedule */}
+      {schedule && (
+        <>
+          <section id="schedule" className={`${SECTION} md:py-14`}>
+            <div className={CONTAINER}>
+              <SectionHeading eyebrow="What’s on?" title="Schedule" />
+              <p className={`${PROSE} max-w-[600px]`}>
+                <Link
+                  href="/schedule"
+                  className="font-semibold text-navy underline"
+                >
+                  Open the full schedule
+                </Link>{" "}
+                to RSVP and bookmark.
+              </p>
+            </div>
+            <div className="mt-10 px-4 sm:px-8">
+              <PublicSchedule
+                days={buildDays(schedule.sessions)}
+                locations={schedule.locations}
+                mine={null}
+              />
+            </div>
+          </section>
+
+          <DiceDivider />
+        </>
+      )}
 
       {/* get involved */}
       <section id="get-involved" className={`${SECTION} md:py-14`}>
