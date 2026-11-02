@@ -38,15 +38,13 @@ describe("ticketView", () => {
       code: "A2C-4EF",
       transferred: false,
       referralCode: null,
-      referrals: 0,
     });
   });
 
   it("shows the referral code to the holder and the owner, nobody else", () => {
     const r = row({ referralCode: "ABCDEFGH", referredByPaymentId: "pi_0" });
-    expect(ticketView(r, ...ada, 2)).toMatchObject({
+    expect(ticketView(r, ...ada)).toMatchObject({
       referralCode: "ABCD-EFGH",
-      referrals: 2,
     });
     expect(
       ticketView({ ...r, ownerUserId: "u2" }, "u2", "bob@example.com"),

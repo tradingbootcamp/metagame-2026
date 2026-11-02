@@ -11,7 +11,6 @@ import {
 import { CheckIcon, CopyIcon, LinkIcon } from "lucide-react";
 import { Button } from "@/v2/components/ui/button";
 import PinInput from "@/v2/components/auth/PinInput";
-import { FAMILY_PACK } from "@/lib/family-pack";
 import {
   TICKET_CODE_LENGTH,
   normalizeTicketCode,
@@ -73,7 +72,7 @@ function CopyButton({
  * The ticket's referral code and invite link. A friend who buys with it pays
  * the Family & Friends price, and both tickets count for the swag.
  */
-function InviteCode({ code, referrals }: { code: string; referrals: number }) {
+function InviteCode({ code }: { code: string }) {
   const href = `/invite/${code}`;
   return (
     <span className="flex basis-full flex-wrap items-center gap-x-1.5 gap-y-1 pt-1 text-sm text-ink/70">
@@ -84,12 +83,6 @@ function InviteCode({ code, referrals }: { code: string; referrals: number }) {
         label="Copy invite link"
         Icon={LinkIcon}
       />
-      <span className="text-ink/60">
-        They get a Standard ticket for ${FAMILY_PACK.usd}, and you both get the
-        bring-a-friend swag.
-        {referrals > 0 &&
-          ` ${referrals} ${referrals === 1 ? "friend has" : "friends have"} joined with it.`}
-      </span>
     </span>
   );
 }
@@ -202,7 +195,7 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                   </span>
                 )}
                 {t.referralCode && t.status === "paid" && (
-                  <InviteCode code={t.referralCode} referrals={t.referrals} />
+                  <InviteCode code={t.referralCode} />
                 )}
               </li>
             );

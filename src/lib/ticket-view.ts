@@ -21,15 +21,12 @@ export type TicketView = {
   transferred: boolean;
   /** The code to invite friends with, once minted for the holder or owner. */
   referralCode: string | null;
-  /** Paid tickets bought with this one's referral code. */
-  referrals: number;
 };
 
 export function ticketView(
   t: TicketRow,
   userId: string,
   email: string,
-  referrals = 0,
 ): TicketView {
   const holds = holdsTicket(t, userId, email);
   const claimed = t.ownerUserId !== null;
@@ -47,6 +44,5 @@ export function ticketView(
       (holds || mine) && t.referralCode !== null
         ? formatReferralCode(t.referralCode)
         : null,
-    referrals,
   };
 }
