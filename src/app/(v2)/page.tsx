@@ -304,7 +304,13 @@ export default async function Home() {
               next?&rdquo;, it&apos;s a game.
             </p>
           </div>
-          <PlayWeb />
+          <figure>
+            <PlayWeb />
+            <figcaption className="mt-3 text-center font-space-mono text-[11px] tracking-[0.1em] text-ink/60 uppercase sm:text-xs">
+              <span className="font-bold text-meeple">Fig. 1</span> What&apos;s
+              in a game? The constellation of play
+            </figcaption>
+          </figure>
         </div>
       </section>
 

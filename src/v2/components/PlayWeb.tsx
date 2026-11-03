@@ -96,13 +96,12 @@ const CAMERA = 9;
 const HEX_CLIP = "polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)";
 
 const DRAG = 0.008;
-// The idle turn, in radians per second, about an axis tilted TILT from
-// vertical. The tilt's direction precesses once per PRECESS_S seconds, so
-// over time every corner gets its turn at the front without the shape
-// visibly wobbling.
-const IDLE_SPIN = 0.12;
-const TILT = 0.4;
-const PRECESS_S = 60;
+// The idle turn, in radians per second, about an axis in the screen plane
+// that itself sweeps round once per PRECESS_S seconds (vertical, then
+// horizontal, then vertical again), so every corner gets a turn at the
+// front while each moment is still a single clean rotation.
+const IDLE_SPIN = 0.29;
+const PRECESS_S = 25;
 const IDLE_AFTER_MS = 2500;
 
 export default function PlayWeb() {
@@ -140,11 +139,7 @@ export default function PlayWeb() {
         v.y *= 0.94;
       } else if (Date.now() - lastTouch.current > IDLE_AFTER_MS) {
         phi += ((2 * Math.PI) / PRECESS_S) * dt;
-        const axis = [
-          Math.sin(TILT) * Math.cos(phi),
-          Math.cos(TILT),
-          Math.sin(TILT) * Math.sin(phi),
-        ];
+        const axis = [Math.sin(phi), Math.cos(phi), 0];
         setPose((p) => mul(rotAxis(axis, IDLE_SPIN * dt), p));
       }
     };
