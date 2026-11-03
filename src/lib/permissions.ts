@@ -205,6 +205,23 @@ export const PERMISSIONS = {
     label: "Grade submissions",
     description: "The speaker committee's rubric at /grade.",
   },
+  "megagame.verify": {
+    audience: "team",
+    group: "Megagame",
+    level: "edit",
+    label: "Verify quests",
+    description:
+      "Record quest completions and level-ups at /backstage/megagame.",
+  },
+  "megagame.manage": {
+    audience: "team",
+    group: "Megagame",
+    level: "edit",
+    label: "Manage megagame",
+    description:
+      "Import and edit quests, change level requirements, void anyone's records, and read the progress dashboard at /backstage/megagame/dashboard.",
+    implies: ["megagame.verify"],
+  },
   "misc.dice_lab": {
     audience: "team",
     group: "Misc",
