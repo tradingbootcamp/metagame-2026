@@ -9,7 +9,11 @@ import { getAuth } from "@/lib/auth";
 import { sendAccountInviteEmail } from "@/lib/email";
 import { listRoles, setUserRole } from "@/lib/permission-store";
 import { PERMISSIONS } from "@/lib/permissions";
-import { ensureAccount, findAccount } from "@/lib/schedule-store";
+import {
+  ensureAccount,
+  findAccount,
+  invalidateSchedule,
+} from "@/lib/schedule-store";
 
 export type Result = { error?: string };
 
@@ -96,6 +100,7 @@ export async function removeUser(userId: string): Promise<Result> {
     if (target.role === "admin" && !access.admin)
       return { error: "Only an admin can delete an admin account." };
     await getDb().delete(user).where(eq(user.id, userId));
+    invalidateSchedule();
   } catch (err) {
     // session_grades keeps its grader (ON DELETE RESTRICT).
     if (/session_grades|foreign key/i.test(message(err)))

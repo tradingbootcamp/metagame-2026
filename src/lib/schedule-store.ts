@@ -12,6 +12,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { revalidateTag, unstable_cache } from "next/cache";
 import { getDb, schema } from "@/db";
 import { can } from "./access";
 import { currentSession, getAuth } from "./auth";
@@ -54,71 +55,166 @@ export type Schedule = {
   sessions: ScheduleSession[];
 };
 
-export async function loadSchedule(): Promise<Schedule> {
-  const db = getDb();
-  const [locs, sess, hosts, shepherds] = await Promise.all([
-    db
-      .select()
-      .from(locations)
-      .orderBy(asc(locations.displayOrder), asc(locations.name)),
-    db
-      .select()
-      .from(sessions)
-      .orderBy(asc(sessions.startsAt), asc(sessions.title)),
-    db
-      .select({ sessionId: sessionHosts.sessionId, ...accountColumns })
-      .from(sessionHosts)
-      .innerJoin(user, eq(user.id, sessionHosts.userId))
-      .orderBy(asc(sessionHosts.sessionId), asc(sessionHosts.position)),
-    db
-      .select({ sessionId: sessions.id, ...accountColumns })
-      .from(sessions)
-      .innerJoin(user, eq(user.id, sessions.shepherdUserId)),
-  ]);
-  const shepherdBySession = new Map(
-    shepherds.map(({ sessionId, ...account }) => [sessionId, account]),
-  );
-  const hostsBySession = new Map<string, ScheduleAccount[]>();
-  for (const { sessionId, ...host } of hosts) {
-    hostsBySession.set(sessionId, [
-      ...(hostsBySession.get(sessionId) ?? []),
-      host,
-    ]);
-  }
+const SCHEDULE_TAG = "schedule";
+
+/**
+ * Drops the cached schedule reads. Every write to what they read (sessions,
+ * locations, session_hosts, host/shepherd names) must call this.
+ */
+export function invalidateSchedule(): void {
+  revalidateTag(SCHEDULE_TAG, { expire: 0 });
+}
+
+type LocationRow = typeof locations.$inferSelect;
+type SessionRow = typeof sessions.$inferSelect;
+
+function toLocation(l: LocationRow): ScheduleLocation {
   return {
-    locations: locs.map((l) => ({
-      id: l.id,
-      name: l.name,
-      capacity: l.capacity,
-      campusLocation: l.campusLocation,
-      description: l.description,
-      displayOrder: l.displayOrder,
-      visibility: l.visibility,
-      thumbnailUrl: l.thumbnailUrl,
-      imageUrl: l.imageUrl,
-    })),
-    sessions: sess.map((s) => ({
-      id: s.id,
-      slug: s.slug,
-      title: s.title,
-      description: s.description,
-      category: s.category,
-      startsAt: s.startsAt?.toISOString() ?? null,
-      endsAt: s.endsAt?.toISOString() ?? null,
-      locationId: s.locationId,
-      maxCapacity: s.maxCapacity,
-      minCapacity: s.minCapacity,
-      ages: s.ages,
-      needs: s.needs,
-      status: s.status,
-      rsvpIsCommitment: s.rsvpIsCommitment,
-      sponsored: s.sponsored,
-      rsvpsOpen: s.rsvpsOpen,
-      airtableRfpRecordId: s.airtableRfpRecordId,
-      hosts: hostsBySession.get(s.id) ?? [],
-      shepherd: shepherdBySession.get(s.id) ?? null,
-    })),
+    id: l.id,
+    name: l.name,
+    capacity: l.capacity,
+    campusLocation: l.campusLocation,
+    description: l.description,
+    displayOrder: l.displayOrder,
+    visibility: l.visibility,
+    thumbnailUrl: l.thumbnailUrl,
+    imageUrl: l.imageUrl,
   };
+}
+
+function toSession(
+  s: SessionRow,
+  hosts: ScheduleAccount[],
+  shepherd: ScheduleAccount | null,
+): ScheduleSession {
+  return {
+    id: s.id,
+    slug: s.slug,
+    title: s.title,
+    description: s.description,
+    category: s.category,
+    startsAt: s.startsAt?.toISOString() ?? null,
+    endsAt: s.endsAt?.toISOString() ?? null,
+    locationId: s.locationId,
+    maxCapacity: s.maxCapacity,
+    minCapacity: s.minCapacity,
+    ages: s.ages,
+    needs: s.needs,
+    status: s.status,
+    rsvpIsCommitment: s.rsvpIsCommitment,
+    sponsored: s.sponsored,
+    rsvpsOpen: s.rsvpsOpen,
+    airtableRfpRecordId: s.airtableRfpRecordId,
+    hosts,
+    shepherd,
+  };
+}
+
+// Cached across requests until invalidateSchedule(); viewer-independent, and
+// nothing in here may read cookies or headers.
+const readSchedule = unstable_cache(
+  async (): Promise<Schedule> => {
+    const db = getDb();
+    const [locs, sess, hosts, shepherds] = await Promise.all([
+      db
+        .select()
+        .from(locations)
+        .orderBy(asc(locations.displayOrder), asc(locations.name)),
+      db
+        .select()
+        .from(sessions)
+        .orderBy(asc(sessions.startsAt), asc(sessions.title)),
+      db
+        .select({ sessionId: sessionHosts.sessionId, ...accountColumns })
+        .from(sessionHosts)
+        .innerJoin(user, eq(user.id, sessionHosts.userId))
+        .orderBy(asc(sessionHosts.sessionId), asc(sessionHosts.position)),
+      db
+        .select({ sessionId: sessions.id, ...accountColumns })
+        .from(sessions)
+        .innerJoin(user, eq(user.id, sessions.shepherdUserId)),
+    ]);
+    const shepherdBySession = new Map(
+      shepherds.map(({ sessionId, ...account }) => [sessionId, account]),
+    );
+    const hostsBySession = new Map<string, ScheduleAccount[]>();
+    for (const { sessionId, ...host } of hosts) {
+      hostsBySession.set(sessionId, [
+        ...(hostsBySession.get(sessionId) ?? []),
+        host,
+      ]);
+    }
+    return {
+      locations: locs.map(toLocation),
+      sessions: sess.map((s) =>
+        toSession(
+          s,
+          hostsBySession.get(s.id) ?? [],
+          shepherdBySession.get(s.id) ?? null,
+        ),
+      ),
+    };
+  },
+  ["schedule"],
+  { tags: [SCHEDULE_TAG] },
+);
+
+export async function loadSchedule(): Promise<Schedule> {
+  return readSchedule();
+}
+
+export type SessionLookup = {
+  session: ScheduleSession;
+  location: ScheduleLocation | null;
+};
+
+const readSessionBySlug = unstable_cache(
+  async (slug: string): Promise<SessionLookup | null> => {
+    const db = getDb();
+    const [s] = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.slug, slug))
+      .limit(1);
+    if (!s) return null;
+    const [location, hosts, shepherd] = await Promise.all([
+      s.locationId
+        ? db
+            .select()
+            .from(locations)
+            .where(eq(locations.id, s.locationId))
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : null,
+      db
+        .select(accountColumns)
+        .from(sessionHosts)
+        .innerJoin(user, eq(user.id, sessionHosts.userId))
+        .where(eq(sessionHosts.sessionId, s.id))
+        .orderBy(asc(sessionHosts.position)),
+      s.shepherdUserId
+        ? db
+            .select(accountColumns)
+            .from(user)
+            .where(eq(user.id, s.shepherdUserId))
+            .limit(1)
+            .then((rows) => rows[0] ?? null)
+        : null,
+    ]);
+    return {
+      session: toSession(s, hosts, shepherd),
+      location: location && toLocation(location),
+    };
+  },
+  ["schedule-session"],
+  { tags: [SCHEDULE_TAG] },
+);
+
+/** One session with its room, raw: the caller applies the viewer's visibility. */
+export async function loadSessionBySlug(
+  slug: string,
+): Promise<SessionLookup | null> {
+  return readSessionBySlug(slug);
 }
 
 export type SessionInput = Omit<
@@ -191,6 +287,7 @@ export async function upsertSession(
   }
   // A raised capacity frees seats for the waitlist.
   if (id) await promoteWaitlist(sessionId);
+  invalidateSchedule();
   return { id: sessionId, clash };
 }
 
@@ -236,16 +333,17 @@ export async function setSessionHosts(
     .where(eq(sessionHosts.sessionId, sessionId));
   if (hostIds.length === 0) {
     await remove;
-    return;
+  } else {
+    await db.batch([
+      remove,
+      db
+        .insert(sessionHosts)
+        .values(
+          hostIds.map((userId, position) => ({ sessionId, position, userId })),
+        ),
+    ]);
   }
-  await db.batch([
-    remove,
-    db
-      .insert(sessionHosts)
-      .values(
-        hostIds.map((userId, position) => ({ sessionId, position, userId })),
-      ),
-  ]);
+  invalidateSchedule();
 }
 
 /**
@@ -272,6 +370,7 @@ export async function updateSessionAsHost(
     .where(eq(sessions.id, sessionId))
     .returning({ id: sessions.id });
   if (!updated) throw new Error("That session no longer exists.");
+  invalidateSchedule();
   // A raised capacity frees seats for the waitlist.
   await promoteWaitlist(sessionId);
 }
@@ -308,6 +407,7 @@ export async function moveSessionTo(
     .update(sessions)
     .set({ startsAt, endsAt, locationId })
     .where(eq(sessions.id, id));
+  invalidateSchedule();
 }
 
 /** A save refused for double-booking a room; the caller may offer to override. */
@@ -672,6 +772,7 @@ export async function loadAccountPlans(userId: string) {
 
 export async function removeSession(id: string): Promise<void> {
   await getDb().delete(sessions).where(eq(sessions.id, id));
+  invalidateSchedule();
 }
 
 export type LocationInput = Omit<ScheduleLocation, "id"> & { id?: string };
@@ -686,12 +787,14 @@ export async function upsertLocation(input: LocationInput): Promise<string> {
       .where(eq(locations.id, id))
       .returning({ id: locations.id });
     if (!updated) throw new Error("That location no longer exists.");
+    invalidateSchedule();
     return updated.id;
   }
   const [inserted] = await db
     .insert(locations)
     .values(row)
     .returning({ id: locations.id });
+  invalidateSchedule();
   return inserted.id;
 }
 
@@ -717,6 +820,7 @@ export async function setLocationImages(
   images: RoomImages,
 ): Promise<void> {
   await getDb().update(locations).set(images).where(eq(locations.id, id));
+  invalidateSchedule();
 }
 
 /**
@@ -728,6 +832,7 @@ export async function removeLocation(id: string): Promise<RoomImages | null> {
     .delete(locations)
     .where(eq(locations.id, id))
     .returning(imageColumns);
+  invalidateSchedule();
   return row ?? null;
 }
 
@@ -1075,6 +1180,7 @@ export async function insertSample(): Promise<void> {
       })),
     );
   }
+  invalidateSchedule();
 }
 
 /** Removes the sample sessions and hosts, then any sample room nothing else uses. */
@@ -1104,4 +1210,5 @@ export async function removeSample(): Promise<void> {
   if (unused.length > 0) {
     await db.delete(locations).where(inArray(locations.id, unused));
   }
+  invalidateSchedule();
 }

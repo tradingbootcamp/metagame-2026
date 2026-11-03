@@ -18,14 +18,20 @@ import {
   formatPacificTime,
   hostNames,
   planConflicts,
+  publicSchedule,
   type Ages,
   type Category,
 } from "@/lib/schedule";
-import { loadSessionRsvps, loadViewerPlans } from "@/lib/schedule-store";
+import {
+  loadSessionBySlug,
+  loadSessionRsvps,
+  loadViewerPlans,
+} from "@/lib/schedule-store";
 import {
   loadPublicSchedule,
   loadRawSchedule,
   rsvpTicket,
+  scheduleViewer,
 } from "@/app/(v2)/schedule/data";
 import SessionPlans from "@/v2/components/schedule/SessionPlans";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
@@ -44,9 +50,18 @@ const AGES_LABEL: Record<Ages, string> = {
   adults: "18+",
 };
 
+// The same visibility rules as the schedule, applied to the one cached row.
 async function findSession(slug: string) {
-  const { sessions, locations } = await loadPublicSchedule();
-  const session = sessions.find((s) => s.slug === slug);
+  const found = await loadSessionBySlug(slug);
+  if (!found) notFound();
+  const { sessions, locations } = publicSchedule(
+    {
+      sessions: [found.session],
+      locations: found.location ? [found.location] : [],
+    },
+    await scheduleViewer(),
+  );
+  const session = sessions.at(0);
   if (!session) notFound();
   const room = locations.find((l) => l.id === session.locationId) ?? null;
   return { session, room };
