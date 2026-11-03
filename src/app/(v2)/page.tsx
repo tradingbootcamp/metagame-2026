@@ -299,11 +299,9 @@ export default async function Home() {
               Metagame is a weekend conference devoted to games and the people
               who make and play them. We mean games in the broadest sense of the
               word: any experience that is designed to be played, as opposed to
-              passively consumed. This includes board games, card games,
-              videogames, tabletop games, LARPs, puzzles, rock climbing routes,
-              and more. If building it involves asking the question &ldquo;what
-              would the consumer of this experience choose to do next?&rdquo;,
-              it&apos;s a game.
+              passively consumed. If building it involves asking the question
+              &ldquo;what would the consumer of this experience choose to do
+              next?&rdquo;, it&apos;s a game.
             </p>
           </div>
           <PlayWeb />
