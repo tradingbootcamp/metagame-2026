@@ -197,6 +197,13 @@
       "when": 1793644043766,
       "tag": "0027_session_rsvps_open",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793748948152,
+      "tag": "0028_hat_steals",
+      "breakpoints": true
     }
   ]
 }

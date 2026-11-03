@@ -57,6 +57,7 @@ const TABLE_GROUPS: Record<string, string[]> = {
   Schedule: ["locations", "sessions", "session_hosts", "rsvps", "bookmarks"],
   Grading: ["session_grades", "session_grade_space_options"],
   Budget: ["xero_connections", "budget_import_runs", "budget_ignored_lines"],
+  Megagame: ["hat_steals"],
 };
 
 // What each table is for, in one line. Reviewed alongside the columns.
@@ -100,6 +101,8 @@ const TABLE_NOTES: Record<string, string> = {
     'One row per Claude call from /backstage/budget: kind "import" (Xero lines proposed into the sheet) or "request" (the Ask Claude box). Holds the outcome counts, the model and its token counts for cost tracking, and the error if it failed.',
   budget_ignored_lines:
     "Xero bank lines the team chose not to import, keyed by the Xero line id so later imports skip them; reason and ignored_by record why and who.",
+  hat_steals:
+    "One row per hat theft in the Hat Tricks minigame (/megagame/hat-tricks). user_id is the thief; recorded_by is the volunteer who logged it (null for backfills). Scores are computed from these rows and the shift schedule, which lives only in the HAT_TRICKS_SCHEDULE env var.",
 };
 
 function columnName(column: PgColumn): string {
