@@ -1,6 +1,6 @@
 "use client";
 
-import { Dices, Mic, RotateCcw, Redo, Sparkles, Wrench } from "lucide-react";
+import { Dices, Mic, RotateCcw, Sparkles, Undo, Wrench } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -128,9 +128,9 @@ export default function SpeakerCard({
               title={`${n} ${n === 1 ? "session" : "sessions"}`}
               className="absolute right-0 bottom-0 size-9 bg-navy text-cream transition-colors outline-none [clip-path:polygon(100%_0,100%_100%,0_100%)] hover:bg-meeple focus-visible:bg-meeple sm:size-11"
             >
-              <Redo
+              <Undo
                 aria-hidden
-                className="absolute right-1 bottom-1 size-3 sm:right-1.5 sm:bottom-1.5 sm:size-3.5"
+                className="absolute right-1 bottom-1 size-3 rotate-[100deg] sm:right-1.5 sm:bottom-1.5 sm:size-3.5"
               />
             </button>
           )}
