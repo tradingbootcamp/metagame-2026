@@ -84,7 +84,8 @@ const IDLE_AFTER_MS = 2500;
 
 export default function PlayWeb() {
   const [pose, setPose] = useState<Mat>(START);
-  // A tapped corner keeps its label up (hover does the same on desktop).
+  // The nearest corner shows its label; a tapped one takes over until tapped
+  // again (hover does the same on desktop).
   const [picked, setPicked] = useState<number | null>(null);
   const moved = useRef(false);
   const drag = useRef<{ id: number; x: number; y: number } | null>(null);
@@ -156,6 +157,12 @@ export default function PlayWeb() {
     };
   });
 
+  const front = nodes.reduce(
+    (b, n, i) => (n.depth > nodes[b].depth ? i : b),
+    0,
+  );
+  const shown = picked ?? front;
+
   return (
     <div
       className="relative w-full cursor-grab touch-none select-none active:cursor-grabbing"
@@ -197,7 +204,7 @@ export default function PlayWeb() {
               key={name}
               // The hovered one rises above the rest, so its label is never
               // under a nearer edge.
-              className={`group absolute z-(--z) -translate-x-1/2 -translate-y-1/2 hover:z-[2000] ${picked === i ? "z-[2000]!" : ""}`}
+              className={`group absolute z-(--z) -translate-x-1/2 -translate-y-1/2 hover:z-[2000] ${shown === i ? "z-[2000]!" : ""}`}
               onClick={() => {
                 if (moved.current) return;
                 setPicked((p) => (p === i ? null : i));
@@ -235,7 +242,7 @@ export default function PlayWeb() {
               </span>
               <span
                 aria-hidden
-                className={`pointer-events-none absolute -top-7 left-1/2 z-20 -translate-x-1/2 rounded bg-navy px-2 py-1 font-space-mono text-[10px] font-bold tracking-[0.1em] whitespace-nowrap text-cream uppercase opacity-0 transition-opacity group-hover:opacity-100 ${picked === i ? "opacity-100" : ""}`}
+                className={`pointer-events-none absolute -top-7 left-1/2 z-20 -translate-x-1/2 rounded bg-navy px-2 py-1 font-space-mono text-[10px] font-bold tracking-[0.1em] whitespace-nowrap text-cream uppercase opacity-0 transition-opacity group-hover:opacity-100 ${shown === i ? "opacity-100" : ""}`}
               >
                 {GLYPH_LABELS[name]}
               </span>
