@@ -3,7 +3,7 @@
 import { Dices, Mic, Sparkles, Undo, Wrench } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState, type MouseEvent, type RefObject } from "react";
 import {
   formatPacificDay,
   formatPacificTime,
@@ -11,7 +11,7 @@ import {
   type Category,
   type HostedSession,
 } from "@/lib/schedule";
-import type { Person } from "@/v2/data/team";
+import type { Speaker } from "@/v2/data/speakers";
 import HatImage from "@/v2/hat-trick/HatImage";
 import { HEADING } from "./styles";
 
@@ -31,11 +31,13 @@ const MONO =
 // The dog-eared corner that turns the card: a clipped triangle in the
 // bottom-right with a turn-over arrow on it.
 function Corner({
+  ref,
   label,
   title,
   onClick,
   className,
 }: {
+  ref: RefObject<HTMLButtonElement | null>;
   label: string;
   title?: string;
   onClick: () => void;
@@ -43,11 +45,9 @@ function Corner({
 }) {
   return (
     <button
+      ref={ref}
       type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
+      onClick={onClick}
       aria-label={label}
       title={title}
       className={`absolute right-0 bottom-0 size-6 transition-colors outline-none [clip-path:polygon(100%_0,100%_100%,0_100%)] sm:size-10 ${className}`}
@@ -72,10 +72,25 @@ export default function SpeakerCard({
   hats,
   logo,
   sessions = [],
-}: Person & { sessions?: HostedSession[] }) {
+}: Omit<Speaker, "userId"> & { sessions?: HostedSession[] }) {
   const [flipped, setFlipped] = useState(false);
+  const frontCorner = useRef<HTMLButtonElement>(null);
+  const backCorner = useRef<HTMLButtonElement>(null);
   const n = sessions.length;
   const canFlip = n > 0;
+  // Flipping makes the old face inert, which would drop focus to the body, so
+  // focus moves to the new face's corner once it can take it.
+  const flip = (to: boolean) => {
+    setFlipped(to);
+    requestAnimationFrame(() =>
+      (to ? backCorner : frontCorner).current?.focus({ preventScroll: true }),
+    );
+  };
+  // Clicks on the face flip it, but not ones on things inside it that do
+  // their own job (hats, the title link, the sessions, the corner).
+  const onFace = (to: boolean) => (e: MouseEvent) => {
+    if (!(e.target as Element).closest("button, a")) flip(to);
+  };
 
   return (
     <div className="h-full [perspective:1200px]">
@@ -86,7 +101,7 @@ export default function SpeakerCard({
       >
         <div
           inert={flipped}
-          onClick={canFlip ? () => setFlipped(true) : undefined}
+          onClick={canFlip ? onFace(true) : undefined}
           className={`${FACE} relative bg-white ${canFlip ? "cursor-pointer" : ""}`}
         >
           {photo && hats?.length ? (
@@ -136,7 +151,6 @@ export default function SpeakerCard({
               {titleUrl ? (
                 <a
                   href={titleUrl}
-                  onClick={(e) => e.stopPropagation()}
                   {...(titleUrl.startsWith("/")
                     ? {}
                     : { target: "_blank", rel: "noopener noreferrer" })}
@@ -151,9 +165,10 @@ export default function SpeakerCard({
           </div>
           {canFlip && (
             <Corner
+              ref={frontCorner}
               label={`Turn over for ${name}'s ${n === 1 ? "session" : `${n} sessions`}`}
               title={`${n} ${n === 1 ? "session" : "sessions"}`}
-              onClick={() => setFlipped(true)}
+              onClick={() => flip(true)}
               className="bg-navy text-cream hover:bg-meeple focus-visible:bg-meeple"
             />
           )}
@@ -162,7 +177,7 @@ export default function SpeakerCard({
         {canFlip && (
           <div
             inert={!flipped}
-            onClick={() => setFlipped(false)}
+            onClick={onFace(false)}
             className={`${FACE} absolute inset-0 [transform:rotateY(180deg)] cursor-pointer bg-navy p-2 text-cream sm:p-3`}
           >
             <span
@@ -170,7 +185,7 @@ export default function SpeakerCard({
             >
               {name.split(" ")[0]}&apos;s sessions
             </span>
-            <ul className="mt-1.5 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto sm:mt-2 sm:gap-2">
+            <ul className="mt-1.5 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto [backface-visibility:hidden] sm:mt-2 sm:gap-2">
               {sessions.map((s) => {
                 const Icon = CATEGORY_ICON[s.category ?? "other"];
                 return (
@@ -181,7 +196,6 @@ export default function SpeakerCard({
                     />
                     <Link
                       href={sessionHref(s)}
-                      onClick={(e) => e.stopPropagation()}
                       className="min-w-0 text-left text-[11px] leading-snug outline-none hover:underline focus-visible:ring-2 focus-visible:ring-tan sm:text-[13px]"
                     >
                       <span className="line-clamp-3">{s.title}</span>
@@ -195,8 +209,9 @@ export default function SpeakerCard({
               })}
             </ul>
             <Corner
+              ref={backCorner}
               label={`Turn ${name}'s card back`}
-              onClick={() => setFlipped(false)}
+              onClick={() => flip(false)}
               className="bg-cream text-navy hover:bg-tan focus-visible:bg-tan"
             />
           </div>

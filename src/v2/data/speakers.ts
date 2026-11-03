@@ -28,12 +28,14 @@ import shineOnLogo from "../../../public/images/speakers/logos/shine-on.png";
 import spencerLogo from "../../../public/images/speakers/logos/spencer.png";
 import tommyLogo from "../../../public/images/speakers/logos/tommy-honton.png";
 import metagameLogo from "../../../public/images/logo_single.png";
+import type { StaticImageData } from "next/image";
 import { HATS } from "@/v2/hat-trick/hats";
 import { SPEAKER_ACCOUNTS } from "./speaker-accounts";
 import type { Person } from "./team";
 
-// A featured speaker: a person plus the account whose sessions their card lists.
-export type Speaker = Person & { userId: string };
+// A featured speaker: a person plus the account whose sessions their card
+// lists, and a small mark for the affiliation.
+export type Speaker = Person & { userId: string; logo?: StaticImageData };
 
 // Featured speakers, in display order on the home page; name and account come
 // from speaker-accounts.ts (the dev seed reads them too). Logos are each

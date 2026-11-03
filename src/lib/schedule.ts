@@ -888,11 +888,6 @@ export function publicSchedule(
   return { locations, sessions };
 }
 
-/**
- * The ids of the sessions a viewer is in: hosting, shepherding, RSVP'd to
- * (waitlist included) or bookmarked. Only ids from `sessions` come back, so
- * plans on sessions the caller left out (drafts, hidden rooms) stay out.
- */
 /** The session's own page, under /schedule. */
 export function sessionHref(session: { slug: string }): string {
   return `/schedule/${encodeURIComponent(session.slug)}`;
@@ -911,13 +906,14 @@ export type HostedSession = Pick<
 export function hostedSessions(
   schedule: { sessions: ScheduleSession[] },
   shown: { sessions: PublicSession[] },
-  userIds: string[],
 ): Map<string, HostedSession[]> {
   const hosts = new Map(schedule.sessions.map((s) => [s.id, s.hosts]));
-  const out = new Map(userIds.map((id) => [id, [] as HostedSession[]]));
+  const out = new Map<string, HostedSession[]>();
   for (const s of shown.sessions) {
     for (const h of hosts.get(s.id) ?? []) {
-      out.get(h.userId)?.push({
+      let mine = out.get(h.userId);
+      if (!mine) out.set(h.userId, (mine = []));
+      mine.push({
         slug: s.slug,
         title: s.title,
         category: s.category,
@@ -928,6 +924,11 @@ export function hostedSessions(
   return out;
 }
 
+/**
+ * The ids of the sessions a viewer is in: hosting, shepherding, RSVP'd to
+ * (waitlist included) or bookmarked. Only ids from `sessions` come back, so
+ * plans on sessions the caller left out (drafts, hidden rooms) stay out.
+ */
 export function viewerSessionIds(
   userId: string,
   sessions: Pick<ScheduleSession, "id" | "hosts" | "shepherd">[],

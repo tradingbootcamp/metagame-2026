@@ -273,14 +273,7 @@ export default async function Home() {
   const raw = env.DATABASE_URL ? await loadSchedule() : null;
   const schedule = raw && publicSchedule(raw, "public");
   // The sessions each speaker hosts, for the backs of their cards.
-  const speaking =
-    raw &&
-    schedule &&
-    hostedSessions(
-      raw,
-      schedule,
-      SPEAKERS.map((s) => s.userId),
-    );
+  const speaking = raw && schedule && hostedSessions(raw, schedule);
   const earlyBird = isEarlyBirdActive();
   return (
     <>

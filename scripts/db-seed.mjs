@@ -30,10 +30,13 @@
 //                              60 ticketed, 20 signed in with no ticket, 10
 //                              invited (hosts, team, one admin) who never signed
 //                              in, 10 who bought under an email with no account
-//   speaker-first-last@metagame.games
+//   speaker-<key>@metagame.games
 //                              the homepage's featured speakers, with the ids
-//                              and names in src/v2/data/speaker-accounts.ts,
-//                              each co-hosting one to three published sessions
+//                              and names in src/v2/data/speaker-accounts.ts
+//                              (placeholder TODO ids skipped), each co-hosting
+//                              one to three published sessions. Only created
+//                              where the id isn't already there, so a copy of
+//                              prod keeps the real accounts
 // Plus 60 purchases from people with no account at all, and one API key for
 // admin: x-api-key mg_seed_metabot_000000000000000000000000000000000000000000000000000.
 //
@@ -111,12 +114,15 @@ const pgArray = (xs) =>
   `{${xs.map((x) => `"${x.replace(/["\\]/g, "\\$&")}"`).join(",")}}`;
 
 /** Insert rows, updating every non-key column on conflict. */
-async function upsert(table, keys, rows) {
+// With `keep`, rows already there are left as they are.
+async function upsert(table, keys, rows, { keep = false } = {}) {
   for (const row of rows) {
     const cols = Object.keys(row);
-    const update = cols
-      .filter((c) => !keys.includes(c))
-      .map((c) => `"${c}" = excluded."${c}"`);
+    const update = keep
+      ? []
+      : cols
+          .filter((c) => !keys.includes(c))
+          .map((c) => `"${c}" = excluded."${c}"`);
     await sql.query(
       `insert into "${table}" (${cols.map((c) => `"${c}"`).join(", ")})
        values (${cols.map((_, i) => `$${i + 1}`).join(", ")})
@@ -244,21 +250,15 @@ const crowd = Array.from({ length: 100 }, (_, i) => {
 const invited = crowd.filter((u) => u.kind === "invited");
 // The featured speakers, under the account ids the homepage cards look up.
 const SPEAKER_EMAIL = "speaker-%@metagame.games";
-const speakers = Object.values(SPEAKER_ACCOUNTS).map(({ name, userId }, i) => {
-  const slug = name
-    .normalize("NFKD")
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-");
-  return {
+const speakers = Object.entries(SPEAKER_ACCOUNTS)
+  .filter(([, { userId }]) => !userId.startsWith("TODO"))
+  .map(([key, { name, userId }], i) => ({
     id: userId,
     name,
-    email: SPEAKER_EMAIL.replace("%", slug),
+    email: SPEAKER_EMAIL.replace("%", key.toLowerCase()),
     verified: true,
     i: 200 + i,
-  };
-});
+  }));
 const everyone = [
   ...Object.values(users).map((u) => ({
     ...u,
@@ -266,7 +266,6 @@ const everyone = [
     verified: true,
   })),
   ...crowd,
-  ...speakers,
 ];
 // Bought a ticket, never made an account: most purchasers, early on.
 const ghosts = Array.from({ length: 60 }, (_, i) => ({
@@ -1015,36 +1014,48 @@ await sql.query(
   [SPEAKER_EMAIL, pgArray(speakers.map((u) => u.id))],
 );
 
-counts.user = await upsert(
-  "user",
-  ["id"],
-  everyone.map((u) => ({
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    email_verified: u.verified,
-    role: u.role ?? "user",
-    banned: u.banned ?? false,
-    ban_reason: u.ban_reason ?? null,
-    wizard_level: u.levels?.wizard ?? 0,
-    pirate_level: u.levels?.pirate ?? 0,
-    alien_level: u.levels?.alien ?? 0,
-  })),
-);
+const userRow = (u) => ({
+  id: u.id,
+  name: u.name,
+  email: u.email,
+  email_verified: u.verified,
+  role: u.role ?? "user",
+  banned: u.banned ?? false,
+  ban_reason: u.ban_reason ?? null,
+  wizard_level: u.levels?.wizard ?? 0,
+  pirate_level: u.levels?.pirate ?? 0,
+  alien_level: u.levels?.alien ?? 0,
+});
+const credential = (u) => ({
+  id: `${u.id}-credential`,
+  account_id: u.id,
+  provider_id: "credential",
+  user_id: u.id,
+  password: passwordHash,
+});
+counts.user = await upsert("user", ["id"], everyone.map(userRow));
 counts.account = await upsert(
   "account",
   ["id"],
-  everyone
-    .filter((u) => u.verified)
-    .map((u) => ({
-      id: `${u.id}-credential`,
-      account_id: u.id,
-      provider_id: "credential",
-      user_id: u.id,
-      password: passwordHash,
-    })),
+  everyone.filter((u) => u.verified).map(credential),
 );
 counts.profiles = await upsert("profiles", ["user_id"], everyone.map(profile));
+// Speakers carry their real ids: on a copy of prod the accounts already exist
+// and stay untouched; elsewhere they're created.
+const keep = { keep: true };
+counts.user += await upsert("user", ["id"], speakers.map(userRow), keep);
+counts.account += await upsert(
+  "account",
+  ["id"],
+  speakers.map(credential),
+  keep,
+);
+counts.profiles += await upsert(
+  "profiles",
+  ["user_id"],
+  speakers.map(profile),
+  keep,
+);
 
 // Attendee is the built-in role src/lib/permission-store.ts expects by name;
 // Team holds everything short of admin.

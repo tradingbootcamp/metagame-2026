@@ -284,9 +284,9 @@ describe("hostedSessions", () => {
   const shown = publicSchedule({ locations: [], ...raw });
 
   it("lists the shown sessions each account hosts, in order", () => {
-    const got = hostedSessions(raw, shown, ["u1", "u9", "u0"]);
+    const got = hostedSessions(raw, shown);
     expect(got.get("u1")?.map((s) => s.slug)).toEqual(["a", "b"]);
     expect(got.get("u9")?.map((s) => s.slug)).toEqual(["b"]);
-    expect(got.get("u0")).toEqual([]);
+    expect(got.get("u0")).toBeUndefined();
   });
 });
