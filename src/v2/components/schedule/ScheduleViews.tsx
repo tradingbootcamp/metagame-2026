@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FaClock, FaListUl, FaThLarge } from "react-icons/fa";
 import {
   cellSessions,
@@ -27,6 +27,7 @@ import {
   SessionMarks,
   SponsorTag,
 } from "./SessionBits";
+import SessionPreview, { PREVIEW_ATTR } from "./SessionPreview";
 
 // The day grid, the day list and the toggles the schedule is built from,
 // shared by /schedule and the profile pages' session views.
@@ -44,6 +45,8 @@ export type ViewSession = {
   hosts: { name: string }[];
   startsAt: string;
   endsAt: string;
+  /** Shown in the list and the grid's preview card when the caller has it. */
+  description?: string | null;
 };
 
 export type ViewDay<S extends ViewSession> = {
@@ -190,8 +193,10 @@ export function ViewToggle({
   );
 }
 
+// No callout or text selection, so a long press brings up the preview card
+// rather than the browser's link menu.
 const BLOCK =
-  "absolute inset-x-0.5 z-10 block overflow-hidden rounded-md border p-1.5 text-left text-[#1b1530]";
+  "absolute inset-x-0.5 z-10 block overflow-hidden rounded-md border p-1.5 text-left text-[#1b1530] select-none [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none]";
 const BLOCK_LINK =
   "transition-shadow hover:z-20 hover:shadow-[0_2px_10px_rgba(27,21,48,0.25)]";
 
@@ -214,26 +219,27 @@ function SessionBlock<S extends ViewSession>({
     ...laneInset(lane),
     ...blockStyle(session),
   };
-  const title = `${session.title}${session.hosts.length ? " — " + hostNames(session) : ""}`;
   const body = (
     <>
       <BlockSummary session={session} titleLines={titleLines(session)} />
       {badge?.(session)}
     </>
   );
+  const preview = { [PREVIEW_ATTR]: session.id };
   const to = href(session);
   if (!to) {
     return (
-      <div title={title} style={style} className={BLOCK}>
+      <div {...preview} style={style} className={BLOCK}>
         {body}
       </div>
     );
   }
   return (
     <Link
-      title={title}
+      {...preview}
       href={to}
       scroll={false}
+      draggable={false}
       style={style}
       className={`${BLOCK} ${BLOCK_LINK}`}
     >
@@ -272,8 +278,18 @@ export function GridDay<S extends ViewSession>({
   const gridCols = `var(--time-w) repeat(${columns.length}, minmax(var(--col-w), 1fr))`;
   const now = useNow();
   const nowTop = now ? nowLinePx(day.key, day.slots[0], now) : null;
+  const gridRef = useRef<HTMLDivElement>(null);
   return (
-    <div className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--col-w:104px] [--time-w:36px] sm:[--col-w:120px] sm:[--time-w:40px]">
+    <div
+      ref={gridRef}
+      className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--col-w:104px] [--time-w:36px] sm:[--col-w:120px] sm:[--time-w:40px]"
+    >
+      <SessionPreview
+        container={gridRef}
+        sessions={day.sessions}
+        columns={columns}
+        href={href}
+      />
       <div className="min-w-fit">
         <div
           className="sticky top-0 z-30 grid bg-[#4096ff] text-white"
@@ -355,7 +371,7 @@ export function GridDay<S extends ViewSession>({
 
 const ROW = "flex w-full items-stretch gap-3 px-3 py-2.5 text-left";
 
-/** One session as a list row: time, category stripe, title, room and hosts. */
+/** One session as a list row: time, category stripe, title, room, hosts and the start of its description. */
 export function SessionRow<S extends ViewSession>({
   session,
   roomName,
@@ -394,6 +410,11 @@ export function SessionRow<S extends ViewSession>({
             .filter(Boolean)
             .join(" · ")}
         </div>
+        {session.description && (
+          <p className="mt-1 line-clamp-2 max-w-prose text-[13px] leading-snug text-[#1b1530]/80">
+            {session.description}
+          </p>
+        )}
       </div>
     </>
   );
