@@ -3,7 +3,7 @@
 // database imports, so the client components can use the types.
 
 import {
-  isPlaced,
+  isListed,
   publicAccountName,
   roomVisible,
   type Ages,
@@ -226,8 +226,7 @@ export function userSessions(
   );
   const sessions: UserSession[] = [];
   for (const s of schedule.sessions) {
-    if (!audience.drafts && !(s.status === "published" && isPlaced(s)))
-      continue;
+    if (!audience.drafts && !isListed(s)) continue;
     if (s.locationId !== null && !rooms.has(s.locationId)) continue;
     const hostIndex = s.hosts.findIndex((h) => h.userId === userId);
     const roles: UserSessionRole[] = [];

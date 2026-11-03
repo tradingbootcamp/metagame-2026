@@ -80,7 +80,7 @@ export default function PublicSchedule({
     [days, mine, onlyMine],
   );
 
-  const columns = buildColumns(locations, false);
+  const columns = buildColumns(locations);
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
   const day = selectedDay(shownDays, dayKey);
