@@ -65,6 +65,41 @@ function Section({
   );
 }
 
+/** Collapsed by default: the tables below the grid are long. */
+function CollapsedSection({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="group">
+      <summary className="flex cursor-pointer items-baseline gap-2 select-none">
+        <svg
+          viewBox="0 0 16 16"
+          aria-hidden="true"
+          className="h-4 w-4 shrink-0 self-center text-ink/50 transition-transform group-open:rotate-90"
+        >
+          <path
+            d="M6 4l4 4-4 4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <h2 className="font-bebas text-xl tracking-wide text-navy">{title}</h2>
+        <span className="text-sm text-ink/50">{count}</span>
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
+  );
+}
+
 type Move = Pick<ScheduleSession, "id" | "startsAt" | "endsAt" | "locationId">;
 /** `cut`: the end was cut back to midnight, so the server takes it rather than keeping the length. */
 type Drop = Move & { startsAt: string; cut: boolean };
@@ -315,6 +350,7 @@ export default function ScheduleTool({
           onCreate={createAt}
           onGrab={grab}
           onDrop={drop}
+          onEditLocation={openLocation}
           confirmClash
         />
       </div>
@@ -351,7 +387,7 @@ export default function ScheduleTool({
         </Section>
       )}
 
-      <Section title="All sessions">
+      <CollapsedSection title="All sessions" count={sessions.length}>
         <div className="overflow-x-auto rounded-xl border border-line bg-white">
           <table className="w-full text-left text-sm">
             <thead className="text-xs tracking-wide text-ink/50 uppercase">
@@ -412,9 +448,9 @@ export default function ScheduleTool({
             </tbody>
           </table>
         </div>
-      </Section>
+      </CollapsedSection>
 
-      <Section title="Rooms">
+      <CollapsedSection title="All rooms" count={locations.length}>
         <div className="overflow-x-auto rounded-xl border border-line bg-white">
           <table className="w-full text-left text-sm">
             <thead className="text-xs tracking-wide text-ink/50 uppercase">
@@ -472,7 +508,7 @@ export default function ScheduleTool({
             </tbody>
           </table>
         </div>
-      </Section>
+      </CollapsedSection>
 
       <ConfirmDialog
         open={Boolean(unconfirmed?.open && unconfirmed.cut)}
