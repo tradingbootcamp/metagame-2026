@@ -1,6 +1,6 @@
 "use client";
 
-import { Dices, Mic, RotateCcw, Sparkles, Undo, Wrench } from "lucide-react";
+import { Dices, Mic, Sparkles, Undo, Wrench } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -27,6 +27,38 @@ const FACE =
   "flex h-full flex-col overflow-hidden rounded-2xl border border-navy/[0.16] shadow-[0_8px_24px_rgba(23,48,89,0.08)] [backface-visibility:hidden]";
 const MONO =
   "font-space-mono text-[9px] uppercase sm:text-xs sm:tracking-[0.08em]";
+
+// The dog-eared corner that turns the card: a clipped triangle in the
+// bottom-right with a turn-over arrow on it.
+function Corner({
+  label,
+  title,
+  onClick,
+  className,
+}: {
+  label: string;
+  title?: string;
+  onClick: () => void;
+  className: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      aria-label={label}
+      title={title}
+      className={`absolute right-0 bottom-0 size-9 transition-colors outline-none [clip-path:polygon(100%_0,100%_100%,0_100%)] sm:size-11 ${className}`}
+    >
+      <Undo
+        aria-hidden
+        className="absolute right-1 bottom-1 size-3 rotate-[100deg] sm:right-1.5 sm:bottom-1.5 sm:size-3.5"
+      />
+    </button>
+  );
+}
 
 // One speaker as a two-sided card: the photo on top (with any Hat Trick
 // hats), name and affiliation under it. Turn it over for their sessions, each
@@ -118,21 +150,12 @@ export default function SpeakerCard({
             </p>
           </div>
           {canFlip && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setFlipped(true);
-              }}
-              aria-label={`Turn over for ${name}'s ${n === 1 ? "session" : `${n} sessions`}`}
+            <Corner
+              label={`Turn over for ${name}'s ${n === 1 ? "session" : `${n} sessions`}`}
               title={`${n} ${n === 1 ? "session" : "sessions"}`}
-              className="absolute right-0 bottom-0 size-9 bg-navy text-cream transition-colors outline-none [clip-path:polygon(100%_0,100%_100%,0_100%)] hover:bg-meeple focus-visible:bg-meeple sm:size-11"
-            >
-              <Undo
-                aria-hidden
-                className="absolute right-1 bottom-1 size-3 rotate-[100deg] sm:right-1.5 sm:bottom-1.5 sm:size-3.5"
-              />
-            </button>
+              onClick={() => setFlipped(true)}
+              className="bg-navy text-cream hover:bg-meeple focus-visible:bg-meeple"
+            />
           )}
         </div>
 
@@ -140,26 +163,13 @@ export default function SpeakerCard({
           <div
             inert={!flipped}
             onClick={() => setFlipped(false)}
-            className={`${FACE} absolute inset-0 [transform:rotateY(180deg)] cursor-pointer bg-navy p-2 text-cream sm:p-3`}
+            className={`${FACE} absolute inset-0 [transform:rotateY(180deg)] cursor-pointer bg-navy p-2 pb-8 text-cream sm:p-3 sm:pb-10`}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span
-                className={`${MONO} truncate font-bold tracking-[0.1em] text-tan`}
-              >
-                {name.split(" ")[0]}&apos;s sessions
-              </span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFlipped(false);
-                }}
-                aria-label={`Turn ${name}'s card back`}
-                className="grid size-6 shrink-0 place-items-center rounded-full text-cream/60 outline-none hover:bg-white/10 hover:text-cream focus-visible:ring-2 focus-visible:ring-tan"
-              >
-                <RotateCcw aria-hidden className="size-3" />
-              </button>
-            </div>
+            <span
+              className={`${MONO} block truncate font-bold tracking-[0.1em] text-tan`}
+            >
+              {name.split(" ")[0]}&apos;s sessions
+            </span>
             <ul className="mt-1.5 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto sm:mt-2 sm:gap-2">
               {sessions.map((s) => {
                 const Icon = CATEGORY_ICON[s.category ?? "other"];
@@ -184,6 +194,11 @@ export default function SpeakerCard({
                 );
               })}
             </ul>
+            <Corner
+              label={`Turn ${name}'s card back`}
+              onClick={() => setFlipped(false)}
+              className="bg-cream text-navy hover:bg-tan focus-visible:bg-tan"
+            />
           </div>
         )}
       </div>
