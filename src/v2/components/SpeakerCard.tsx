@@ -50,11 +50,11 @@ function Corner({
       }}
       aria-label={label}
       title={title}
-      className={`absolute right-0 bottom-0 size-9 transition-colors outline-none [clip-path:polygon(100%_0,100%_100%,0_100%)] sm:size-11 ${className}`}
+      className={`absolute right-0 bottom-0 size-6 transition-colors outline-none [clip-path:polygon(100%_0,100%_100%,0_100%)] sm:size-10 ${className}`}
     >
       <Undo
         aria-hidden
-        className="absolute right-1 bottom-1 size-3 rotate-[100deg] sm:right-1.5 sm:bottom-1.5 sm:size-3.5"
+        className="absolute right-0.5 bottom-0.5 size-2.5 rotate-[100deg] sm:right-1.5 sm:bottom-1.5 sm:size-3.5"
       />
     </button>
   );
@@ -163,7 +163,7 @@ export default function SpeakerCard({
           <div
             inert={!flipped}
             onClick={() => setFlipped(false)}
-            className={`${FACE} absolute inset-0 [transform:rotateY(180deg)] cursor-pointer bg-navy p-2 pb-8 text-cream sm:p-3 sm:pb-10`}
+            className={`${FACE} absolute inset-0 [transform:rotateY(180deg)] cursor-pointer bg-navy p-2 pb-6 text-cream sm:p-3 sm:pb-10`}
           >
             <span
               className={`${MONO} block truncate font-bold tracking-[0.1em] text-tan`}
