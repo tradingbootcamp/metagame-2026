@@ -88,7 +88,12 @@ export default function TicketsTable({
 }) {
   const [state, setState] = useState(initial);
   const [rows, setRows] = useState(tickets);
-  useEffect(() => setRows(tickets), [tickets]);
+  // Refreshed props replace local edits, adjusted during render (not an effect).
+  const [seen, setSeen] = useState(tickets);
+  if (seen !== tickets) {
+    setSeen(tickets);
+    setRows(tickets);
+  }
   const [openId, setOpenId] = useState<string | null>(null);
   const open = rows.find((r) => r.t.id === openId) ?? null;
   const { q, sort, dir, size } = state;
