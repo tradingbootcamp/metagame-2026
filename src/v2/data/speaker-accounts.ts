@@ -20,6 +20,7 @@ export const SPEAKER_ACCOUNTS = {
     name: "Tommy Honton",
     userId: "XdJOUZ2rkePZ8Cmxh0dzw7GEUWMx1Sbs",
   },
+  aella: { name: "Aella", userId: "p4OsCChdJOU6bLlRZ13sMg82Kyzg4WCU" },
   lexiKohanski: {
     name: "Lexi Kohanski",
     userId: "iEXCt5pJ2QbZIvHXlen0fd4wa4P1riRU",

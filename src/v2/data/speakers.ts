@@ -1,3 +1,4 @@
+import aella from "../../../public/images/speakers/aella.jpg";
 import aemilia from "../../../public/images/speakers/aemilia_dixon.jpg";
 import amy from "../../../public/images/speakers/amy_schneider.jpg";
 import andrew from "../../../public/images/speakers/andrew_nathenson.jpg";
@@ -69,6 +70,12 @@ export const SPEAKERS: Speaker[] = [
     titleUrl: "https://tommyhonton.com/",
     photo: tommy,
     logo: tommyLogo,
+  },
+  {
+    ...SPEAKER_ACCOUNTS.aella,
+    title: "aella.substack.com",
+    titleUrl: "https://aella.substack.com/",
+    photo: aella,
   },
   {
     ...SPEAKER_ACCOUNTS.lexiKohanski,
