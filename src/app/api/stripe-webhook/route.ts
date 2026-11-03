@@ -11,6 +11,7 @@ import {
 } from "@/lib/airtable";
 import { sendTicketConfirmationEmail } from "@/lib/email";
 import { reportError } from "@/lib/error-report";
+import { followUpTicketPurchase } from "@/lib/ticket-followup";
 import { getStripe } from "@/lib/stripe";
 import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
@@ -330,6 +331,26 @@ export async function POST(request: Request) {
             "Ticket confirmation email didn't send; the buyer has no ticket code yet",
           details: { Buyer: email, Session: full.id },
           error: err,
+        });
+      }
+
+      try {
+        await followUpTicketPurchase({
+          to: email,
+          name: preferredName ?? full.customer_details?.name ?? undefined,
+          ticketType: ticketType ?? "Standard",
+          paymentId: paymentIntent?.id ?? full.id,
+          test: !event.livemode || isTestCoupon,
+        });
+      } catch (err) {
+        console.error("[stripe-webhook] ticket follow-up failed:", err);
+        await reportError({
+          source: "Stripe webhook",
+          summary:
+            "Ticket follow-up (Resend contact + one-week-out email) failed (the ticket itself is fine)",
+          details: { Buyer: email, Session: full.id },
+          error: err,
+          mention: false,
         });
       }
     }
