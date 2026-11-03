@@ -110,7 +110,8 @@ export function DayTabs({
   onSelect: (key: string) => void;
 }) {
   // Phones get "Fri 11/6"; the full name and date come in at the sm
-  // breakpoint. Five days (the team sees setup and teardown) get less padding.
+  // breakpoint. Five days (the team sees setup and teardown) don't fit a
+  // narrow phone in a row, so the date goes under the name then.
   const tight = days.length > 3;
   return (
     <div role="tablist" aria-label="Conference day" className={TOGGLE}>
@@ -126,7 +127,13 @@ export function DayTabs({
         >
           <span className="sm:hidden">{d.name.slice(0, 3)}</span>
           <span className="hidden sm:inline">{d.name}</span>
-          <span className="ml-1 inline-block text-[11px] opacity-70 sm:ml-1.5 sm:text-sm">
+          <span
+            className={`opacity-70 sm:ml-1.5 sm:inline-block sm:text-sm sm:leading-normal ${
+              tight
+                ? "block text-[10px] leading-tight"
+                : "ml-1 inline-block text-[11px]"
+            }`}
+          >
             <span className="sm:hidden">{shortDate(d.key)}</span>
             <span className="hidden sm:inline">{d.dateLabel}</span>
           </span>
