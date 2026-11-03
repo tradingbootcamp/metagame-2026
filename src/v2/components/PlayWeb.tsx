@@ -84,6 +84,9 @@ const IDLE_AFTER_MS = 2500;
 
 export default function PlayWeb() {
   const [pose, setPose] = useState<Mat>(START);
+  // A tapped corner keeps its label up (hover does the same on desktop).
+  const [picked, setPicked] = useState<number | null>(null);
+  const moved = useRef(false);
   const drag = useRef<{ id: number; x: number; y: number } | null>(null);
   const velocity = useRef({ x: 0, y: 0 });
   const lastTouch = useRef(0);
@@ -112,6 +115,7 @@ export default function PlayWeb() {
     if (e.button !== 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    moved.current = false;
     velocity.current = { x: 0, y: 0 };
     lastTouch.current = Date.now();
   };
@@ -120,6 +124,9 @@ export default function PlayWeb() {
     if (!d || d.id !== e.pointerId) return;
     const dx = (e.clientX - d.x) * DRAG;
     const dy = -(e.clientY - d.y) * DRAG;
+    if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 3) {
+      moved.current = true;
+    }
     d.x = e.clientX;
     d.y = e.clientY;
     velocity.current = { x: dx, y: dy };
@@ -190,7 +197,11 @@ export default function PlayWeb() {
               key={name}
               // The hovered one rises above the rest, so its label is never
               // under a nearer edge.
-              className="group absolute z-(--z) -translate-x-1/2 -translate-y-1/2 hover:z-[2000]"
+              className={`group absolute z-(--z) -translate-x-1/2 -translate-y-1/2 hover:z-[2000] ${picked === i ? "z-[2000]!" : ""}`}
+              onClick={() => {
+                if (moved.current) return;
+                setPicked((p) => (p === i ? null : i));
+              }}
               style={
                 {
                   left: `${r((x / W) * 100)}%`,
@@ -224,7 +235,7 @@ export default function PlayWeb() {
               </span>
               <span
                 aria-hidden
-                className="pointer-events-none absolute -top-7 left-1/2 z-20 -translate-x-1/2 rounded bg-navy px-2 py-1 font-space-mono text-[10px] font-bold tracking-[0.1em] whitespace-nowrap text-cream uppercase opacity-0 transition-opacity group-hover:opacity-100"
+                className={`pointer-events-none absolute -top-7 left-1/2 z-20 -translate-x-1/2 rounded bg-navy px-2 py-1 font-space-mono text-[10px] font-bold tracking-[0.1em] whitespace-nowrap text-cream uppercase opacity-0 transition-opacity group-hover:opacity-100 ${picked === i ? "opacity-100" : ""}`}
               >
                 {GLYPH_LABELS[name]}
               </span>
