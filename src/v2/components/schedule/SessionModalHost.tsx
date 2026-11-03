@@ -15,9 +15,10 @@ import {
   closeSessionHref,
   openSessionHref,
   SESSION_PARAM,
+  SESSION_TITLE_ID,
   sessionPageSlug,
 } from "@/lib/session-link";
-import SessionModal, { SESSION_TITLE_ID } from "./SessionModal";
+import SessionModal from "./SessionModal";
 
 const HostContext = createContext(false);
 

@@ -3,6 +3,7 @@
 // own, shareable page.
 
 export const SESSION_PARAM = "session";
+export const SESSION_TITLE_ID = "session-title";
 
 /** The slug of the session page `pathname` is, /schedule/<slug>, or null. */
 export function sessionPageSlug(pathname: string): string | null {

@@ -11,8 +11,6 @@ import {
 } from "react";
 import { FaTimes } from "react-icons/fa";
 
-export const SESSION_TITLE_ID = "session-title";
-
 const PlanChangeContext = createContext<(() => void) | null>(null);
 
 /** Tells the enclosing session modal a plan changed, if there is one. */
@@ -43,10 +41,17 @@ export default function SessionModal({
 
   const close = useCallback(() => {
     router.replace(closeHref, { scroll: false });
-    // The page underneath wasn't re-rendered for the click, so an RSVP or
-    // bookmark made here reaches its lists (My sessions, the account) now.
-    if (planChanged.current) router.refresh();
   }, [router, closeHref]);
+
+  // The page underneath wasn't re-rendered for the click, so an RSVP or
+  // bookmark made here reaches its lists (My sessions, the account) once the
+  // modal goes, however it was closed (browser back included).
+  useEffect(
+    () => () => {
+      if (planChanged.current) router.refresh();
+    },
+    [router],
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

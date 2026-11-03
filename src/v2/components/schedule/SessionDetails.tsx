@@ -30,7 +30,7 @@ import {
 import SessionPlans from "@/v2/components/schedule/SessionPlans";
 import SessionSignIn from "@/v2/components/schedule/SessionSignIn";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
-import { SESSION_TITLE_ID } from "@/v2/components/schedule/SessionModal";
+import { SESSION_TITLE_ID } from "@/lib/session-link";
 import { HEADING } from "@/v2/components/styles";
 
 const CATEGORY_LABEL: Record<Category, string> = {

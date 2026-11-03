@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import SessionDetails, {
   sessionMetadata,
 } from "@/v2/components/schedule/SessionDetails";
-import SessionModal, {
-  SESSION_TITLE_ID,
-} from "@/v2/components/schedule/SessionModal";
+import { SESSION_TITLE_ID } from "@/lib/session-link";
+import SessionModal from "@/v2/components/schedule/SessionModal";
 
 type Props = { params: Promise<{ slug: string }> };
 
