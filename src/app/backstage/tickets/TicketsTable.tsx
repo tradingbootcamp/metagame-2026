@@ -203,7 +203,15 @@ export default function TicketsTable({
           </thead>
           <tbody className="divide-y divide-line align-top">
             {page.rows.map(({ t, people }) => (
-              <tr key={t.id}>
+              <tr
+                key={t.id}
+                onClick={(e) => {
+                  // Links and buttons in the row keep their own action.
+                  if ((e.target as HTMLElement).closest("a, button")) return;
+                  setOpenId(t.id);
+                }}
+                className="cursor-pointer hover:bg-cream"
+              >
                 <td className="px-4 py-2 whitespace-nowrap">
                   {monthDay.format(t.createdAt)}
                 </td>
