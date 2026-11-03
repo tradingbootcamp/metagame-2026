@@ -34,24 +34,16 @@ import { HEADING } from "../styles";
 // variant.
 // The min height matches a three-line tile, so tiles stay even without the
 // row stretching them (it can't: the family tile's swag bubble adds height).
-const TILE =
-  "min-h-[112px] min-w-[210px] flex-col gap-1 px-7 py-4 max-[460px]:min-h-0 max-[460px]:w-full max-[460px]:min-w-0 max-[460px]:py-3";
-const TILE_LABEL =
-  "font-space-mono text-[13px] tracking-[0.18em] uppercase whitespace-nowrap text-cream/85 max-[460px]:whitespace-normal";
-const TILE_NOTE =
-  "font-space-mono text-[11px] tracking-[0.08em] uppercase whitespace-nowrap text-cream/60 max-[460px]:whitespace-normal";
-
 // Below 460px the tiles drop into a two-column grid with tighter type.
-const M = {
-  tile: "max-[460px]:px-3",
-  label: "max-[460px]:text-[10px] max-[460px]:tracking-[0.1em]",
-  note: "max-[460px]:text-[9px] max-[460px]:tracking-[0.04em]",
-  price: "max-[460px]:text-[24px]",
-  strike: "max-[460px]:text-[14px]",
-  dayUsd: "max-[460px]:text-[14px]",
-  dayBtc: "max-[460px]:text-[11px]",
-  bubble: "max-[460px]:w-[calc(100%+12px)] max-[460px]:text-[9px]",
-};
+const TILE =
+  "min-h-[112px] min-w-[210px] flex-col gap-1 px-7 py-4 max-[460px]:min-h-0 max-[460px]:min-w-0 max-[460px]:px-3 max-[460px]:py-3";
+const TILE_LABEL =
+  "font-space-mono text-[13px] tracking-[0.18em] uppercase whitespace-nowrap text-cream/85 max-[460px]:text-[10px] max-[460px]:tracking-[0.1em] max-[460px]:whitespace-normal";
+const TILE_NOTE =
+  "font-space-mono text-[11px] tracking-[0.08em] uppercase whitespace-nowrap text-cream/60 max-[460px]:text-[9px] max-[460px]:tracking-[0.04em] max-[460px]:whitespace-normal";
+const TILE_PRICE = `${HEADING} text-[30px] text-tan max-[460px]:text-[24px]`;
+const TILE_STRIKE =
+  "text-[18px] font-bold text-cream/40 line-through max-[460px]:text-[14px]";
 
 // The tickets UI for the home page's tickets section: a currency toggle over the early-bird ticket (USD → Stripe Checkout;
 // BTC → the OpenNode BtcModal) and the pay-what-you-want supporter tile, both
@@ -95,11 +87,6 @@ export default function TicketsPanel({
   showHeading?: boolean;
 }) {
   const start = align === "start";
-  const m = M;
-  const tile = `${TILE} ${m.tile}`;
-  const tileNarrow = `${TILE.replace("px-7", "px-4")} ${m.tile}`;
-  const label = `${TILE_LABEL} ${m.label}`;
-  const note = `${TILE_NOTE} ${m.note}`;
   const earlyBirdActive = useSyncExternalStore(
     subscribeNever,
     isEarlyBirdActive,
@@ -184,7 +171,7 @@ export default function TicketsPanel({
       </button>
 
       <div
-        className={`flex flex-wrap items-start gap-[18px] max-[460px]:grid max-[460px]:w-full max-[460px]:grid-cols-2 max-[460px]:gap-3 max-[460px]:*:w-full ${start ? "justify-start" : "justify-center"}`}
+        className={`flex flex-wrap items-start gap-[18px] max-[460px]:grid max-[460px]:w-full max-[460px]:grid-cols-2 max-[460px]:gap-3 ${start ? "justify-start" : "justify-center"}`}
       >
         {standard &&
           earlyBirdActive &&
@@ -193,23 +180,21 @@ export default function TicketsPanel({
               type="button"
               variant="raised"
               onClick={() => setBtcOpen("early-bird")}
-              className={tile}
+              className={TILE}
             >
-              <span className={label}>Early-bird</span>
+              <span className={TILE_LABEL}>Early-bird</span>
               <span className="flex items-baseline gap-2.5 leading-none">
-                <span
-                  className={`text-[18px] font-bold text-cream/40 line-through ${m.strike}`}
-                >
+                <span className={TILE_STRIKE}>
                   &#8383;{standard.prices.full.btc}
                 </span>
-                <span className={`${HEADING} text-[30px] text-tan ${m.price}`}>
+                <span className={TILE_PRICE}>
                   &#8383;{standard.prices.earlyBird.btc}
                 </span>
               </span>
-              <span className={note}>until {EARLY_BIRD_DEADLINE}</span>
+              <span className={TILE_NOTE}>until {EARLY_BIRD_DEADLINE}</span>
             </Button>
           ) : (
-            <Button asChild variant="raised" className={tile}>
+            <Button asChild variant="raised" className={TILE}>
               <a
                 href={EARLY_BIRD_HREF}
                 onClick={addUtm(EARLY_BIRD_HREF)}
@@ -217,20 +202,16 @@ export default function TicketsPanel({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span className={label}>Early-bird</span>
+                <span className={TILE_LABEL}>Early-bird</span>
                 <span className="flex items-baseline gap-2.5 leading-none">
-                  <span
-                    className={`text-[18px] font-bold text-cream/40 line-through ${m.strike}`}
-                  >
+                  <span className={TILE_STRIKE}>
                     ${standard.prices.full.usd}
                   </span>
-                  <span
-                    className={`${HEADING} text-[30px] text-tan ${m.price}`}
-                  >
+                  <span className={TILE_PRICE}>
                     ${standard.prices.earlyBird.usd}
                   </span>
                 </span>
-                <span className={note}>until {EARLY_BIRD_DEADLINE}</span>
+                <span className={TILE_NOTE}>until {EARLY_BIRD_DEADLINE}</span>
               </a>
             </Button>
           ))}
@@ -243,17 +224,15 @@ export default function TicketsPanel({
               type="button"
               variant="raised"
               onClick={() => setBtcOpen("standard")}
-              className={tile}
+              className={TILE}
             >
-              <span className={label}>Standard</span>
-              <span
-                className={`${HEADING} text-[30px] leading-none text-tan ${m.price}`}
-              >
+              <span className={TILE_LABEL}>Standard</span>
+              <span className={`${TILE_PRICE} leading-none`}>
                 &#8383;{standard.prices.full.btc}
               </span>
             </Button>
           ) : (
-            <Button asChild variant="raised" className={tile}>
+            <Button asChild variant="raised" className={TILE}>
               <a
                 href={FULL_PRICE_HREF}
                 onClick={(e) => {
@@ -266,10 +245,8 @@ export default function TicketsPanel({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span className={label}>Standard</span>
-                <span
-                  className={`${HEADING} text-[30px] leading-none text-tan ${m.price}`}
-                >
+                <span className={TILE_LABEL}>Standard</span>
+                <span className={`${TILE_PRICE} leading-none`}>
                   ${standard.prices.full.usd}
                 </span>
               </a>
@@ -280,12 +257,10 @@ export default function TicketsPanel({
           variant="raised"
           id="supporter"
           onClick={() => setOpenModal("supporter")}
-          className={`${tile} scroll-mt-24`}
+          className={`${TILE} scroll-mt-24`}
         >
-          <span className={label}>Supporter</span>
-          <span
-            className={`${HEADING} text-[30px] leading-none text-tan ${m.price}`}
-          >
+          <span className={TILE_LABEL}>Supporter</span>
+          <span className={`${TILE_PRICE} leading-none`}>
             {isBtc ? (
               <>&#8383;{supporterTier.floor.btc}+</>
             ) : (
@@ -300,18 +275,18 @@ export default function TicketsPanel({
           id="day-pass"
           onClick={() => setOpenModal("day-pass")}
           // Narrower padding + a 32px line box so the three-price line fits the
-          // shared 210px tile at the same height as the others.
-          className={tileNarrow}
+          // shared 210px desktop tile at the same height as the others.
+          className={TILE.replace("px-7", "px-4")}
         >
-          <span className={label}>Day pass</span>
+          <span className={TILE_LABEL}>Day pass</span>
           <span
-            className={`${HEADING} leading-[32px] text-tan ${isBtc ? `text-[15px] ${m.dayBtc}` : `text-[22px] ${m.dayUsd}`}`}
+            className={`${HEADING} leading-[32px] text-tan ${isBtc ? "text-[15px] max-[460px]:text-[9px]" : "text-[22px] max-[460px]:text-[13px]"}`}
           >
             {isBtc
               ? `\u20BF${dayPasses.map((p) => p.btc).join("/")}`
               : dayPasses.map((p) => `$${p.usd}`).join("/")}
           </span>
-          <span className={note}>
+          <span className={TILE_NOTE}>
             {dayPasses.map((p) => p.date.long.slice(0, 3)).join(" · ")}
           </span>
         </Button>
@@ -325,21 +300,15 @@ export default function TicketsPanel({
             variant="raised"
             id="family-pack"
             onClick={() => setOpenModal("family-pack")}
-            // Narrower padding so the long label fits the shared 210px tile.
-            className={`peer ${tileNarrow} max-[460px]:pb-6`}
+            // Narrower padding so the long label fits the shared 210px desktop tile.
+            className={`peer ${TILE.replace("px-7", "px-4")} max-[460px]:pb-6`}
           >
-            <span className={label}>Family &amp; Friends</span>
+            <span className={TILE_LABEL}>Family &amp; Friends</span>
             <span className="flex items-baseline gap-2.5 leading-none">
-              <span
-                className={`text-[18px] font-bold text-cream/40 line-through ${m.strike}`}
-              >
-                ${STANDARD_USD}
-              </span>
-              <span className={`${HEADING} text-[30px] text-tan ${m.price}`}>
-                ${FAMILY_PACK.usd}
-              </span>
+              <span className={TILE_STRIKE}>${STANDARD_USD}</span>
+              <span className={TILE_PRICE}>${FAMILY_PACK.usd}</span>
             </span>
-            <span className={note}>
+            <span className={TILE_NOTE}>
               each · {FAMILY_PACK.min}–{FAMILY_PACK.max} tickets
             </span>
           </Button>
@@ -347,7 +316,7 @@ export default function TicketsPanel({
             type="button"
             id="friend-swag"
             onClick={() => setOpenModal("friend-swag")}
-            className={`absolute inset-x-0 -bottom-8 z-10 mx-auto w-[190px] -rotate-2 scroll-mt-24 rounded-2xl border-2 border-navy bg-meeple px-2.5 py-1.5 text-center font-space-mono text-[10px] leading-[1.25] font-bold tracking-[0.04em] text-cream uppercase shadow-[3px_3px_0_0_var(--color-navy)] transition-[translate,scale] duration-150 peer-hover:-translate-[5px] hover:scale-105 ${m.bubble}`}
+            className={`absolute inset-x-0 -bottom-8 z-10 mx-auto w-[190px] -rotate-2 scroll-mt-24 rounded-2xl border-2 border-navy bg-meeple px-2.5 py-1.5 text-center font-space-mono text-[10px] leading-[1.25] font-bold tracking-[0.04em] text-cream uppercase shadow-[3px_3px_0_0_var(--color-navy)] transition-[translate,scale] duration-150 peer-hover:-translate-[5px] hover:scale-105 max-[460px]:-inset-x-1.5 max-[460px]:w-auto max-[460px]:text-[9px]`}
           >
             Plus special bring‑a‑friend reward swag
           </button>
@@ -357,23 +326,15 @@ export default function TicketsPanel({
           variant="raised"
           id="discount-rate"
           onClick={() => setOpenModal("discount-rate")}
-          className={tile}
+          className={TILE}
         >
-          <span className={label}>Student / Aid</span>
-          <span
-            className={`${HEADING} text-[30px] leading-none text-tan ${m.price}`}
-          >
-            50% off
-          </span>
+          <span className={TILE_LABEL}>Student / Aid</span>
+          <span className={`${TILE_PRICE} leading-none`}>50% off</span>
         </Button>
-        <Button asChild variant="raised" className={tile}>
+        <Button asChild variant="raised" className={TILE}>
           <VolunteerFormLink>
-            <span className={label}>Volunteer</span>
-            <span
-              className={`${HEADING} text-[30px] leading-none text-tan ${m.price}`}
-            >
-              $0
-            </span>
+            <span className={TILE_LABEL}>Volunteer</span>
+            <span className={`${TILE_PRICE} leading-none`}>$0</span>
           </VolunteerFormLink>
         </Button>
       </div>
