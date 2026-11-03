@@ -319,7 +319,7 @@ export default async function Home() {
             {SPEAKERS.map((speaker) => (
               <div
                 key={speaker.name}
-                className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]"
+                className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(20%-1rem)]"
               >
                 <SpeakerCard
                   {...speaker}
@@ -327,7 +327,7 @@ export default async function Home() {
                 />
               </div>
             ))}
-            <div className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]">
+            <div className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(20%-1rem)]">
               <SpeakerCtaCard href={RFP_FORM_URL} />
             </div>
           </div>

@@ -28,7 +28,7 @@ const CATEGORY_ICON: Record<Category, typeof Mic> = {
   other: Sparkles,
 };
 
-const SIZES = "(min-width: 1024px) 400px, (min-width: 640px) 50vw, 33vw";
+const SIZES = "(min-width: 1024px) 220px, 33vw";
 const FACE =
   "flex h-full flex-col overflow-hidden rounded-lg border border-navy/[0.16] shadow-[0_8px_24px_rgba(23,48,89,0.08)] [backface-visibility:hidden]";
 const MONO =
