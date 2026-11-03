@@ -2,6 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import {
+  Component,
   createContext,
   Suspense,
   useContext,
@@ -21,6 +22,7 @@ import {
 import SessionModal from "./SessionModal";
 
 const HostContext = createContext(false);
+const ReloadContext = createContext<(() => void) | null>(null);
 
 /**
  * Where a session link should point from the current page: over it as
@@ -32,6 +34,14 @@ export function useSessionHref(): (slug: string) => string {
   const hosted = useContext(HostContext);
   return (slug) =>
     hosted ? openSessionHref(pathname, slug) : sessionHref({ slug });
+}
+
+/**
+ * Re-reads the modal body from the server, when it's one loaded over another
+ * page; null on the session's own page, where a router refresh does that.
+ */
+export function useReloadSession() {
+  return useContext(ReloadContext);
 }
 
 /**
@@ -70,46 +80,74 @@ function ParamModal() {
   );
 }
 
-const NOTE = "text-sm text-[#1b1530]/60";
+function Note({ children }: { children: ReactNode }) {
+  return (
+    <p id={SESSION_TITLE_ID} className="text-sm text-[#1b1530]/60">
+      {children}
+    </p>
+  );
+}
+
+const LOADING = <Note>Loading&hellip;</Note>;
 
 /** The session's details, rendered on the server once the modal opens. */
 function LoadedSession({ slug }: { slug: string }) {
-  const [body, setBody] = useState<ReactNode>();
-  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [body, setBody] = useState<ReactNode>(LOADING);
+  const reload = () => {
+    setBody(LOADING);
+    setAttempt((n) => n + 1);
+  };
 
   useEffect(() => {
     let live = true;
     sessionDetails(slug)
       .then((node) => {
-        if (!live) return;
-        setBody(
-          node ?? (
-            <p id={SESSION_TITLE_ID} className={NOTE}>
-              This session isn&rsquo;t on the schedule.
-            </p>
-          ),
-        );
+        if (live)
+          setBody(
+            node ?? <Note>This session isn&rsquo;t on the schedule.</Note>,
+          );
       })
       .catch(() => {
-        if (live) setFailed(true);
+        if (live) setBody(<LoadFailed />);
       });
     return () => {
       live = false;
     };
-  }, [slug]);
+  }, [slug, attempt]);
 
-  if (failed) {
-    return (
-      <p id={SESSION_TITLE_ID} className={NOTE}>
-        Couldn&rsquo;t load this session. Try again.
-      </p>
-    );
-  }
+  // The body streams in from the action: parts of it can still be pending or
+  // throw while rendering, and both should stay inside the modal.
   return (
-    body ?? (
-      <p id={SESSION_TITLE_ID} className={NOTE}>
-        Loading&hellip;
-      </p>
-    )
+    <ReloadContext value={reload}>
+      <BodyBoundary key={attempt} fallback={<LoadFailed />}>
+        <Suspense fallback={LOADING}>{body}</Suspense>
+      </BodyBoundary>
+    </ReloadContext>
   );
+}
+
+function LoadFailed() {
+  const reload = useReloadSession();
+  return (
+    <Note>
+      Couldn&rsquo;t load this session.{" "}
+      <button type="button" onClick={() => reload?.()} className="underline">
+        Try again
+      </button>
+    </Note>
+  );
+}
+
+class BodyBoundary extends Component<
+  { fallback: ReactNode; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
 }

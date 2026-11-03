@@ -13,6 +13,7 @@ import {
   type PlanResult,
 } from "@/app/(v2)/schedule/actions";
 import { Button } from "@/v2/components/ui/button";
+import { useReloadSession } from "@/v2/components/schedule/SessionModalHost";
 import {
   Dialog,
   DialogContent,
@@ -321,6 +322,7 @@ function TicketDialog({
   onClaimed: () => void;
 }) {
   const router = useRouter();
+  const reloadSession = useReloadSession();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const mine = claimable[0];
@@ -383,8 +385,10 @@ function TicketDialog({
                     setError(result.error);
                     return;
                   }
-                  // Ticket holders see who's coming, so re-read the page.
+                  // Ticket holders see who's coming, so re-read the page and,
+                  // over another page, the modal body too.
                   router.refresh();
+                  reloadSession?.();
                   onClaimed();
                 })
               }

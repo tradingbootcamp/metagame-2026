@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import type {
   PlanConflict,
@@ -8,7 +9,6 @@ import type {
   SessionRsvps,
 } from "@/lib/schedule";
 import PlanButtons from "./PlanButtons";
-import { useNotePlanChange } from "./SessionModal";
 
 /** A session page's RSVP controls and attendee list, updated together in place. */
 export default function SessionPlans({
@@ -33,7 +33,7 @@ export default function SessionPlans({
   plan: { status: RsvpStatus | null; bookmarked: boolean } | null;
   signIn: ReactNode;
 }) {
-  const notePlanChange = useNotePlanChange();
+  const router = useRouter();
   const [rsvps, setRsvps] = useState(initial);
   const [prev, setPrev] = useState(initial);
   if (prev !== initial) {
@@ -60,8 +60,10 @@ export default function SessionPlans({
           conflicts={conflicts}
           ticket={ticket}
           onSettled={(result) => {
-            notePlanChange?.();
             if (result.rsvps) setRsvps(result.rsvps);
+            // The page underneath (My sessions, the account lists) didn't
+            // see the change.
+            router.refresh();
           }}
         />
       ) : (

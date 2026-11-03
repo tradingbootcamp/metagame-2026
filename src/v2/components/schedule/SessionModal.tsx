@@ -1,22 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { FaTimes } from "react-icons/fa";
-
-const PlanChangeContext = createContext<(() => void) | null>(null);
-
-/** Tells the enclosing session modal a plan changed, if there is one. */
-export function useNotePlanChange() {
-  return useContext(PlanChangeContext);
-}
 
 /**
  * A session's details over the page. Closing replaces the URL with `closeHref`
@@ -34,24 +20,10 @@ export default function SessionModal({
 }) {
   const router = useRouter();
   const overlayRef = useRef<HTMLDivElement>(null);
-  const planChanged = useRef(false);
-  const notePlanChange = useCallback(() => {
-    planChanged.current = true;
-  }, []);
 
   const close = useCallback(() => {
     router.replace(closeHref, { scroll: false });
   }, [router, closeHref]);
-
-  // The page underneath wasn't re-rendered for the click, so an RSVP or
-  // bookmark made here reaches its lists (My sessions, the account) once the
-  // modal goes, however it was closed (browser back included).
-  useEffect(
-    () => () => {
-      if (planChanged.current) router.refresh();
-    },
-    [router],
-  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -87,7 +59,7 @@ export default function SessionModal({
         >
           <FaTimes size={18} />
         </button>
-        <PlanChangeContext value={notePlanChange}>{children}</PlanChangeContext>
+        {children}
       </div>
     </div>
   );

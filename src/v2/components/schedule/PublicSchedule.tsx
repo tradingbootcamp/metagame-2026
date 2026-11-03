@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaStar } from "react-icons/fa";
 import { toast } from "sonner";
 import {
@@ -79,8 +79,12 @@ export default function PublicSchedule({
 
   // Landing with ?session= open (coming back from sign-in) shows that day
   // too. Read off the location: useSearchParams would need a Suspense
-  // boundary, and the home page would lose its prerendered schedule.
+  // boundary, and the home page would lose its prerendered schedule. Once
+  // only: on the home page a refresh hands over a new `days`.
+  const landed = useRef(false);
   useEffect(() => {
+    if (landed.current) return;
+    landed.current = true;
     const slug = new URLSearchParams(window.location.search).get(SESSION_PARAM);
     const key = sessionDayKey(days, slug);
     if (!key) return;
