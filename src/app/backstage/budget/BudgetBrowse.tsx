@@ -1,6 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import {
+  addCategoryAction,
+  setBudgetAction,
+  type CategoryInput,
+  type Result,
+} from "./actions";
+import { buttonClass, fieldClass, selectClass, selectStyle } from "../ui";
 import type { Category, LedgerRow } from "@/lib/budget-ledger";
 
 // Read-only view of the budget as the Categories tab computes it, with the
@@ -18,6 +26,24 @@ const sum = (xs: (number | null)[]) =>
   xs.reduce<number>((t, x) => t + (x ?? 0), 0);
 
 const panel = "rounded-xl border border-line bg-white p-4 shadow-sm";
+const label =
+  "mb-1 block text-xs font-semibold uppercase tracking-wide text-ink/60";
+const primary = buttonClass.replace("w-full ", "");
+
+const parseAmount = (s: string) =>
+  s.trim() === "" ? null : Number(s.replace(/[$,]/g, ""));
+
+function Flash({ result }: { result: Result | null }) {
+  if (!result) return null;
+  return (
+    <p
+      role="status"
+      className={`mt-2 text-sm ${result.ok ? "text-moss" : "text-meeple"}`}
+    >
+      {result.ok ? result.message : result.error}
+    </p>
+  );
+}
 
 type Props = {
   categories: Category[];
@@ -25,6 +51,7 @@ type Props = {
   ledger: LedgerRow[];
   pending: number;
   sheetUrl: string;
+  canManage: boolean;
 };
 
 export default function BudgetBrowse({
@@ -32,7 +59,9 @@ export default function BudgetBrowse({
   ledger,
   pending,
   sheetUrl,
+  canManage,
 }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
 
   if (categories.length === 0) {
@@ -115,6 +144,7 @@ export default function BudgetBrowse({
           ledger={ledger}
           open={open}
           setOpen={setOpen}
+          canManage={canManage}
           income
         />
       </section>
@@ -127,9 +157,14 @@ export default function BudgetBrowse({
             ledger={ledger}
             open={open}
             setOpen={setOpen}
+            canManage={canManage}
           />
         </section>
       ))}
+
+      {canManage && (
+        <AddCategory categories={categories} onAdded={router.refresh} />
+      )}
 
       <section className={panel}>
         <h2 className="mb-2 text-sm font-semibold">Recent spend</h2>
@@ -209,12 +244,14 @@ function CategoryTable({
   ledger,
   open,
   setOpen,
+  canManage,
   income,
 }: {
   categories: Category[];
   ledger: LedgerRow[];
   open: string | null;
   setOpen: (name: string | null) => void;
+  canManage: boolean;
   income?: boolean;
 }) {
   return (
@@ -271,11 +308,188 @@ function CategoryTable({
                 </span>
               </span>
             </button>
+            {isOpen && canManage && <EditBudget category={c} />}
             {isOpen && <CategoryRows name={c.name} ledger={ledger} />}
           </div>
         );
       })}
     </div>
+  );
+}
+
+function EditBudget({ category }: { category: Category }) {
+  const router = useRouter();
+  const [amount, setAmount] = useState(
+    category.budget === null ? "" : String(category.budget),
+  );
+  const [result, setResult] = useState<Result | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <form
+      className="mt-2 flex flex-wrap items-center gap-2 text-sm"
+      onSubmit={(e) => {
+        e.preventDefault();
+        start(async () => {
+          const { type, group, name } = category;
+          const r = await setBudgetAction(
+            { type, group, name },
+            parseAmount(amount),
+          );
+          setResult(r);
+          if (r.ok) router.refresh();
+        });
+      }}
+    >
+      <label htmlFor={`budget-${category.name}`} className="text-ink/60">
+        Budget
+      </label>
+      <input
+        id={`budget-${category.name}`}
+        inputMode="decimal"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+        className={`${fieldClass.replace("w-full", "")} w-32 py-1 text-sm`}
+      />
+      <button
+        type="submit"
+        disabled={pending}
+        className={`${primary} px-3 py-1 text-sm`}
+      >
+        {pending ? "Saving…" : "Save"}
+      </button>
+      <Flash result={result} />
+    </form>
+  );
+}
+
+const NEW_GROUP = "__new__";
+
+function AddCategory({
+  categories,
+  onAdded,
+}: {
+  categories: Category[];
+  onAdded: () => void;
+}) {
+  const [type, setType] = useState<"Income" | "Expense">("Expense");
+  const [group, setGroup] = useState("");
+  const [newGroup, setNewGroup] = useState("");
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [result, setResult] = useState<Result | null>(null);
+  const [pending, start] = useTransition();
+
+  const groups = [
+    ...new Set(categories.filter((c) => c.type === type).map((c) => c.group)),
+  ];
+  const chosenGroup = group === NEW_GROUP ? newGroup : group;
+
+  return (
+    <form
+      className={`${panel} grid gap-3 sm:grid-cols-2`}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const input: CategoryInput = {
+          type,
+          group: chosenGroup,
+          name,
+          budget: parseAmount(amount),
+        };
+        start(async () => {
+          const r = await addCategoryAction(input);
+          setResult(r);
+          if (r.ok) {
+            setGroup("");
+            setNewGroup("");
+            setName("");
+            setAmount("");
+            onAdded();
+          }
+        });
+      }}
+    >
+      <h2 className="text-sm font-semibold sm:col-span-2">Add a category</h2>
+      <div>
+        <label htmlFor="cat-type" className={label}>
+          Type
+        </label>
+        <select
+          id="cat-type"
+          value={type}
+          onChange={(e) => {
+            setType(e.target.value as "Income" | "Expense");
+            setGroup("");
+          }}
+          className={selectClass}
+          style={selectStyle}
+        >
+          <option value="Expense">Expense</option>
+          <option value="Income">Income</option>
+        </select>
+      </div>
+      <div>
+        <label htmlFor="cat-group" className={label}>
+          Group
+        </label>
+        <select
+          id="cat-group"
+          value={group}
+          onChange={(e) => setGroup(e.target.value)}
+          className={selectClass}
+          style={selectStyle}
+          required
+        >
+          <option value="">Pick a group</option>
+          {groups.map((g) => (
+            <option key={g} value={g}>
+              {g}
+            </option>
+          ))}
+          <option value={NEW_GROUP}>New group…</option>
+        </select>
+        {group === NEW_GROUP && (
+          <input
+            aria-label="New group name"
+            value={newGroup}
+            onChange={(e) => setNewGroup(e.target.value)}
+            placeholder="Group name"
+            className={`${fieldClass} mt-2`}
+            required
+          />
+        )}
+      </div>
+      <div>
+        <label htmlFor="cat-name" className={label}>
+          Name
+        </label>
+        <input
+          id="cat-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className={fieldClass}
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor="cat-budget" className={label}>
+          Budget
+        </label>
+        <input
+          id="cat-budget"
+          inputMode="decimal"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="Leave blank for none"
+          className={fieldClass}
+        />
+      </div>
+      <div className="sm:col-span-2">
+        <button type="submit" disabled={pending} className={primary}>
+          {pending ? "Adding…" : "Add to the sheet"}
+        </button>
+        <Flash result={result} />
+      </div>
+    </form>
   );
 }
 

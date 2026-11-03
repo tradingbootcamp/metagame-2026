@@ -1,6 +1,7 @@
 import { env } from "@/env";
 import {
   deleteRow,
+  insertRow,
   readRanges,
   sheetIdByTitle,
   writeRanges,
@@ -106,4 +107,63 @@ export async function replaceRow(row: number, r: RowInput): Promise<void> {
 export async function removeRow(row: number): Promise<void> {
   const tab = await sheetIdByTitle(sheetId(), LEDGER_TAB);
   await deleteRow(sheetId(), tab, row);
+}
+
+export type CategoryKey = { type: string; group: string; name: string };
+
+type CategoryRow = CategoryKey & { row: number; budget: number | null };
+
+/** The Categories tab's input columns with their sheet rows, read fresh. */
+async function readCategoryRows(): Promise<CategoryRow[]> {
+  const [income, expense] = await readRanges(sheetId(), [
+    `'${CATEGORIES_TAB}'!A5:D7`,
+    `'${CATEGORIES_TAB}'!A10:D80`,
+  ]);
+  const block = (values: CellValue[][], first: number) =>
+    values.flatMap((v, i) =>
+      parseCategories([v]).map((c) => ({ ...c, row: first + i })),
+    );
+  return [...block(income, 5), ...block(expense, 10)];
+}
+
+const sameName = (a: string, b: string) =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
+ * Inserts a category after the last row of its group (or of its type for a
+ * new group) so it lands inside the block the rollups and dropdowns span.
+ */
+export async function addCategory(
+  input: CategoryKey & { budget: number | null },
+): Promise<void> {
+  const rows = await readCategoryRows();
+  if (rows.some((c) => sameName(c.name, input.name))) {
+    throw new Error(`There's already a category named ${input.name}.`);
+  }
+  const ofType = rows.filter((c) => c.type === input.type);
+  const anchor =
+    ofType.filter((c) => c.group === input.group).at(-1) ?? ofType.at(-1);
+  if (!anchor) throw new Error(`No ${input.type} rows found to insert after.`);
+  const tab = await sheetIdByTitle(sheetId(), CATEGORIES_TAB);
+  await insertRow(sheetId(), tab, anchor.row);
+  const row = anchor.row + 1;
+  await writeRanges(sheetId(), [
+    {
+      range: `'${CATEGORIES_TAB}'!A${row}:D${row}`,
+      values: [[input.type, input.group, input.name, cell(input.budget)]],
+    },
+  ]);
+}
+
+export async function setCategoryBudget(
+  key: CategoryKey,
+  budget: number | null,
+): Promise<void> {
+  const match = (await readCategoryRows()).find(
+    (c) => c.type === key.type && c.group === key.group && c.name === key.name,
+  );
+  if (!match) throw new Error(`${key.name} is no longer in the sheet.`);
+  await writeRanges(sheetId(), [
+    { range: `'${CATEGORIES_TAB}'!D${match.row}`, values: [[cell(budget)]] },
+  ]);
 }

@@ -174,3 +174,29 @@ export async function deleteRow(
     }),
   });
 }
+
+/** Inserts one blank row after a 1-based row, inheriting that row's format. */
+export async function insertRow(
+  spreadsheetId: string,
+  sheetId: number,
+  after: number,
+): Promise<void> {
+  await call(spreadsheetId, ":batchUpdate", {
+    method: "POST",
+    body: JSON.stringify({
+      requests: [
+        {
+          insertDimension: {
+            range: {
+              sheetId,
+              dimension: "ROWS",
+              startIndex: after,
+              endIndex: after + 1,
+            },
+            inheritFromBefore: true,
+          },
+        },
+      ],
+    }),
+  });
+}

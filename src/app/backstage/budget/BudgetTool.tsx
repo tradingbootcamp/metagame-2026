@@ -189,6 +189,7 @@ export default function BudgetTool({
           ledger={ledger}
           pending={queue.length}
           sheetUrl={sheetUrl}
+          canManage={canManage}
         />
       )}
       {tab === "queue" && (

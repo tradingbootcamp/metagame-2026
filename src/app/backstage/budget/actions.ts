@@ -4,13 +4,16 @@ import { revalidatePath } from "next/cache";
 import { EXPIRED, requireAccess } from "@/lib/admin-auth";
 import { requestRows, runImport } from "@/lib/budget-import";
 import {
+  addCategory,
   appendRows,
   loadLedger,
   nextId,
   PHASES,
   removeRow,
   replaceRow,
+  setCategoryBudget,
   toInput,
+  type CategoryKey,
   type LedgerRow,
   type RowInput,
 } from "@/lib/budget-sheet";
@@ -241,6 +244,48 @@ export async function addPlanAction(input: PlanInput): Promise<Result> {
     ]);
     revalidatePath(PATH);
     return { ok: true, message: `${id} added.`, id };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export type CategoryInput = CategoryKey & { budget: number | null };
+
+export async function addCategoryAction(input: CategoryInput): Promise<Result> {
+  const admin = await requireAccess("budget.manage");
+  if (!admin) return { ok: false, error: EXPIRED };
+  if (input.type !== "Income" && input.type !== "Expense") {
+    return { ok: false, error: "Pick Income or Expense." };
+  }
+  const group = input.group.trim();
+  const name = input.name.trim();
+  if (!group) return { ok: false, error: "Give it a group." };
+  if (!name) return { ok: false, error: "Give it a name." };
+  if (input.budget !== null && !Number.isFinite(input.budget)) {
+    return { ok: false, error: "Budget must be a number." };
+  }
+  try {
+    await addCategory({ type: input.type, group, name, budget: input.budget });
+    revalidatePath(PATH);
+    return { ok: true, message: `${name} added.` };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export async function setBudgetAction(
+  key: CategoryKey,
+  budget: number | null,
+): Promise<Result> {
+  const admin = await requireAccess("budget.manage");
+  if (!admin) return { ok: false, error: EXPIRED };
+  if (budget !== null && !Number.isFinite(budget)) {
+    return { ok: false, error: "Budget must be a number." };
+  }
+  try {
+    await setCategoryBudget(key, budget);
+    revalidatePath(PATH);
+    return { ok: true, message: `${key.name} budget saved.` };
   } catch (err) {
     return fail(err);
   }
