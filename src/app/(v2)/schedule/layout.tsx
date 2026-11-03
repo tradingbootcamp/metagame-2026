@@ -1,5 +1,7 @@
+import { cookies } from "next/headers";
 import { connection } from "next/server";
 import { buildDays } from "@/lib/schedule";
+import { parseView, VIEW_COOKIE } from "@/lib/schedule-view";
 import ContentPage from "@/v2/components/ContentPage";
 import { ModalHost } from "@/v2/components/RouteModal";
 import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
@@ -15,9 +17,10 @@ export default async function ScheduleLayout({
   // Rendered per request: which rooms and plans show depends on the viewer,
   // and a build has no database to prerender from.
   await connection();
-  const [{ locations, sessions }, mine] = await Promise.all([
+  const [{ locations, sessions }, mine, cookieStore] = await Promise.all([
     loadPublicSchedule(),
     loadMySessionIds(),
+    cookies(),
   ]);
   return (
     <ModalHost closeHref="/schedule">
@@ -26,6 +29,7 @@ export default async function ScheduleLayout({
           days={buildDays(sessions)}
           locations={locations}
           mine={mine}
+          initialView={parseView(cookieStore.get(VIEW_COOKIE)?.value)}
         />
       </ContentPage>
       {children}

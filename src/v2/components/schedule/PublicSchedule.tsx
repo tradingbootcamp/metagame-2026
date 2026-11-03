@@ -13,6 +13,7 @@ import {
   type PublicLocation,
   type PublicSession,
 } from "@/lib/schedule";
+import { readViewCookie, writeViewCookie } from "@/lib/schedule-view";
 import { ScheduleLegend } from "./SessionBits";
 import {
   buildColumns,
@@ -35,14 +36,32 @@ export default function PublicSchedule({
   days,
   locations,
   mine,
+  initialView,
 }: {
   days: PublicDay[];
   locations: PublicLocation[];
   /** Ids of the viewer's own sessions; null when signed out. */
   mine: string[] | null;
+  /** The view cookie as read on the server; undefined where the page is
+   *  cached and the cookie has to be read after mount instead. */
+  initialView?: View;
 }) {
   const [dayKey, setDayKey] = useState(() => openingDayKey(days));
-  const [view, setView] = useState<View>("grid");
+  const [view, setView] = useState<View>(initialView ?? "grid");
+  const selectView = (v: View) => {
+    setView(v);
+    writeViewCookie(v);
+  };
+
+  // Without a server-read view, pick up the one stored in the browser;
+  // deferred so server and first client render match.
+  useEffect(() => {
+    if (initialView) return;
+    const stored = readViewCookie();
+    if (!stored) return;
+    const t = setTimeout(() => setView(stored), 0);
+    return () => clearTimeout(t);
+  }, [initialView]);
   const [onlyMine, setOnlyMine] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -111,7 +130,7 @@ export default function PublicSchedule({
         )}
         <ViewToggle
           view={view}
-          onSelect={setView}
+          onSelect={selectView}
           views={["grid", "list", "moments"]}
           iconsOnly
           className={`${mine ? "" : "ml-auto"} shrink-0 sm:hidden`}
@@ -122,7 +141,7 @@ export default function PublicSchedule({
         <div className="hidden sm:block">
           <ViewToggle
             view={view}
-            onSelect={setView}
+            onSelect={selectView}
             views={["grid", "list", "moments"]}
           />
         </div>
