@@ -583,7 +583,7 @@ export async function updateRfpSession(
     .where(eq(sessions.id, sessionId))
     .returning({ id: sessions.id });
   if (!row) throw new Error("That session no longer exists.");
-  if (pipeline.shepherdUserId !== undefined) invalidateSchedule();
+  invalidateSchedule();
 
   await mirrorSession(
     sessionId,

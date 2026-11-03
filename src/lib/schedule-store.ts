@@ -58,94 +58,92 @@ export type Schedule = {
 
 const SCHEDULE_TAG = "schedule";
 
-/**
- * Drops the cached schedule read. Every write to what it reads (sessions,
- * locations, session_hosts, host/shepherd names) must call this.
- */
+/** Call after any write to sessions, locations, session_hosts or user names. */
 export function invalidateSchedule(): void {
   revalidateTag(SCHEDULE_TAG, { expire: 0 });
 }
 
-// Nothing in here may read cookies or headers. The TTL is a backstop for
-// writes that bypass invalidateSchedule() (scripts, console edits, a read
-// racing a write); dev keeps it short so a reseed shows up promptly.
-// Deployments share one data cache, so the key carries the database host.
-const readSchedule = unstable_cache(
-  async (): Promise<Schedule> => {
-    const db = getDb();
-    const [locs, sess, hosts, shepherds] = await Promise.all([
-      db
-        .select()
-        .from(locations)
-        .orderBy(asc(locations.displayOrder), asc(locations.name)),
-      db
-        .select()
-        .from(sessions)
-        .orderBy(asc(sessions.startsAt), asc(sessions.title)),
-      db
-        .select({ sessionId: sessionHosts.sessionId, ...accountColumns })
-        .from(sessionHosts)
-        .innerJoin(user, eq(user.id, sessionHosts.userId))
-        .orderBy(asc(sessionHosts.sessionId), asc(sessionHosts.position)),
-      db
-        .select({ sessionId: sessions.id, ...accountColumns })
-        .from(sessions)
-        .innerJoin(user, eq(user.id, sessions.shepherdUserId)),
-    ]);
-    const shepherdBySession = new Map(
-      shepherds.map(({ sessionId, ...account }) => [sessionId, account]),
-    );
-    const hostsBySession = new Map<string, ScheduleAccount[]>();
-    for (const { sessionId, ...host } of hosts) {
-      const list = hostsBySession.get(sessionId);
-      if (list) list.push(host);
-      else hostsBySession.set(sessionId, [host]);
-    }
-    return {
-      locations: locs.map((l) => ({
-        id: l.id,
-        name: l.name,
-        capacity: l.capacity,
-        campusLocation: l.campusLocation,
-        description: l.description,
-        displayOrder: l.displayOrder,
-        visibility: l.visibility,
-        thumbnailUrl: l.thumbnailUrl,
-        imageUrl: l.imageUrl,
-      })),
-      sessions: sess.map((s) => ({
-        id: s.id,
-        slug: s.slug,
-        title: s.title,
-        description: s.description,
-        category: s.category,
-        startsAt: s.startsAt?.toISOString() ?? null,
-        endsAt: s.endsAt?.toISOString() ?? null,
-        locationId: s.locationId,
-        maxCapacity: s.maxCapacity,
-        minCapacity: s.minCapacity,
-        ages: s.ages,
-        needs: s.needs,
-        status: s.status,
-        rsvpIsCommitment: s.rsvpIsCommitment,
-        sponsored: s.sponsored,
-        rsvpsOpen: s.rsvpsOpen,
-        airtableRfpRecordId: s.airtableRfpRecordId,
-        hosts: hostsBySession.get(s.id) ?? [],
-        shepherd: shepherdBySession.get(s.id) ?? null,
-      })),
-    };
-  },
-  ["schedule", env.DATABASE_URL ? new URL(env.DATABASE_URL).host : ""],
+/** Straight from the database: for admin writes that merge over the current row. */
+export async function querySchedule(): Promise<Schedule> {
+  const db = getDb();
+  const [locs, sess, hosts, shepherds] = await Promise.all([
+    db
+      .select()
+      .from(locations)
+      .orderBy(asc(locations.displayOrder), asc(locations.name)),
+    db
+      .select()
+      .from(sessions)
+      .orderBy(asc(sessions.startsAt), asc(sessions.title)),
+    db
+      .select({ sessionId: sessionHosts.sessionId, ...accountColumns })
+      .from(sessionHosts)
+      .innerJoin(user, eq(user.id, sessionHosts.userId))
+      .orderBy(asc(sessionHosts.sessionId), asc(sessionHosts.position)),
+    db
+      .select({ sessionId: sessions.id, ...accountColumns })
+      .from(sessions)
+      .innerJoin(user, eq(user.id, sessions.shepherdUserId)),
+  ]);
+  const shepherdBySession = new Map(
+    shepherds.map(({ sessionId, ...account }) => [sessionId, account]),
+  );
+  const hostsBySession = new Map<string, ScheduleAccount[]>();
+  for (const { sessionId, ...host } of hosts) {
+    const list = hostsBySession.get(sessionId);
+    if (list) list.push(host);
+    else hostsBySession.set(sessionId, [host]);
+  }
+  return {
+    locations: locs.map((l) => ({
+      id: l.id,
+      name: l.name,
+      capacity: l.capacity,
+      campusLocation: l.campusLocation,
+      description: l.description,
+      displayOrder: l.displayOrder,
+      visibility: l.visibility,
+      thumbnailUrl: l.thumbnailUrl,
+      imageUrl: l.imageUrl,
+    })),
+    sessions: sess.map((s) => ({
+      id: s.id,
+      slug: s.slug,
+      title: s.title,
+      description: s.description,
+      category: s.category,
+      startsAt: s.startsAt?.toISOString() ?? null,
+      endsAt: s.endsAt?.toISOString() ?? null,
+      locationId: s.locationId,
+      maxCapacity: s.maxCapacity,
+      minCapacity: s.minCapacity,
+      ages: s.ages,
+      needs: s.needs,
+      status: s.status,
+      rsvpIsCommitment: s.rsvpIsCommitment,
+      sponsored: s.sponsored,
+      rsvpsOpen: s.rsvpsOpen,
+      airtableRfpRecordId: s.airtableRfpRecordId,
+      hosts: hostsBySession.get(s.id) ?? [],
+      shepherd: shepherdBySession.get(s.id) ?? null,
+    })),
+  };
+}
+
+// The TTL backstops writes that skip invalidateSchedule(); deployments share
+// one data cache, so the key carries the database host and the deployment.
+export const loadSchedule = unstable_cache(
+  querySchedule,
+  [
+    "schedule",
+    env.DATABASE_URL ? new URL(env.DATABASE_URL).host : "",
+    process.env.VERCEL_DEPLOYMENT_ID ?? "",
+  ],
   {
     tags: [SCHEDULE_TAG],
     revalidate: process.env.NODE_ENV === "production" ? 600 : 5,
   },
 );
-
-export async function loadSchedule(): Promise<Schedule> {
-  return readSchedule();
-}
 
 export type SessionInput = Omit<
   ScheduleSession,
@@ -200,7 +198,6 @@ export async function upsertSession(
       .returning({ id: sessions.id });
     sessionId = inserted.id;
   }
-  invalidateSchedule();
   const remove = db
     .delete(sessionHosts)
     .where(eq(sessionHosts.sessionId, sessionId));
@@ -216,6 +213,7 @@ export async function upsertSession(
         ),
     ]);
   }
+  invalidateSchedule();
   // A raised capacity frees seats for the waitlist.
   if (id) await promoteWaitlist(sessionId);
   return { id: sessionId, clash };
@@ -263,16 +261,17 @@ export async function setSessionHosts(
     .where(eq(sessionHosts.sessionId, sessionId));
   if (hostIds.length === 0) {
     await remove;
-  } else {
-    await db.batch([
-      remove,
-      db
-        .insert(sessionHosts)
-        .values(
-          hostIds.map((userId, position) => ({ sessionId, position, userId })),
-        ),
-    ]);
+    invalidateSchedule();
+    return;
   }
+  await db.batch([
+    remove,
+    db
+      .insert(sessionHosts)
+      .values(
+        hostIds.map((userId, position) => ({ sessionId, position, userId })),
+      ),
+  ]);
   invalidateSchedule();
 }
 
@@ -710,7 +709,6 @@ export type LocationInput = Omit<ScheduleLocation, "id"> & { id?: string };
 export async function upsertLocation(input: LocationInput): Promise<string> {
   const db = getDb();
   const { id, ...row } = input;
-  let locationId: string;
   if (id) {
     const [updated] = await db
       .update(locations)
@@ -718,16 +716,15 @@ export async function upsertLocation(input: LocationInput): Promise<string> {
       .where(eq(locations.id, id))
       .returning({ id: locations.id });
     if (!updated) throw new Error("That location no longer exists.");
-    locationId = updated.id;
-  } else {
-    const [inserted] = await db
-      .insert(locations)
-      .values(row)
-      .returning({ id: locations.id });
-    locationId = inserted.id;
+    invalidateSchedule();
+    return updated.id;
   }
+  const [inserted] = await db
+    .insert(locations)
+    .values(row)
+    .returning({ id: locations.id });
   invalidateSchedule();
-  return locationId;
+  return inserted.id;
 }
 
 export type RoomImages = Pick<ScheduleLocation, "thumbnailUrl" | "imageUrl">;

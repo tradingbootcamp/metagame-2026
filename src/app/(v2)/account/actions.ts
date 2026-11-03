@@ -55,7 +55,6 @@ export async function updateProfile(
       body: { name },
       headers: await headers(),
     });
-    // Host and shepherd names are read into the cached schedule.
     invalidateSchedule();
   }
   const { profiles } = schema;
