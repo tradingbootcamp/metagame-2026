@@ -10,6 +10,7 @@ import {
 } from "react";
 import { addSample, clearSample, moveSession, type FormState } from "./actions";
 import LocationForm from "./LocationForm";
+import RoomList from "./RoomList";
 import ScheduleGrid, { GrabHandle, type DropFn } from "./ScheduleGrid";
 import SessionForm, { type SessionDefaults } from "./SessionForm";
 import ConfirmDialog from "./ConfirmDialog";
@@ -28,7 +29,6 @@ import {
   openingDayKey,
   pacificDayKey,
   planConflicts,
-  VISIBILITY_LABEL,
   type Attendance,
   type RoomClash,
   type ScheduleLocation,
@@ -451,63 +451,11 @@ export default function ScheduleTool({
       </CollapsedSection>
 
       <CollapsedSection title="All rooms" count={locations.length}>
-        <div className="overflow-x-auto rounded-xl border border-line bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs tracking-wide text-ink/50 uppercase">
-              <tr>
-                <th className="px-4 py-2 font-medium">Order</th>
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">Campus</th>
-                <th className="px-4 py-2 font-medium">Capacity</th>
-                <th className="px-4 py-2 font-medium">Seen by</th>
-                <th className="px-4 py-2 font-medium" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {locations.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-4 py-2 tabular-nums">{l.displayOrder}</td>
-                  <td className="px-4 py-2 font-semibold">
-                    <span className="flex items-center gap-2">
-                      {l.thumbnailUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element -- already thumbnail-sized
-                        <img
-                          src={l.thumbnailUrl}
-                          alt=""
-                          className="h-8 w-10 rounded object-cover"
-                        />
-                      )}
-                      {l.name}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2">{l.campusLocation ?? "—"}</td>
-                  <td className="px-4 py-2 tabular-nums">
-                    {l.capacity ?? "—"}
-                  </td>
-                  <td className="px-4 py-2">
-                    {VISIBILITY_LABEL[l.visibility]}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <button
-                      type="button"
-                      onClick={() => openLocation(l)}
-                      className={smallButtonClass}
-                    >
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {locations.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-ink/50">
-                    No rooms yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <RoomList
+          locations={locations}
+          onEdit={openLocation}
+          onError={setError}
+        />
       </CollapsedSection>
 
       <ConfirmDialog

@@ -727,6 +727,25 @@ export async function upsertLocation(input: LocationInput): Promise<string> {
   return inserted.id;
 }
 
+/** Where a new room goes: after every existing one. */
+export async function nextDisplayOrder(): Promise<number> {
+  const [row] = await getDb()
+    .select({ max: sql<number | null>`max(${locations.displayOrder})` })
+    .from(locations);
+  return (row?.max ?? -1) + 1;
+}
+
+/** Rewrites display_order to match `ids` left to right; rooms not listed keep theirs. */
+export async function setLocationOrder(ids: string[]): Promise<void> {
+  const db = getDb();
+  // neon-http has no transactions; a half-applied reorder is harmless and the next drag fixes it.
+  await Promise.all(
+    ids.map((id, i) =>
+      db.update(locations).set({ displayOrder: i }).where(eq(locations.id, id)),
+    ),
+  );
+}
+
 export type RoomImages = Pick<ScheduleLocation, "thumbnailUrl" | "imageUrl">;
 
 const imageColumns = {
