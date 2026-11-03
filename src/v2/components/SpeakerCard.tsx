@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Dices,
-  Mic,
-  RotateCcw,
-  RotateCw,
-  Sparkles,
-  Wrench,
-} from "lucide-react";
+import { Dices, Mic, RotateCcw, Redo, Sparkles, Wrench } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
