@@ -1,4 +1,5 @@
 import {
+  BabyIcon,
   BookOpenIcon,
   CalendarIcon,
   DatabaseIcon,
@@ -71,6 +72,14 @@ const TOOLS: {
     name: "Tickets",
     blurb: "Every ticket with its buyer, holder and attendee.",
     perm: "tickets.view",
+  },
+  {
+    href: "/backstage/children",
+    icon: BabyIcon,
+    name: "Children",
+    blurb:
+      "Every registered child, with childcare sessions and parent contacts.",
+    perm: "children.view",
   },
   {
     href: "/backstage/schedule",
