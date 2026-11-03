@@ -141,19 +141,18 @@ export function BlockSummary({
           <SponsorTag />
         </span>
       )}
-      {/* The marks float top-right so only the first line wraps around
-          them; a line-clamp box can't hold a float, so the title is cut by
-          height instead (one line is 16px, as lib/schedule's titleLines). */}
+      {/* The marks trail the title inline, so they never cost a line of
+          their own on a narrow block. */}
       <span
-        className="block overflow-hidden text-[13px] leading-4 font-semibold"
-        style={{ maxHeight: titleLines * 16 }}
+        className="line-clamp-3 text-[13px] leading-tight font-semibold"
+        style={{ WebkitLineClamp: titleLines }}
       >
+        {session.title}
         {hasMarks(session) && (
-          <span className="float-right ml-1 flex gap-1">
+          <span className="ml-1 inline-flex gap-1 align-middle whitespace-nowrap">
             <SessionMarks session={session} />
           </span>
         )}
-        {session.title}
       </span>
       {session.hosts.length > 0 && (
         <span className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-[#1b1530]/70">
