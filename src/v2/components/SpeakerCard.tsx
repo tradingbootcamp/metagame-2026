@@ -1,6 +1,13 @@
 "use client";
 
-import { Dices, Mic, RotateCcw, Sparkles, Wrench } from "lucide-react";
+import {
+  Dices,
+  Mic,
+  RotateCcw,
+  RotateCw,
+  Sparkles,
+  Wrench,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -55,7 +62,7 @@ export default function SpeakerCard({
         <div
           inert={flipped}
           onClick={canFlip ? () => setFlipped(true) : undefined}
-          className={`${FACE} bg-white ${canFlip ? "cursor-pointer" : ""}`}
+          className={`${FACE} relative bg-white ${canFlip ? "cursor-pointer" : ""}`}
         >
           {photo && hats?.length ? (
             <HatImage
@@ -116,21 +123,24 @@ export default function SpeakerCard({
                 <span className="min-w-0 break-words">{title}</span>
               )}
             </p>
-            {canFlip && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFlipped(true);
-                }}
-                aria-label={`Turn over for ${name}'s ${n === 1 ? "session" : `${n} sessions`}`}
-                className={`${MONO} mt-auto flex items-center gap-1 pt-1.5 font-bold text-meeple outline-none hover:underline focus-visible:ring-2 focus-visible:ring-meeple sm:pt-2`}
-              >
-                <RotateCcw aria-hidden className="size-2.5 sm:size-3" />
-                {n} {n === 1 ? "session" : "sessions"}
-              </button>
-            )}
           </div>
+          {canFlip && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setFlipped(true);
+              }}
+              aria-label={`Turn over for ${name}'s ${n === 1 ? "session" : `${n} sessions`}`}
+              title={`${n} ${n === 1 ? "session" : "sessions"}`}
+              className="absolute right-0 bottom-0 size-9 bg-navy text-cream transition-colors outline-none [clip-path:polygon(100%_0,100%_100%,0_100%)] hover:bg-meeple focus-visible:bg-meeple sm:size-11"
+            >
+              <RotateCw
+                aria-hidden
+                className="absolute right-1 bottom-1 size-3 sm:right-1.5 sm:bottom-1.5 sm:size-3.5"
+              />
+            </button>
+          )}
         </div>
 
         {canFlip && (
