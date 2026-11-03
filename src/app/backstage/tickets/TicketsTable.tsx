@@ -175,9 +175,9 @@ export default function TicketsTable({
         <table className="w-full table-fixed text-left text-sm">
           <colgroup>
             <col className="w-[5.5rem]" />
-            <col className="w-[22%]" />
-            <col className="w-[6rem]" />
             <col />
+            <col className="w-[24%]" />
+            <col className="w-[6rem]" />
             <col />
           </colgroup>
           <thead className="text-xs tracking-wide text-ink/50 uppercase">
@@ -187,13 +187,13 @@ export default function TicketsTable({
                 label="Date"
                 {...{ sort, dir, sortBy }}
               />
-              <th className="px-4 py-2 font-medium">Ticket</th>
-              <SortHeader col="pay" label="Amt" {...{ sort, dir, sortBy }} />
               <SortHeader
                 col="buyer"
                 label="Buyer"
                 {...{ sort, dir, sortBy }}
               />
+              <th className="px-4 py-2 font-medium">Ticket</th>
+              <SortHeader col="pay" label="Amt" {...{ sort, dir, sortBy }} />
               <SortHeader
                 col="claimer"
                 label="Claimer"
@@ -215,45 +215,34 @@ export default function TicketsTable({
                 <td className="px-4 py-2 whitespace-nowrap">
                   {monthDay.format(t.createdAt)}
                 </td>
-                <td className="px-4 py-2">
-                  <div className="break-words">{t.tier}</div>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    {t.status !== "paid" && <StatusTag status={t.status} />}
-                    {t.test && <TestTag />}
-                    <span className="text-xs text-ink/60">
-                      Code <span className="font-mono">{t.code}</span>
-                    </span>
-                  </div>
-                  {swagReason(t) && (
-                    <div className="mt-1 text-xs text-meeple">
-                      Swag · {swagReason(t)}
+                <td className="px-4 py-2 break-words">
+                  <PersonLink person={people.buyer} />
+                  {!people.holderIsBuyer && people.holder && (
+                    <div className="mt-1 text-xs text-ink/60">
+                      Held by {personLabel(people.holder)}
                     </div>
                   )}
-                  {canEdit && (
-                    <button
-                      type="button"
-                      onClick={() => setOpenId(t.id)}
-                      className="mt-1 text-xs text-ink/50 underline-offset-2 hover:text-navy hover:underline"
-                    >
-                      {t.referredBy ? "Change referrer" : "Set referrer"}
-                    </button>
-                  )}
+                </td>
+                <td className="px-4 py-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="break-words">{t.tier}</span>
+                    {t.status !== "paid" && <StatusTag status={t.status} />}
+                    {t.test && <TestTag />}
+                  </div>
+                  <div className="mt-1 truncate text-xs text-ink/60">
+                    <span className="font-mono">{t.code}</span>
+                    {swagReason(t) && (
+                      <span className="text-meeple"> · {swagReason(t)}</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-2 tabular-nums">
                   <div className="whitespace-nowrap">
                     {amount(t.amountCents)}
                   </div>
                   {t.couponCode && (
-                    <div className="mt-1 text-xs break-all text-ink/60">
-                      Coupon <span className="font-mono">{t.couponCode}</span>
-                    </div>
-                  )}
-                </td>
-                <td className="px-4 py-2 break-words">
-                  <PersonLink person={people.buyer} />
-                  {!people.holderIsBuyer && people.holder && (
-                    <div className="mt-1 text-xs text-ink/60">
-                      Held by {personLabel(people.holder)}
+                    <div className="mt-1 truncate font-mono text-xs text-ink/60">
+                      {t.couponCode}
                     </div>
                   )}
                 </td>
