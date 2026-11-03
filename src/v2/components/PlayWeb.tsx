@@ -91,14 +91,21 @@ export default function PlayWeb() {
   const drag = useRef<{ id: number; x: number; y: number } | null>(null);
   const velocity = useRef({ x: 0, y: 0 });
   const lastTouch = useRef(0);
+  const box = useRef<HTMLDivElement>(null);
+  const onScreen = useRef(true);
 
   // Inertia after a drag, and the slow idle turn, unless motion is unwanted.
+  // Nothing runs while the box is scrolled out of view.
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const seen = new IntersectionObserver(([e]) => {
+      onScreen.current = e.isIntersecting;
+    });
+    if (box.current) seen.observe(box.current);
     let frame = 0;
     const tick = () => {
       frame = requestAnimationFrame(tick);
-      if (drag.current || document.hidden) return;
+      if (drag.current || document.hidden || !onScreen.current) return;
       const v = velocity.current;
       if (Math.abs(v.x) + Math.abs(v.y) > 0.0004) {
         setPose((p) => mul(mul(rotY(v.x), rotX(v.y)), p));
@@ -109,7 +116,10 @@ export default function PlayWeb() {
       }
     };
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      seen.disconnect();
+    };
   }, []);
 
   const down = (e: PointerEvent<HTMLDivElement>) => {
@@ -165,6 +175,7 @@ export default function PlayWeb() {
 
   return (
     <div
+      ref={box}
       className="relative w-full cursor-grab touch-none select-none active:cursor-grabbing"
       style={{ aspectRatio: `${W} / ${H}` }}
       onPointerDown={down}
