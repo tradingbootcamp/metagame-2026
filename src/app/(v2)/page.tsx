@@ -29,7 +29,6 @@ import {
   DISPLAY,
   EYEBROW,
   HEADING,
-  NEWSLETTER_LINK,
   SECTION,
   SECTION_ANCHOR,
 } from "@/v2/components/styles";
@@ -306,21 +305,10 @@ export default async function Home() {
               would the consumer of this experience choose to do next?&rdquo;,
               it&apos;s a game.
             </p>
-            <p className={PROSE}>
-              <Link href="/last-year" className={NEWSLETTER_LINK}>
-                See what happened last year &rarr;
-              </Link>
-            </p>
           </div>
           <PlayWeb />
         </div>
       </section>
-
-      {/* Bottom padding matches the next section's top, so the divider sits
-          midway between the photo and the heading. */}
-      <div className="pt-6 pb-8 md:pb-14">
-        <Carousel images={CAROUSEL} />
-      </div>
 
       <CastlingDivider />
 
@@ -667,11 +655,6 @@ export default async function Home() {
           />
           <Highlights2025 />
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Button asChild variant="default">
-              <a href={RFP_FORM_URL} target="_blank" rel="noopener noreferrer">
-                Propose a session
-              </a>
-            </Button>
             <Button asChild variant="navy">
               <Link href="/last-year">See the full 2025 schedule</Link>
             </Button>
@@ -700,6 +683,12 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* Bottom padding matches the next section's top, so the divider sits
+          midway between the photo and the heading. */}
+      <div className="pt-6 pb-8 md:pb-14">
+        <Carousel images={CAROUSEL} />
+      </div>
 
       <SetCardDivider />
 
