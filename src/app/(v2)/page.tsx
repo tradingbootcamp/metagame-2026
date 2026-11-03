@@ -301,7 +301,9 @@ export default async function Home() {
               word: any experience meant to be played or actively experienced.
             </p>
           </div>
-          <PlayWeb />
+          <div className="mx-auto w-full max-w-[480px] lg:max-w-none">
+            <PlayWeb />
+          </div>
         </div>
       </section>
 

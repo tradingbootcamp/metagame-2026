@@ -105,7 +105,7 @@ const PATHS = {
       <circle cx="24" cy="34" r="2" fill="currentColor" stroke="none" />
     </>
   ),
-  // Not in the brand guide's set: drawn to match it, for the hero's web.
+  // Not in the brand guide's set: drawn to match it.
   dance: (
     <>
       <circle cx="27" cy="9" r="4" />

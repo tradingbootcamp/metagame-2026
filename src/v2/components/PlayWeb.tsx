@@ -106,11 +106,18 @@ const IDLE_AFTER_MS = 2500;
 
 export default function PlayWeb() {
   const [pose, setPose] = useState<Mat>(START);
-  // The nearest corner shows its label; a tapped one takes over until tapped
-  // again (hover does the same on desktop).
+  // The nearest corner shows its label; a tapped one takes over until the
+  // next tap (hover does the same on desktop).
   const [picked, setPicked] = useState<number | null>(null);
   const moved = useRef(false);
-  const drag = useRef<{ id: number; x: number; y: number } | null>(null);
+  const drag = useRef<{
+    id: number;
+    x: number;
+    y: number;
+    x0: number;
+    y0: number;
+    at: number;
+  } | null>(null);
   const velocity = useRef({ x: 0, y: 0 });
   const lastTouch = useRef(0);
   const box = useRef<HTMLDivElement>(null);
@@ -133,11 +140,12 @@ export default function PlayWeb() {
       last = now;
       if (drag.current || document.hidden || !onScreen.current) return;
       const v = velocity.current;
+      const f = dt * 60;
       if (Math.abs(v.x) + Math.abs(v.y) > 0.0004) {
-        setPose((p) => mul(mul(rotY(v.x), rotX(v.y)), p));
-        v.x *= 0.94;
-        v.y *= 0.94;
-      } else if (Date.now() - lastTouch.current > IDLE_AFTER_MS) {
+        setPose((p) => mul(mul(rotY(v.x * f), rotX(v.y * f)), p));
+        v.x *= 0.94 ** f;
+        v.y *= 0.94 ** f;
+      } else if (now - lastTouch.current > IDLE_AFTER_MS) {
         phi += ((2 * Math.PI) / PRECESS_S) * dt;
         const axis = [Math.sin(phi), Math.cos(phi), 0];
         setPose((p) => mul(rotAxis(axis, IDLE_SPIN * dt), p));
@@ -153,28 +161,41 @@ export default function PlayWeb() {
   const down = (e: PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    const { pointerId: id, clientX: x, clientY: y } = e;
+    drag.current = { id, x, y, x0: x, y0: y, at: performance.now() };
     moved.current = false;
     velocity.current = { x: 0, y: 0 };
-    lastTouch.current = Date.now();
   };
   const move = (e: PointerEvent<HTMLDivElement>) => {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
-    const dx = (e.clientX - d.x) * DRAG;
-    const dy = -(e.clientY - d.y) * DRAG;
-    if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 3) {
+    if (!moved.current) {
+      if (Math.abs(e.clientX - d.x0) + Math.abs(e.clientY - d.y0) <= 3) return;
       moved.current = true;
     }
+    const dx = (e.clientX - d.x) * DRAG;
+    const dy = -(e.clientY - d.y) * DRAG;
     d.x = e.clientX;
     d.y = e.clientY;
+    d.at = performance.now();
     velocity.current = { x: dx, y: dy };
     setPose((p) => mul(mul(rotY(dx), rotX(dy)), p));
   };
+  // Pointer capture sends the click to the box, not the corner under the
+  // finger, so a tap is resolved here: pin the corner it landed on, or clear.
   const up = (e: PointerEvent<HTMLDivElement>) => {
-    if (drag.current?.id !== e.pointerId) return;
+    const d = drag.current;
+    if (d?.id !== e.pointerId) return;
     drag.current = null;
-    lastTouch.current = Date.now();
+    const now = performance.now();
+    lastTouch.current = now;
+    if (now - d.at > 60) velocity.current = { x: 0, y: 0 };
+    if (moved.current || e.type === "pointercancel") return;
+    const hit = document
+      .elementFromPoint(e.clientX, e.clientY)
+      ?.closest<HTMLElement>("[data-corner]");
+    const i = hit ? Number(hit.dataset.corner) : null;
+    setPicked((p) => (i === null || p === i ? null : i));
   };
 
   // Rounded, so the server's and the browser's floating point agree and the
@@ -204,15 +225,12 @@ export default function PlayWeb() {
   return (
     <div
       ref={box}
-      className="relative w-full cursor-grab touch-none select-none active:cursor-grabbing"
+      className="relative isolate w-full cursor-grab touch-pan-y select-none active:cursor-grabbing"
       style={{ aspectRatio: `${W} / ${H}` }}
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}
       onPointerCancel={up}
-      onClick={() => {
-        if (!moved.current) setPicked(null);
-      }}
     >
       {/* Each edge on its own layer, just under the further of its two
           corners, so a corner at the back sits behind the edges in front of
@@ -247,11 +265,7 @@ export default function PlayWeb() {
               // The hovered one rises above the rest, so its label is never
               // under a nearer edge.
               className={`group absolute z-(--z) -translate-x-1/2 -translate-y-1/2 hover:z-[2000] ${shown === i ? "z-[2000]!" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (moved.current) return;
-                setPicked((p) => (p === i ? null : i));
-              }}
+              data-corner={i}
               style={
                 {
                   left: `${r((x / W) * 100)}%`,

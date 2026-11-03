@@ -24,6 +24,3 @@ export const FIELD_LIGHT =
 
 // The display face (Bebas Neue): big titles, clock readouts, toggles.
 export const DISPLAY = "font-[family-name:var(--font-bebas)] font-normal";
-
-// A small label over a title, a list or a figure: mono, bold, tracked,
-// uppercase. Colour is the caller's.
