@@ -135,14 +135,23 @@ export async function addCategory(
   const ofType = rows.filter((c) => c.type === input.type);
   const last = ofType.at(-1);
   if (!last) throw new Error(`No ${input.type} rows found to insert after.`);
-  const anchor =
-    ofType.filter((c) => same(c.group, input.group)).at(-1) ?? last;
+  const inGroup = ofType.filter((c) => same(c.group, input.group));
+  const anchor = inGroup.at(-1);
   // Ranges only stretch for inserts strictly inside them, so a new last row
-  // goes in above the block's current last row rather than below it.
-  const row = anchor === last ? anchor.row : anchor.row + 1;
+  // goes in above the block's current last row rather than below it, and a
+  // new group goes in above the whole last group (unless that is the only
+  // group, which would put it outside the block).
+  const lastGroupStart = ofType.find((c) => c.group === last.group)!;
+  const row = !anchor
+    ? lastGroupStart === ofType[0]
+      ? last.row
+      : lastGroupStart.row
+    : anchor === last
+      ? anchor.row
+      : anchor.row + 1;
   await insertRow(sheetId(), tab, row, [
     input.type,
-    same(anchor.group, input.group) ? anchor.group : input.group.trim(),
+    anchor ? anchor.group : input.group.trim(),
     input.name,
     cell(input.budget),
   ]);
