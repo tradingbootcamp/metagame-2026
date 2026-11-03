@@ -18,20 +18,14 @@ import {
   formatPacificTime,
   hostNames,
   planConflicts,
-  publicSchedule,
   type Ages,
   type Category,
 } from "@/lib/schedule";
-import {
-  loadSessionBySlug,
-  loadSessionRsvps,
-  loadViewerPlans,
-} from "@/lib/schedule-store";
+import { loadSessionRsvps, loadViewerPlans } from "@/lib/schedule-store";
 import {
   loadPublicSchedule,
   loadRawSchedule,
   rsvpTicket,
-  scheduleViewer,
 } from "@/app/(v2)/schedule/data";
 import SessionPlans from "@/v2/components/schedule/SessionPlans";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
@@ -50,20 +44,12 @@ const AGES_LABEL: Record<Ages, string> = {
   adults: "18+",
 };
 
-// The same visibility rules as the schedule, applied to the one cached row.
 async function findSession(slug: string) {
-  const found = await loadSessionBySlug(slug);
-  if (!found) notFound();
-  const { sessions, locations } = publicSchedule(
-    {
-      sessions: [found.session],
-      locations: found.location ? [found.location] : [],
-    },
-    await scheduleViewer(),
-  );
-  const session = sessions.at(0);
+  const { sessions, locations } = await loadPublicSchedule();
+  const session = sessions.find((s) => s.slug === slug);
   if (!session) notFound();
-  const room = locations.find((l) => l.id === session.locationId) ?? null;
+  const room = locations.find((l) => l.id === session.locationId);
+  if (!room) notFound();
   return { session, room };
 }
 
@@ -232,7 +218,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
           <dt className="sr-only">Where</dt>
           <FaMapMarkerAlt aria-hidden className="shrink-0 text-[#eaa35a]" />
           <dd className="flex items-center gap-2.5">
-            {room?.thumbnailUrl && (
+            {room.thumbnailUrl && (
               // eslint-disable-next-line @next/next/no-img-element -- already thumbnail-sized
               <img
                 src={room.thumbnailUrl}
@@ -241,8 +227,8 @@ export default async function SessionDetails({ slug }: { slug: string }) {
               />
             )}
             <span>
-              {room?.name ?? "Room TBA"}
-              {room?.campusLocation && (
+              {room.name}
+              {room.campusLocation && (
                 <span className="text-[#1b1530]/60">
                   {" "}
                   · {room.campusLocation}

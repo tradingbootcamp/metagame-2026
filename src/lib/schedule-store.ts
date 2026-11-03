@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm";
 import { revalidateTag, unstable_cache } from "next/cache";
 import { getDb, schema } from "@/db";
+import { env } from "@/env";
 import { can } from "./access";
 import { currentSession, getAuth } from "./auth";
 import type { HostSessionFields } from "./schedule-input";
@@ -58,60 +59,17 @@ export type Schedule = {
 const SCHEDULE_TAG = "schedule";
 
 /**
- * Drops the cached schedule reads. Every write to what they read (sessions,
+ * Drops the cached schedule read. Every write to what it reads (sessions,
  * locations, session_hosts, host/shepherd names) must call this.
  */
 export function invalidateSchedule(): void {
   revalidateTag(SCHEDULE_TAG, { expire: 0 });
 }
 
-type LocationRow = typeof locations.$inferSelect;
-type SessionRow = typeof sessions.$inferSelect;
-
-function toLocation(l: LocationRow): ScheduleLocation {
-  return {
-    id: l.id,
-    name: l.name,
-    capacity: l.capacity,
-    campusLocation: l.campusLocation,
-    description: l.description,
-    displayOrder: l.displayOrder,
-    visibility: l.visibility,
-    thumbnailUrl: l.thumbnailUrl,
-    imageUrl: l.imageUrl,
-  };
-}
-
-function toSession(
-  s: SessionRow,
-  hosts: ScheduleAccount[],
-  shepherd: ScheduleAccount | null,
-): ScheduleSession {
-  return {
-    id: s.id,
-    slug: s.slug,
-    title: s.title,
-    description: s.description,
-    category: s.category,
-    startsAt: s.startsAt?.toISOString() ?? null,
-    endsAt: s.endsAt?.toISOString() ?? null,
-    locationId: s.locationId,
-    maxCapacity: s.maxCapacity,
-    minCapacity: s.minCapacity,
-    ages: s.ages,
-    needs: s.needs,
-    status: s.status,
-    rsvpIsCommitment: s.rsvpIsCommitment,
-    sponsored: s.sponsored,
-    rsvpsOpen: s.rsvpsOpen,
-    airtableRfpRecordId: s.airtableRfpRecordId,
-    hosts,
-    shepherd,
-  };
-}
-
-// Cached across requests until invalidateSchedule(); viewer-independent, and
-// nothing in here may read cookies or headers.
+// Nothing in here may read cookies or headers. The TTL is a backstop for
+// writes that bypass invalidateSchedule() (scripts, console edits, a read
+// racing a write); dev keeps it short so a reseed shows up promptly.
+// Deployments share one data cache, so the key carries the database host.
 const readSchedule = unstable_cache(
   async (): Promise<Schedule> => {
     const db = getDb();
@@ -139,82 +97,54 @@ const readSchedule = unstable_cache(
     );
     const hostsBySession = new Map<string, ScheduleAccount[]>();
     for (const { sessionId, ...host } of hosts) {
-      hostsBySession.set(sessionId, [
-        ...(hostsBySession.get(sessionId) ?? []),
-        host,
-      ]);
+      const list = hostsBySession.get(sessionId);
+      if (list) list.push(host);
+      else hostsBySession.set(sessionId, [host]);
     }
     return {
-      locations: locs.map(toLocation),
-      sessions: sess.map((s) =>
-        toSession(
-          s,
-          hostsBySession.get(s.id) ?? [],
-          shepherdBySession.get(s.id) ?? null,
-        ),
-      ),
+      locations: locs.map((l) => ({
+        id: l.id,
+        name: l.name,
+        capacity: l.capacity,
+        campusLocation: l.campusLocation,
+        description: l.description,
+        displayOrder: l.displayOrder,
+        visibility: l.visibility,
+        thumbnailUrl: l.thumbnailUrl,
+        imageUrl: l.imageUrl,
+      })),
+      sessions: sess.map((s) => ({
+        id: s.id,
+        slug: s.slug,
+        title: s.title,
+        description: s.description,
+        category: s.category,
+        startsAt: s.startsAt?.toISOString() ?? null,
+        endsAt: s.endsAt?.toISOString() ?? null,
+        locationId: s.locationId,
+        maxCapacity: s.maxCapacity,
+        minCapacity: s.minCapacity,
+        ages: s.ages,
+        needs: s.needs,
+        status: s.status,
+        rsvpIsCommitment: s.rsvpIsCommitment,
+        sponsored: s.sponsored,
+        rsvpsOpen: s.rsvpsOpen,
+        airtableRfpRecordId: s.airtableRfpRecordId,
+        hosts: hostsBySession.get(s.id) ?? [],
+        shepherd: shepherdBySession.get(s.id) ?? null,
+      })),
     };
   },
-  ["schedule"],
-  { tags: [SCHEDULE_TAG] },
+  ["schedule", env.DATABASE_URL ? new URL(env.DATABASE_URL).host : ""],
+  {
+    tags: [SCHEDULE_TAG],
+    revalidate: process.env.NODE_ENV === "production" ? 600 : 5,
+  },
 );
 
 export async function loadSchedule(): Promise<Schedule> {
   return readSchedule();
-}
-
-export type SessionLookup = {
-  session: ScheduleSession;
-  location: ScheduleLocation | null;
-};
-
-const readSessionBySlug = unstable_cache(
-  async (slug: string): Promise<SessionLookup | null> => {
-    const db = getDb();
-    const [s] = await db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.slug, slug))
-      .limit(1);
-    if (!s) return null;
-    const [location, hosts, shepherd] = await Promise.all([
-      s.locationId
-        ? db
-            .select()
-            .from(locations)
-            .where(eq(locations.id, s.locationId))
-            .limit(1)
-            .then((rows) => rows[0] ?? null)
-        : null,
-      db
-        .select(accountColumns)
-        .from(sessionHosts)
-        .innerJoin(user, eq(user.id, sessionHosts.userId))
-        .where(eq(sessionHosts.sessionId, s.id))
-        .orderBy(asc(sessionHosts.position)),
-      s.shepherdUserId
-        ? db
-            .select(accountColumns)
-            .from(user)
-            .where(eq(user.id, s.shepherdUserId))
-            .limit(1)
-            .then((rows) => rows[0] ?? null)
-        : null,
-    ]);
-    return {
-      session: toSession(s, hosts, shepherd),
-      location: location && toLocation(location),
-    };
-  },
-  ["schedule-session"],
-  { tags: [SCHEDULE_TAG] },
-);
-
-/** One session with its room, raw: the caller applies the viewer's visibility. */
-export async function loadSessionBySlug(
-  slug: string,
-): Promise<SessionLookup | null> {
-  return readSessionBySlug(slug);
 }
 
 export type SessionInput = Omit<
@@ -270,6 +200,7 @@ export async function upsertSession(
       .returning({ id: sessions.id });
     sessionId = inserted.id;
   }
+  invalidateSchedule();
   const remove = db
     .delete(sessionHosts)
     .where(eq(sessionHosts.sessionId, sessionId));
@@ -287,7 +218,6 @@ export async function upsertSession(
   }
   // A raised capacity frees seats for the waitlist.
   if (id) await promoteWaitlist(sessionId);
-  invalidateSchedule();
   return { id: sessionId, clash };
 }
 
@@ -780,6 +710,7 @@ export type LocationInput = Omit<ScheduleLocation, "id"> & { id?: string };
 export async function upsertLocation(input: LocationInput): Promise<string> {
   const db = getDb();
   const { id, ...row } = input;
+  let locationId: string;
   if (id) {
     const [updated] = await db
       .update(locations)
@@ -787,15 +718,16 @@ export async function upsertLocation(input: LocationInput): Promise<string> {
       .where(eq(locations.id, id))
       .returning({ id: locations.id });
     if (!updated) throw new Error("That location no longer exists.");
-    invalidateSchedule();
-    return updated.id;
+    locationId = updated.id;
+  } else {
+    const [inserted] = await db
+      .insert(locations)
+      .values(row)
+      .returning({ id: locations.id });
+    locationId = inserted.id;
   }
-  const [inserted] = await db
-    .insert(locations)
-    .values(row)
-    .returning({ id: locations.id });
   invalidateSchedule();
-  return inserted.id;
+  return locationId;
 }
 
 export type RoomImages = Pick<ScheduleLocation, "thumbnailUrl" | "imageUrl">;

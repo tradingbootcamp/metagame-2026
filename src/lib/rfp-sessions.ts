@@ -583,7 +583,7 @@ export async function updateRfpSession(
     .where(eq(sessions.id, sessionId))
     .returning({ id: sessions.id });
   if (!row) throw new Error("That session no longer exists.");
-  invalidateSchedule();
+  if (pipeline.shepherdUserId !== undefined) invalidateSchedule();
 
   await mirrorSession(
     sessionId,
@@ -728,7 +728,6 @@ export async function saveGrade(
         ]
       : []),
   ]);
-  invalidateSchedule();
 
   const spaceNames = (await spaceOptionLocations())
     .filter((l) => input.spaceLocationIds.includes(l.id))
