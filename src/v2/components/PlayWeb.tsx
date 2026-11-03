@@ -171,6 +171,9 @@ export default function PlayWeb() {
       onPointerMove={move}
       onPointerUp={up}
       onPointerCancel={up}
+      onClick={() => {
+        if (!moved.current) setPicked(null);
+      }}
     >
       {/* Each edge on its own layer, just under the further of its two
           corners, so a corner at the back sits behind the edges in front of
@@ -205,7 +208,8 @@ export default function PlayWeb() {
               // The hovered one rises above the rest, so its label is never
               // under a nearer edge.
               className={`group absolute z-(--z) -translate-x-1/2 -translate-y-1/2 hover:z-[2000] ${shown === i ? "z-[2000]!" : ""}`}
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 if (moved.current) return;
                 setPicked((p) => (p === i ? null : i));
               }}
