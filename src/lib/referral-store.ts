@@ -1,6 +1,7 @@
 import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { canRefer, REFERRAL_CODE_LENGTH } from "@/lib/referral";
+import { TICKET_CODE_LENGTH } from "@/lib/ticket-code-format";
 import { randomCode, withFreshTicketCode } from "@/lib/ticket-code";
 import { holdsTicket } from "@/lib/ticket-holder";
 import { visible, type TicketRow } from "@/lib/ticket-store";
@@ -139,4 +140,48 @@ export async function referralFacts(rows: TicketRow[]): Promise<{
     referred.map((t) => [t.paymentId, code.get(t.referredByPaymentId!)!]),
   );
   return { referredBy, referrals };
+}
+
+export type ReferrerTicket = Pick<
+  TicketRow,
+  "paymentId" | "ticketCode" | "tier"
+>;
+
+/**
+ * The paid ticket a normalized code names: a ticket code (6) or a referral
+ * code (8). Null for anything else, including a code nobody holds.
+ */
+export async function findReferrerTicket(
+  code: string,
+): Promise<ReferrerTicket | null> {
+  const by =
+    code.length === TICKET_CODE_LENGTH
+      ? eq(tickets.ticketCode, code)
+      : code.length === REFERRAL_CODE_LENGTH
+        ? eq(tickets.referralCode, code)
+        : null;
+  if (!by) return null;
+  const [row] = await getDb()
+    .select({
+      paymentId: tickets.paymentId,
+      ticketCode: tickets.ticketCode,
+      tier: tickets.tier,
+    })
+    .from(tickets)
+    .where(and(visible, by, eq(tickets.status, "paid")))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Points a ticket at its referrer (null clears it); false when there's no such ticket. */
+export async function setReferrer(
+  paymentId: string,
+  referrerPaymentId: string | null,
+): Promise<boolean> {
+  const rows = await getDb()
+    .update(tickets)
+    .set({ referredByPaymentId: referrerPaymentId })
+    .where(and(visible, eq(tickets.paymentId, paymentId)))
+    .returning({ paymentId: tickets.paymentId });
+  return rows.length > 0;
 }

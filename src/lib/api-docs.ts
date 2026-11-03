@@ -564,6 +564,35 @@ export const API_AREAS: Area[] = [
     ],
   },
   {
+    title: "Tickets",
+    blurb: "Fixing up a ticket's referral after the fact.",
+    endpoints: [
+      {
+        method: "PUT",
+        path: "/api/admin/tickets/{id}/referral",
+        permission: "tickets.edit",
+        summary:
+          "Marks ticket {id} (its payment id) as referred by another ticket. 404 if either ticket is missing; 400 if the referrer is the ticket itself or a tier that can't refer.",
+        body: [
+          {
+            name: "referrerCode",
+            type: "string",
+            required: true,
+            note: "The referrer's ticket code (6 chars) or referral code (8); dashes and case don't matter.",
+          },
+        ],
+        response: "{ referredBy: string } — the referrer's ticket code",
+      },
+      {
+        method: "DELETE",
+        path: "/api/admin/tickets/{id}/referral",
+        permission: "tickets.edit",
+        summary: "Clears ticket {id}'s referrer.",
+        response: "{ referredBy: null }",
+      },
+    ],
+  },
+  {
     title: "Docs",
     endpoints: [
       {

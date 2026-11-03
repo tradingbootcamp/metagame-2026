@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   PersonLink,
   profileHref,
@@ -79,22 +80,53 @@ const defaultDir = (sort: TicketSort): SortDir =>
 export default function TicketsTable({
   tickets,
   initial,
+  canEdit,
 }: {
   tickets: AdminTicket[];
   initial: TableState;
+  canEdit: boolean;
 }) {
   const [state, setState] = useState(initial);
-  const [open, setOpen] = useState<AdminTicket | null>(null);
+  const [rows, setRows] = useState(tickets);
+  useEffect(() => setRows(tickets), [tickets]);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const open = rows.find((r) => r.t.id === openId) ?? null;
   const { q, sort, dir, size } = state;
+
+  // Mirrors a referral edit until the refreshed page lands: the ticket's own
+  // line plus the old and new referrers' counts (only paid referees count).
+  const applyReferrer = (id: string, referredBy: string | null) =>
+    setRows((rows) => {
+      const target = rows.find((r) => r.t.id === id);
+      if (!target || target.t.referredBy === referredBy) return rows;
+      const delta = (code: string | null) =>
+        target.t.status === "paid" && code !== null
+          ? code === target.t.referredBy
+            ? -1
+            : code === referredBy
+              ? 1
+              : 0
+          : 0;
+      return rows.map((r) =>
+        r.t.id === id
+          ? { ...r, t: { ...r.t, referredBy } }
+          : delta(r.t.code)
+            ? {
+                ...r,
+                t: { ...r.t, referrals: r.t.referrals + delta(r.t.code) },
+              }
+            : r,
+      );
+    });
 
   const matching = useMemo(
     () =>
       sortTicketRows(
-        tickets.filter((r) => ticketMatch(r, q)),
+        rows.filter((r) => ticketMatch(r, q)),
         sort,
         dir,
       ),
-    [tickets, q, sort, dir],
+    [rows, q, sort, dir],
   );
   const page = pageOf(matching, state.page, size);
 
@@ -184,6 +216,15 @@ export default function TicketsTable({
                       Swag · {swagReason(t)}
                     </div>
                   )}
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => setOpenId(t.id)}
+                      className="mt-1 text-xs text-ink/50 underline-offset-2 hover:text-navy hover:underline"
+                    >
+                      {t.referredBy ? "Change referrer" : "Set referrer"}
+                    </button>
+                  )}
                 </td>
                 <td className="px-4 py-2 tabular-nums">
                   <div className="whitespace-nowrap">
@@ -229,7 +270,7 @@ export default function TicketsTable({
           <li key={row.t.id}>
             <button
               type="button"
-              onClick={() => setOpen(row)}
+              onClick={() => setOpenId(row.t.id)}
               className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
             >
               <span className="w-10 shrink-0 text-ink/60 tabular-nums">
@@ -268,12 +309,18 @@ export default function TicketsTable({
         )}
       </ul>
 
-      <Dialog open={open !== null} onOpenChange={(o) => !o && setOpen(null)}>
+      <Dialog open={open !== null} onOpenChange={(o) => !o && setOpenId(null)}>
         <DialogContent
           aria-describedby={undefined}
           className="flex max-w-[480px] flex-col gap-4 px-6 py-6"
         >
-          {open && <TicketDetail ticket={open} />}
+          {open && (
+            <TicketDetail
+              ticket={open}
+              canEdit={canEdit}
+              onReferrer={applyReferrer}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -393,7 +440,15 @@ function Person({ person }: { person: TicketPerson | null }) {
 }
 
 /** Everything the desktop table shows for one ticket, for the phone modal. */
-function TicketDetail({ ticket: { t, people } }: { ticket: AdminTicket }) {
+function TicketDetail({
+  ticket: { t, people },
+  canEdit,
+  onReferrer,
+}: {
+  ticket: AdminTicket;
+  canEdit: boolean;
+  onReferrer: (id: string, referredBy: string | null) => void;
+}) {
   return (
     <>
       <DialogTitle className="font-bebas pr-8 text-2xl tracking-wide text-cream">
@@ -451,7 +506,110 @@ function TicketDetail({ ticket: { t, people } }: { ticket: AdminTicket }) {
         <Field label="Swag">
           {swagReason(t) ?? <span className="text-cream/40">—</span>}
         </Field>
+        <Field label="Referred by">
+          {t.referredBy ? (
+            <span className="font-mono">{t.referredBy}</span>
+          ) : (
+            <span className="text-cream/40">—</span>
+          )}
+        </Field>
       </dl>
+      {canEdit && (
+        <ReferrerEditor
+          id={t.id}
+          referredBy={t.referredBy}
+          onChange={(code) => onReferrer(t.id, code)}
+        />
+      )}
     </>
+  );
+}
+
+/** Sets or clears a ticket's referrer by the referrer's ticket code. */
+function ReferrerEditor({
+  id,
+  referredBy,
+  onChange,
+}: {
+  id: string;
+  referredBy: string | null;
+  onChange: (referredBy: string | null) => void;
+}) {
+  const router = useRouter();
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async (method: "PUT" | "DELETE") => {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/tickets/${encodeURIComponent(id)}/referral`,
+        {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body:
+            method === "PUT"
+              ? JSON.stringify({ referrerCode: code })
+              : undefined,
+        },
+      );
+      const data = (await res.json()) as {
+        error?: string;
+        referredBy?: string | null;
+      };
+      if (!res.ok) {
+        setError(data.error ?? `Failed (${res.status}).`);
+        return;
+      }
+      onChange(data.referredBy ?? null);
+      setCode("");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (code.trim()) void send("PUT");
+      }}
+      className="space-y-2 text-sm"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Referrer's ticket code"
+          autoCapitalize="characters"
+          spellCheck={false}
+          disabled={busy}
+          className={`${fieldClass} max-w-[14rem] font-mono text-sm text-ink`}
+        />
+        <button
+          type="submit"
+          disabled={busy || !code.trim()}
+          className={smallButtonClass}
+        >
+          {referredBy ? "Change" : "Set referrer"}
+        </button>
+        {referredBy && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void send("DELETE")}
+            className={smallButtonClass}
+          >
+            Remove
+          </button>
+        )}
+      </div>
+      {error && <p className="text-salmon">{error}</p>}
+    </form>
   );
 }

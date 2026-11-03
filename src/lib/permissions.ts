@@ -61,6 +61,14 @@ export const PERMISSIONS = {
     label: "View tickets",
     description: "Each ticket with its buyer, holder and attendee.",
   },
+  "tickets.edit": {
+    audience: "team",
+    group: "Tickets",
+    level: "edit",
+    label: "Edit tickets",
+    description: "Set or clear which ticket referred a ticket, after the fact.",
+    implies: ["tickets.view"],
+  },
   "schedule.preview": {
     audience: "attendee",
     group: "Schedule",
