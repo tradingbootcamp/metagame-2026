@@ -82,8 +82,15 @@ const apply = (m: Mat, [x, y, z]: number[]) => [
   m[6] * x + m[7] * y + m[8] * z,
 ];
 
-// The opening pose, turned so no two corners land near each other.
-const START = mul(rotY(1.955), rotX(2.897));
+// The opening pose (rotY(1.955) · rotX(2.897)), turned so no two corners land
+// near each other. Literal, so the server and every browser render the same
+// first frame.
+// prettier-ignore
+const START: Mat = [
+  -0.374821, 0.224507, -0.899503,
+  0, -0.970236, -0.242161,
+  -0.927097, -0.090767, 0.363665,
+];
 
 // The box, in CSS pixels at the design width; everything is laid out as a
 // percentage of it so it scales with the column.

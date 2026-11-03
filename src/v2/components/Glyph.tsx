@@ -105,13 +105,6 @@ const PATHS = {
       <circle cx="24" cy="34" r="2" fill="currentColor" stroke="none" />
     </>
   ),
-  // Not in the brand guide's set: drawn to match it.
-  dance: (
-    <>
-      <circle cx="27" cy="9" r="4" />
-      <path d="M26 15 L22 28 M25 18 L16 13 L11 6 M25 18 L33 21 L38 15 M22 28 L15 34 L17 42 M22 28 L30 33 L36 40" />
-    </>
-  ),
   // Two more in the same hand, for the Megagame form's kinds.
   physical: (
     <>
@@ -128,6 +121,13 @@ const PATHS = {
       <rect x="8" y="22" width="32" height="17" rx="2" />
       <rect x="20.5" y="19" width="7" height="7" rx="1.5" />
       <circle cx="24" cy="22.5" r="1.4" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // Not in the brand guide's set: drawn to match it.
+  dance: (
+    <>
+      <circle cx="27" cy="9" r="4" />
+      <path d="M26 15 L22 28 M25 18 L16 13 L11 6 M25 18 L33 21 L38 15 M22 28 L15 34 L17 42 M22 28 L30 33 L36 40" />
     </>
   ),
   // And for the session proposal's categories.
