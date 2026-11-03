@@ -1,10 +1,8 @@
+import "server-only";
+
 import { env } from "@/env";
 import { airtableConfig } from "@/lib/airtable-config";
-import {
-  CHILD_FIELDS,
-  FAMILY_FIELDS,
-  SESSION_NAMES,
-} from "@/v2/forms/children";
+import { CHILD_FIELDS, FAMILY_FIELDS } from "@/v2/forms/children";
 
 export type Family = {
   recordId: string;
@@ -35,25 +33,8 @@ export type ChildEntry = {
 export type ChildrenData = {
   children: ChildEntry[];
   /** Families whose "more children" text or declared count has no rows. */
-  families: Family[];
+  unlisted: Family[];
 };
-
-export const CHILDCARE_MIN_AGE = 5;
-export const CHILDCARE_MAX_AGE = 12;
-
-export const SESSION_SHORT: Record<string, string> = {
-  [SESSION_NAMES[0]]: "Fri PM",
-  [SESSION_NAMES[1]]: "Sat AM",
-  [SESSION_NAMES[2]]: "Sat PM",
-  [SESSION_NAMES[3]]: "Sun AM",
-  [SESSION_NAMES[4]]: "Sun PM",
-};
-export const sessionShort = (s: string) => SESSION_SHORT[s] ?? "Other";
-
-export const needsChildcare = (c: { sessions: string[] }) =>
-  c.sessions.length > 0;
-export const outsideChildcareAges = (age: number | null) =>
-  age !== null && (age < CHILDCARE_MIN_AGE || age > CHILDCARE_MAX_AGE);
 
 type AirtableRecord = {
   id: string;
@@ -83,19 +64,27 @@ function toFamily(r: AirtableRecord): Family {
 }
 
 function toChildren(r: AirtableRecord, family: Family): ChildEntry[] {
+  const f = r.fields;
   const out: ChildEntry[] = [];
   CHILD_FIELDS.forEach(([name, age, times, medical, other], i) => {
-    const f = r.fields;
-    const childName = text(f[name]);
-    const childAge = num(f[age]);
-    if (!childName && childAge === null) return;
-    out.push({
-      key: `${r.id}:${i}`,
-      name: childName || "(unnamed)",
-      age: childAge,
+    const child = {
+      name: text(f[name]),
+      age: num(f[age]),
       sessions: list(f[times]),
       medical: text(f[medical]),
       notes: text(f[other]),
+    };
+    const empty =
+      !child.name &&
+      child.age === null &&
+      child.sessions.length === 0 &&
+      !child.medical &&
+      !child.notes;
+    if (empty) return;
+    out.push({
+      ...child,
+      key: `${r.id}:${i}`,
+      name: child.name || "(unnamed)",
       family,
     });
   });
@@ -133,14 +122,14 @@ export async function loadChildren(): Promise<ChildrenData> {
 
   records.sort((a, b) => b.createdTime.localeCompare(a.createdTime));
   const children: ChildEntry[] = [];
-  const families: Family[] = [];
+  const unlisted: Family[] = [];
   for (const r of records) {
     const family = toFamily(r);
     const rows = toChildren(r, family);
     children.push(...rows);
     if (family.moreChildren || (family.count ?? 0) > rows.length) {
-      families.push(family);
+      unlisted.push(family);
     }
   }
-  return { children, families };
+  return { children, unlisted };
 }

@@ -3,24 +3,48 @@
 import { useMemo, useState } from "react";
 import { shortDate, TAG } from "../tickets/parts";
 import { fieldClass, selectClass, selectStyle } from "../ui";
-import {
-  CHILDCARE_MAX_AGE,
-  CHILDCARE_MIN_AGE,
-  needsChildcare,
-  outsideChildcareAges,
-  sessionShort,
-  type ChildEntry,
-  type ChildrenData,
-  type Family,
-} from "@/lib/children";
+import type { ChildEntry, ChildrenData, Family } from "@/lib/children";
 import { Dialog, DialogContent, DialogTitle } from "@/v2/components/ui/dialog";
-import { SESSION_NAMES } from "@/v2/forms/children";
+import { OTHER_SESSION, SESSION_NAMES } from "@/v2/forms/children";
 
 type CareFilter = "all" | "yes" | "no";
 type LongText = { title: string; text: string };
 type OpenText = (t: LongText) => void;
 
-const SESSION_OPTIONS = [...SESSION_NAMES, "Other"];
+const CHILDCARE_MIN_AGE = 5;
+const CHILDCARE_MAX_AGE = 12;
+// Halves are allowed on the form, so 12.5 is still 12.
+const outsideChildcareAges = (age: number | null) =>
+  age !== null && (age < CHILDCARE_MIN_AGE || age >= CHILDCARE_MAX_AGE + 1);
+
+const needsChildcare = (c: ChildEntry) => c.sessions.length > 0;
+
+const SESSION_SHORT: Record<(typeof SESSION_NAMES)[number], string> = {
+  [SESSION_NAMES[0]]: "Fri PM",
+  [SESSION_NAMES[1]]: "Sat AM",
+  [SESSION_NAMES[2]]: "Sat PM",
+  [SESSION_NAMES[3]]: "Sun AM",
+  [SESSION_NAMES[4]]: "Sun PM",
+};
+const SESSION_OPTIONS = [...SESSION_NAMES, OTHER_SESSION];
+// Anything the form doesn't offer (a relabelled option, say) counts as Other,
+// for the chips, the filter and the counts alike.
+const sessionShort = (s: string): string =>
+  (SESSION_SHORT as Record<string, string>)[s] ?? OTHER_SESSION;
+const inSession = (c: ChildEntry, s: string) =>
+  c.sessions.some((x) => sessionShort(x) === sessionShort(s));
+
+const HEADERS = [
+  "Parent",
+  "Contact",
+  "Family notes",
+  "Registered",
+  "Child",
+  "Age",
+  "Childcare",
+  "Medical",
+  "Notes",
+];
 
 const childCount = (n: number) => `${n} ${n === 1 ? "child" : "children"}`;
 
@@ -28,19 +52,13 @@ const Empty = () => <span className="text-ink/40">—</span>;
 
 const CELL = "px-3 py-2";
 
-export default function ChildrenTool({
-  data,
-  error,
-}: {
-  data: ChildrenData;
-  error: string | null;
-}) {
+export default function ChildrenTool({ data }: { data: ChildrenData }) {
   const [q, setQ] = useState("");
   const [care, setCare] = useState<CareFilter>("all");
   const [session, setSession] = useState("");
   const [open, setOpen] = useState<LongText | null>(null);
 
-  const { children, families } = data;
+  const { children, unlisted } = data;
 
   // Families keep their newest-first order; a filter only shrinks a block.
   const blocks = useMemo(() => {
@@ -49,7 +67,7 @@ export default function ChildrenTool({
     for (const c of children) {
       if (care === "yes" && !needsChildcare(c)) continue;
       if (care === "no" && needsChildcare(c)) continue;
-      if (session && !c.sessions.includes(session)) continue;
+      if (session && !inSession(c, session)) continue;
       if (
         needle &&
         ![c.name, c.family.parentName, c.family.email].some((s) =>
@@ -68,16 +86,8 @@ export default function ChildrenTool({
   const wanting = children.filter(needsChildcare).length;
   const perSession = SESSION_OPTIONS.map((s) => ({
     name: s,
-    count: children.filter((c) => c.sessions.includes(s)).length,
+    count: children.filter((c) => inSession(c, s)).length,
   })).filter((s) => s.count > 0);
-
-  if (error) {
-    return (
-      <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-        Couldn&rsquo;t read the Children table: {error}
-      </p>
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -139,15 +149,11 @@ export default function ChildrenTool({
         <table className="w-full text-left text-sm">
           <thead className="text-xs tracking-wide text-ink/50 uppercase">
             <tr>
-              <th className={`${CELL} font-medium`}>Parent</th>
-              <th className={`${CELL} font-medium`}>Contact</th>
-              <th className={`${CELL} font-medium`}>Family notes</th>
-              <th className={`${CELL} font-medium`}>Registered</th>
-              <th className={`${CELL} font-medium`}>Child</th>
-              <th className={`${CELL} font-medium`}>Age</th>
-              <th className={`${CELL} font-medium`}>Childcare</th>
-              <th className={`${CELL} font-medium`}>Medical</th>
-              <th className={`${CELL} font-medium`}>Notes</th>
+              {HEADERS.map((h) => (
+                <th key={h} className={`${CELL} font-medium`}>
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           {blocks.map(({ family, rows }) => (
@@ -159,8 +165,7 @@ export default function ChildrenTool({
                 <ChildRow
                   key={c.key}
                   c={c}
-                  family={i === 0 ? { f: family, span: rows.length } : null}
-                  divided={i > 0}
+                  familySpan={i === 0 ? rows.length : 0}
                   onOpen={setOpen}
                 />
               ))}
@@ -169,7 +174,10 @@ export default function ChildrenTool({
           {shown === 0 && (
             <tbody>
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-ink/50">
+                <td
+                  colSpan={HEADERS.length}
+                  className="px-3 py-6 text-center text-ink/50"
+                >
                   {children.length === 0
                     ? "No children registered yet."
                     : "No children match."}
@@ -180,7 +188,7 @@ export default function ChildrenTool({
         </table>
       </div>
 
-      {families.length > 0 && (
+      {unlisted.length > 0 && (
         <section className="space-y-2">
           <h2 className="font-bebas text-xl tracking-wide text-navy">
             More children, not in the table
@@ -190,7 +198,7 @@ export default function ChildrenTool({
             text; some declared more children than they listed.
           </p>
           <ul className="divide-y divide-line rounded-xl border border-line bg-white text-sm shadow-sm">
-            {families.map((f) => (
+            {unlisted.map((f) => (
               <FamilyNote key={f.recordId} f={f} onOpen={setOpen} />
             ))}
           </ul>
@@ -245,26 +253,25 @@ function Clamp({
 
 function ChildRow({
   c,
-  family,
-  divided,
+  familySpan,
   onOpen,
 }: {
   c: ChildEntry;
-  /** Set on a family's first row; the family cells span its siblings. */
-  family: { f: Family; span: number } | null;
-  /** Sibling rows after the first: a thin line on the child cells only, so
-   * the spanning family cells stay one unbroken block. */
-  divided: boolean;
+  /** Rows the family cells span; 0 on a sibling row, which gets a thin
+   * divider on its own cells so the family block stays unbroken. */
+  familySpan: number;
   onOpen: OpenText;
 }) {
   const flag = needsChildcare(c) && outsideChildcareAges(c.age);
-  const cell = divided ? `${CELL} border-t border-line` : CELL;
+  const cell = familySpan ? CELL : `${CELL} border-t border-line`;
   return (
     <tr>
-      {family && <FamilyCells {...family} onOpen={onOpen} />}
+      {familySpan > 0 && (
+        <FamilyCells f={c.family} span={familySpan} onOpen={onOpen} />
+      )}
       <td className={`${cell} font-medium whitespace-nowrap`}>{c.name}</td>
       <td className={`${cell} whitespace-nowrap tabular-nums`}>
-        {c.age ?? "—"}
+        {c.age ?? <Empty />}
         {flag && (
           <span
             className={`${TAG} ml-1.5 bg-amber-100 text-amber-900`}
@@ -309,7 +316,7 @@ function FamilyCells({
   return (
     <>
       <td rowSpan={span} className={CELL}>
-        <div className="whitespace-nowrap">{f.parentName || "—"}</div>
+        <div className="whitespace-nowrap">{f.parentName || <Empty />}</div>
         {f.relationship && (
           <div className="text-xs text-ink/60">{f.relationship}</div>
         )}
@@ -376,17 +383,6 @@ function FamilyNote({ f, onOpen }: { f: Family; onOpen: OpenText }) {
         />
       ) : (
         <p className="text-ink/60">No details given for the rest.</p>
-      )}
-      {f.anythingElse && (
-        <div className="text-ink/70">
-          <span className="text-xs text-ink/50">Anything else:</span>{" "}
-          <Clamp
-            text={f.anythingElse}
-            title={`${who}: anything else`}
-            onOpen={onOpen}
-            className="max-w-prose"
-          />
-        </div>
       )}
     </li>
   );

@@ -13,6 +13,7 @@ export const SESSION_NAMES = [
   "Sunday morning (9:45am-3pm, includes lunch)",
   "Sunday afternoon (5pm-7:30pm, includes dinner)",
 ] as const;
+export const OTHER_SESSION = "Other";
 const SESSIONS = opts(...SESSION_NAMES);
 
 export const FAMILY_FIELDS = {
@@ -65,7 +66,7 @@ const childStep = (i: number): Step => {
   const n = i + 1;
   // "Other" opens a box; what's typed there joins the child's notes.
   const otherTimes: Option = {
-    value: "Other",
+    value: OTHER_SESSION,
     more: {
       key: `child${n}OtherTimes`,
       label: "Other times",
