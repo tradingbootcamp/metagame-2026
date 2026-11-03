@@ -146,7 +146,8 @@ function SessionBlock({
         type="button"
         onClick={() => onOpen(session)}
         title={`${session.title}${session.hosts.length ? " — " + hostNames(session) : ""}${draft ? " (draft)" : ""}`}
-        className="block h-full w-full p-1.5 pr-4 text-left"
+        // flex-col: a block button would centre its content vertically.
+        className="flex h-full w-full flex-col p-1.5 pr-4 text-left"
       >
         <BlockSummary session={session} titleLines={titleLines(session)} />
         {(going > 0 || session.maxCapacity !== null) && (

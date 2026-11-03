@@ -56,6 +56,9 @@ export function LimitedSpotsMark() {
 
 export type Flagged = { rsvpIsCommitment: boolean; sponsored: boolean };
 
+export const hasMarks = (s: Flagged & { ages: Ages | null }) =>
+  s.ages === "adults" || s.ages === "kids" || s.rsvpIsCommitment;
+
 /** The marks beside a session's title wherever it's listed. */
 export function SessionMarks({
   session,
@@ -138,11 +141,19 @@ export function BlockSummary({
           <SponsorTag />
         </span>
       )}
-      <span className="flex items-start gap-1 text-[13px] leading-tight font-semibold">
-        <span className="line-clamp-3" style={{ WebkitLineClamp: titleLines }}>
-          {session.title}
-        </span>
-        <SessionMarks session={session} />
+      {/* The marks float top-right so only the first line wraps around
+          them; a line-clamp box can't hold a float, so the title is cut by
+          height instead (one line is 16px, as lib/schedule's titleLines). */}
+      <span
+        className="block overflow-hidden text-[13px] leading-4 font-semibold"
+        style={{ maxHeight: titleLines * 16 }}
+      >
+        {hasMarks(session) && (
+          <span className="float-right ml-1 flex gap-1">
+            <SessionMarks session={session} />
+          </span>
+        )}
+        {session.title}
       </span>
       {session.hosts.length > 0 && (
         <span className="mt-0.5 line-clamp-2 text-[11px] leading-tight text-[#1b1530]/70">
