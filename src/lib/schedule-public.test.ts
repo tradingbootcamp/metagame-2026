@@ -168,13 +168,18 @@ describe("publicSchedule", () => {
   it("keeps volunteer rooms and their sessions from the public", () => {
     const { locations, sessions } = publicSchedule(levels);
     expect(locations.map((l) => l.id)).toEqual(["open"]);
-    expect(sessions.map((s) => s.id)).toEqual(["a", "c"]);
+    expect(sessions.map((s) => s.id)).toEqual(["a"]);
   });
 
   it("gives volunteers the volunteer rooms too, but not the hidden one", () => {
     const { locations, sessions } = publicSchedule(levels, "volunteer");
     expect(locations.map((l) => l.id)).toEqual(["open", "ops"]);
-    expect(sessions.map((s) => s.id)).toEqual(["a", "b", "c"]);
+    expect(sessions.map((s) => s.id)).toEqual(["a", "b"]);
+  });
+
+  it("drops a roomless session even for the team", () => {
+    const { sessions } = publicSchedule(levels, "team");
+    expect(sessions.map((s) => s.id)).toEqual(["a", "b"]);
   });
 
   it("gives the team every room, used or not", () => {

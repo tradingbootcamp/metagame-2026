@@ -65,7 +65,7 @@ export type Column = {
 /** Room columns in order, with a "Room TBA" column when anything needs one. */
 export function buildColumns(
   locations: PublicLocation[],
-  roomless: boolean,
+  roomless = false,
 ): Column[] {
   const columns: Column[] = locations.map((l) => ({
     id: l.id,
