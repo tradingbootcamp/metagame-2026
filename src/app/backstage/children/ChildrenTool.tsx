@@ -139,27 +139,28 @@ export default function ChildrenTool({
         <table className="w-full text-left text-sm">
           <thead className="text-xs tracking-wide text-ink/50 uppercase">
             <tr>
+              <th className={`${CELL} font-medium`}>Parent</th>
+              <th className={`${CELL} font-medium`}>Contact</th>
+              <th className={`${CELL} font-medium`}>Family notes</th>
+              <th className={`${CELL} font-medium`}>Registered</th>
               <th className={`${CELL} font-medium`}>Child</th>
               <th className={`${CELL} font-medium`}>Age</th>
               <th className={`${CELL} font-medium`}>Childcare</th>
               <th className={`${CELL} font-medium`}>Medical</th>
               <th className={`${CELL} font-medium`}>Notes</th>
-              <th className={`${CELL} font-medium`}>Parent</th>
-              <th className={`${CELL} font-medium`}>Contact</th>
-              <th className={`${CELL} font-medium`}>Family notes</th>
-              <th className={`${CELL} font-medium`}>Registered</th>
             </tr>
           </thead>
           {blocks.map(({ family, rows }) => (
             <tbody
               key={family.recordId}
-              className="border-t border-line align-top"
+              className="border-t-2 border-line align-top"
             >
               {rows.map((c, i) => (
                 <ChildRow
                   key={c.key}
                   c={c}
                   family={i === 0 ? { f: family, span: rows.length } : null}
+                  divided={i > 0}
                   onOpen={setOpen}
                 />
               ))}
@@ -250,13 +251,18 @@ function ChildRow({
   c: ChildEntry;
   /** Set on a family's first row; the family cells span its siblings. */
   family: { f: Family; span: number } | null;
+  /** Sibling rows after the first: a thin line on the child cells only, so
+   * the spanning family cells stay one unbroken block. */
+  divided: boolean;
   onOpen: OpenText;
 }) {
   const flag = needsChildcare(c) && outsideChildcareAges(c.age);
+  const cell = divided ? `${CELL} border-t border-line` : CELL;
   return (
     <tr>
-      <td className={`${CELL} font-medium whitespace-nowrap`}>{c.name}</td>
-      <td className={`${CELL} whitespace-nowrap tabular-nums`}>
+      {family && <FamilyCells {...family} onOpen={onOpen} />}
+      <td className={`${cell} font-medium whitespace-nowrap`}>{c.name}</td>
+      <td className={`${cell} whitespace-nowrap tabular-nums`}>
         {c.age ?? "—"}
         {flag && (
           <span
@@ -267,7 +273,7 @@ function ChildRow({
           </span>
         )}
       </td>
-      <td className={CELL}>
+      <td className={cell}>
         {c.sessions.length === 0 ? (
           <Empty />
         ) : (
@@ -280,13 +286,12 @@ function ChildRow({
           </span>
         )}
       </td>
-      <td className={`${CELL} max-w-[14rem]`}>
+      <td className={`${cell} max-w-[14rem]`}>
         <Clamp text={c.medical} title={`${c.name}: medical`} onOpen={onOpen} />
       </td>
-      <td className={`${CELL} max-w-[14rem]`}>
+      <td className={`${cell} max-w-[14rem]`}>
         <Clamp text={c.notes} title={`${c.name}: notes`} onOpen={onOpen} />
       </td>
-      {family && <FamilyCells {...family} onOpen={onOpen} />}
     </tr>
   );
 }
