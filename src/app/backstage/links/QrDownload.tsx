@@ -82,10 +82,13 @@ export default function QrDownload({
   url,
   slug,
   compact,
+  fileName,
 }: {
   url: string;
   slug: string;
   compact?: boolean;
+  /** Download name without the style suffix; defaults to go-<slug>. */
+  fileName?: string;
 }) {
   const [{ size, style }, update] = usePrefs();
   const [busy, setBusy] = useState(false);
@@ -110,7 +113,7 @@ export default function QrDownload({
     try {
       const QRCodeStyling = await loadLib();
       await new QRCodeStyling(qrOptions(url, style, size)).download({
-        name: `go-${slug}-${style}`,
+        name: `${fileName ?? `go-${slug}`}-${style}`,
         extension: "png",
       });
     } finally {
