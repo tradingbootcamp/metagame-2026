@@ -163,7 +163,7 @@ export default function SpeakerCard({
           <div
             inert={!flipped}
             onClick={() => setFlipped(false)}
-            className={`${FACE} absolute inset-0 [transform:rotateY(180deg)] cursor-pointer bg-navy p-2 pb-6 text-cream sm:p-3 sm:pb-10`}
+            className={`${FACE} absolute inset-0 [transform:rotateY(180deg)] cursor-pointer bg-navy p-2 text-cream sm:p-3`}
           >
             <span
               className={`${MONO} block truncate font-bold tracking-[0.1em] text-tan`}
