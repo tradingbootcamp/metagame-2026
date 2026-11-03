@@ -246,6 +246,7 @@ function Clamp({
 function ChildRow({
   c,
   family,
+  divided,
   onOpen,
 }: {
   c: ChildEntry;
