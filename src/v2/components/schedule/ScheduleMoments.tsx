@@ -14,10 +14,14 @@ export default function ScheduleMoments({
   days,
   columns,
   onOpen,
+  dayKey,
+  onDayChange,
 }: {
   days: Day<PublicSession>[];
   columns: Column[];
   onOpen: (session: PublicSession) => void;
+  dayKey: string;
+  onDayChange: (key: string) => void;
 }) {
   // The board places sessions by room, so roomless ones go under "Room TBA".
   const boardDays = useMemo(
@@ -52,6 +56,8 @@ export default function ScheduleMoments({
       onOpen={onOpen}
       now={now}
       hideQuiet
+      dayKey={dayKey}
+      onDayChange={onDayChange}
     />
   );
 }

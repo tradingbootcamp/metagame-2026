@@ -129,9 +129,7 @@ export default function PublicSchedule({
         />
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
-        {view !== "moments" && (
-          <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
-        )}
+        <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
         <div className="hidden sm:block">
           <ViewToggle
             view={view}
@@ -148,6 +146,8 @@ export default function PublicSchedule({
           days={shownDays}
           columns={columns}
           onOpen={(s) => router.push(href(s), { scroll: false })}
+          dayKey={day.key}
+          onDayChange={setDayKey}
         />
       ) : onlyMine && day.sessions.length === 0 ? (
         <EmptyPanel>

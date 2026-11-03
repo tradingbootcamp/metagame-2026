@@ -92,6 +92,14 @@ export const toggleButton = (active: boolean, i: number) =>
     i > 0 ? "border-l-[1.5px] border-[#1b1530]/25" : ""
   }`;
 
+/** "11/6" from a day key like 2026-11-06, for the phone-sized tabs. */
+const shortDate = (key: string) =>
+  key
+    .split("-")
+    .slice(1)
+    .map((n) => String(Number(n)))
+    .join("/");
+
 export function DayTabs({
   days,
   selected,
@@ -101,8 +109,8 @@ export function DayTabs({
   selected: string;
   onSelect: (key: string) => void;
 }) {
-  // Five days (the team sees setup and teardown) don't fit a phone with full
-  // names beside dates, so narrow screens get "Thu" over the date then.
+  // Phones get "Fri 11/6"; the full name and date come in at the sm
+  // breakpoint. Five days (the team sees setup and teardown) get less padding.
   const tight = days.length > 3;
   return (
     <div role="tablist" aria-label="Conference day" className={TOGGLE}>
@@ -114,20 +122,13 @@ export function DayTabs({
           aria-selected={d.key === selected}
           aria-label={`${d.name} ${d.dateLabel}`}
           onClick={() => onSelect(d.key)}
-          className={`py-2 font-[family-name:var(--font-bebas)] text-lg tracking-[0.06em] transition-colors sm:px-6 sm:text-xl ${tight ? "px-3" : "px-4"} ${toggleButton(d.key === selected, i)}`}
+          className={`py-1.5 font-[family-name:var(--font-bebas)] text-base tracking-[0.06em] whitespace-nowrap transition-colors sm:px-6 sm:py-2 sm:text-xl ${tight ? "px-2" : "px-2.5"} ${toggleButton(d.key === selected, i)}`}
         >
-          {tight ? (
-            <>
-              <span className="sm:hidden">{d.name.slice(0, 3)}</span>
-              <span className="hidden sm:inline">{d.name}</span>
-            </>
-          ) : (
-            d.name
-          )}
-          <span
-            className={`whitespace-nowrap opacity-70 ${tight ? "block text-[11px] leading-tight sm:ml-1.5 sm:inline-block sm:text-sm sm:leading-normal" : "ml-1.5 inline-block text-sm"}`}
-          >
-            {d.dateLabel}
+          <span className="sm:hidden">{d.name.slice(0, 3)}</span>
+          <span className="hidden sm:inline">{d.name}</span>
+          <span className="ml-1 inline-block text-[11px] opacity-70 sm:ml-1.5 sm:text-sm">
+            <span className="sm:hidden">{shortDate(d.key)}</span>
+            <span className="hidden sm:inline">{d.dateLabel}</span>
           </span>
         </button>
       ))}
