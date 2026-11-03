@@ -44,6 +44,8 @@ export type ViewSession = {
   hosts: { name: string }[];
   startsAt: string;
   endsAt: string;
+  /** Shown in the list when the caller has it. */
+  description?: string | null;
 };
 
 export type ViewDay<S extends ViewSession> = {
@@ -354,7 +356,7 @@ export function GridDay<S extends ViewSession>({
 
 const ROW = "flex w-full items-stretch gap-3 px-3 py-2.5 text-left";
 
-/** One session as a list row: time, category stripe, title, room and hosts. */
+/** One session as a list row: time, category stripe, title, room, hosts and the start of its description. */
 export function SessionRow<S extends ViewSession>({
   session,
   roomName,
@@ -393,6 +395,11 @@ export function SessionRow<S extends ViewSession>({
             .filter(Boolean)
             .join(" · ")}
         </div>
+        {session.description && (
+          <p className="mt-1 line-clamp-2 max-w-prose text-[13px] leading-snug text-[#1b1530]/80">
+            {session.description}
+          </p>
+        )}
       </div>
     </>
   );
