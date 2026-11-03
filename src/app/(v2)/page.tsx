@@ -61,9 +61,9 @@ import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { env } from "@/env";
 import { buildDays, hostedSessions, publicSchedule } from "@/lib/schedule";
 import { loadSchedule } from "@/lib/schedule-store";
-import lighthavenCutout from "../../../../public/images/lighthaven_cutout.png";
-import megagameChess from "../../../../public/images/megagame-chess.jpg";
-import nightMarketCooks from "../../../../public/images/email/night_market_cooks.jpg";
+import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
+import megagameChess from "../../../public/images/megagame-chess.jpg";
+import nightMarketCooks from "../../../public/images/email/night_market_cooks.jpg";
 
 // Re-render hourly so the early-bird gate flips at the deadline and the key
 // dates' "Today" stop advances without a deploy.

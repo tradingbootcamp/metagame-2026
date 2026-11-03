@@ -30,6 +30,13 @@ import ScheduleSearch from "./ScheduleSearch";
 
 type PublicDay = Day<PublicSession>;
 
+/** The day of the session whose page `pathname` is, if it is one. */
+function sessionDayKey(days: PublicDay[], pathname: string) {
+  const slug = decodeURIComponent(pathname.split("/")[2] ?? "");
+  if (!slug) return undefined;
+  return days.find((d) => d.sessions.some((s) => s.slug === slug))?.key;
+}
+
 /** The published schedule, a day at a time; every session links to its page. */
 export default function PublicSchedule({
   days,
@@ -41,11 +48,13 @@ export default function PublicSchedule({
   /** Ids of the viewer's own sessions; null when signed out. */
   mine: string[] | null;
 }) {
-  const [dayKey, setDayKey] = useState(() => openingDayKey(days));
-  const [view, setView] = useState<View>("grid");
-  const [onlyMine, setOnlyMine] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const [dayKey, setDayKey] = useState(
+    () => sessionDayKey(days, pathname) ?? openingDayKey(days),
+  );
+  const [view, setView] = useState<View>("grid");
+  const [onlyMine, setOnlyMine] = useState(false);
 
   // Whichever session page is open, show its day underneath: a search pick,
   // a shared link, or the back button all land on the right tab. State is
@@ -54,11 +63,8 @@ export default function PublicSchedule({
   const [seenPath, setSeenPath] = useState(pathname);
   if (pathname !== seenPath) {
     setSeenPath(pathname);
-    const slug = decodeURIComponent(pathname.split("/")[2] ?? "");
-    const found = slug
-      ? days.find((d) => d.sessions.some((s) => s.slug === slug))
-      : undefined;
-    if (found) setDayKey(found.key);
+    const found = sessionDayKey(days, pathname);
+    if (found) setDayKey(found);
   }
 
   // Phones start on moments; deferred so server and first client render match.
