@@ -3,7 +3,13 @@
 import { Dices, Mic, Sparkles, Undo, Wrench } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState, type MouseEvent, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type RefObject,
+} from "react";
 import {
   formatPacificDay,
   formatPacificTime,
@@ -79,16 +85,21 @@ export default function SpeakerCard({
   const n = sessions.length;
   const canFlip = n > 0;
   // Flipping makes the old face inert, which would drop focus to the body, so
-  // focus moves to the new face's corner once it can take it.
+  // after a flip focus moves to the new face's corner.
+  const refocus = useRef(false);
+  useEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    const corner = flipped ? backCorner.current : frontCorner.current;
+    corner?.focus({ preventScroll: true });
+  }, [flipped]);
   const flip = (to: boolean) => {
+    refocus.current = true;
     setFlipped(to);
-    requestAnimationFrame(() =>
-      (to ? backCorner : frontCorner).current?.focus({ preventScroll: true }),
-    );
   };
   // Clicks on the face flip it, but not ones on things inside it that do
   // their own job (hats, the title link, the sessions, the corner).
-  const onFace = (to: boolean) => (e: MouseEvent) => {
+  const onFace = (e: MouseEvent, to: boolean) => {
     if (!(e.target as Element).closest("button, a")) flip(to);
   };
 
@@ -101,7 +112,7 @@ export default function SpeakerCard({
       >
         <div
           inert={flipped}
-          onClick={canFlip ? onFace(true) : undefined}
+          onClick={canFlip ? (e) => onFace(e, true) : undefined}
           className={`${FACE} relative bg-white ${canFlip ? "cursor-pointer" : ""}`}
         >
           {photo && hats?.length ? (
@@ -177,7 +188,7 @@ export default function SpeakerCard({
         {canFlip && (
           <div
             inert={!flipped}
-            onClick={onFace(false)}
+            onClick={(e) => onFace(e, false)}
             className={`${FACE} absolute inset-0 [transform:rotateY(180deg)] cursor-pointer bg-navy p-2 text-cream sm:p-3`}
           >
             <span
