@@ -8,6 +8,7 @@ import {
   onlySessions,
   openingDayKey,
   selectedDay,
+  sessionHref as href,
   type Day,
   type PublicLocation,
   type PublicSession,
@@ -28,8 +29,6 @@ import ScheduleMoments from "./ScheduleMoments";
 import ScheduleSearch from "./ScheduleSearch";
 
 type PublicDay = Day<PublicSession>;
-
-const href = (s: PublicSession) => `/schedule/${encodeURIComponent(s.slug)}`;
 
 /** The published schedule, a day at a time; every session links to its page. */
 export default function PublicSchedule({

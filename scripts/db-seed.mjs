@@ -30,6 +30,10 @@
 //                              60 ticketed, 20 signed in with no ticket, 10
 //                              invited (hosts, team, one admin) who never signed
 //                              in, 10 who bought under an email with no account
+//   speaker-first-last@metagame.games
+//                              the homepage's featured speakers, with the ids
+//                              and names in src/v2/data/speaker-accounts.ts,
+//                              each co-hosting one to three published sessions
 // Plus 60 purchases from people with no account at all, and one API key for
 // admin: x-api-key mg_seed_metabot_000000000000000000000000000000000000000000000000000.
 //
@@ -38,6 +42,7 @@
 import { createHash, scryptSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { neon } from "@neondatabase/serverless";
+import { SPEAKER_ACCOUNTS } from "../src/v2/data/speaker-accounts.ts";
 
 for (const file of [
   ".env.local",
@@ -237,6 +242,23 @@ const crowd = Array.from({ length: 100 }, (_, i) => {
   };
 });
 const invited = crowd.filter((u) => u.kind === "invited");
+// The featured speakers, under the account ids the homepage cards look up.
+const SPEAKER_EMAIL = "speaker-%@metagame.games";
+const speakers = Object.values(SPEAKER_ACCOUNTS).map(({ name, userId }, i) => {
+  const slug = name
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-");
+  return {
+    id: userId,
+    name,
+    email: SPEAKER_EMAIL.replace("%", slug),
+    verified: true,
+    i: 200 + i,
+  };
+});
 const everyone = [
   ...Object.values(users).map((u) => ({
     ...u,
@@ -244,6 +266,7 @@ const everyone = [
     verified: true,
   })),
   ...crowd,
+  ...speakers,
 ];
 // Bought a ticket, never made an account: most purchasers, early on.
 const ghosts = Array.from({ length: 60 }, (_, i) => ({
@@ -663,6 +686,18 @@ const crowdHosts = [...program, ...pipeline].flatMap((s, k) => {
   ];
 });
 
+// Each speaker co-hosts one to three program sessions, billed after whoever
+// the crowd already put on them.
+const lastPosition = new Map(crowdHosts.map((h) => [h.session_id, h.position]));
+const speakerHosts = speakers.flatMap((u, i) =>
+  [i, i + 7, i + 14].slice(0, 1 + (i % 3)).map((k) => {
+    const s = program[k % program.length];
+    const position = (lastPosition.get(s.id) ?? -1) + 1;
+    lastPosition.set(s.id, position);
+    return { session_id: s.id, position, user_id: u.id };
+  }),
+);
+
 // Prod's tier names and price points, in roughly prod's proportions: mostly
 // early-bird code, a third comped, a few full price, day passes, a supporter.
 const T_FULL = "Metagame 2026";
@@ -974,6 +1009,11 @@ await sql.query(
   `delete from "user" where id like 'seed-%' and not (id = any($1::text[]))`,
   [pgArray(everyone.map((u) => u.id))],
 );
+// Speaker accounts carry their real ids, so they're found by email instead.
+await sql.query(
+  `delete from "user" where email like $1 and not (id = any($2::text[]))`,
+  [SPEAKER_EMAIL, pgArray(speakers.map((u) => u.id))],
+);
 
 counts.user = await upsert(
   "user",
@@ -1093,6 +1133,7 @@ counts.session_hosts = await upsert(
     { session_id: uuid(105), position: 0, user_id: users.newcomer.id },
     { session_id: uuid(106), position: 0, user_id: users.grants.id },
     ...crowdHosts,
+    ...speakerHosts,
   ],
 );
 counts.rsvps = await upsertRsvps([

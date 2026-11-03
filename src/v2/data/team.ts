@@ -31,6 +31,8 @@ export type Person = {
   contactKey?: string;
   // Hat Trick: hats hidden in this photo (see src/v2/hat-trick).
   hats?: Hat[];
+  // A small mark for the affiliation, before its name on a speaker card.
+  logo?: StaticImageData;
 };
 
 export const TEAM: Person[] = [

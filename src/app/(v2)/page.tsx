@@ -19,10 +19,10 @@ import SpaceInvadersDivider from "@/v2/components/dividers/space-invaders";
 import TetrisDivider from "@/v2/components/dividers/tetris";
 import FaqItem from "@/v2/components/FaqItem";
 import Highlights2025 from "@/v2/components/Highlights2025";
-import PersonCard from "@/v2/components/PersonCard";
 import SectionHeading from "@/v2/components/SectionHeading";
 import SignupForm from "@/v2/components/signup/SignupForm";
 import SiteHero from "@/v2/components/SiteHero";
+import SpeakerCard from "@/v2/components/SpeakerCard";
 import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
 import {
   EYEBROW,
@@ -58,7 +58,7 @@ import { HATS } from "@/v2/hat-trick/hats";
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
 import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { env } from "@/env";
-import { buildDays, publicSchedule } from "@/lib/schedule";
+import { buildDays, hostedSessions, publicSchedule } from "@/lib/schedule";
 import { loadSchedule } from "@/lib/schedule-store";
 import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
 import megagameChess from "../../../public/images/megagame-chess.jpg";
@@ -270,9 +270,17 @@ export default async function Home() {
   // Public rooms only and no per-viewer state, so the page stays static. CI
   // prerenders it with no database (Vercel builds have one), so the grid is
   // skipped rather than failing the build.
-  const schedule = env.DATABASE_URL
-    ? publicSchedule(await loadSchedule(), "public")
-    : null;
+  const raw = env.DATABASE_URL ? await loadSchedule() : null;
+  const schedule = raw && publicSchedule(raw, "public");
+  // The sessions each speaker hosts, for the backs of their cards.
+  const speaking =
+    raw &&
+    schedule &&
+    hostedSessions(
+      raw,
+      schedule,
+      SPEAKERS.map((s) => s.userId),
+    );
   const earlyBird = isEarlyBirdActive();
   return (
     <>
@@ -323,7 +331,10 @@ export default async function Home() {
                 key={speaker.name}
                 className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]"
               >
-                <PersonCard {...speaker} compact />
+                <SpeakerCard
+                  {...speaker}
+                  sessions={speaking?.get(speaker.userId)}
+                />
               </div>
             ))}
             <div className="w-[calc(33.333%-0.3334rem)] sm:w-[calc(33.333%-0.8334rem)] lg:w-[calc(25%-0.9375rem)]">

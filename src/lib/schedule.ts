@@ -893,6 +893,41 @@ export function publicSchedule(
  * (waitlist included) or bookmarked. Only ids from `sessions` come back, so
  * plans on sessions the caller left out (drafts, hidden rooms) stay out.
  */
+/** The session's own page, under /schedule. */
+export function sessionHref(session: { slug: string }): string {
+  return `/schedule/${encodeURIComponent(session.slug)}`;
+}
+
+export type HostedSession = Pick<
+  PublicSession,
+  "slug" | "title" | "category" | "startsAt"
+>;
+
+/**
+ * The shown sessions each account hosts, by account id, in schedule order.
+ * `shown` is the public schedule; `schedule` the raw one, which has the
+ * hosts' ids.
+ */
+export function hostedSessions(
+  schedule: { sessions: ScheduleSession[] },
+  shown: { sessions: PublicSession[] },
+  userIds: string[],
+): Map<string, HostedSession[]> {
+  const hosts = new Map(schedule.sessions.map((s) => [s.id, s.hosts]));
+  const out = new Map(userIds.map((id) => [id, [] as HostedSession[]]));
+  for (const s of shown.sessions) {
+    for (const h of hosts.get(s.id) ?? []) {
+      out.get(h.userId)?.push({
+        slug: s.slug,
+        title: s.title,
+        category: s.category,
+        startsAt: s.startsAt,
+      });
+    }
+  }
+  return out;
+}
+
 export function viewerSessionIds(
   userId: string,
   sessions: Pick<ScheduleSession, "id" | "hosts" | "shepherd">[],
