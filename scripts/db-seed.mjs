@@ -34,9 +34,7 @@
 //                              the homepage's featured speakers, with the ids
 //                              and names in src/v2/data/speaker-accounts.ts
 //                              (placeholder TODO ids skipped), each co-hosting
-//                              one to three published sessions. Only created
-//                              where the id isn't already there, so a copy of
-//                              prod keeps the real accounts
+//                              one to three published sessions
 // Plus 60 purchases from people with no account at all, and one API key for
 // admin: x-api-key mg_seed_metabot_000000000000000000000000000000000000000000000000000.
 //
@@ -114,15 +112,12 @@ const pgArray = (xs) =>
   `{${xs.map((x) => `"${x.replace(/["\\]/g, "\\$&")}"`).join(",")}}`;
 
 /** Insert rows, updating every non-key column on conflict. */
-// With `keep`, rows already there are left as they are.
-async function upsert(table, keys, rows, { keep = false } = {}) {
+async function upsert(table, keys, rows) {
   for (const row of rows) {
     const cols = Object.keys(row);
-    const update = keep
-      ? []
-      : cols
-          .filter((c) => !keys.includes(c))
-          .map((c) => `"${c}" = excluded."${c}"`);
+    const update = cols
+      .filter((c) => !keys.includes(c))
+      .map((c) => `"${c}" = excluded."${c}"`);
     await sql.query(
       `insert into "${table}" (${cols.map((c) => `"${c}"`).join(", ")})
        values (${cols.map((_, i) => `$${i + 1}`).join(", ")})
@@ -266,6 +261,7 @@ const everyone = [
     verified: true,
   })),
   ...crowd,
+  ...speakers,
 ];
 // Bought a ticket, never made an account: most purchasers, early on.
 const ghosts = Array.from({ length: 60 }, (_, i) => ({
@@ -1040,22 +1036,6 @@ counts.account = await upsert(
   everyone.filter((u) => u.verified).map(credential),
 );
 counts.profiles = await upsert("profiles", ["user_id"], everyone.map(profile));
-// Speakers carry their real ids: on a copy of prod the accounts already exist
-// and stay untouched; elsewhere they're created.
-const keep = { keep: true };
-counts.user += await upsert("user", ["id"], speakers.map(userRow), keep);
-counts.account += await upsert(
-  "account",
-  ["id"],
-  speakers.map(credential),
-  keep,
-);
-counts.profiles += await upsert(
-  "profiles",
-  ["user_id"],
-  speakers.map(profile),
-  keep,
-);
 
 // Attendee is the built-in role src/lib/permission-store.ts expects by name;
 // Team holds everything short of admin.
