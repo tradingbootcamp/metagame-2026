@@ -207,6 +207,7 @@ export default function SpeakerCard({
                     />
                     <Link
                       href={sessionHref(s)}
+                      scroll={false}
                       className="min-w-0 text-left text-[11px] leading-snug outline-none hover:underline focus-visible:ring-2 focus-visible:ring-tan sm:text-[13px]"
                     >
                       <span className="line-clamp-3">{s.title}</span>
