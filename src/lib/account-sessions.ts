@@ -1,7 +1,7 @@
 import {
   formatPacificDay,
   formatPacificTime,
-  isPlaced,
+  isListed,
   planConflicts,
   type PlanConflict,
   type RsvpStatus,
@@ -73,7 +73,7 @@ export function accountSessions(
   const row = (s: ScheduleSession): AccountSessionRow => ({
     id: s.id,
     slug: s.slug,
-    listed: s.status === "published" && isPlaced(s),
+    listed: isListed(s),
     title: s.title,
     status: s.status,
     when: sessionWhen(s),

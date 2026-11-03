@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { NO_ROOM, type Day, type PublicSession } from "@/lib/schedule";
+import { useEffect, useState } from "react";
+import { type Day, type PublicSession } from "@/lib/schedule";
 import { momentAt, type Moment } from "@/v2/lib/moments";
 import Moments from "./Moments";
 import type { Column } from "./ScheduleViews";
@@ -23,19 +23,6 @@ export default function ScheduleMoments({
   dayKey: string;
   onDayChange: (key: string) => void;
 }) {
-  // The board places sessions by room, so roomless ones go under "Room TBA".
-  const boardDays = useMemo(
-    () =>
-      days.map((d) => ({
-        ...d,
-        sessions: d.sessions.map((s) => ({
-          ...s,
-          locationId: s.locationId ?? NO_ROOM,
-        })),
-      })),
-    [days],
-  );
-
   // Only the browser knows the time, so this starts empty and fills in after mount.
   const [now, setNow] = useState<Moment | null>(null);
   useEffect(() => {
@@ -50,7 +37,7 @@ export default function ScheduleMoments({
 
   return (
     <Moments
-      days={boardDays}
+      days={days}
       locations={columns}
       styleFor={blockStyle}
       onOpen={onOpen}

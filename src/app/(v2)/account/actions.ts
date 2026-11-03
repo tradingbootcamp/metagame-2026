@@ -10,6 +10,7 @@ import { currentSession, getAuth, hasPassword } from "@/lib/auth";
 import { deleteImage, uploadImage } from "@/lib/blob";
 import { isMegagameClass, starterLevels } from "@/lib/megagame-levels";
 import { loadMegagameLevels, setMegagameLevels } from "@/lib/megagame-store";
+import { invalidateSchedule } from "@/lib/schedule-store";
 import {
   claimOwnTicket,
   claimTicket,
@@ -54,6 +55,7 @@ export async function updateProfile(
       body: { name },
       headers: await headers(),
     });
+    invalidateSchedule();
   }
   const { profiles } = schema;
   await getDb()

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   buildDays,
+  isListed,
   isPlaced,
   openingDayKey,
   selectedDay,
@@ -157,9 +158,7 @@ export default function UserSessions({
   const [dayKey, setDayKey] = useState(firstFilled);
 
   const href = (s: UserSession) =>
-    linkable && s.status === "published"
-      ? `/schedule/${encodeURIComponent(s.slug)}`
-      : null;
+    linkable && isListed(s) ? `/schedule/${encodeURIComponent(s.slug)}` : null;
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
   const columns = buildColumns(

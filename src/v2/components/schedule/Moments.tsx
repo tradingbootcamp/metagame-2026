@@ -261,12 +261,13 @@ function Board<S extends MomentSession>({
     <div>
       {/* Play on the left, the day in the middle, the clock on the right; on
           a phone the clock takes its own row above. With the day chosen
-          outside the board, it's just play and the clock. */}
+          outside the board it's just play and the clock, which drops to its
+          own row only when the two don't fit. */}
       <div
-        className={`grid items-center gap-3 ${
+        className={`items-center ${
           dayKey === undefined
-            ? "grid-cols-[1fr_auto_1fr]"
-            : "grid-cols-[auto_1fr]"
+            ? "grid grid-cols-[1fr_auto_1fr] gap-3"
+            : "flex flex-wrap gap-x-3 gap-y-2"
         }`}
       >
         <div className="flex items-center gap-2 justify-self-start">
@@ -322,8 +323,8 @@ function Board<S extends MomentSession>({
         <p
           className={`${DISPLAY} justify-self-end text-[clamp(30px,4vw,44px)] leading-none text-navy ${
             dayKey === undefined
-              ? "order-first col-span-3 sm:order-none sm:col-span-1 sm:col-start-3"
-              : ""
+              ? "order-first col-span-3 sm:order-none sm:col-span-1"
+              : "ml-auto whitespace-nowrap"
           }`}
         >
           {d.name} · {slotLabel(t)}

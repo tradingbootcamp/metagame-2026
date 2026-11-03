@@ -508,6 +508,19 @@ export function isPlaced<S extends Timed>(s: S): s is Placed<S> {
   return s.startsAt !== null && s.endsAt !== null;
 }
 
+type Listable = Timed & Pick<ScheduleSession, "status" | "locationId">;
+
+/**
+ * Published, timed and in a room: the one test for whether attendees get a
+ * session at all. Anything linking to /schedule/<slug> must pass it, since the
+ * session page resolves out of publicSchedule().
+ */
+export function isListed<S extends Listable>(
+  s: S,
+): s is Placed<S> & { locationId: string } {
+  return s.status === "published" && isPlaced(s) && s.locationId !== null;
+}
+
 export function offsetPx(session: Placed<Timed>, slotStart: number): number {
   return Math.max(0, pacificMinutes(session.startsAt) - slotStart) * PX_PER_MIN;
 }
@@ -845,7 +858,8 @@ export function roomVisible(
  * The published, placed sessions and the rooms to show them in, as much of
  * each as this viewer may see (see ScheduleLocation.visibility). A session in
  * a room the viewer can't see is dropped with it, so nothing leaks through
- * the list view or a session page.
+ * the list view or a session page. A session with no room yet is unscheduled
+ * as far as attendees are concerned, so it is dropped too (see isListed).
  */
 export function publicSchedule(
   schedule: {
@@ -854,13 +868,11 @@ export function publicSchedule(
   },
   viewer: ScheduleViewer = "public",
 ): { locations: PublicLocation[]; sessions: PublicSession[] } {
-  const placed = schedule.sessions
-    .filter((s) => s.status === "published")
-    .filter(isPlaced);
   const rooms = schedule.locations.filter((l) => roomVisible(l, viewer));
   const shown = new Set(rooms.map((l) => l.id));
-  const sessions: PublicSession[] = placed
-    .filter((s) => s.locationId === null || shown.has(s.locationId))
+  const sessions: PublicSession[] = schedule.sessions
+    .filter(isListed)
+    .filter((s) => shown.has(s.locationId))
     .map((s) => ({
       id: s.id,
       slug: s.slug,

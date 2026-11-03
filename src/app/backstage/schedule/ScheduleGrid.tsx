@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { GripVerticalIcon } from "lucide-react";
-import { FaListUl, FaThLarge } from "react-icons/fa";
+import { FaListUl, FaPencilAlt, FaThLarge } from "react-icons/fa";
 import {
   cellSessions,
   capAtMidnight,
@@ -197,6 +197,7 @@ type Column = {
   name: string;
   detail: string | null;
   thumbnailUrl: string | null;
+  location: ScheduleLocation | null;
 };
 
 function GridDay({
@@ -212,6 +213,7 @@ function GridDay({
   onCreate,
   onGrab,
   onDrop,
+  onEditLocation,
   confirmClash,
 }: {
   day: Day;
@@ -227,6 +229,7 @@ function GridDay({
   onCreate?: CreateFn;
   onGrab: GrabFn;
   onDrop: DropFn;
+  onEditLocation?: (location: ScheduleLocation) => void;
   confirmClash?: boolean;
 }) {
   const [hover, setHover] = useState<{
@@ -285,27 +288,55 @@ function GridDay({
           style={{ gridTemplateColumns: gridCols }}
         >
           <div className="sticky left-0 z-40 border-r border-b border-line bg-navy" />
-          {columns.map((col) => (
-            <div
-              key={col.id}
-              className="border-r border-b border-line px-2 py-2 last:border-r-0"
-            >
-              {col.thumbnailUrl && (
-                // eslint-disable-next-line @next/next/no-img-element -- already thumbnail-sized
-                <img
-                  src={col.thumbnailUrl}
-                  alt=""
-                  className="mb-1.5 h-14 w-full rounded-sm object-cover"
-                />
-              )}
-              <div className="text-sm leading-tight font-bold">{col.name}</div>
-              {col.detail && (
-                <div className="text-[11px] leading-tight text-white/75">
-                  {col.detail}
+          {columns.map((col) => {
+            const room = col.location;
+            const edit =
+              onEditLocation && room ? () => onEditLocation(room) : null;
+            const body = (
+              <>
+                {edit && (
+                  <FaPencilAlt
+                    size={10}
+                    aria-hidden="true"
+                    className="absolute top-1.5 right-1.5 text-white/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                  />
+                )}
+                {col.thumbnailUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- already thumbnail-sized
+                  <img
+                    src={col.thumbnailUrl}
+                    alt=""
+                    className="mb-1.5 h-14 w-full rounded-sm object-cover"
+                  />
+                )}
+                <div className="text-sm leading-tight font-bold">
+                  {col.name}
                 </div>
-              )}
-            </div>
-          ))}
+                {col.detail && (
+                  <div className="text-[11px] leading-tight text-white/75">
+                    {col.detail}
+                  </div>
+                )}
+              </>
+            );
+            const cellClass =
+              "relative border-r border-b border-line px-2 py-2 last:border-r-0";
+            return edit ? (
+              <button
+                key={col.id}
+                type="button"
+                onClick={edit}
+                title="Edit room"
+                className={`${cellClass} group block w-full text-left transition-colors hover:bg-white/10`}
+              >
+                {body}
+              </button>
+            ) : (
+              <div key={col.id} className={cellClass}>
+                {body}
+              </div>
+            );
+          })}
         </div>
 
         <div className="grid" style={{ gridTemplateColumns: gridCols }}>
@@ -486,6 +517,7 @@ export default function ScheduleGrid({
   onCreate,
   onGrab,
   onDrop,
+  onEditLocation,
   confirmClash,
   dayKey: controlledDay,
   onDayChange,
@@ -504,6 +536,8 @@ export default function ScheduleGrid({
   onCreate?: CreateFn;
   onGrab: GrabFn;
   onDrop: DropFn;
+  /** Shows a pencil in each room's column header. */
+  onEditLocation?: (location: ScheduleLocation) => void;
   /** Let drops onto an overlap through (with its clash) instead of refusing them. */
   confirmClash?: boolean;
   /** Controlled day tab, for a parent that needs to switch it (search). */
@@ -518,6 +552,7 @@ export default function ScheduleGrid({
     id: l.id,
     name: l.name,
     thumbnailUrl: l.thumbnailUrl,
+    location: l,
     detail:
       [
         l.campusLocation,
@@ -533,6 +568,7 @@ export default function ScheduleGrid({
       name: "No room",
       detail: "unassigned",
       thumbnailUrl: null,
+      location: null,
     });
   }
   const roomName = (id: string | null) =>
@@ -636,6 +672,7 @@ export default function ScheduleGrid({
             onCreate={onCreate}
             onGrab={onGrab}
             onDrop={onDrop}
+            onEditLocation={onEditLocation}
             confirmClash={confirmClash}
           />
         )
