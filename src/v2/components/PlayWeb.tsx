@@ -53,6 +53,23 @@ const rotY = (t: number): Mat => {
   const s = Math.sin(t);
   return [c, 0, s, 0, 1, 0, -s, 0, c];
 };
+// Rotation by t about a unit axis (Rodrigues).
+const rotAxis = ([x, y, z]: number[], t: number): Mat => {
+  const c = Math.cos(t);
+  const s = Math.sin(t);
+  const k = 1 - c;
+  return [
+    c + x * x * k,
+    x * y * k - z * s,
+    x * z * k + y * s,
+    y * x * k + z * s,
+    c + y * y * k,
+    y * z * k - x * s,
+    z * x * k - y * s,
+    z * y * k + x * s,
+    c + z * z * k,
+  ];
+};
 const mul = (a: Mat, b: Mat): Mat =>
   Array.from({ length: 9 }, (_, i) => {
     const r = Math.floor(i / 3);
@@ -79,7 +96,13 @@ const CAMERA = 9;
 const HEX_CLIP = "polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)";
 
 const DRAG = 0.008;
-const IDLE_SPIN = 0.0013;
+// The idle turn, in radians per second, about an axis tilted TILT from
+// vertical. The tilt's direction precesses once per PRECESS_S seconds, so
+// over time every corner gets its turn at the front without the shape
+// visibly wobbling.
+const IDLE_SPIN = 0.12;
+const TILT = 0.4;
+const PRECESS_S = 60;
 const IDLE_AFTER_MS = 2500;
 
 export default function PlayWeb() {
@@ -103,8 +126,12 @@ export default function PlayWeb() {
     });
     if (box.current) seen.observe(box.current);
     let frame = 0;
-    const tick = () => {
+    let last = performance.now();
+    let phi = 0;
+    const tick = (now: number) => {
       frame = requestAnimationFrame(tick);
+      const dt = Math.min(now - last, 50) / 1000;
+      last = now;
       if (drag.current || document.hidden || !onScreen.current) return;
       const v = velocity.current;
       if (Math.abs(v.x) + Math.abs(v.y) > 0.0004) {
@@ -112,7 +139,13 @@ export default function PlayWeb() {
         v.x *= 0.94;
         v.y *= 0.94;
       } else if (Date.now() - lastTouch.current > IDLE_AFTER_MS) {
-        setPose((p) => mul(rotY(IDLE_SPIN), p));
+        phi += ((2 * Math.PI) / PRECESS_S) * dt;
+        const axis = [
+          Math.sin(TILT) * Math.cos(phi),
+          Math.cos(TILT),
+          Math.sin(TILT) * Math.sin(phi),
+        ];
+        setPose((p) => mul(rotAxis(axis, IDLE_SPIN * dt), p));
       }
     };
     frame = requestAnimationFrame(tick);
