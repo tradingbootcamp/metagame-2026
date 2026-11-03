@@ -29,6 +29,8 @@ export async function mint(
   const admin = await requireAccess("promo.create");
   if (!admin) return { error: EXPIRED };
 
+  const couponId = str(formData, "couponId");
+  if (!couponId) return { field: "couponId", error: "Pick a coupon." };
   const name = str(formData, "name");
   if (!name) return { field: "name", error: "Required." };
   const purpose =
@@ -53,7 +55,7 @@ export async function mint(
       maxUses,
       purpose,
       notes: str(formData, "notes"),
-      couponId: str(formData, "couponId") || undefined,
+      couponId,
       issuedBy: admin.name,
     });
     return { minted };
