@@ -79,7 +79,10 @@ export default function FirstSigninFlow() {
         showCloseButton={false}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
-        className="flex max-h-[calc(100dvh-2rem)] max-w-[560px] flex-col gap-6 overflow-y-auto px-6 py-7 sm:px-9 sm:py-8"
+        // Above the session RouteModal (z-[100]): landing on /schedule/<slug>
+        // signed in for the first time must still show this first.
+        overlayClassName="z-[110]"
+        className="z-[110] flex max-h-[calc(100dvh-2rem)] max-w-[560px] flex-col gap-6 overflow-y-auto px-6 py-7 sm:px-9 sm:py-8"
       >
         <div>
           <DialogTitle className={`${HEADING} text-[28px] text-cream`}>
