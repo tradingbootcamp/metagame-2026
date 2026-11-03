@@ -61,13 +61,6 @@ export default function PublicSchedule({
     if (found) setDayKey(found.key);
   }
 
-  // Phones start on moments; deferred so server and first client render match.
-  useEffect(() => {
-    if (!window.matchMedia("(max-width: 767px)").matches) return;
-    const t = setTimeout(() => setView("moments"), 0);
-    return () => clearTimeout(t);
-  }, []);
-
   // The layout isn't re-rendered when a session modal closes, so an RSVP or
   // bookmark made in one wouldn't reach `mine` without this.
   useEffect(() => {
