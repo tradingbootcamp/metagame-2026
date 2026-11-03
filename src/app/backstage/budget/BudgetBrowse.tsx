@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import {
   addCategoryAction,
   setBudgetAction,
@@ -308,7 +308,12 @@ function CategoryTable({
                 </span>
               </span>
             </button>
-            {isOpen && canManage && <EditBudget category={c} />}
+            {isOpen && canManage && (
+              <EditBudget
+                key={`${c.type}-${c.name}-${c.budget}`}
+                category={c}
+              />
+            )}
             {isOpen && <CategoryRows name={c.name} ledger={ledger} />}
           </div>
         );
@@ -319,6 +324,7 @@ function CategoryTable({
 
 function EditBudget({ category }: { category: Category }) {
   const router = useRouter();
+  const id = useId();
   const [amount, setAmount] = useState(
     category.budget === null ? "" : String(category.budget),
   );
@@ -340,11 +346,11 @@ function EditBudget({ category }: { category: Category }) {
         });
       }}
     >
-      <label htmlFor={`budget-${category.name}`} className="text-ink/60">
+      <label htmlFor={id} className="text-ink/60">
         Budget
       </label>
       <input
-        id={`budget-${category.name}`}
+        id={id}
         inputMode="decimal"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}

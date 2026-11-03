@@ -175,11 +175,25 @@ export async function deleteRow(
   });
 }
 
-/** Inserts one blank row after a 1-based row, inheriting that row's format. */
+const cellData = (v: CellValue) =>
+  v === null || v === ""
+    ? {}
+    : typeof v === "number"
+      ? { userEnteredValue: { numberValue: v } }
+      : typeof v === "boolean"
+        ? { userEnteredValue: { boolValue: v } }
+        : { userEnteredValue: { stringValue: v } };
+
+/**
+ * Inserts a row at a 1-based row (what was there shifts down), inheriting the
+ * format of the row above, and fills it from column A in the same request so
+ * a failed write can't leave a blank row behind.
+ */
 export async function insertRow(
   spreadsheetId: string,
   sheetId: number,
-  after: number,
+  row: number,
+  values: CellValue[],
 ): Promise<void> {
   await call(spreadsheetId, ":batchUpdate", {
     method: "POST",
@@ -190,10 +204,17 @@ export async function insertRow(
             range: {
               sheetId,
               dimension: "ROWS",
-              startIndex: after,
-              endIndex: after + 1,
+              startIndex: row - 1,
+              endIndex: row,
             },
             inheritFromBefore: true,
+          },
+        },
+        {
+          updateCells: {
+            start: { sheetId, rowIndex: row - 1, columnIndex: 0 },
+            rows: [{ values: values.map(cellData) }],
+            fields: "userEnteredValue",
           },
         },
       ],
