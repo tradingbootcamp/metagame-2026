@@ -298,19 +298,10 @@ export default async function Home() {
             <p className={`${PROSE} mt-6`}>
               Metagame is a weekend conference devoted to games and the people
               who make and play them. We mean games in the broadest sense of the
-              word: any experience that is designed to be played, as opposed to
-              passively consumed. If building it involves asking the question
-              &ldquo;what would the consumer of this experience choose to do
-              next?&rdquo;, it&apos;s a game.
+              word: any experience meant to be played or actively experienced.
             </p>
           </div>
-          <figure>
-            <PlayWeb />
-            <figcaption className="mt-3 text-center font-space-mono text-[11px] tracking-[0.1em] text-ink/60 uppercase sm:text-xs">
-              <span className="font-bold text-meeple">Fig. 1</span> What&apos;s
-              in a game? The constellation of play
-            </figcaption>
-          </figure>
+          <PlayWeb />
         </div>
       </section>
 
