@@ -79,7 +79,7 @@ const CAMERA = 9;
 const HEX_CLIP = "polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%)";
 
 const DRAG = 0.008;
-const IDLE_SPIN = 0.000875;
+const IDLE_SPIN = 0.0013;
 const IDLE_AFTER_MS = 2500;
 
 export default function PlayWeb() {
