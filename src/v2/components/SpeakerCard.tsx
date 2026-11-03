@@ -62,8 +62,8 @@ function Corner({
 
 // One speaker as a two-sided card: the photo on top (with any Hat Trick
 // hats), name and affiliation under it. Turn it over for their sessions, each
-// linking to its page. The front sets the height; the back lies over it and
-// scrolls if it has to. With no sessions there's nothing to turn to.
+// linking to its page. Both faces share one grid cell, so the card is as tall
+// as the taller face. With no sessions there's nothing to turn to.
 export default function SpeakerCard({
   name,
   title,
@@ -80,14 +80,14 @@ export default function SpeakerCard({
   return (
     <div className="h-full [perspective:1200px]">
       <div
-        className={`relative h-full transition-transform duration-500 [transform-style:preserve-3d] motion-reduce:transition-none ${
+        className={`grid h-full transition-transform duration-500 [transform-style:preserve-3d] motion-reduce:transition-none ${
           flipped ? "[transform:rotateY(180deg)]" : ""
         }`}
       >
         <div
           inert={flipped}
           onClick={canFlip ? () => setFlipped(true) : undefined}
-          className={`${FACE} relative bg-white ${canFlip ? "cursor-pointer" : ""}`}
+          className={`${FACE} relative bg-white [grid-area:1/1] ${canFlip ? "cursor-pointer" : ""}`}
         >
           {photo && hats?.length ? (
             <HatImage
@@ -163,14 +163,14 @@ export default function SpeakerCard({
           <div
             inert={!flipped}
             onClick={() => setFlipped(false)}
-            className={`${FACE} absolute inset-0 [transform:rotateY(180deg)] cursor-pointer bg-navy p-2 pb-6 text-cream sm:p-3 sm:pb-10`}
+            className={`${FACE} relative [transform:rotateY(180deg)] cursor-pointer bg-navy p-2 pb-6 text-cream [grid-area:1/1] sm:p-3 sm:pb-10`}
           >
             <span
               className={`${MONO} block truncate font-bold tracking-[0.1em] text-tan`}
             >
               {name.split(" ")[0]}&apos;s sessions
             </span>
-            <ul className="mt-1.5 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto sm:mt-2 sm:gap-2">
+            <ul className="mt-1.5 flex flex-1 flex-col gap-1.5 sm:mt-2 sm:gap-2">
               {sessions.map((s) => {
                 const Icon = CATEGORY_ICON[s.category ?? "other"];
                 return (
