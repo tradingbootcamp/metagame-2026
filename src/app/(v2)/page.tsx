@@ -23,6 +23,7 @@ import PersonCard from "@/v2/components/PersonCard";
 import SectionHeading from "@/v2/components/SectionHeading";
 import SignupForm from "@/v2/components/signup/SignupForm";
 import SiteHero from "@/v2/components/SiteHero";
+import HomeHero from "@/v2/components/HomeHero";
 import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
 import {
   EYEBROW,
@@ -280,6 +281,7 @@ export default async function Home() {
       <div id="home" className={SECTION_ANCHOR}>
         <SiteHero />
       </div>
+      <HomeHero />
 
       {/* about */}
       <section id="about" className={`${SECTION} md:pt-11 md:pb-12`}>
