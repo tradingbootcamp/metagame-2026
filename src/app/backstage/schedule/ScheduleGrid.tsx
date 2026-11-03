@@ -288,38 +288,55 @@ function GridDay({
           style={{ gridTemplateColumns: gridCols }}
         >
           <div className="sticky left-0 z-40 border-r border-b border-line bg-navy" />
-          {columns.map((col) => (
-            <div
-              key={col.id}
-              className="relative border-r border-b border-line px-2 py-2 last:border-r-0"
-            >
-              {onEditLocation && col.location && (
-                <button
-                  type="button"
-                  onClick={() => col.location && onEditLocation(col.location)}
-                  aria-label={`Edit ${col.name}`}
-                  title="Edit room"
-                  className="absolute right-1 bottom-1 rounded p-1 text-white/60 transition-colors hover:bg-white/15 hover:text-white"
-                >
-                  <FaPencilAlt size={10} />
-                </button>
-              )}
-              {col.thumbnailUrl && (
-                // eslint-disable-next-line @next/next/no-img-element -- already thumbnail-sized
-                <img
-                  src={col.thumbnailUrl}
-                  alt=""
-                  className="mb-1.5 h-14 w-full rounded-sm object-cover"
-                />
-              )}
-              <div className="text-sm leading-tight font-bold">{col.name}</div>
-              {col.detail && (
-                <div className="text-[11px] leading-tight text-white/75">
-                  {col.detail}
+          {columns.map((col) => {
+            const room = col.location;
+            const edit =
+              onEditLocation && room ? () => onEditLocation(room) : null;
+            const body = (
+              <>
+                {edit && (
+                  <FaPencilAlt
+                    size={10}
+                    aria-hidden="true"
+                    className="absolute top-1.5 right-1.5 text-white/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                  />
+                )}
+                {col.thumbnailUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- already thumbnail-sized
+                  <img
+                    src={col.thumbnailUrl}
+                    alt=""
+                    className="mb-1.5 h-14 w-full rounded-sm object-cover"
+                  />
+                )}
+                <div className="text-sm leading-tight font-bold">
+                  {col.name}
                 </div>
-              )}
-            </div>
-          ))}
+                {col.detail && (
+                  <div className="text-[11px] leading-tight text-white/75">
+                    {col.detail}
+                  </div>
+                )}
+              </>
+            );
+            const cellClass =
+              "relative border-r border-b border-line px-2 py-2 last:border-r-0";
+            return edit ? (
+              <button
+                key={col.id}
+                type="button"
+                onClick={edit}
+                title="Edit room"
+                className={`${cellClass} group block w-full text-left transition-colors hover:bg-white/10`}
+              >
+                {body}
+              </button>
+            ) : (
+              <div key={col.id} className={cellClass}>
+                {body}
+              </div>
+            );
+          })}
         </div>
 
         <div className="grid" style={{ gridTemplateColumns: gridCols }}>
