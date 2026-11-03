@@ -34,6 +34,9 @@ const nextConfig: NextConfig = {
     // time. Keys are globs, so `[slug]` can't be spelled out.
     "/backstage/emails": ["./emails/*", "./emails/drafts/*"],
     "/backstage/emails/**": ["./emails/*", "./emails/drafts/*"],
+    // Ticket webhooks send the one-week-out email from the same files.
+    "/api/stripe-webhook": ["./emails/*", "./emails/drafts/*"],
+    "/api/opennode-webhook": ["./emails/*", "./emails/drafts/*"],
   },
   // public/ files are served max-age=0 by default, so the hero backdrop
   // revalidated on every visit. Filenames are stable; bump them if the

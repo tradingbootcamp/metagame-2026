@@ -334,25 +334,14 @@ export async function POST(request: Request) {
         });
       }
 
-      try {
-        await followUpTicketPurchase({
-          to: email,
-          name: preferredName ?? full.customer_details?.name ?? undefined,
-          ticketType: ticketType ?? "Standard",
-          paymentId: paymentIntent?.id ?? full.id,
-          test: !event.livemode || isTestCoupon,
-        });
-      } catch (err) {
-        console.error("[stripe-webhook] ticket follow-up failed:", err);
-        await reportError({
-          source: "Stripe webhook",
-          summary:
-            "Ticket follow-up (Resend contact + one-week-out email) failed (the ticket itself is fine)",
-          details: { Buyer: email, Session: full.id },
-          error: err,
-          mention: false,
-        });
-      }
+      await followUpTicketPurchase({
+        to: email,
+        name: preferredName ?? full.customer_details?.name ?? undefined,
+        ticketType,
+        paymentId: paymentIntent?.id ?? full.id,
+        test: !event.livemode || isTestCoupon,
+        source: "Stripe webhook",
+      });
     }
   } catch (err) {
     // 500 → Stripe retries; recordPurchase upserts, so a retry can't duplicate.

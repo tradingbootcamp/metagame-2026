@@ -260,25 +260,14 @@ export async function POST(request: Request) {
       });
     }
 
-    try {
-      await followUpTicketPurchase({
-        to: email,
-        name: meta.name ? String(meta.name) : undefined,
-        ticketType: meta.ticketLabel ? String(meta.ticketLabel) : undefined,
-        paymentId: charge.id,
-        test: meta.test === true || meta.test === "true",
-      });
-    } catch (err) {
-      console.error("[opennode-webhook] ticket follow-up failed:", err);
-      await reportError({
-        source: "OpenNode webhook",
-        summary:
-          "Ticket follow-up (Resend contact + one-week-out email) failed (the ticket itself is fine)",
-        details: { Buyer: email, Charge: charge.id },
-        error: err,
-        mention: false,
-      });
-    }
+    await followUpTicketPurchase({
+      to: email,
+      name: meta.name ? String(meta.name) : undefined,
+      ticketType: meta.ticketLabel ? String(meta.ticketLabel) : undefined,
+      paymentId: charge.id,
+      test: meta.test === true || meta.test === "true",
+      source: "OpenNode webhook",
+    });
   }
 
   return NextResponse.json({ received: true });

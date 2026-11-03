@@ -1,16 +1,11 @@
 import { CORE, FROM, escapeHtml, getResend } from "@/lib/email";
-import { readEmail } from "@/lib/sent-emails";
+import { reportError } from "@/lib/error-report";
+import { emailSubject, readEmail } from "@/lib/sent-emails";
 
 const TICKET_HOLDERS_SEGMENT_ID = "352cb53c-55e4-48d4-8a11-fa32aaa73f1e";
 
 const OPENER =
   '<p style="margin:0 0 18px;font-size:17px;line-height:1.6;color:#1b1b1b;">We are less than a week out';
-
-const OCTOPUS_TAGS = [
-  "{{UnsubscribeURL}}",
-  "{{SenderInfoLine}}",
-  "{{RewardsURL}}",
-];
 
 export type TicketFollowUp = {
   to: string;
@@ -19,6 +14,8 @@ export type TicketFollowUp = {
   /** Payment id the one-week-out send is idempotent on. */
   paymentId: string;
   test: boolean;
+  /** reportError source, e.g. "Stripe webhook". */
+  source: string;
 };
 
 function splitName(name: string | undefined) {
@@ -34,9 +31,7 @@ export function renderOneWeekOutEmail(
   source: string,
   firstName: string | undefined,
 ): { subject: string; html: string } {
-  const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source);
-  if (!title) throw new Error("one-week-out email has no <title>");
-  const subject = title[1].trim();
+  const subject = emailSubject(source, "one-week-out");
 
   let html = source
     .replace(
@@ -48,8 +43,8 @@ export function renderOneWeekOutEmail(
       /^[ \t]*<p[^>]*><a href="\{\{RewardsURL\}\}"[^>]*>Powered by EmailOctopus<\/a><\/p>[ \t]*\r?\n/m,
       "",
     );
-  const leftover = OCTOPUS_TAGS.filter((tag) => html.includes(tag));
-  if (leftover.length)
+  const leftover = html.match(/\{\{\w+\}\}/g);
+  if (leftover)
     throw new Error(`one-week-out email still has ${leftover.join(", ")}`);
 
   if (!html.includes(OPENER))
@@ -62,8 +57,8 @@ export function renderOneWeekOutEmail(
 
 /**
  * After a paid ticket: the buyer joins the ticket-holders segment and gets
- * the one-week-out logistics email. The two steps run independently; any
- * failures are combined into one thrown Error.
+ * the one-week-out logistics email. The two steps run independently and
+ * soft-fail through reportError, so they can never break the ticket itself.
  */
 export async function followUpTicketPurchase({
   to,
@@ -71,6 +66,7 @@ export async function followUpTicketPurchase({
   ticketType,
   paymentId,
   test,
+  source,
 }: TicketFollowUp): Promise<void> {
   if (test) return;
   const resend = getResend();
@@ -109,5 +105,15 @@ export async function followUpTicketPurchase({
     errors.push(err instanceof Error ? err.message : String(err));
   }
 
-  if (errors.length) throw new Error(errors.join("; "));
+  if (!errors.length) return;
+  const err = new Error(errors.join("; "));
+  console.error(`[${source}] ticket follow-up failed:`, err);
+  await reportError({
+    source,
+    summary:
+      "Ticket follow-up (Resend contact + one-week-out email) failed (the ticket itself is fine)",
+    details: { Buyer: to, Payment: paymentId },
+    error: err,
+    mention: false,
+  });
 }

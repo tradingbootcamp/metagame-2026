@@ -5,7 +5,6 @@ import {
   type PurchaseStatus,
 } from "@/lib/airtable";
 import { sendTicketConfirmationEmail } from "@/lib/email";
-import { reportError } from "@/lib/error-report";
 import {
   FAMILY_PACK,
   STANDARD_USD,
@@ -14,10 +13,7 @@ import {
 } from "@/lib/family-pack";
 import { capturePurchase } from "@/lib/posthog-server";
 import { ticketCode } from "@/lib/ticket-code";
-import {
-  followUpTicketPurchase,
-  type TicketFollowUp,
-} from "@/lib/ticket-followup";
+import { followUpTicketPurchase } from "@/lib/ticket-followup";
 import { currentTicketCode, recordTicket } from "@/lib/ticket-store";
 import { pickUtm } from "@/lib/utm";
 
@@ -94,13 +90,18 @@ export async function recordFamilyPack(
       idempotencyKey: `family-pack/${paymentId}`,
       test: !session.livemode,
     });
-    await followUp({
-      to: email,
-      name: session.customer_details?.name ?? undefined,
-      ticketType: "Standard",
-      paymentId: `${paymentId}`,
-      test: !session.livemode,
-    });
+    const buyerIsAttendee = tickets.some(
+      (t) => t.email.toLowerCase() === email.toLowerCase(),
+    );
+    if (buyerIsAttendee)
+      await followUpTicketPurchase({
+        to: email,
+        name: session.customer_details?.name ?? undefined,
+        ticketType: `${FAMILY_PACK.label} — Standard`,
+        paymentId: `${paymentId}`,
+        test: !session.livemode,
+        source: "Stripe webhook",
+      });
     for (const [index, ticket] of tickets.entries()) {
       if (ticket.email.toLowerCase() === email.toLowerCase()) continue;
       await sendTicketConfirmationEmail({
@@ -113,29 +114,14 @@ export async function recordFamilyPack(
         idempotencyKey: `family-pack/${paymentId}/ticket/${index + 1}`,
         test: !session.livemode,
       });
-      await followUp({
+      await followUpTicketPurchase({
         to: ticket.email,
         name: ticket.name,
-        ticketType: "Standard",
+        ticketType: `${FAMILY_PACK.label} — Standard`,
         paymentId: `${paymentId}/ticket/${index + 1}`,
         test: !session.livemode,
+        source: "Stripe webhook",
       });
     }
-  }
-}
-
-async function followUp(input: TicketFollowUp) {
-  try {
-    await followUpTicketPurchase(input);
-  } catch (err) {
-    console.error("[family-pack] ticket follow-up failed:", err);
-    await reportError({
-      source: "Stripe webhook",
-      summary:
-        "Ticket follow-up (Resend contact + one-week-out email) failed (the ticket itself is fine)",
-      details: { Buyer: input.to, Payment: input.paymentId },
-      error: err,
-      mention: false,
-    });
   }
 }
