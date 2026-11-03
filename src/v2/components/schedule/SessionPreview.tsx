@@ -112,7 +112,9 @@ export default function SessionPreview<S extends ViewSession>({
     let press: { x: number; y: number } | null = null;
     let pending: string | null = null;
     let current: string | null = null;
-    // Set by a long press, so the click that ends it doesn't open the session.
+    let touchCard = false;
+    // Set by a long press, and by the tap that dismisses a long-press card, so
+    // the click that follows doesn't open a session.
     let swallowClick = false;
 
     const blockOf = (t: EventTarget | null) =>
@@ -120,6 +122,7 @@ export default function SessionPreview<S extends ViewSession>({
     const open = (block: HTMLElement, touch: boolean) => {
       pending = null;
       current = block.getAttribute(PREVIEW_ATTR);
+      touchCard = touch;
       if (current)
         setShown({ id: current, anchor: block.getBoundingClientRect(), touch });
     };
@@ -157,14 +160,19 @@ export default function SessionPreview<S extends ViewSession>({
       if (!from || (to instanceof Node && from.contains(to))) return;
       hideTimer = window.setTimeout(hide, HIDE_DELAY_MS);
     };
-    // Any press outside the card puts it away first (see onDown).
+    // Any press outside the card puts it away first (see onDown). A tap that
+    // dismisses a long-press card does only that, even when it lands on
+    // another block.
     const onAnyDown = (e: PointerEvent) => {
       swallowClick = false;
       const t = e.target;
-      if (!(t instanceof Node && cardRef.current?.contains(t))) hide();
+      if (t instanceof Node && cardRef.current?.contains(t)) return;
+      if (current && touchCard && e.pointerType === "touch")
+        swallowClick = true;
+      hide();
     };
     const onDown = (e: PointerEvent) => {
-      if (e.pointerType !== "touch") return;
+      if (e.pointerType !== "touch" || swallowClick) return;
       const block = blockOf(e.target);
       if (!block) return;
       press = { x: e.clientX, y: e.clientY };

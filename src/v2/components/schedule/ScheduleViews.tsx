@@ -196,7 +196,7 @@ export function ViewToggle({
 // No callout or text selection, so a long press brings up the preview card
 // rather than the browser's link menu.
 const BLOCK =
-  "absolute inset-x-0.5 z-10 block overflow-hidden rounded-md border p-1.5 text-left text-[#1b1530] select-none [-webkit-touch-callout:none]";
+  "absolute inset-x-0.5 z-10 block overflow-hidden rounded-md border p-1.5 text-left text-[#1b1530] select-none [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none]";
 const BLOCK_LINK =
   "transition-shadow hover:z-20 hover:shadow-[0_2px_10px_rgba(27,21,48,0.25)]";
 
@@ -238,6 +238,7 @@ function SessionBlock<S extends ViewSession>({
     <Link
       {...preview}
       href={to}
+      draggable={false}
       style={style}
       className={`${BLOCK} ${BLOCK_LINK}`}
     >
