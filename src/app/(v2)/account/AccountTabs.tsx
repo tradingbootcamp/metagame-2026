@@ -45,7 +45,7 @@ export default function AccountTabs({
     <Tabs.Root value={tab} onValueChange={select}>
       <Tabs.List
         aria-label="Account"
-        className="mb-10 flex max-w-[960px] gap-3 border-b border-line max-sm:[scrollbar-width:none] max-sm:overflow-x-auto sm:gap-6"
+        className="mb-10 flex max-w-[960px] gap-2 border-b border-line max-sm:[scrollbar-width:none] max-sm:overflow-x-auto sm:gap-6"
       >
         {tabs.map((t) => (
           <Tabs.Trigger

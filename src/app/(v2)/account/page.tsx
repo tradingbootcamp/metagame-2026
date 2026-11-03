@@ -103,7 +103,7 @@ export default async function AccountPage({
               asChild
               variant="navy"
               size="sm"
-              className="max-sm:size-9 max-sm:p-0 max-sm:[&_svg]:size-[18px]"
+              className="max-sm:size-8 max-sm:p-0 max-sm:[&_svg]:size-4"
             >
               <Link href="/backstage">
                 <GiTheaterCurtains aria-hidden />
