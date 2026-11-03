@@ -9,10 +9,12 @@ import { VISIBILITY_LABEL, type ScheduleLocation } from "@/lib/schedule";
 /** The rooms table; drag a row by its grip to change the grid's column order. */
 export default function RoomList({
   locations,
+  canReorder,
   onEdit,
   onError,
 }: {
   locations: ScheduleLocation[];
+  canReorder: boolean;
   onEdit: (location: ScheduleLocation) => void;
   onError: (message: string | null) => void;
 }) {
@@ -49,7 +51,7 @@ export default function RoomList({
       <table className="w-full text-left text-sm">
         <thead className="text-xs tracking-wide text-ink/50 uppercase">
           <tr>
-            <th className="w-8 px-2 py-2" />
+            {canReorder && <th className="w-8 px-2 py-2" />}
             <th className="px-4 py-2 font-medium">Name</th>
             <th className="px-4 py-2 font-medium">Campus</th>
             <th className="px-4 py-2 font-medium">Capacity</th>
@@ -62,7 +64,7 @@ export default function RoomList({
             <tr
               key={l.id}
               onDragOver={(e) => {
-                if (!dragging) return;
+                if (!canReorder || !dragging) return;
                 e.preventDefault();
                 e.dataTransfer.dropEffect = "move";
                 setOver(l.id);
@@ -80,23 +82,25 @@ export default function RoomList({
                     : ""
               }`}
             >
-              <td className="px-2 py-2">
-                <button
-                  type="button"
-                  aria-label={`Move ${l.name}`}
-                  title="Drag to reorder"
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.effectAllowed = "move";
-                    e.dataTransfer.setData("text/plain", l.id);
-                    setDragging(l.id);
-                  }}
-                  onDragEnd={clear}
-                  className="flex h-6 w-6 cursor-grab items-center justify-center rounded text-ink/40 transition-colors hover:bg-ink/10 hover:text-ink"
-                >
-                  <GripVerticalIcon size={14} aria-hidden />
-                </button>
-              </td>
+              {canReorder && (
+                <td className="px-2 py-2">
+                  <button
+                    type="button"
+                    aria-label={`Move ${l.name}`}
+                    title="Drag to reorder"
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.setData("text/plain", l.id);
+                      setDragging(l.id);
+                    }}
+                    onDragEnd={clear}
+                    className="flex h-6 w-6 cursor-grab items-center justify-center rounded text-ink/40 transition-colors hover:bg-ink/10 hover:text-ink"
+                  >
+                    <GripVerticalIcon size={14} aria-hidden />
+                  </button>
+                </td>
+              )}
               <td className="px-4 py-2 font-semibold">
                 <span className="flex items-center gap-2">
                   {l.thumbnailUrl && (
@@ -126,7 +130,10 @@ export default function RoomList({
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={6} className="px-4 py-6 text-center text-ink/50">
+              <td
+                colSpan={canReorder ? 6 : 5}
+                className="px-4 py-6 text-center text-ink/50"
+              >
                 No rooms yet.
               </td>
             </tr>

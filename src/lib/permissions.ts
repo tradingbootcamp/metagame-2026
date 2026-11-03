@@ -103,6 +103,16 @@ export const PERMISSIONS = {
     description: "On the admin grid and over the API.",
     implies: ["schedule.view"],
   },
+  // Kept off schedule.manage: column order is one shared view, so only
+  // people who know that should move it.
+  "schedule.rooms": {
+    audience: "team",
+    group: "Schedule",
+    level: "edit",
+    label: "Arrange rooms",
+    description: "Drag rooms to reorder the grid's columns for everyone.",
+    implies: ["schedule.manage"],
+  },
   "promo.view": {
     audience: "team",
     group: "Promo codes",

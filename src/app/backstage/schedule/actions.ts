@@ -238,7 +238,7 @@ export async function saveLocation(
 
 /** Every room id, in the order the list now shows them. */
 export async function reorderLocations(ids: string[]): Promise<FormState> {
-  if (!(await requireAccess("schedule.manage"))) return { error: EXPIRED };
+  if (!(await requireAccess("schedule.rooms"))) return { error: EXPIRED };
   try {
     await setLocationOrder(ids);
   } catch (err) {

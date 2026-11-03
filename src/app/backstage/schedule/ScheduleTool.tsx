@@ -110,6 +110,7 @@ export default function ScheduleTool({
   attendance,
   viewer,
   canSeed,
+  canReorder,
   initialEdit,
 }: {
   sessions: ScheduleSession[];
@@ -117,6 +118,8 @@ export default function ScheduleTool({
   attendance: Attendance;
   viewer: (ViewerPlans & { userId: string }) | null;
   canSeed: boolean;
+  /** Holds schedule.rooms: shows the drag handles in the rooms list. */
+  canReorder: boolean;
   /** `?edit=<slug or id>`: open that session on load. Unknown values are ignored. */
   initialEdit: string | null;
 }) {
@@ -453,6 +456,7 @@ export default function ScheduleTool({
       <CollapsedSection title="All rooms" count={locations.length}>
         <RoomList
           locations={locations}
+          canReorder={canReorder}
           onEdit={openLocation}
           onError={setError}
         />
