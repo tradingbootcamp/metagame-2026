@@ -233,6 +233,7 @@ function SessionBlock<S extends ViewSession>({
     <Link
       title={title}
       href={to}
+      scroll={false}
       style={style}
       className={`${BLOCK} ${BLOCK_LINK}`}
     >
@@ -402,6 +403,7 @@ export function SessionRow<S extends ViewSession>({
       {to ? (
         <Link
           href={to}
+          scroll={false}
           className={`${ROW} transition-colors hover:bg-[#1b1530]/[0.04]`}
         >
           {body}

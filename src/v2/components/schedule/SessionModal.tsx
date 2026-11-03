@@ -1,63 +1,52 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
   useContext,
-  useMemo,
   useEffect,
   useRef,
   type ReactNode,
-  type RefObject,
 } from "react";
 import { FaTimes } from "react-icons/fa";
 
-type Host = { closeHref: string; navigated: RefObject<boolean> };
+export const SESSION_TITLE_ID = "session-title";
 
-const HostContext = createContext<Host | null>(null);
+const PlanChangeContext = createContext<(() => void) | null>(null);
 
-/**
- * Wraps the page a route modal sits on. Until something navigates within it,
- * the modal was the landing page, so closing replaces to `closeHref` instead
- * of going back (off the site).
- */
-export function ModalHost({
-  closeHref,
-  children,
-}: {
-  closeHref: string;
-  children: ReactNode;
-}) {
-  const pathname = usePathname();
-  const landedOn = useRef(pathname);
-  const navigated = useRef(false);
-  useEffect(() => {
-    if (pathname !== landedOn.current) navigated.current = true;
-  }, [pathname]);
-  const host = useMemo(() => ({ closeHref, navigated }), [closeHref]);
-  return <HostContext value={host}>{children}</HostContext>;
+/** Tells the enclosing session modal a plan changed, if there is one. */
+export function useNotePlanChange() {
+  return useContext(PlanChangeContext);
 }
 
-/** A modal over the page for a route; closing goes back (see ModalHost). */
-export default function RouteModal({
+/**
+ * A session's details over the page. Closing replaces the URL with `closeHref`
+ * (the page without its ?session= param, or /schedule from the session's own
+ * page), so nothing underneath remounts.
+ */
+export default function SessionModal({
+  closeHref,
   labelledBy,
   children,
 }: {
+  closeHref: string;
   labelledBy: string;
   children: ReactNode;
 }) {
   const router = useRouter();
-  const host = useContext(HostContext);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const planChanged = useRef(false);
+  const notePlanChange = useCallback(() => {
+    planChanged.current = true;
+  }, []);
 
   const close = useCallback(() => {
-    if (host && !host.navigated.current) {
-      router.replace(host.closeHref, { scroll: false });
-    } else {
-      router.back();
-    }
-  }, [router, host]);
+    router.replace(closeHref, { scroll: false });
+    // The page underneath wasn't re-rendered for the click, so an RSVP or
+    // bookmark made here reaches its lists (My sessions, the account) now.
+    if (planChanged.current) router.refresh();
+  }, [router, closeHref]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -93,7 +82,7 @@ export default function RouteModal({
         >
           <FaTimes size={18} />
         </button>
-        {children}
+        <PlanChangeContext value={notePlanChange}>{children}</PlanChangeContext>
       </div>
     </div>
   );

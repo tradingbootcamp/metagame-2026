@@ -27,6 +27,7 @@ import {
   type View,
 } from "./ScheduleViews";
 import { ScheduleLegend } from "./SessionBits";
+import { useSessionHref } from "./SessionModalHost";
 
 // One person's sessions, as a list or on the schedule grid. Rendered by both
 // the public /u/<id> and the team's /backstage/users/<id>; which roles appear
@@ -118,6 +119,7 @@ function UnscheduledRows({
             {to ? (
               <Link
                 href={to}
+                scroll={false}
                 className="flex w-full items-stretch gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[#1b1530]/[0.04]"
               >
                 {body}
@@ -157,8 +159,9 @@ export default function UserSessions({
   const [view, setView] = useState<View>("list");
   const [dayKey, setDayKey] = useState(firstFilled);
 
+  const sessionHref = useSessionHref();
   const href = (s: UserSession) =>
-    linkable && isListed(s) ? `/schedule/${encodeURIComponent(s.slug)}` : null;
+    linkable && isListed(s) ? sessionHref(s.slug) : null;
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
   const columns = buildColumns(

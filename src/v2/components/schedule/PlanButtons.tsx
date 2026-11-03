@@ -47,7 +47,7 @@ const TONE: Record<
   },
 };
 
-// Above RouteModal (z-[100]), which hosts these on the session page.
+// Above SessionModal (z-[100]), which hosts these on the session page.
 const DIALOG_OVERLAY = "z-[110]";
 const DIALOG = "z-[110] max-w-[440px] bg-white px-6 py-5 text-ink";
 const DIALOG_TITLE =

@@ -28,7 +28,9 @@ import {
   rsvpTicket,
 } from "@/app/(v2)/schedule/data";
 import SessionPlans from "@/v2/components/schedule/SessionPlans";
+import SessionSignIn from "@/v2/components/schedule/SessionSignIn";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
+import { SESSION_TITLE_ID } from "@/v2/components/schedule/SessionModal";
 import { HEADING } from "@/v2/components/styles";
 
 const CATEGORY_LABEL: Record<Category, string> = {
@@ -44,16 +46,19 @@ const AGES_LABEL: Record<Ages, string> = {
   adults: "18+",
 };
 
-async function findSession(slug: string) {
+/** The shown session with that slug and its room, or null. */
+export async function lookupSession(slug: string) {
   const { sessions, locations } = await loadPublicSchedule();
   const session = sessions.find((s) => s.slug === slug);
-  if (!session) notFound();
-  const room = locations.find((l) => l.id === session.locationId);
-  if (!room) notFound();
-  return { session, room };
+  const room = session && locations.find((l) => l.id === session.locationId);
+  return session && room ? { session, room } : null;
 }
 
-export const SESSION_TITLE_ID = "session-title";
+async function findSession(slug: string) {
+  const found = await lookupSession(slug);
+  if (!found) notFound();
+  return found;
+}
 
 export async function sessionMetadata(slug: string): Promise<Metadata> {
   const { session } = await findSession(slug);
@@ -148,7 +153,7 @@ async function AdminDetails({ sessionId }: { sessionId: string }) {
   );
 }
 
-/** The session page body, under the schedule layout or the account modal. */
+/** The session modal's body, on the session's own page or over another. */
 export default async function SessionDetails({ slug }: { slug: string }) {
   const [{ session, room }, account, admin] = await Promise.all([
     findSession(slug),
@@ -286,17 +291,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
               bookmarked: plans.bookmarks.includes(session.id),
             }
           }
-          signIn={
-            <p className="text-sm text-[#1b1530]/60">
-              <Link
-                href={`/login?next=${encodeURIComponent(`/schedule/${slug}`)}`}
-                className="font-semibold text-navy underline"
-              >
-                Sign in
-              </Link>{" "}
-              to RSVP or bookmark.
-            </p>
-          }
+          signIn={<SessionSignIn />}
         />
       </section>
 

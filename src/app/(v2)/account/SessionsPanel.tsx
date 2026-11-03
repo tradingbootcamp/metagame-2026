@@ -4,6 +4,7 @@ import type {
   AccountSessionRow,
   AccountSessions,
 } from "@/lib/account-sessions";
+import { openSessionHref } from "@/lib/session-link";
 import PlanButtons from "@/v2/components/schedule/PlanButtons";
 
 const TAG = "rounded px-1.5 py-0.5 text-xs font-semibold";
@@ -23,7 +24,8 @@ function Row({
         <span className="text-base font-semibold text-ink">
           {linkable && s.listed ? (
             <Link
-              href={`/schedule/${s.slug}`}
+              href={openSessionHref("/account", s.slug, "tab=sessions")}
+              scroll={false}
               className="underline-offset-2 hover:underline"
             >
               {s.title}

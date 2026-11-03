@@ -2,6 +2,7 @@ import ContactProvider from "@/v2/components/contact/ContactProvider";
 import SiteFooter from "@/v2/components/SiteFooter";
 import SiteShell from "@/v2/components/SiteShell";
 import FirstSigninFlow from "@/v2/components/first-signin/FirstSigninFlow";
+import SessionModalHost from "@/v2/components/schedule/SessionModalHost";
 import HatToast from "@/v2/hat-trick/HatToast";
 
 // The rewritten site. Everything it renders lives under src/v2/ — see
@@ -17,8 +18,10 @@ export default function SiteLayout({
   return (
     <div className="flex min-h-dvh flex-col bg-background font-[family-name:var(--font-inter)] leading-[1.55] text-ink">
       <ContactProvider>
-        <SiteShell>{children}</SiteShell>
-        <SiteFooter />
+        <SessionModalHost>
+          <SiteShell>{children}</SiteShell>
+          <SiteFooter />
+        </SessionModalHost>
       </ContactProvider>
       <HatToast />
       <FirstSigninFlow />

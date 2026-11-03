@@ -13,12 +13,12 @@ import {
 import {
   formatPacificDay,
   formatPacificTime,
-  sessionHref,
   type Category,
   type HostedSession,
 } from "@/lib/schedule";
 import type { Speaker } from "@/v2/data/speakers";
 import HatImage from "@/v2/hat-trick/HatImage";
+import { useSessionHref } from "./schedule/SessionModalHost";
 import { HEADING } from "./styles";
 
 const CATEGORY_ICON: Record<Category, typeof Mic> = {
@@ -80,6 +80,7 @@ export default function SpeakerCard({
   sessions = [],
 }: Omit<Speaker, "userId"> & { sessions?: HostedSession[] }) {
   const [flipped, setFlipped] = useState(false);
+  const sessionHref = useSessionHref();
   const frontCorner = useRef<HTMLButtonElement>(null);
   const backCorner = useRef<HTMLButtonElement>(null);
   const n = sessions.length;
@@ -206,7 +207,7 @@ export default function SpeakerCard({
                       className="mt-0.5 hidden size-3.5 shrink-0 text-tan sm:block"
                     />
                     <Link
-                      href={sessionHref(s)}
+                      href={sessionHref(s.slug)}
                       scroll={false}
                       className="min-w-0 text-left text-[11px] leading-snug outline-none hover:underline focus-visible:ring-2 focus-visible:ring-tan sm:text-[13px]"
                     >

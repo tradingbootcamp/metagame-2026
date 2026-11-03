@@ -8,6 +8,7 @@ import type {
   SessionRsvps,
 } from "@/lib/schedule";
 import PlanButtons from "./PlanButtons";
+import { useNotePlanChange } from "./SessionModal";
 
 /** A session page's RSVP controls and attendee list, updated together in place. */
 export default function SessionPlans({
@@ -32,6 +33,7 @@ export default function SessionPlans({
   plan: { status: RsvpStatus | null; bookmarked: boolean } | null;
   signIn: ReactNode;
 }) {
+  const notePlanChange = useNotePlanChange();
   const [rsvps, setRsvps] = useState(initial);
   const [prev, setPrev] = useState(initial);
   if (prev !== initial) {
@@ -57,7 +59,10 @@ export default function SessionPlans({
           open={open}
           conflicts={conflicts}
           ticket={ticket}
-          onSettled={(result) => result.rsvps && setRsvps(result.rsvps)}
+          onSettled={(result) => {
+            notePlanChange?.();
+            if (result.rsvps) setRsvps(result.rsvps);
+          }}
         />
       ) : (
         signIn
