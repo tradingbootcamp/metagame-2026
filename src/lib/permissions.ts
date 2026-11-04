@@ -233,6 +233,14 @@ export const PERMISSIONS = {
     description:
       "Arrange the hero dice and export them as PNG/SVG assets, at /backstage/dice-lab.",
   },
+  "misc.qr": {
+    audience: "team",
+    group: "Misc",
+    level: "view",
+    label: "QR codes",
+    description:
+      "Turn any link or text into a QR code in the poster styles, at /backstage/qr.",
+  },
   "roles.manage": {
     audience: "team",
     group: "Sensitive",

@@ -78,6 +78,9 @@ export const QR_PARAMS = {
 } as const;
 const CHOICES = { dots: QR_DOTS, corners: QR_CORNERS, logo: QR_LOGOS };
 
+/** What /backstage/qr accepts: well inside a version-40 code, and still scannable. */
+export const MAX_QR_TEXT = 1000;
+
 export const isPlainQr = (qr: PosterQr) =>
   qr.dots === "square" && qr.corners === "square" && qr.logo === "none";
 

@@ -10,6 +10,7 @@ import {
   type LucideIcon,
   MailIcon,
   MicIcon,
+  QrCodeIcon,
   TicketIcon,
   UserIcon,
   UsersIcon,
@@ -131,6 +132,13 @@ const TOOLS: {
     blurb:
       "Arrange the hero dice and export transparent PNG or SVG assets for print.",
     perm: "misc.dice_lab",
+  },
+  {
+    href: "/backstage/qr",
+    icon: QrCodeIcon,
+    name: "QR codes",
+    blurb: "Any link or text as a QR code in the poster styles, as SVG or PNG.",
+    perm: "misc.qr",
   },
 ];
 

@@ -297,8 +297,16 @@ export async function createPosterQrSvg(
 ): Promise<string> {
   if (validateSlug(slug) || promoCode(promo) !== promo)
     throw new Error("Invalid poster link");
+  return createQrSvg(posterQrUrl(slug, promo), qrStyle);
+}
+
+/** Any text as a styled QR, for /backstage/qr. */
+export async function createQrSvg(
+  text: string,
+  qrStyle: PosterQr,
+): Promise<string> {
   return styledQrSvg({
-    url: posterQrUrl(slug, promo),
+    url: text,
     qr: qrStyle,
     ink: rgb(0, 0, 0),
     font: await readFile(path.join(ASSETS, "fonts", "SpaceGrotesk-Bold.ttf")),
