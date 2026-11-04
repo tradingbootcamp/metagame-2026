@@ -6,6 +6,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type ReactNode,
 } from "react";
@@ -38,7 +39,7 @@ import { readPngText, stampPng } from "./pngMeta";
 const LabStage = dynamic(() => import("./LabStage"), { ssr: false });
 
 const STORAGE_KEY = "dice-lab:v1";
-const MAX_DICE = 12;
+const MAX_DICE = 24;
 const EXPORT_WIDTHS = [1024, 2048, 4096, 8192];
 const ROT_STEPS = [1, 5, 15, 45, 90];
 
@@ -305,13 +306,11 @@ export default function DiceLab() {
         ? `no die for: ${[...new Set(unsupported)].join(" ")} (letters M E T A G, digits 0 1 2 5 6, up to ${MAX_DICE} dice)`
         : "",
     );
-    stage.current?.arrange();
   };
   const rowOf = (i: number) =>
     lay.perRow > 0 ? Math.floor(i / lay.perRow) : 0;
   const applyTint = (pick: (i: number) => boolean) =>
     set("dice", recolorLetters(s.dice, tint, pick));
-  const tintCustom = tint !== "blue" && tint !== "orange";
 
   const tp = s.throwParams;
   const setTp = <K extends keyof ThrowParams>(k: K, v: ThrowParams[K]) =>
@@ -398,27 +397,7 @@ export default function DiceLab() {
             <span className="w-12 shrink-0 text-xs text-neutral-500">
               Letters
             </span>
-            <select
-              className={INPUT}
-              value={tintCustom ? "custom" : tint}
-              onChange={(e) =>
-                setTint(
-                  e.target.value === "custom" ? "#ffffff" : e.target.value,
-                )
-              }
-            >
-              <option value="blue">blue</option>
-              <option value="orange">orange</option>
-              <option value="custom">custom</option>
-            </select>
-            {tintCustom && (
-              <input
-                type="color"
-                value={tint}
-                onChange={(e) => setTint(e.target.value)}
-                className="h-7 w-8 shrink-0 rounded border border-neutral-700 bg-transparent"
-              />
-            )}
+            <ColorPick color={tint} onChange={setTint} />
             <button
               type="button"
               className={BTN}
@@ -1130,6 +1109,127 @@ function Check({
   );
 }
 
+// Custom colors saved into every color dropdown, shared across pickers and
+// reloads via localStorage.
+const SWATCH_KEY = "dice-lab:swatches";
+const swatchListeners = new Set<() => void>();
+let swatchCache: string[] | null = null;
+function readSwatches(): string[] {
+  if (swatchCache) return swatchCache;
+  try {
+    const raw = localStorage.getItem(SWATCH_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    swatchCache = Array.isArray(parsed)
+      ? parsed.filter((x): x is string => typeof x === "string")
+      : [];
+  } catch {
+    swatchCache = [];
+  }
+  return swatchCache;
+}
+function writeSwatches(next: string[]) {
+  swatchCache = next;
+  try {
+    localStorage.setItem(SWATCH_KEY, JSON.stringify(next));
+  } catch {
+    // private mode / quota: the palette just won't persist
+  }
+  swatchListeners.forEach((fn) => fn());
+}
+function useSwatches() {
+  return useSyncExternalStore(
+    (fn) => {
+      swatchListeners.add(fn);
+      return () => swatchListeners.delete(fn);
+    },
+    readSwatches,
+    () => [],
+  );
+}
+
+// Brand key (blue / orange), a saved swatch, or a custom color editable as a
+// swatch or hex; custom colors can be saved into the dropdown.
+function ColorPick({
+  color,
+  onChange,
+}: {
+  color: string;
+  onChange: (c: string) => void;
+}) {
+  const swatches = useSwatches();
+  const brand = color === "blue" || color === "orange";
+  const saved = swatches.includes(color);
+  // the hex field holds partial input until it's a full #rrggbb
+  const [hex, setHex] = useState(color);
+  const [synced, setSynced] = useState(color);
+  if (synced !== color) {
+    setSynced(color);
+    setHex(color);
+  }
+  return (
+    <>
+      <select
+        className={INPUT}
+        value={brand || saved ? color : "custom"}
+        onChange={(e) =>
+          onChange(e.target.value === "custom" ? "#ffffff" : e.target.value)
+        }
+      >
+        <option value="blue">blue</option>
+        <option value="orange">orange</option>
+        {swatches.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+        <option value="custom">custom</option>
+      </select>
+      {!brand && (
+        <>
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => onChange(e.target.value)}
+            className="h-7 w-8 shrink-0 rounded border border-neutral-700 bg-transparent"
+          />
+          <input
+            type="text"
+            value={hex}
+            spellCheck={false}
+            onChange={(e) => {
+              const v = e.target.value.trim();
+              setHex(v);
+              const full = v.startsWith("#") ? v : `#${v}`;
+              if (/^#[0-9a-f]{6}$/i.test(full)) onChange(full.toLowerCase());
+            }}
+            className={`${INPUT} w-20 flex-none font-mono`}
+            placeholder="#rrggbb"
+          />
+          {saved ? (
+            <button
+              type="button"
+              className={`${BTN} w-7 px-0`}
+              title="Remove this color from the dropdown"
+              onClick={() => writeSwatches(swatches.filter((c) => c !== color))}
+            >
+              ×
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={`${BTN} w-7 px-0`}
+              title="Save this color to the dropdown"
+              onClick={() => writeSwatches([...swatches, color])}
+            >
+              💾
+            </button>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
 function FaceEditor({
   name,
   face,
@@ -1139,8 +1239,6 @@ function FaceEditor({
   face: Face;
   onChange: (f: Face) => void;
 }) {
-  const custom =
-    face.kind === "letter" && face.color !== "blue" && face.color !== "orange";
   return (
     <div className="flex items-center gap-1">
       <span className="w-12 shrink-0 text-xs text-neutral-500">{name}</span>
@@ -1169,28 +1267,10 @@ function FaceEditor({
               <option key={l}>{l}</option>
             ))}
           </select>
-          <select
-            className={INPUT}
-            value={custom ? "custom" : face.color}
-            onChange={(e) =>
-              onChange({
-                ...face,
-                color: e.target.value === "custom" ? "#ffffff" : e.target.value,
-              })
-            }
-          >
-            <option value="blue">blue</option>
-            <option value="orange">orange</option>
-            <option value="custom">custom</option>
-          </select>
-          {custom && (
-            <input
-              type="color"
-              value={face.color}
-              onChange={(e) => onChange({ ...face, color: e.target.value })}
-              className="h-7 w-8 shrink-0 rounded border border-neutral-700 bg-transparent"
-            />
-          )}
+          <ColorPick
+            color={face.color}
+            onChange={(color) => onChange({ ...face, color })}
+          />
         </>
       ) : (
         <select
