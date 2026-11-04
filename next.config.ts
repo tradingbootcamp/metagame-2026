@@ -6,7 +6,6 @@ import {
 import { buildErd } from "./scripts/build-erd.mjs";
 import { validateEnv } from "./src/env";
 import {
-  BOOTH_PATH,
   BOOTH_PAYMENT_URL,
   CON_PARTIFUL_PATH,
   CON_PARTIFUL_URL,
@@ -112,7 +111,7 @@ const nextConfig: NextConfig = {
     },
     // Short link to the booth-only Night Market purchase.
     {
-      source: BOOTH_PATH,
+      source: "/booth",
       destination: BOOTH_PAYMENT_URL,
       permanent: false,
     },
