@@ -51,7 +51,11 @@ export function spellDice(
         unsupported.push(ch);
         continue;
       }
-      const base = existing[i] ? cloneSpec(existing[i]) : heroDie("M", "G", 2);
+      // new dice cycle through the hero set so their pips vary
+      const hero = DICE[i % DICE.length];
+      const base = existing[i]
+        ? cloneSpec(existing[i])
+        : heroDie(hero.front, hero.right, hero.top);
       if (LETTERS.includes(ch)) {
         const prev = base.faces[0];
         const color = prev.kind === "letter" ? prev.color : "blue";
