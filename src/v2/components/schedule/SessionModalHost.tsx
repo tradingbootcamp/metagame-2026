@@ -20,14 +20,6 @@ import {
   sessionPageSlug,
 } from "@/lib/session-link";
 import SessionModal from "./SessionModal";
-// The modal body comes back from a server action as a rendered tree. Its
-// client components must already be in this route's client manifest, or the
-// action can't serialize them; these imports keep them there on every page.
-import SessionPlans from "./SessionPlans";
-import SessionSignIn from "./SessionSignIn";
-
-void SessionPlans;
-void SessionSignIn;
 
 const HostContext = createContext(false);
 const ReloadContext = createContext<(() => void) | null>(null);
