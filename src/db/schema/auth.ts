@@ -43,12 +43,15 @@ export const user = pgTable(
     wizardLevel: smallint().notNull().default(0),
     pirateLevel: smallint().notNull().default(0),
     alienLevel: smallint().notNull().default(0),
+    tokens: integer().notNull().default(0),
+    loanTokens: integer().notNull().default(0),
     ...timestamps,
   },
   (t) => [
     check("user_wizard_level_range", sql`${t.wizardLevel} between 0 and 5`),
     check("user_pirate_level_range", sql`${t.pirateLevel} between 0 and 5`),
     check("user_alien_level_range", sql`${t.alienLevel} between 0 and 5`),
+    check("user_loan_tokens_nonnegative", sql`${t.loanTokens} >= 0`),
   ],
 );
 

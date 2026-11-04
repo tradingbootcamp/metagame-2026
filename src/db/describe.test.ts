@@ -31,7 +31,9 @@ describe("describeSchema", () => {
       "session_grades",
       "session_hosts",
       "sessions",
+      "site_settings",
       "tickets",
+      "token_ledger",
       "user",
       "user_permission_grants",
       "user_roles",
@@ -67,8 +69,11 @@ describe("describeSchema", () => {
       "session_grades",
       "session_hosts",
       "sessions",
+      "site_settings",
       "tickets",
       "tickets",
+      "token_ledger",
+      "token_ledger",
       "user_permission_grants",
       "user_roles",
     ]);
@@ -154,6 +159,8 @@ describe("describeSchema", () => {
       "Schedule",
       "Grading",
       "Budget",
+      "Settings",
+      "Magnum Opus",
     ]);
     expect(info.groups.flatMap((g) => g.tables.map((t) => t.name))).toEqual([
       "user",
@@ -177,6 +184,8 @@ describe("describeSchema", () => {
       "xero_connections",
       "budget_import_runs",
       "budget_ignored_lines",
+      "site_settings",
+      "token_ledger",
     ]);
   });
 });

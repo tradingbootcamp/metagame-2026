@@ -1,12 +1,13 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import {
+  expand,
   isPermission,
   PERMISSIONS,
   type AccessInput,
   type Permission,
 } from "./permissions";
-import { hasClaimedTicket } from "./ticket-store";
+import { claimedTicketOwners, hasClaimedTicket } from "./ticket-store";
 
 const {
   roles,
@@ -31,6 +32,8 @@ type Builtin = {
   auto: string;
   defaults: Permission[];
   holds: (userId: string) => Promise<boolean>;
+  /** Everyone `holds` is true for. */
+  members: () => Promise<string[]>;
 };
 
 const BUILTIN: Record<string, Builtin> = {
@@ -38,11 +41,13 @@ const BUILTIN: Record<string, Builtin> = {
     auto: "has a ticket",
     defaults: ["schedule.rsvps"],
     holds: hasClaimedTicket,
+    members: claimedTicketOwners,
   },
   [HOST_ROLE]: {
     auto: "hosts a session",
     defaults: ["schedule.preview"],
     holds: hostsASession,
+    members: sessionHostIds,
   },
 };
 
@@ -53,6 +58,13 @@ const builtinKey = (name: string): string | null =>
   null;
 
 export const isBuiltinRole = (name: string) => builtinKey(name) !== null;
+
+async function sessionHostIds(): Promise<string[]> {
+  const rows = await getDb()
+    .selectDistinct({ id: sessionHosts.userId })
+    .from(sessionHosts);
+  return rows.map((r) => r.id);
+}
 
 /** On any session's host list, lead or co-host. */
 async function hostsASession(userId: string): Promise<boolean> {
@@ -196,6 +208,69 @@ export async function setRolePermission(
   }
 }
 
+/**
+ * Every account holding `permission` the way userAccess resolves it: through
+ * a role, a built-in role's rule, a per-user grant, or an implication. Admins'
+ * superuser bypass doesn't count, so they appear only if they hold it too.
+ */
+export async function holdersOf(permission: Permission): Promise<string[]> {
+  const db = getDb();
+  const [roleRows, grantRows] = await Promise.all([
+    db
+      .select({
+        id: roles.id,
+        name: roles.name,
+        permission: rolePermissions.permission,
+      })
+      .from(roles)
+      .leftJoin(rolePermissions, eq(rolePermissions.roleId, roles.id)),
+    db
+      .select({
+        userId: userPermissionGrants.userId,
+        permission: userPermissionGrants.permission,
+      })
+      .from(userPermissionGrants),
+  ]);
+  const carries = (held: string[]) => expand(held).has(permission);
+
+  const byRole = new Map<string, { name: string; permissions: string[] }>();
+  for (const r of roleRows) {
+    const role = byRole.get(r.id) ?? { name: r.name, permissions: [] };
+    if (r.permission) role.permissions.push(r.permission);
+    byRole.set(r.id, role);
+  }
+
+  const out = new Set<string>();
+  const grantsByUser = new Map<string, string[]>();
+  for (const g of grantRows)
+    grantsByUser.set(g.userId, [
+      ...(grantsByUser.get(g.userId) ?? []),
+      g.permission,
+    ]);
+  for (const [userId, held] of grantsByUser) if (carries(held)) out.add(userId);
+
+  const explicit = [...byRole]
+    .filter(([, r]) => !isBuiltinRole(r.name) && carries(r.permissions))
+    .map(([id]) => id);
+  const [assigned, ...builtinMembers] = await Promise.all([
+    explicit.length > 0
+      ? db
+          .select({ userId: userRoles.userId })
+          .from(userRoles)
+          .where(inArray(userRoles.roleId, explicit))
+      : Promise.resolve([]),
+    ...Object.entries(BUILTIN).map(([name, { defaults, members }]) => {
+      const row = [...byRole.values()].find((r) => builtinKey(r.name) === name);
+      return carries(row ? row.permissions : defaults)
+        ? members()
+        : Promise.resolve([]);
+    }),
+  ]);
+  for (const a of assigned) out.add(a.userId);
+  for (const ids of builtinMembers) for (const id of ids) out.add(id);
+  return [...out];
+}
+
 /** Everything that decides one account's permissions, for `effectivePermissions`. */
 export async function userAccess(
   userId: string,
@@ -328,4 +403,57 @@ export async function setUserGrant(
         ),
       );
   }
+}
+
+// The role migration 0029 makes. Magnum Opus admins add and remove its
+// members from /backstage/magnum-opus without needing users.edit.
+export const MAGNUM_OPUS_ADMIN_ROLE = "Magnum Opus Admin";
+
+/** The role's id, remaking it with its permission if it was deleted or renamed. */
+async function magnumOpusAdminRoleId(): Promise<string> {
+  const db = getDb();
+  const [found] = await db
+    .select({ id: roles.id })
+    .from(roles)
+    .where(sameName(MAGNUM_OPUS_ADMIN_ROLE))
+    .limit(1);
+  if (found) return found.id;
+  const [made] = await db
+    .insert(roles)
+    .values({ name: MAGNUM_OPUS_ADMIN_ROLE })
+    .onConflictDoNothing()
+    .returning({ id: roles.id });
+  const id =
+    made?.id ??
+    (
+      await db
+        .select({ id: roles.id })
+        .from(roles)
+        .where(sameName(MAGNUM_OPUS_ADMIN_ROLE))
+        .limit(1)
+    )[0].id;
+  await db
+    .insert(rolePermissions)
+    .values({ roleId: id, permission: "magnum_opus.manage" })
+    .onConflictDoNothing();
+  return id;
+}
+
+export async function listMagnumOpusAdmins(): Promise<
+  { id: string; name: string; email: string }[]
+> {
+  const roleId = await magnumOpusAdminRoleId();
+  return getDb()
+    .select({ id: user.id, name: user.name, email: user.email })
+    .from(userRoles)
+    .innerJoin(user, eq(user.id, userRoles.userId))
+    .where(eq(userRoles.roleId, roleId))
+    .orderBy(asc(user.name));
+}
+
+export async function setMagnumOpusAdmin(
+  userId: string,
+  admin: boolean,
+): Promise<void> {
+  await setUserRole(userId, await magnumOpusAdminRoleId(), admin);
 }

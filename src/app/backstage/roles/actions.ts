@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { can } from "@/lib/access";
+import { can, teamAccess } from "@/lib/access";
 import * as store from "@/lib/permission-store";
-import { isPermission } from "@/lib/permissions";
+import { isHoldersOnly, isPermission, PERMISSIONS } from "@/lib/permissions";
 
 export type Result = { error?: string };
 
@@ -60,5 +60,12 @@ export async function setRolePermission(
   granted: boolean,
 ): Promise<Result> {
   if (!isPermission(permission)) return { error: "Unknown permission." };
+  if (granted && isHoldersOnly(permission)) {
+    const viewer = await teamAccess();
+    if (!viewer?.admin && !viewer?.permissions.has(permission))
+      return {
+        error: `Only people who hold ${PERMISSIONS[permission].label} can add it to a role.`,
+      };
+  }
   return run(() => store.setRolePermission(roleId, permission, granted));
 }

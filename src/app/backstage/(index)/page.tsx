@@ -10,6 +10,7 @@ import {
   type LucideIcon,
   MailIcon,
   MicIcon,
+  SparklesIcon,
   TicketIcon,
   UserIcon,
   UsersIcon,
@@ -123,6 +124,13 @@ const TOOLS: {
     name: "Database schema",
     blurb: "ER diagram and column-by-column reference for the Postgres schema.",
     perm: "schema.view",
+  },
+  {
+    href: "/backstage/magnum-opus",
+    icon: SparklesIcon,
+    name: "Magnum Opus",
+    blurb: "Show or hide the Magnum Opus account tab, or leave it on schedule.",
+    perm: "magnum_opus.manage",
   },
   {
     href: "/backstage/dice-lab",

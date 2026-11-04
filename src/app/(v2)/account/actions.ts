@@ -8,17 +8,27 @@ import { redirect } from "next/navigation";
 import { getDb, schema } from "@/db";
 import { currentSession, getAuth, hasPassword } from "@/lib/auth";
 import { deleteImage, uploadImage } from "@/lib/blob";
+import {
+  isLoanAmount,
+  loanCap,
+  loanRoom,
+  loansOpen,
+  magnumOpusOpen,
+} from "@/lib/magnum-opus";
 import { isMegagameClass, starterLevels } from "@/lib/megagame-levels";
 import { loadMegagameLevels, setMegagameLevels } from "@/lib/megagame-store";
 import { invalidateSchedule } from "@/lib/schedule-store";
+import { loadOverrides } from "@/lib/site-settings";
 import { isSpeakerAccount } from "@/v2/data/speakers";
 import {
   claimOwnTicket,
   claimTicket,
+  hasClaimedTicket,
   normalizeTicketCode,
   ticketLabel,
   unclaimTicket,
 } from "@/lib/ticket-store";
+import { borrowTokens, loadBalance } from "@/lib/token-store";
 
 export type FormState = { error?: string; saved?: boolean };
 
@@ -294,4 +304,38 @@ export async function signOut(): Promise<void> {
 /** Signs out without redirecting; the nav menu reloads the page itself. */
 export async function signOutInPlace(): Promise<void> {
   await getAuth().api.signOut({ headers: await headers() });
+}
+
+/** A self-serve loan from the Magnum Opus tab. */
+export async function takeLoan(amount: number): Promise<{ error?: string }> {
+  const session = await currentSession();
+  if (!session) return { error: "Your session expired. Sign in again." };
+  const userId = session.user.id;
+  // The action is reachable even when the tab and button aren't, so it checks too.
+  const [overrides, ticketed, balance, levels] = await Promise.all([
+    loadOverrides(),
+    hasClaimedTicket(userId),
+    loadBalance(userId),
+    loadMegagameLevels(userId),
+  ]);
+  if (!magnumOpusOpen(overrides.tab.override))
+    return { error: "Metagame isn't lending yet." };
+  if (!loansOpen(overrides.loans.override))
+    return { error: "Metagame is no longer offering loans." };
+  if (!ticketed) return { error: "Loans are only for ticket holders." };
+  const cap = loanCap(levels);
+  if (!isLoanAmount(amount, balance.loanTokens, cap)) {
+    const room = loanRoom(balance.loanTokens, cap);
+    return {
+      error:
+        room === 0
+          ? `You're at your ${cap}-token loan limit.`
+          : `You can borrow up to ${room} more.`,
+    };
+  }
+  if (!(await borrowTokens(userId, amount, cap)))
+    return { error: "That would take you past your loan limit." };
+  revalidatePath("/account");
+  revalidatePath("/backstage/magnum-opus");
+  return {};
 }

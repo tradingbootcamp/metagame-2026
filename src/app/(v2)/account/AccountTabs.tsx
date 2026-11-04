@@ -9,6 +9,7 @@ const LABELS: Record<AccountTab, string> = {
   tickets: "Tickets",
   sessions: "Sessions",
   megagame: "Megagame",
+  magnumOpus: "Magnum Opus",
 };
 
 export default function AccountTabs({

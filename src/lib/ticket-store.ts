@@ -4,6 +4,7 @@ import {
   desc,
   eq,
   inArray,
+  isNotNull,
   isNull,
   lte,
   or,
@@ -217,6 +218,17 @@ export async function hasClaimedTicket(userId: string): Promise<boolean> {
     )
     .limit(1);
   return row !== undefined;
+}
+
+/** Everyone hasClaimedTicket is true for. */
+export async function claimedTicketOwners(): Promise<string[]> {
+  const rows = await getDb()
+    .selectDistinct({ id: tickets.ownerUserId })
+    .from(tickets)
+    .where(
+      and(visible, isNotNull(tickets.ownerUserId), eq(tickets.status, "paid")),
+    );
+  return rows.flatMap((r) => (r.id ? [r.id] : []));
 }
 
 export type ClaimResult =
