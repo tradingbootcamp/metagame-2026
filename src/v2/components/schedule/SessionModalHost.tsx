@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Component,
   createContext,
@@ -8,6 +9,8 @@ import {
   useContext,
   useEffect,
   useState,
+  type ComponentProps,
+  type MouseEvent,
   type ReactNode,
 } from "react";
 import { sessionDetails } from "@/app/(v2)/schedule/details";
@@ -34,6 +37,57 @@ export function useSessionHref(): (slug: string) => string {
   const hosted = useContext(HostContext);
   return (slug) =>
     hosted ? openSessionHref(pathname, slug) : sessionHref({ slug });
+}
+
+/**
+ * Opens the session over this page. Under a host that only writes the URL:
+ * a router navigation would refetch the page and scroll to its top.
+ */
+export function useOpenSession(): (slug: string) => void {
+  const href = useSessionHref();
+  const hosted = useContext(HostContext);
+  const router = useRouter();
+  return (slug) => {
+    const to = href(slug);
+    if (hosted) window.history.pushState(null, "", to);
+    else router.push(to);
+  };
+}
+
+function plainClick(e: MouseEvent) {
+  return (
+    e.button === 0 &&
+    !e.metaKey &&
+    !e.ctrlKey &&
+    !e.shiftKey &&
+    !e.altKey &&
+    !e.defaultPrevented
+  );
+}
+
+/**
+ * A link to a session: from a hosted page it opens the modal in place (see
+ * useOpenSession), while modified clicks and other pages still navigate.
+ */
+export function SessionLink({
+  href,
+  onClick,
+  ...rest
+}: Omit<ComponentProps<typeof Link>, "href"> & { href: string }) {
+  const hosted = useContext(HostContext);
+  return (
+    <Link
+      {...rest}
+      href={href}
+      scroll={false}
+      onClick={(e) => {
+        onClick?.(e);
+        if (!hosted || !plainClick(e)) return;
+        e.preventDefault();
+        window.history.pushState(null, "", href);
+      }}
+    />
+  );
 }
 
 /**

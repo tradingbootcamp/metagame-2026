@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { SessionLink } from "./SessionModalHost";
+
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FaClock, FaListUl, FaThLarge } from "react-icons/fa";
 import {
@@ -235,16 +236,15 @@ function SessionBlock<S extends ViewSession>({
     );
   }
   return (
-    <Link
+    <SessionLink
       {...preview}
       href={to}
-      scroll={false}
       draggable={false}
       style={style}
       className={`${BLOCK} ${BLOCK_LINK}`}
     >
       {body}
-    </Link>
+    </SessionLink>
   );
 }
 
@@ -422,13 +422,12 @@ export function SessionRow<S extends ViewSession>({
   return (
     <li>
       {to ? (
-        <Link
+        <SessionLink
           href={to}
-          scroll={false}
           className={`${ROW} transition-colors hover:bg-[#1b1530]/[0.04]`}
         >
           {body}
-        </Link>
+        </SessionLink>
       ) : (
         <div className={ROW}>{body}</div>
       )}

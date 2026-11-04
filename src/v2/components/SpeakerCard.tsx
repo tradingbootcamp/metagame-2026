@@ -2,7 +2,6 @@
 
 import { Dices, Mic, Sparkles, Undo, Wrench } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import {
   useEffect,
   useRef,
@@ -20,7 +19,7 @@ import { FACTION_NAMES, type MegagameClass } from "@/lib/megagame-levels";
 import type { Speaker } from "@/v2/data/speakers";
 import HatImage from "@/v2/hat-trick/HatImage";
 import { FactionMedal } from "./megagame/FactionPatch";
-import { useSessionHref } from "./schedule/SessionModalHost";
+import { SessionLink, useSessionHref } from "./schedule/SessionModalHost";
 import { HEADING } from "./styles";
 
 const CATEGORY_ICON: Record<Category, typeof Mic> = {
@@ -297,9 +296,8 @@ export default function SpeakerCard({
                       aria-hidden
                       className="mt-0.5 hidden size-3.5 shrink-0 text-tan sm:block"
                     />
-                    <Link
+                    <SessionLink
                       href={sessionHref(s.slug)}
-                      scroll={false}
                       className="min-w-0 text-left text-[11px] leading-snug outline-none hover:underline focus-visible:ring-2 focus-visible:ring-tan sm:text-[13px]"
                     >
                       <span className="line-clamp-3">{s.title}</span>
@@ -307,7 +305,7 @@ export default function SpeakerCard({
                         {formatPacificDay(s.startsAt).split(",")[0]}{" "}
                         {formatPacificTime(s.startsAt)}
                       </span>
-                    </Link>
+                    </SessionLink>
                   </li>
                 );
               })}

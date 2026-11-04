@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaStar } from "react-icons/fa";
 import { toast } from "sonner";
@@ -15,7 +15,7 @@ import {
 import { SESSION_PARAM, sessionPageSlug } from "@/lib/session-link";
 import { readViewCookie, writeViewCookie } from "@/lib/schedule-view";
 import { ScheduleLegend } from "./SessionBits";
-import { useSessionHref } from "./SessionModalHost";
+import { useOpenSession, useSessionHref } from "./SessionModalHost";
 import {
   buildColumns,
   DayTabs,
@@ -53,9 +53,9 @@ export default function PublicSchedule({
    *  cached and the cookie has to be read after mount instead. */
   initialView?: View;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const href = useSessionHref();
+  const openSession = useOpenSession();
   // A session's own page shows its day underneath.
   const [dayKey, setDayKey] = useState(
     () => sessionDayKey(days, sessionPageSlug(pathname)) ?? openingDayKey(days),
@@ -93,7 +93,7 @@ export default function PublicSchedule({
   }, [days]);
 
   const open = (s: PublicSession) => {
-    router.push(href(s.slug), { scroll: false });
+    openSession(s.slug);
   };
 
   const shownDays = useMemo(

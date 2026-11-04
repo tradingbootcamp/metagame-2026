@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   buildDays,
   isListed,
@@ -27,7 +26,7 @@ import {
   type View,
 } from "./ScheduleViews";
 import { ScheduleLegend } from "./SessionBits";
-import { useSessionHref } from "./SessionModalHost";
+import { SessionLink, useSessionHref } from "./SessionModalHost";
 
 // One person's sessions, as a list or on the schedule grid. Rendered by both
 // the public /u/<id> and the team's /backstage/users/<id>; which roles appear
@@ -117,13 +116,12 @@ function UnscheduledRows({
         return (
           <li key={s.id}>
             {to ? (
-              <Link
+              <SessionLink
                 href={to}
-                scroll={false}
                 className="flex w-full items-stretch gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[#1b1530]/[0.04]"
               >
                 {body}
-              </Link>
+              </SessionLink>
             ) : (
               <div className="flex w-full items-stretch gap-3 px-3 py-2.5 text-left">
                 {body}

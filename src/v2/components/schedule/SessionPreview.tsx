@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { SessionLink } from "./SessionModalHost";
+
 import {
   useEffect,
   useLayoutEffect,
@@ -333,14 +334,9 @@ export default function SessionPreview<S extends ViewSession>({
       className={`fixed top-0 left-0 z-[90] w-[300px] max-w-[calc(100vw-16px)] animate-in overflow-hidden rounded-md border-[1.5px] border-[#1b1530]/15 bg-[#fff5e4] text-left text-[#1b1530] shadow-[0_8px_28px_rgba(27,21,48,0.28)] animation-duration-100 fade-in-0 zoom-in-95 ${to ? "" : "pointer-events-none"}`}
     >
       {to ? (
-        <Link
-          href={to}
-          scroll={false}
-          onClick={() => setShown(null)}
-          className="block"
-        >
+        <SessionLink href={to} onClick={() => setShown(null)} className="block">
           {body}
-        </Link>
+        </SessionLink>
       ) : (
         body
       )}

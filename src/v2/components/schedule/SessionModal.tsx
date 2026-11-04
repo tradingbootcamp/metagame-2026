@@ -22,7 +22,14 @@ export default function SessionModal({
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => {
-    router.replace(closeHref, { scroll: false });
+    // Closing over the page it opened on only rewrites the URL, as opening
+    // did; a router navigation would scroll the page to its top.
+    const { pathname } = new URL(closeHref, window.location.href);
+    if (pathname === window.location.pathname) {
+      window.history.replaceState(null, "", closeHref);
+    } else {
+      router.replace(closeHref, { scroll: false });
+    }
   }, [router, closeHref]);
 
   useEffect(() => {
