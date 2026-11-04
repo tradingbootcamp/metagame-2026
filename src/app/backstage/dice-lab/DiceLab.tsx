@@ -16,6 +16,8 @@ import {
   PRESETS,
   cloneSpec,
   heroDie,
+  recolorLetters,
+  spellDice,
   type DieSpec,
   type Face,
 } from "./labDice";
@@ -148,6 +150,8 @@ export default function DiceLab() {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [rotStep, setRotStep] = useState(15);
+  const [spell, setSpell] = useState("");
+  const [tint, setTint] = useState("blue");
   // the crop outline shows only while the padding slider is in use
   const [padActive, setPadActive] = useState(false);
 
@@ -286,6 +290,29 @@ export default function DiceLab() {
     setSelected(null);
   };
 
+  const applySpell = (text: string) => {
+    setSpell(text);
+    const { dice, perRow, unsupported } = spellDice(text, s.dice, MAX_DICE);
+    if (dice.length === 0) return;
+    setS((prev) => ({
+      ...prev,
+      dice,
+      layout: { ...prev.layout, perRow },
+    }));
+    if (selected !== null && selected >= dice.length) setSelected(null);
+    setStatus(
+      unsupported.length
+        ? `no die for: ${[...new Set(unsupported)].join(" ")} (letters M E T A G, digits 0 1 2 5 6, up to ${MAX_DICE} dice)`
+        : "",
+    );
+    stage.current?.arrange();
+  };
+  const rowOf = (i: number) =>
+    lay.perRow > 0 ? Math.floor(i / lay.perRow) : 0;
+  const applyTint = (pick: (i: number) => boolean) =>
+    set("dice", recolorLetters(s.dice, tint, pick));
+  const tintCustom = tint !== "blue" && tint !== "orange";
+
   const tp = s.throwParams;
   const setTp = <K extends keyof ThrowParams>(k: K, v: ThrowParams[K]) =>
     set("throwParams", { ...tp, [k]: v });
@@ -332,6 +359,13 @@ export default function DiceLab() {
               ))}
             </select>
           </Row>
+          <textarea
+            className={`${INPUT} min-h-14 resize-y`}
+            value={spell}
+            placeholder="Spell it: METAGAME ⏎ 2026"
+            title="One die per character. Letters M E T A G show on the front face, digits 0 1 2 5 6 as top pips; a newline starts a new row."
+            onChange={(e) => applySpell(e.target.value)}
+          />
           <div className="flex flex-wrap items-center gap-1">
             {s.dice.map((_, i) => (
               <button
@@ -355,6 +389,63 @@ export default function DiceLab() {
               title="Add a die"
             >
               +
+            </button>
+          </div>
+          <div
+            className="flex items-center gap-1"
+            title="Repaint every letter face on the chosen dice"
+          >
+            <span className="w-12 shrink-0 text-xs text-neutral-500">
+              Letters
+            </span>
+            <select
+              className={INPUT}
+              value={tintCustom ? "custom" : tint}
+              onChange={(e) =>
+                setTint(
+                  e.target.value === "custom" ? "#ffffff" : e.target.value,
+                )
+              }
+            >
+              <option value="blue">blue</option>
+              <option value="orange">orange</option>
+              <option value="custom">custom</option>
+            </select>
+            {tintCustom && (
+              <input
+                type="color"
+                value={tint}
+                onChange={(e) => setTint(e.target.value)}
+                className="h-7 w-8 shrink-0 rounded border border-neutral-700 bg-transparent"
+              />
+            )}
+            <button
+              type="button"
+              className={BTN}
+              disabled={selected === null}
+              onClick={() => applyTint((i) => i === selected)}
+              title="Selected die"
+            >
+              die
+            </button>
+            <button
+              type="button"
+              className={BTN}
+              disabled={selected === null}
+              onClick={() =>
+                selected !== null &&
+                applyTint((i) => rowOf(i) === rowOf(selected))
+              }
+              title="The selected die's row"
+            >
+              row
+            </button>
+            <button
+              type="button"
+              className={BTN}
+              onClick={() => applyTint(() => true)}
+            >
+              all
             </button>
           </div>
           {sel && selected !== null ? (
@@ -410,6 +501,7 @@ export default function DiceLab() {
                 >
                   <option value="front">front letter</option>
                   <option value="right">right letter</option>
+                  <option value="top">top pips</option>
                 </select>
               </Row>
               <div className="mt-1 flex items-center gap-2">

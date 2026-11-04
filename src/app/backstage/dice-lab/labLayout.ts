@@ -32,7 +32,7 @@ export const DEFAULT_LAYOUT: Layout = {
   seed: 1,
 };
 
-export type Show = "front" | "right";
+export type Show = "front" | "right" | "top";
 
 // A soft shadow blob behind and below each die, facing the camera like a
 // drop shadow in a graphics app, rather than a floor the dice stand on.
@@ -60,6 +60,10 @@ const SHOW_QUAT: Record<Show, THREE.Quaternion> = {
   right: new THREE.Quaternion().setFromAxisAngle(
     new THREE.Vector3(0, 1, 0),
     -Math.PI / 2,
+  ),
+  top: new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(1, 0, 0),
+    Math.PI / 2,
   ),
 };
 
