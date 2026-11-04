@@ -4,7 +4,12 @@ import LinksTool from "./LinksTool";
 import { toolAccess } from "@/lib/admin-auth";
 import { matchLabel } from "@/lib/name-match";
 import { siteOriginFromHeaders } from "@/lib/site-origin";
-import { listTrackingLinks, loadLinkOptions } from "@/lib/tracking-links";
+import {
+  listTrackingLinks,
+  loadLinkOptions,
+  type LinkOptions,
+  type TrackingLink,
+} from "@/lib/tracking-links";
 
 export default async function AdminLinksPage() {
   // Per-request on every branch, or the sign-in branch gets baked in as
@@ -14,11 +19,22 @@ export default async function AdminLinksPage() {
   const access = await toolAccess("links.manage");
   if (!access) return <SignIn next="/backstage/links" />;
 
-  const [links, options, origin] = await Promise.all([
-    listTrackingLinks(),
-    loadLinkOptions(),
-    siteOriginFromHeaders(),
-  ]);
+  let links: TrackingLink[];
+  let options: LinkOptions;
+  try {
+    [links, options] = await Promise.all([
+      listTrackingLinks(),
+      loadLinkOptions(),
+    ]);
+  } catch (err) {
+    return (
+      <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        Couldn&rsquo;t read the Tracking Links table:{" "}
+        {err instanceof Error ? err.message : String(err)}
+      </p>
+    );
+  }
+  const origin = await siteOriginFromHeaders();
   const me = matchLabel(
     access.name,
     links.map((l) => l.createdBy),
