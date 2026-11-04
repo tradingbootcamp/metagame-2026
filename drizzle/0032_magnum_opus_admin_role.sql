@@ -1,5 +1,5 @@
 -- Custom SQL migration file, put your code below! --
--- An ordinary role: once made it's edited, renamed or deleted on /backstage/roles like any other.
+-- /backstage/magnum-opus finds this role by name, so the name and this permission are fixed; it's otherwise assigned and extended like any role.
 INSERT INTO "roles" ("name") VALUES ('Magnum Opus Admin') ON CONFLICT ("name") DO NOTHING;
 --> statement-breakpoint
 INSERT INTO "role_permissions" ("role_id", "permission")

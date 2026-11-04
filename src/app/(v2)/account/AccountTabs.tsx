@@ -52,7 +52,7 @@ export default function AccountTabs({
           <Tabs.Trigger
             key={t}
             value={t}
-            className="-mb-px border-b-2 border-transparent pb-2.5 font-grotesk text-[15px] font-bold text-ink/50 transition-colors outline-none hover:text-navy focus-visible:text-navy data-[state=active]:border-meeple data-[state=active]:text-navy sm:text-lg"
+            className="-mb-px shrink-0 border-b-2 border-transparent pb-2.5 font-grotesk text-[15px] font-bold whitespace-nowrap text-ink/50 transition-colors outline-none hover:text-navy focus-visible:text-navy data-[state=active]:border-meeple data-[state=active]:text-navy sm:text-lg"
           >
             {LABELS[t]}
           </Tabs.Trigger>

@@ -175,6 +175,7 @@ export async function loadLedger(userId: string): Promise<LedgerEntry[]> {
 /**
  * Who to hand tokens to: unbanned accounts holding magnum_opus.manage. Admins
  * hold it implicitly, so they're left off unless they hold it explicitly too.
+ * Nameless accounts are left off too: nobody can look for them.
  */
 export async function listTokenVolunteers(): Promise<string[]> {
   const ids = await holdersOf("magnum_opus.manage");
@@ -183,5 +184,8 @@ export async function listTokenVolunteers(): Promise<string[]> {
     .select({ name: user.name })
     .from(user)
     .where(and(inArray(user.id, ids), eq(user.banned, false)));
-  return rows.map((r) => r.name).sort((a, b) => a.localeCompare(b));
+  return rows
+    .map((r) => r.name.trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
 }

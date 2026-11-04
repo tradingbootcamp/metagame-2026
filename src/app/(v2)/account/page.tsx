@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -63,10 +64,7 @@ export default async function AccountPage({
     admin,
     backstage,
     levels,
-    balance,
     overrides,
-    volunteers,
-    ticketed,
   ] = await Promise.all([
     getDb()
       .select()
@@ -81,13 +79,29 @@ export default async function AccountPage({
     can("schedule.manage"),
     teamAccess().then((a) => a?.team ?? false),
     loadMegagameLevels(user.id),
-    loadBalance(user.id),
     loadOverrides(),
-    listTokenVolunteers(),
-    hasClaimedTicket(user.id),
   ]);
   const tabs = visibleAccountTabs(overrides.tab.override);
   const initialTab = parseAccountTab(tab, tabs);
+  // Panels are serialized even when no tab shows them, so a hidden tab must not
+  // build one: volunteer names and balances would land in the page source.
+  let magnumOpusPanel: ReactNode = null;
+  if (tabs.includes("magnumOpus")) {
+    const [balance, volunteers, ticketed] = await Promise.all([
+      loadBalance(user.id),
+      listTokenVolunteers(),
+      hasClaimedTicket(user.id),
+    ]);
+    magnumOpusPanel = (
+      <MagnumOpusPanel
+        balance={balance}
+        volunteers={volunteers}
+        ticketed={ticketed}
+        cap={loanCap(levels)}
+        lending={loansOpen(overrides.loans.override)}
+      />
+    );
+  }
   // Referral codes are minted the first time their holder looks.
   const [, referrers] = await Promise.all([
     mintReferralCodes(rows, user.id, email).catch((err) =>
@@ -180,15 +194,7 @@ export default async function AccountPage({
             />
           ),
           megagame: <MegagamePanel levels={levels} />,
-          magnumOpus: (
-            <MagnumOpusPanel
-              balance={balance}
-              volunteers={volunteers}
-              ticketed={ticketed}
-              cap={loanCap(levels)}
-              lending={loansOpen(overrides.loans.override)}
-            />
-          ),
+          magnumOpus: magnumOpusPanel,
         }}
       />
     </div>

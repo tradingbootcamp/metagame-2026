@@ -119,7 +119,9 @@ export default function AccountsPane({
               className="flex w-full items-center gap-4 px-1 py-3 text-left transition-colors hover:bg-cream aria-expanded:bg-cream"
             >
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-navy">{r.name}</span>
+                <span className="block font-semibold text-navy">
+                  {r.name.trim() || "Unnamed"}
+                </span>
                 {r.email && (
                   <span className="block truncate text-sm text-ink/60">
                     {r.email}

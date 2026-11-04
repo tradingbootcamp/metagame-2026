@@ -59,9 +59,10 @@ const builtinKey = (name: string): string | null =>
 
 export const isBuiltinRole = (name: string) => builtinKey(name) !== null;
 
-// The role migration 0032 makes. Magnum Opus admins add and remove its members
-// from /backstage/magnum-opus, found by this name, so the name and this
-// permission are fixed. It's otherwise assigned and extended like any role.
+// The role the magnum_opus_admin_role migration makes. Magnum Opus admins add
+// and remove its members from /backstage/magnum-opus, found by this name, so
+// the name and this permission are fixed. It's otherwise assigned and extended
+// like any role.
 export const MAGNUM_OPUS_ADMIN_ROLE = "Magnum Opus Admin";
 const MAGNUM_OPUS_MANAGE: Permission = "magnum_opus.manage";
 

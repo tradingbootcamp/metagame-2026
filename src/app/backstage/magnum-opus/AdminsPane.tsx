@@ -59,7 +59,9 @@ export default function AdminsPane({
           {admins.map((a) => (
             <li key={a.id} className="flex items-center gap-4 py-2">
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold text-navy">{a.name}</span>
+                <span className="block font-semibold text-navy">
+                  {a.name.trim() || "Unnamed"}
+                </span>
                 {a.email && (
                   <span className="block truncate text-sm text-ink/60">
                     {a.email}
@@ -100,7 +102,7 @@ export default function AdminsPane({
               <li key={a.id} className="flex items-center gap-4 py-2">
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold text-navy">
-                    {a.name}
+                    {a.name.trim() || "Unnamed"}
                   </span>
                   {a.email && (
                     <span className="block truncate text-sm text-ink/60">
