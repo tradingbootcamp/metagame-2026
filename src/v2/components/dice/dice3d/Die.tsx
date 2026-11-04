@@ -312,12 +312,14 @@ export function DieBody({ textures }: { textures: THREE.Texture[] }) {
             // letter tiles carry a keyed alpha: the black regions drop out so the
             // die body shows through instead of a flatter, deader pure black
             alphaTest={i < 4 ? 0.5 : 0}
-            // Minimal decal offset. `factor` scales with the face's depth slope,
-            // so anything bigger punches the panel through the bevel (and the
-            // die behind it) whenever a face turns edge-on mid-roll.
+            // Decal offset. `factor` scales with the face's depth slope, so
+            // anything bigger punches the panel through the bevel (and the die
+            // behind it) whenever a face turns edge-on mid-roll. `units` is a
+            // flat step in depth-buffer ticks: a few of them stop the body
+            // z-fighting through as hatching in supersampled lab exports.
             polygonOffset
             polygonOffsetFactor={-1}
-            polygonOffsetUnits={-1}
+            polygonOffsetUnits={-4}
           />
         </mesh>
       ))}
