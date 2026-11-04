@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb, schema } from "@/db";
+import { liveSession } from "@/lib/access";
 import { currentSession, getAuth, hasPassword } from "@/lib/auth";
 import { deleteImage, uploadImage } from "@/lib/blob";
 import {
@@ -308,7 +309,7 @@ export async function signOutInPlace(): Promise<void> {
 
 /** A self-serve loan from the Magnum Opus tab. */
 export async function takeLoan(amount: number): Promise<{ error?: string }> {
-  const session = await currentSession();
+  const session = await liveSession();
   if (!session) return { error: "Your session expired. Sign in again." };
   const userId = session.user.id;
   // The action is reachable even when the tab and button aren't, so it checks too.

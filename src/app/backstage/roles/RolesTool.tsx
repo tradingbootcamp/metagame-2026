@@ -58,64 +58,72 @@ function RoleDialog({
         {role.name}
       </DialogTitle>
       <DialogDescription className="sr-only">
-        Rename or delete the role, and see who holds it.
+        {role.required
+          ? "See who holds the role."
+          : "Rename or delete the role, and see who holds it."}
       </DialogDescription>
-      <form
-        className="flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const name = String(new FormData(e.currentTarget).get("name") ?? "");
-          if (name.trim() && name.trim() !== role.name) onRename(name);
-        }}
-      >
-        <input
-          name="name"
-          defaultValue={role.name}
-          maxLength={40}
-          aria-label="Role name"
-          className={`${fieldClass} text-ink`}
-        />
-        <Button type="submit" size="sm" disabled={pending}>
-          Rename
-        </Button>
-      </form>
-      <div className="flex items-center gap-3">
-        {confirming ? (
-          <>
-            <span className="text-sm text-cream/80">
-              Delete “{role.name}”? {n}{" "}
-              {n === 1 ? "person loses" : "people lose"} what it granted.
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              disabled={pending}
-              onClick={onDelete}
-            >
-              Delete role
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setConfirming(false)}
-            >
-              Keep
-            </Button>
-          </>
-        ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={pending}
-            onClick={() => setConfirming(true)}
-            className="text-salmon"
+      {!role.required && (
+        <>
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const name = String(
+                new FormData(e.currentTarget).get("name") ?? "",
+              );
+              if (name.trim() && name.trim() !== role.name) onRename(name);
+            }}
           >
-            Delete role
-          </Button>
-        )}
-      </div>
+            <input
+              name="name"
+              defaultValue={role.name}
+              maxLength={40}
+              aria-label="Role name"
+              className={`${fieldClass} text-ink`}
+            />
+            <Button type="submit" size="sm" disabled={pending}>
+              Rename
+            </Button>
+          </form>
+          <div className="flex items-center gap-3">
+            {confirming ? (
+              <>
+                <span className="text-sm text-cream/80">
+                  Delete “{role.name}”? {n}{" "}
+                  {n === 1 ? "person loses" : "people lose"} what it granted.
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={pending}
+                  onClick={onDelete}
+                >
+                  Delete role
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirming(false)}
+                >
+                  Keep
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={pending}
+                onClick={() => setConfirming(true)}
+                className="text-salmon"
+              >
+                Delete role
+              </Button>
+            )}
+          </div>
+        </>
+      )}
       <div>
         <h3 className="mb-2 text-xs tracking-wide text-cream/60 uppercase">
           Everyone who has it
@@ -255,20 +263,23 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
                       // An implied box is locked even when also stored, so the
                       // direct grant survives if the implier is later removed.
                       const by = implier(r, key);
+                      const required = r.required === key;
                       return (
                         <td key={r.id} className="px-3 py-2 align-top">
                           <span
                             title={
-                              by &&
-                              describeSource({ kind: "implied", by }) +
-                                (stored ? "; also granted directly." : "")
+                              required
+                                ? `${r.name} always carries this.`
+                                : by &&
+                                  describeSource({ kind: "implied", by }) +
+                                    (stored ? "; also granted directly." : "")
                             }
                           >
                             <input
                               type="checkbox"
                               aria-label={`${r.name}: ${label}`}
                               checked={stored || by !== undefined}
-                              disabled={pending || by !== undefined}
+                              disabled={pending || required || by !== undefined}
                               onChange={(e) => {
                                 const on = e.currentTarget.checked;
                                 run(() => setRolePermission(r.id, key, on));

@@ -59,6 +59,15 @@ const builtinKey = (name: string): string | null =>
 
 export const isBuiltinRole = (name: string) => builtinKey(name) !== null;
 
+// The role migration 0032 makes. Magnum Opus admins add and remove its members
+// from /backstage/magnum-opus, found by this name, so the name and this
+// permission are fixed. It's otherwise assigned and extended like any role.
+export const MAGNUM_OPUS_ADMIN_ROLE = "Magnum Opus Admin";
+const MAGNUM_OPUS_MANAGE: Permission = "magnum_opus.manage";
+
+const isMagnumOpusAdminRole = (name: string) =>
+  name.toLowerCase() === MAGNUM_OPUS_ADMIN_ROLE.toLowerCase();
+
 async function sessionHostIds(): Promise<string[]> {
   const rows = await getDb()
     .selectDistinct({ id: sessionHosts.userId })
@@ -84,6 +93,8 @@ export type Role = {
   holders: { id: string; name: string; email: string }[];
   /** Built-in: who gets it automatically, e.g. "has a ticket". */
   auto?: string;
+  /** Can't be renamed or deleted, and always carries this permission. */
+  required?: Permission;
 };
 
 const sameName = (name: string) => sql`lower(${roles.name}) = lower(${name})`;
@@ -144,6 +155,9 @@ export async function listRoles(): Promise<Role[]> {
             .filter((h) => h.roleId === r.id)
             .map(({ id, name, email }) => ({ id, name, email })),
       ...(builtin ? { auto: BUILTIN[builtin].auto } : {}),
+      ...(isMagnumOpusAdminRole(r.name)
+        ? { required: MAGNUM_OPUS_MANAGE }
+        : {}),
     };
   });
 }
@@ -160,19 +174,38 @@ async function refuseBuiltin(id: string): Promise<void> {
     );
 }
 
-export async function createRole(name: string): Promise<void> {
+async function refuseFixedRole(id: string): Promise<void> {
+  await refuseBuiltin(id);
+  const [row] = await getDb()
+    .select({ name: roles.name })
+    .from(roles)
+    .where(eq(roles.id, id))
+    .limit(1);
+  if (row && isMagnumOpusAdminRole(row.name))
+    throw new Error(
+      `${row.name} can't be renamed or deleted: /backstage/magnum-opus relies on it.`,
+    );
+}
+
+function refuseReservedName(name: string): void {
   if (isBuiltinRole(name)) throw new Error(`${name} is a built-in role.`);
+  if (isMagnumOpusAdminRole(name))
+    throw new Error(`${MAGNUM_OPUS_ADMIN_ROLE} is a reserved role name.`);
+}
+
+export async function createRole(name: string): Promise<void> {
+  refuseReservedName(name);
   await getDb().insert(roles).values({ name });
 }
 
 export async function renameRole(id: string, name: string): Promise<void> {
-  await refuseBuiltin(id);
-  if (isBuiltinRole(name)) throw new Error(`${name} is a built-in role.`);
+  await refuseFixedRole(id);
+  refuseReservedName(name);
   await getDb().update(roles).set({ name }).where(eq(roles.id, id));
 }
 
 export async function deleteRole(id: string): Promise<void> {
-  await refuseBuiltin(id);
+  await refuseFixedRole(id);
   await getDb().delete(roles).where(eq(roles.id, id));
 }
 
@@ -182,15 +215,27 @@ export async function setRolePermission(
   granted: boolean,
 ): Promise<void> {
   const db = getDb();
-  if (granted && PERMISSIONS[permission].audience !== "attendee") {
-    const [row] = await db
-      .select({ name: roles.name })
-      .from(roles)
-      .where(eq(roles.id, roleId))
-      .limit(1);
-    if (row && isBuiltinRole(row.name))
-      throw new Error(`${row.name} can only carry attendee permissions.`);
-  }
+  const [row] = await db
+    .select({ name: roles.name })
+    .from(roles)
+    .where(eq(roles.id, roleId))
+    .limit(1);
+  if (
+    granted &&
+    PERMISSIONS[permission].audience !== "attendee" &&
+    row &&
+    isBuiltinRole(row.name)
+  )
+    throw new Error(`${row.name} can only carry attendee permissions.`);
+  if (
+    !granted &&
+    permission === MAGNUM_OPUS_MANAGE &&
+    row &&
+    isMagnumOpusAdminRole(row.name)
+  )
+    throw new Error(
+      `${row.name} always carries ${PERMISSIONS[permission].label}.`,
+    );
   if (granted) {
     await db
       .insert(rolePermissions)
@@ -405,55 +450,65 @@ export async function setUserGrant(
   }
 }
 
-// The role migration 0029 makes. Magnum Opus admins add and remove its
-// members from /backstage/magnum-opus without needing users.edit.
-export const MAGNUM_OPUS_ADMIN_ROLE = "Magnum Opus Admin";
-
-/** The role's id, remaking it with its permission if it was deleted or renamed. */
-async function magnumOpusAdminRoleId(): Promise<string> {
+/** The role's id and what it carries now, which /backstage/roles can extend. */
+async function magnumOpusAdminRole(): Promise<{
+  id: string;
+  permissions: Permission[];
+} | null> {
   const db = getDb();
-  const [found] = await db
+  const [role] = await db
     .select({ id: roles.id })
     .from(roles)
-    .where(sameName(MAGNUM_OPUS_ADMIN_ROLE))
+    .where(eq(roles.name, MAGNUM_OPUS_ADMIN_ROLE))
     .limit(1);
-  if (found) return found.id;
-  const [made] = await db
-    .insert(roles)
-    .values({ name: MAGNUM_OPUS_ADMIN_ROLE })
-    .onConflictDoNothing()
-    .returning({ id: roles.id });
-  const id =
-    made?.id ??
-    (
-      await db
-        .select({ id: roles.id })
-        .from(roles)
-        .where(sameName(MAGNUM_OPUS_ADMIN_ROLE))
-        .limit(1)
-    )[0].id;
-  await db
-    .insert(rolePermissions)
-    .values({ roleId: id, permission: "magnum_opus.manage" })
-    .onConflictDoNothing();
-  return id;
+  if (!role) return null;
+  const rows = await db
+    .select({ permission: rolePermissions.permission })
+    .from(rolePermissions)
+    .where(eq(rolePermissions.roleId, role.id));
+  return {
+    id: role.id,
+    permissions: rows.map((r) => r.permission).filter(isPermission),
+  };
 }
 
 export async function listMagnumOpusAdmins(): Promise<
   { id: string; name: string; email: string }[]
 > {
-  const roleId = await magnumOpusAdminRoleId();
   return getDb()
     .select({ id: user.id, name: user.name, email: user.email })
     .from(userRoles)
+    .innerJoin(roles, eq(roles.id, userRoles.roleId))
     .innerJoin(user, eq(user.id, userRoles.userId))
-    .where(eq(userRoles.roleId, roleId))
+    .where(eq(roles.name, MAGNUM_OPUS_ADMIN_ROLE))
     .orderBy(asc(user.name));
 }
 
+/**
+ * Adds or removes a member without users.edit, so adding is bounded the way
+ * assigning any role is: the operator must hold everything it carries now.
+ */
 export async function setMagnumOpusAdmin(
   userId: string,
   admin: boolean,
+  operator: { admin: boolean; permissions: ReadonlySet<Permission> },
 ): Promise<void> {
-  await setUserRole(userId, await magnumOpusAdminRoleId(), admin);
+  const role = await magnumOpusAdminRole();
+  if (!role) throw new Error(`The ${MAGNUM_OPUS_ADMIN_ROLE} role is missing.`);
+  if (admin) {
+    if (!role.permissions.includes(MAGNUM_OPUS_MANAGE))
+      throw new Error(
+        `${MAGNUM_OPUS_ADMIN_ROLE} no longer carries ${PERMISSIONS[MAGNUM_OPUS_MANAGE].label}.`,
+      );
+    const missing = operator.admin
+      ? []
+      : role.permissions.filter((p) => !operator.permissions.has(p));
+    if (missing.length > 0)
+      throw new Error(
+        `You can't add people to ${MAGNUM_OPUS_ADMIN_ROLE}: it carries ${missing
+          .map((p) => PERMISSIONS[p].label)
+          .join(", ")}, which you don't hold.`,
+      );
+  }
+  await setUserRole(userId, role.id, admin);
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { teamAccess } from "@/lib/access";
 import { EXPIRED, requireAccess } from "@/lib/admin-auth";
 import { setMagnumOpusAdmin } from "@/lib/permission-store";
 import {
@@ -22,11 +23,12 @@ export async function setAdmin(
   admin: boolean,
 ): Promise<{ error?: string }> {
   const access = await requireAccess("magnum_opus.manage");
-  if (!access) return { error: EXPIRED };
+  const operator = await teamAccess();
+  if (!access || !operator) return { error: EXPIRED };
   if (access.userId === userId)
     return { error: "You can't change your own access." };
   try {
-    await setMagnumOpusAdmin(userId, admin);
+    await setMagnumOpusAdmin(userId, admin, operator);
   } catch (err) {
     return { error: err instanceof Error ? err.message : String(err) };
   }
