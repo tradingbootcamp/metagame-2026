@@ -1,5 +1,7 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   pgTable,
@@ -20,21 +22,27 @@ export const timestamps = {
     .$onUpdate(() => new Date()),
 };
 
-export const user = pgTable("user", {
-  id: text().primaryKey(),
-  name: text().notNull(),
-  email: text().notNull().unique(),
-  emailVerified: boolean().notNull().default(false),
-  image: text(),
-  // Better Auth admin plugin. `role` is "user" or "admin" for now; the plugin
-  // refuses to let users change it themselves. Admin is the break-glass
-  // superuser that gates every team tool until the permission system lands.
-  role: text().notNull().default("user"),
-  banned: boolean().notNull().default(false),
-  banReason: text(),
-  banExpires: timestamp({ withTimezone: true }),
-  ...timestamps,
-});
+export const user = pgTable(
+  "user",
+  {
+    id: text().primaryKey(),
+    name: text().notNull(),
+    email: text().notNull().unique(),
+    emailVerified: boolean().notNull().default(false),
+    image: text(),
+    // Better Auth admin plugin. `role` is "user" or "admin" for now; the plugin
+    // refuses to let users change it themselves. Admin is the break-glass
+    // superuser that gates every team tool until the permission system lands.
+    role: text().notNull().default("user"),
+    banned: boolean().notNull().default(false),
+    banReason: text(),
+    banExpires: timestamp({ withTimezone: true }),
+    tokens: integer().notNull().default(0),
+    loanTokens: integer().notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [check("user_loan_tokens_nonnegative", sql`${t.loanTokens} >= 0`)],
+);
 
 export const session = pgTable(
   "session",

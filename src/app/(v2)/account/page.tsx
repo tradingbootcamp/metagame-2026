@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -6,11 +7,12 @@ import { GiTheaterCurtains } from "react-icons/gi";
 import { PasswordForm, ProfileForm, SignOutButton } from "./AccountForms";
 import AccountTabs from "./AccountTabs";
 import AvatarForm from "./AvatarForm";
+import MagnumOpusPanel from "./MagnumOpusPanel";
 import MegagamePanel from "./MegagamePanel";
 import MegagameSummary from "./MegagameSummary";
 import SessionsPanel from "./SessionsPanel";
 import TicketsPanel from "./TicketsPanel";
-import { parseAccountTab } from "./tabs";
+import { parseAccountTab, visibleAccountTabs } from "./tabs";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
 import { can, teamAccess } from "@/lib/access";
@@ -27,7 +29,10 @@ import {
   loadViewerPlans,
 } from "@/lib/schedule-store";
 import { mintReferralCodes, referrerNames } from "@/lib/referral-store";
-import { emailKey, ticketsForUser } from "@/lib/ticket-store";
+import { emailKey, hasClaimedTicket, ticketsForUser } from "@/lib/ticket-store";
+import { loadOverrides } from "@/lib/site-settings";
+import { loanCap, loansOpen } from "@/lib/magnum-opus";
+import { listTokenVolunteers, loadBalance } from "@/lib/token-store";
 import { ticketView } from "@/lib/ticket-view";
 import { Button } from "@/v2/components/ui/button";
 
@@ -42,12 +47,14 @@ export default async function AccountPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { tab } = await searchParams;
-  const initialTab = parseAccountTab(tab);
   const session = await currentSession();
-  if (!session)
+  if (!session) {
+    // Visibility is settled after sign-in; a hidden tab falls back there.
+    const requested = parseAccountTab(tab);
     redirect(
-      `/login?next=${encodeURIComponent(initialTab === "profile" ? "/account" : `/account?tab=${initialTab}`)}`,
+      `/login?next=${encodeURIComponent(requested === "profile" ? "/account" : `/account?tab=${requested}`)}`,
     );
+  }
   const { user } = session;
 
   const email = emailKey(user.email);
@@ -63,6 +70,7 @@ export default async function AccountPage({
     levels,
     playerCode,
     megagameLocked,
+    overrides,
   ] = await Promise.all([
     getDb()
       .select()
@@ -79,7 +87,29 @@ export default async function AccountPage({
     loadMegagameLevels(user.id),
     ensurePlayerCode(user.id),
     hasVolunteerLevelEvent(user.id),
+    loadOverrides(),
   ]);
+  const tabs = visibleAccountTabs(overrides.tab.override);
+  const initialTab = parseAccountTab(tab, tabs);
+  // Panels are serialized even when no tab shows them, so a hidden tab must not
+  // build one: volunteer names and balances would land in the page source.
+  let magnumOpusPanel: ReactNode = null;
+  if (tabs.includes("magnumOpus")) {
+    const [balance, volunteers, ticketed] = await Promise.all([
+      loadBalance(user.id),
+      listTokenVolunteers(),
+      hasClaimedTicket(user.id),
+    ]);
+    magnumOpusPanel = (
+      <MagnumOpusPanel
+        balance={balance}
+        volunteers={volunteers}
+        ticketed={ticketed}
+        cap={loanCap(levels)}
+        lending={loansOpen(overrides.loans.override)}
+      />
+    );
+  }
   // Referral codes are minted the first time their holder looks.
   const [, referrers] = await Promise.all([
     mintReferralCodes(rows, user.id, email).catch((err) =>
@@ -105,6 +135,7 @@ export default async function AccountPage({
     <div className="mx-auto max-w-[1180px] px-8 pt-28 pb-20">
       <AccountTabs
         initial={initialTab}
+        tabs={tabs}
         trailing={
           backstage && (
             <Button
@@ -177,6 +208,7 @@ export default async function AccountPage({
               locked={megagameLocked}
             />
           ),
+          magnumOpus: magnumOpusPanel,
         }}
       />
     </div>

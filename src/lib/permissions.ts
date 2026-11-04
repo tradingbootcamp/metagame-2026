@@ -241,6 +241,15 @@ export const PERMISSIONS = {
     description: "Undo other volunteers' confirmations and level-ups.",
     implies: ["megagame.verify"],
   },
+  "magnum_opus.manage": {
+    audience: "team",
+    group: "Magnum Opus",
+    level: "edit",
+    label: "Magnum Opus",
+    description:
+      "Run /backstage/magnum-opus: switch the account tab and loans on or off, see every account's tokens, loan and change history (emails too, with View users), change anyone else's tokens or loan, and add or remove Magnum Opus admins. Holders are listed as the people to hand tokens to. Only holders and admins can hand it out.",
+    holdersOnly: true,
+  },
   "misc.dice_lab": {
     audience: "team",
     group: "Misc",
@@ -283,6 +292,11 @@ export const PERMISSIONS = {
     label: string;
     description: string;
     implies?: readonly string[];
+    /**
+     * Only its holders (and admins) may hand it out: by role, grant, or
+     * ticking it on a role. roles.manage alone isn't enough.
+     */
+    holdersOnly?: boolean;
   }
 >;
 
@@ -309,6 +323,10 @@ export function permissionGroups(): { group: string; keys: Permission[] }[] {
 
 export const isPermission = (value: unknown): value is Permission =>
   typeof value === "string" && Object.hasOwn(PERMISSIONS, value);
+
+/** See `holdersOnly` in the catalog. */
+export const isHoldersOnly = (p: Permission): boolean =>
+  (PERMISSIONS[p] as { holdersOnly?: boolean }).holdersOnly === true;
 
 /** Whether holding any of these counts as team access (see PermissionAudience). */
 export const hasTeamPermission = (held: Iterable<Permission>): boolean => {

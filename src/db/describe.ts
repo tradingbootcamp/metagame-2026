@@ -66,11 +66,13 @@ const TABLE_GROUPS: Record<string, string[]> = {
   Grading: ["session_grades", "session_grade_space_options"],
   Budget: ["xero_connections", "budget_import_runs", "budget_ignored_lines"],
   Megagame: ["quests", "confirmations", "quest_progress", "level_events"],
+  Settings: ["site_settings"],
+  "Magnum Opus": ["token_ledger"],
 };
 
 // What each table is for, in one line. Reviewed alongside the columns.
 const TABLE_NOTES: Record<string, string> = {
-  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique. role (user | admin) and the ban fields come from the admin plugin and can't be changed through the normal account-update path; admin is the break-glass superuser that bypasses the permission system (roles, user_permission_grants) and is only set by SQL.",
+  user: "One row per account. Owned by Better Auth; email is the login identifier and is unique. role (user | admin) and the ban fields come from the admin plugin and can't be changed through the normal account-update path; admin is the break-glass superuser that bypasses the permission system (roles, user_permission_grants) and is only set by SQL. tokens is a plain integer balance (any value, negatives too, default 0), shown on the Magnum Opus tab of /account. loan_tokens is what they owe from loans (never below 0, check constraint), shown when above 0. Both are changed by loans from that tab or by hand on /backstage/magnum-opus, and every change is a token_ledger row.",
   session:
     "Signed-in browser sessions. Deleting a user removes their sessions (cascade).",
   account:
@@ -121,6 +123,10 @@ const TABLE_NOTES: Record<string, string> = {
     "One row per player and quest. status is completed exactly when confirmation_id points at a live confirmation; attempt_count and first_attempt_at come from the answer checker and survive an undo. Deleting the account deletes its rows.",
   level_events:
     "The audit log of Megagame level changes; current levels are the profiles level columns. source is picker (joining a class on /account) or volunteer (the level-up action). A partial unique index allows one live event per player, class and level. checks_passed false with override_reason records a volunteer's \"Yes, I'm sure\". Undo voids the row and recomputes the profile column from what remains.",
+  token_ledger:
+    "Every change to an account's tokens or loan_tokens, one row each, written in the same statement as the change: the deltas, kind (loan: a self-serve loan from the Magnum Opus tab, by ticket holders only, until noon Pacific Sunday 8 Nov or the magnum_opus_loans override, and only up to 5 + the account's Megagame levels owed; adjustment: a hand edit on /backstage/magnum-opus, which may lend past that limit), actor_id (the borrower, or whoever made the edit; null once their account is gone) and created_at. /backstage/magnum-opus reads when outstanding loans were taken by walking an account's loan changes back to when it last owed 0.",
+  site_settings:
+    "Site-wide switches flipped from /backstage at runtime, one row per key. value is jsonb; a missing row or null value means not set, so the code reading the key supplies the default. Today: magnum_opus_tab (true / false force the Magnum Opus tab on /account shown / hidden) and magnum_opus_loans (true / false force its loans open / closed); null leaves each on its schedule. Both are set on /backstage/magnum-opus. updated_by and updated_at record the last change.",
 };
 
 function columnName(column: PgColumn): string {

@@ -35,7 +35,9 @@ describe("describeSchema", () => {
       "session_grades",
       "session_hosts",
       "sessions",
+      "site_settings",
       "tickets",
+      "token_ledger",
       "unconference_note_reactions",
       "unconference_notes",
       "user",
@@ -79,8 +81,11 @@ describe("describeSchema", () => {
       "session_grades",
       "session_hosts",
       "sessions",
+      "site_settings",
       "tickets",
       "tickets",
+      "token_ledger",
+      "token_ledger",
       "unconference_note_reactions",
       "unconference_notes",
       "user_permission_grants",
@@ -187,6 +192,8 @@ describe("describeSchema", () => {
       "Grading",
       "Budget",
       "Megagame",
+      "Settings",
+      "Magnum Opus",
     ]);
     expect(info.groups.flatMap((g) => g.tables.map((t) => t.name))).toEqual([
       "user",
@@ -216,6 +223,8 @@ describe("describeSchema", () => {
       "confirmations",
       "quest_progress",
       "level_events",
+      "site_settings",
+      "token_ledger",
     ]);
   });
 

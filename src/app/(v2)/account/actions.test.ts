@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { store, order } = vi.hoisted(() => {
+const { mocks, store, order } = vi.hoisted(() => {
   const order: string[] = [];
   const store = {
     loadMegagameLevels: vi.fn(async () => ({ wizard: 0, pirate: 0, alien: 0 })),
@@ -12,25 +12,41 @@ const { store, order } = vi.hoisted(() => {
     }),
     hasVolunteerLevelEvent: vi.fn(async () => false),
   };
-  return { store, order };
+  const mocks = {
+    liveSession: vi.fn(),
+    currentSession: vi.fn(),
+    borrowTokens: vi.fn(),
+  };
+  return { mocks, store, order };
 });
 
 vi.mock("@/lib/megagame-store", () => store);
+vi.mock("@/lib/access", () => ({ liveSession: mocks.liveSession }));
 vi.mock("@/lib/auth", () => ({
-  currentSession: vi.fn(async () => ({ user: { id: "u1" } })),
+  currentSession: mocks.currentSession,
   getAuth: vi.fn(),
   hasPassword: vi.fn(),
 }));
 vi.mock("@/db", () => ({ getDb: vi.fn(), schema: {} }));
 vi.mock("@/lib/blob", () => ({ deleteImage: vi.fn(), uploadImage: vi.fn() }));
-vi.mock("@/lib/ticket-store", () => ({ hasClaimedTicket: vi.fn() }));
+vi.mock("@/lib/site-settings", () => ({
+  loadOverrides: async () => ({
+    tab: { override: true },
+    loans: { override: true },
+  }),
+}));
+vi.mock("@/lib/ticket-store", () => ({ hasClaimedTicket: async () => true }));
+vi.mock("@/lib/token-store", () => ({
+  borrowTokens: mocks.borrowTokens,
+  loadBalance: async () => ({ tokens: 0, loanTokens: 0 }),
+}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/schedule-store", () => ({ invalidateSchedule: vi.fn() }));
-vi.mock("next/headers", () => ({ headers: vi.fn() }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@/v2/data/speakers", () => ({ isSpeakerAccount: vi.fn(() => false) }));
 
-import { chooseMegagameClass } from "./actions";
+import { chooseMegagameClass, takeLoan } from "./actions";
 
 const pick = (cls: string) => {
   const form = new FormData();
@@ -42,6 +58,7 @@ describe("chooseMegagameClass", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     order.length = 0;
+    mocks.currentSession.mockResolvedValue({ user: { id: "u1" } });
   });
 
   it("writes the picker event before setting the levels", async () => {
@@ -105,5 +122,28 @@ describe("chooseMegagameClass", () => {
       pirate: 0,
       alien: 1,
     });
+  });
+});
+
+describe("takeLoan", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.borrowTokens.mockResolvedValue(true);
+    // What a still-valid cookie cache would say after the ban.
+    mocks.currentSession.mockResolvedValue({ user: { id: "u" } });
+  });
+
+  it("refuses a session the database no longer honors, whatever the cookie says", async () => {
+    mocks.liveSession.mockResolvedValue(null);
+    await expect(takeLoan(1)).resolves.toEqual({
+      error: expect.stringMatching(/session expired/i),
+    });
+    expect(mocks.borrowTokens).not.toHaveBeenCalled();
+  });
+
+  it("lends to a live session without any team permission", async () => {
+    mocks.liveSession.mockResolvedValue({ user: { id: "u" } });
+    await expect(takeLoan(1)).resolves.toEqual({});
+    expect(mocks.borrowTokens).toHaveBeenCalledWith("u", 1, expect.any(Number));
   });
 });

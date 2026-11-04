@@ -225,6 +225,20 @@
       "when": 1793806593110,
       "tag": "0031_megagame_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793806801748,
+      "tag": "0032_magnum_opus",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793806802291,
+      "tag": "0033_magnum_opus_admin_role",
+      "breakpoints": true
     }
   ]
 }
