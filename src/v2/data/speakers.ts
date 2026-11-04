@@ -143,7 +143,7 @@ export const SPEAKERS: Speaker[] = [
   {
     ...SPEAKER_ACCOUNTS.aemiliaDixon,
     title: "The Treacherous Turn",
-    titleUrl: "https://iris-lemony.itch.io/",
+    titleUrl: "https://thetreacherousturn.ai/",
     photo: aemilia,
     hats: [HATS.aemilia],
   },
