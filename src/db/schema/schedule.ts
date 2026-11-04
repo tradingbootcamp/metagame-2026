@@ -2,16 +2,20 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { EMPTY_DOC, type NoticeDoc } from "../../lib/notice-doc";
 import { timestamps, user } from "./auth";
 
 export const sessionCategory = pgEnum("session_category", [
@@ -81,6 +85,16 @@ export const locationVisibility = pgEnum("location_visibility", [
   "volunteer",
   "hidden",
 ]);
+// The post-it palette. An enum so a note can only ever carry a colour the
+// board knows how to paint.
+export const unconferenceNoteColor = pgEnum("unconference_note_color", [
+  "butter",
+  "rose",
+  "sky",
+  "mint",
+  "tangerine",
+  "lilac",
+]);
 
 export const locations = pgTable(
   "locations",
@@ -92,6 +106,12 @@ export const locations = pgTable(
     description: text(),
     displayOrder: integer().notNull().default(100),
     visibility: locationVisibility().notNull().default("hidden"),
+    // When the unconference bulletin board takes over this room's column;
+    // null for a room that never hosts it. A null end runs it to the end of
+    // the schedule. Sessions may still be placed here; the grid shows them
+    // only through a session poster on the board.
+    boardStartsAt: timestamp({ withTimezone: true }),
+    boardEndsAt: timestamp({ withTimezone: true }),
     // Vercel Blob URLs; images never live in the database. The thumbnail is
     // what the schedule shows; image_url is a large copy for detail views.
     thumbnailUrl: text(),
@@ -102,6 +122,10 @@ export const locations = pgTable(
   },
   (t) => [
     check("locations_capacity_positive", sql`${t.capacity} > 0`),
+    check(
+      "locations_board_window",
+      sql`${t.boardEndsAt} is null OR (${t.boardStartsAt} is not null AND ${t.boardEndsAt} > ${t.boardStartsAt})`,
+    ),
     check(
       "locations_thumbnail_url_https",
       sql`${t.thumbnailUrl} like 'https://%'`,
@@ -230,5 +254,77 @@ export const bookmarks = pgTable(
   (t) => [
     primaryKey({ columns: [t.sessionId, t.userId] }),
     index("bookmarks_user_id_idx").on(t.userId),
+  ],
+);
+
+// Notices on the board room (locations.board_starts_at set), written by any
+// ticket holder: a sticky note the board draws and a poster it opens into.
+// x and y are fractions of the board so it reflows at any width; y is free
+// placement, not a time.
+export const unconferenceNotes = pgTable(
+  "unconference_notes",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    locationId: uuid()
+      .notNull()
+      .references(() => locations.id, { onDelete: "cascade" }),
+    // The shown name is read from the account, never stored here.
+    authorUserId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // Which day's board the notice is on, as a Pacific date: each day the
+    // board is up it starts fresh.
+    boardDay: date({ mode: "string" }).notNull(),
+    // Set on a session poster: the team's full-width notice that sits at the
+    // session's own time rows and opens the session. Its documents, colour
+    // and position go unused; the session supplies all of that.
+    sessionId: uuid()
+      .unique()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    // Derived from the documents on save, for the list view and search;
+    // null when the notice is only drawings.
+    title: text(),
+    // NoticeDoc JSON (src/lib/notice-doc.ts), validated by parseNoticeDoc
+    // before every write.
+    sticky: jsonb().$type<NoticeDoc>().notNull().default(EMPTY_DOC),
+    poster: jsonb().$type<NoticeDoc>().notNull().default(EMPTY_DOC),
+    color: unconferenceNoteColor().notNull(),
+    x: real().notNull().default(0),
+    y: real().notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [
+    index("unconference_notes_location_id_idx").on(t.locationId, t.boardDay),
+    index("unconference_notes_author_user_id_idx").on(t.authorUserId),
+    check(
+      "unconference_notes_title_length",
+      sql`${t.title} is null OR char_length(${t.title}) <= 120`,
+    ),
+    check("unconference_notes_x_fraction", sql`${t.x} >= 0 AND ${t.x} <= 1`),
+    check("unconference_notes_y_fraction", sql`${t.y} >= 0 AND ${t.y} <= 1`),
+  ],
+);
+
+// Emoji reactions on a notice, one row per person per emoji.
+export const unconferenceNoteReactions = pgTable(
+  "unconference_note_reactions",
+  {
+    noteId: uuid()
+      .notNull()
+      .references(() => unconferenceNotes.id, { onDelete: "cascade" }),
+    userId: text()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    emoji: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.noteId, t.userId, t.emoji] }),
+    index("unconference_note_reactions_user_id_idx").on(t.userId),
+    // Mirrors EMOJI_MAX in src/lib/unconference.ts.
+    check(
+      "unconference_note_reactions_emoji_length",
+      sql`char_length(${t.emoji}) > 0 AND char_length(${t.emoji}) <= 32`,
+    ),
   ],
 );

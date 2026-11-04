@@ -127,6 +127,16 @@ const LOCATION_FIELDS: Field[] = [
     type: oneOf(LOCATION_VISIBILITIES),
     note: 'Default "hidden" (team only).',
   },
+  {
+    name: "boardStartsAt",
+    type: "string | null",
+    note: 'Pacific date, "2026-11-06": the first day the unconference bulletin board takes over this room\'s whole column. Sessions may still be placed here.',
+  },
+  {
+    name: "boardEndsAt",
+    type: "string | null",
+    note: "Pacific date: the board's last day; null runs it to the end of the schedule. Read back as the instant the following day starts.",
+  },
 ];
 
 const GRADER_FIELDS: Field[] = [
@@ -186,7 +196,7 @@ export const TYPES: { name: string; shape: string }[] = [
   },
   {
     name: "Location",
-    shape: `{ id, name, capacity: number | null, campusLocation, description, displayOrder: number, visibility: ${oneOf(LOCATION_VISIBILITIES)}, thumbnailUrl, imageUrl }`,
+    shape: `{ id, name, capacity: number | null, campusLocation, description, displayOrder: number, visibility: ${oneOf(LOCATION_VISIBILITIES)}, boardStartsAt: string | null, boardEndsAt: string | null, thumbnailUrl, imageUrl }`,
   },
   {
     name: "Session",

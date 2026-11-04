@@ -3,8 +3,10 @@ import { can, teamAccess } from "@/lib/access";
 import { currentSession } from "@/lib/auth";
 import { ticketStep } from "@/lib/first-signin";
 import {
+  hostsBoard,
   publicSchedule,
   viewerSessionIds,
+  type PublicLocation,
   type RsvpTicket,
   type ScheduleViewer,
 } from "@/lib/schedule";
@@ -15,6 +17,8 @@ import {
   ticketLabel,
   ticketsForUser,
 } from "@/lib/ticket-store";
+import { boardNote, type BoardData } from "@/lib/unconference";
+import { listNotesIn } from "@/lib/unconference-store";
 
 export const loadRawSchedule = cache(loadSchedule);
 
@@ -28,6 +32,48 @@ export const scheduleViewer = cache(async (): Promise<ScheduleViewer> => {
 export const loadPublicSchedule = cache(async () =>
   publicSchedule(await loadRawSchedule(), await scheduleViewer()),
 );
+
+/** The rooms that host the bulletin board, as much as this viewer may see. */
+export const boardRooms = cache(async (): Promise<PublicLocation[]> => {
+  const { locations } = await loadPublicSchedule();
+  return locations.filter(hostsBoard);
+});
+
+/**
+ * The unconference notes and what the viewer may do with them, or null when
+ * no room this viewer can see is a board.
+ *
+ * Loaded here rather than in the board component because PublicSchedule is a
+ * client component, and because this is the one place that already knows
+ * which rooms survived the visibility filter — so notes pinned in a room the
+ * viewer can't see are never read, let alone sent.
+ */
+export const loadBoard = cache(async (): Promise<BoardData | null> => {
+  const rooms = await boardRooms();
+  if (rooms.length === 0) return null;
+  // The viewer first, since the notes are read as them; the rest together.
+  const session = await currentSession();
+  const viewerId = session?.user.id ?? null;
+  const [post, team, notes] = await Promise.all([
+    can("unconference.post"),
+    can("schedule.manage"),
+    listNotesIn(
+      rooms.map((r) => r.id),
+      viewerId,
+    ),
+  ]);
+  return {
+    // Mapped, not sent as read: the client needs the author's name and
+    // whether the note is its own, never an account id. Posters stay
+    // behind until a notice is opened.
+    notes: notes.map((note) =>
+      boardNote(note, viewerId, { withPoster: false }),
+    ),
+    signedIn: !!session,
+    canPost: !!post && !session?.user.banned,
+    isTeam: !!team,
+  };
+});
 
 /** The public sessions the signed-in viewer is in; null when signed out. */
 export const loadMySessionIds = cache(async (): Promise<string[] | null> => {

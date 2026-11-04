@@ -43,6 +43,8 @@ const room = (over: Partial<ScheduleLocation>): ScheduleLocation => ({
   description: "internal notes",
   displayOrder: 0,
   visibility: "public",
+  boardStartsAt: null,
+  boardEndsAt: null,
   thumbnailUrl: null,
   imageUrl: null,
   ...over,
@@ -73,10 +75,10 @@ describe("summarizeRsvps", () => {
 describe("publicSchedule", () => {
   it("keeps only published, placed sessions and drops private fields", () => {
     const { sessions } = publicSchedule({
-      locations: [],
+      locations: [room({ id: "r" })],
       sessions: [
-        session({ id: "pub" }),
-        session({ id: "draft", status: "draft" }),
+        session({ id: "pub", locationId: "r" }),
+        session({ id: "draft", locationId: "r", status: "draft" }),
         session({
           id: "unplaced",
           status: "draft",
@@ -97,9 +99,14 @@ describe("publicSchedule", () => {
 
   it("carries the commitment, sponsor and RSVPs-open flags", () => {
     const { sessions } = publicSchedule({
-      locations: [],
+      locations: [room({ id: "r" })],
       sessions: [
-        session({ rsvpIsCommitment: true, sponsored: true, rsvpsOpen: false }),
+        session({
+          locationId: "r",
+          rsvpIsCommitment: true,
+          sponsored: true,
+          rsvpsOpen: false,
+        }),
       ],
     });
     expect(sessions[0]).toMatchObject({
@@ -111,9 +118,10 @@ describe("publicSchedule", () => {
 
   it("does not show a nameless host's email as their name", () => {
     const { sessions } = publicSchedule({
-      locations: [],
+      locations: [room({ id: "r" })],
       sessions: [
         session({
+          locationId: "r",
           hosts: [
             { userId: "u2", name: "bob@example.com", email: "bob@example.com" },
           ],
@@ -275,18 +283,31 @@ describe("hostedSessions", () => {
   const grace = { userId: "u9", name: "Grace", email: "grace@example.com" };
   const raw = {
     sessions: [
-      session({ id: "a", slug: "a", title: "A", hosts: [ada] }),
-      session({ id: "b", slug: "b", title: "B", hosts: [grace, ada] }),
+      session({
+        id: "a",
+        slug: "a",
+        title: "A",
+        locationId: "r",
+        hosts: [ada],
+      }),
+      session({
+        id: "b",
+        slug: "b",
+        title: "B",
+        locationId: "r",
+        hosts: [grace, ada],
+      }),
       session({
         id: "c",
         slug: "c",
         title: "C",
+        locationId: "r",
         hosts: [ada],
         status: "draft",
       }),
     ],
   };
-  const shown = publicSchedule({ locations: [], ...raw });
+  const shown = publicSchedule({ locations: [room({ id: "r" })], ...raw });
 
   it("lists the shown sessions each account hosts, in order", () => {
     const got = hostedSessions(raw, shown);

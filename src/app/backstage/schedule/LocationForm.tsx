@@ -21,6 +21,7 @@ import { downscaleImage } from "@/lib/downscale-image";
 import { UnsavedChangesDialog, useUnsavedChanges } from "./UnsavedChanges";
 import {
   LOCATION_VISIBILITIES,
+  pacificDayKey,
   VISIBILITY_LABEL,
   type ScheduleLocation,
 } from "@/lib/schedule";
@@ -295,6 +296,50 @@ export default function LocationForm({
               ))}
             </select>
           </Field>
+
+          {/* A save replaces the whole row, so these are submitted even when
+              untouched or the board would come down. Pacific dates. */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              label="Unconference board, first day"
+              name="boardStartsAt"
+              state={state}
+            >
+              <input
+                type="date"
+                name="boardStartsAt"
+                defaultValue={
+                  location?.boardStartsAt
+                    ? pacificDayKey(location.boardStartsAt)
+                    : ""
+                }
+                className={fieldClass}
+              />
+            </Field>
+            <Field label="Last day" name="boardEndsAt" state={state}>
+              <input
+                type="date"
+                name="boardEndsAt"
+                defaultValue={
+                  location?.boardEndsAt
+                    ? // Stored as the start of the day after.
+                      pacificDayKey(
+                        new Date(
+                          Date.parse(location.boardEndsAt) - 1,
+                        ).toISOString(),
+                      )
+                    : ""
+                }
+                className={fieldClass}
+              />
+            </Field>
+          </div>
+          <p className="-mt-2 text-xs text-ink/55">
+            On those days the board takes over this room’s whole column.
+            Sessions can still go here; the grid shows them only through a
+            session poster on the board. Leave both empty for a room that never
+            hosts the board, or the last day empty to keep it up to the end.
+          </p>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
