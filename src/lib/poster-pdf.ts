@@ -13,7 +13,12 @@ import {
 import QRCode from "qrcode";
 import { POSTER_ORIGIN } from "@/lib/poster-options";
 import { drawStyledQr, styledQrSvg } from "@/lib/poster-qr";
-import { DEFAULT_POSTER_QR, isPlainQr, type PosterQr } from "@/lib/qr-styles";
+import {
+  DEFAULT_POSTER_QR,
+  DEFAULT_QR_COLORS,
+  isPlainQr,
+  type PosterQr,
+} from "@/lib/qr-styles";
 import {
   PROMO_PARAM,
   promoCode,
@@ -157,6 +162,12 @@ const templates: Record<
 };
 
 const ASSETS = path.join(process.cwd(), "assets/posters");
+const hexRgb = (hex: string) =>
+  rgb(
+    parseInt(hex.slice(1, 3), 16) / 255,
+    parseInt(hex.slice(3, 5), 16) / 255,
+    parseInt(hex.slice(5, 7), 16) / 255,
+  );
 
 async function drawRoll(
   doc: PDFDocument,
@@ -304,11 +315,13 @@ export async function createPosterQrSvg(
 export async function createQrSvg(
   text: string,
   qrStyle: PosterQr,
+  colors: { ink: string; bg: string } = DEFAULT_QR_COLORS,
 ): Promise<string> {
   return styledQrSvg({
     url: text,
     qr: qrStyle,
-    ink: rgb(0, 0, 0),
+    ink: hexRgb(colors.ink),
+    bg: hexRgb(colors.bg),
     font: await readFile(path.join(ASSETS, "fonts", "SpaceGrotesk-Bold.ttf")),
   });
 }

@@ -81,6 +81,13 @@ const CHOICES = { dots: QR_DOTS, corners: QR_CORNERS, logo: QR_LOGOS };
 /** What /backstage/qr accepts: well inside a version-40 code, and still scannable. */
 export const MAX_QR_TEXT = 1000;
 
+export const DEFAULT_QR_COLORS = { ink: "#000000", bg: "#ffffff" };
+/** `#rrggbb`, lowercased, or null. */
+export function hexColor(value: string | null): string | null {
+  const v = value?.trim().toLowerCase() ?? "";
+  return /^#[0-9a-f]{6}$/.test(v) ? v : null;
+}
+
 export const isPlainQr = (qr: PosterQr) =>
   qr.dots === "square" && qr.corners === "square" && qr.logo === "none";
 

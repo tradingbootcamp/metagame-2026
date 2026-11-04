@@ -1,6 +1,11 @@
 import { toolAccess } from "@/lib/admin-auth";
 import { createQrSvg } from "@/lib/poster-pdf";
-import { MAX_QR_TEXT, parsePosterQr } from "@/lib/qr-styles";
+import {
+  DEFAULT_QR_COLORS,
+  hexColor,
+  MAX_QR_TEXT,
+  parsePosterQr,
+} from "@/lib/qr-styles";
 
 export const runtime = "nodejs";
 const headers = {
@@ -14,14 +19,18 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const text = params.get("text") ?? "";
   const qr = parsePosterQr(params);
-  if (!text.trim() || text.length > MAX_QR_TEXT || !qr)
+  const ink = hexColor(params.get("ink") ?? DEFAULT_QR_COLORS.ink);
+  const bg = hexColor(params.get("bg") ?? DEFAULT_QR_COLORS.bg);
+  if (!text.trim() || text.length > MAX_QR_TEXT || !qr || !ink || !bg)
     return Response.json(
-      { error: `Give some text, up to ${MAX_QR_TEXT} characters.` },
+      {
+        error: `Give some text, up to ${MAX_QR_TEXT} characters, and #rrggbb colors.`,
+      },
       { status: 400, headers },
     );
   let svg: string;
   try {
-    svg = await createQrSvg(text, qr);
+    svg = await createQrSvg(text, qr, { ink, bg });
   } catch {
     return Response.json(
       { error: "That text is too long for a QR code." },

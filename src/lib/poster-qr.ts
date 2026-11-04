@@ -271,6 +271,7 @@ export function styledQrSvg(options: {
   url: string;
   qr: PosterQr;
   ink: RGB;
+  bg?: RGB;
   font: Uint8Array;
 }): string {
   const kind = options.qr.logo === "none" ? null : options.qr.logo;
@@ -301,7 +302,7 @@ export function styledQrSvg(options: {
       );
   }
   const span = count + 8;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${span} ${span}" width="${span * 16}" height="${span * 16}"><rect x="-4" y="-4" width="${span}" height="${span}" fill="#fff"/>${paths.join("")}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 ${span} ${span}" width="${span * 16}" height="${span * 16}"><rect x="-4" y="-4" width="${span}" height="${span}" fill="${svgColor(options.bg ?? rgb(1, 1, 1))}"/>${paths.join("")}</svg>`;
 }
 
 function drawLogo(

@@ -9,7 +9,12 @@ import {
   useQrStyle,
   type QrSampleMatrix,
 } from "@/components/QrStylePicker";
-import { MAX_QR_TEXT, posterQrQuery } from "@/lib/qr-styles";
+import {
+  DEFAULT_QR_COLORS,
+  hexColor,
+  MAX_QR_TEXT,
+  posterQrQuery,
+} from "@/lib/qr-styles";
 
 const PNG_SIZE = 2048;
 
@@ -24,6 +29,7 @@ function sample(level: "M" | "H"): QrSampleMatrix {
 export default function QrTool() {
   const [text, setText] = useState("");
   const [qr, setQr] = useQrStyle();
+  const [colors, setColors] = useState(DEFAULT_QR_COLORS);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const samples = useMemo(() => ({ M: sample("M"), H: sample("H") }), []);
@@ -42,6 +48,8 @@ export default function QrTool() {
   const query = new URLSearchParams({
     text: trimmed,
     ...posterQrQuery(qr),
+    ...(colors.ink !== DEFAULT_QR_COLORS.ink ? { ink: colors.ink } : {}),
+    ...(colors.bg !== DEFAULT_QR_COLORS.bg ? { bg: colors.bg } : {}),
   }).toString();
 
   async function save(format: "svg" | "png") {
@@ -72,6 +80,8 @@ export default function QrTool() {
           <QrArt
             qr={qr}
             matrix={matrix}
+            ink={colors.ink}
+            bg={colors.bg}
             className="mx-auto aspect-square w-full max-w-md rounded-lg border border-line p-4"
           />
         ) : (
@@ -98,6 +108,18 @@ export default function QrTool() {
           />
         </label>
         <QrStylePicker value={qr} onChange={setQr} samples={samples} />
+        <div className="grid grid-cols-2 gap-3">
+          <ColorField
+            label="Code"
+            value={colors.ink}
+            onChange={(ink) => setColors({ ...colors, ink })}
+          />
+          <ColorField
+            label="Background"
+            value={colors.bg}
+            onChange={(bg) => setColors({ ...colors, bg })}
+          />
+        </div>
         <div className="space-y-2">
           <button
             type="button"
@@ -149,4 +171,48 @@ async function rasterize(svg: Blob): Promise<Blob> {
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/** A swatch picker beside a hex box; the hex only applies once it's a full #rrggbb. */
+function ColorField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (hex: string) => void;
+}) {
+  const [typed, setTyped] = useState(value);
+  const [editing, setEditing] = useState(false);
+  const shown = editing ? typed : value;
+  return (
+    <label className="block">
+      <span className="text-xs font-semibold">{label}</span>
+      <span className="mt-1 flex items-center gap-2">
+        <input
+          type="color"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="size-9 shrink-0 cursor-pointer rounded border border-line bg-white p-0.5"
+        />
+        <input
+          type="text"
+          value={shown}
+          spellCheck={false}
+          onFocus={() => {
+            setTyped(value);
+            setEditing(true);
+          }}
+          onBlur={() => setEditing(false)}
+          onChange={(event) => {
+            setTyped(event.target.value);
+            const hex = hexColor(event.target.value);
+            if (hex) onChange(hex);
+          }}
+          className={`${fieldClass} min-w-0 px-2 py-1.5 font-mono text-sm`}
+        />
+      </span>
+    </label>
+  );
 }
