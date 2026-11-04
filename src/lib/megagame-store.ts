@@ -341,7 +341,7 @@ export async function confirmQuest(
     insert into quest_progress (user_id, quest_id, status, completed_at, confirmation_id, updated_at)
     select u.id, c.quest_id, 'completed', now(), c.id, now()
     from confirmations c
-    cross join unnest(${requested}::text[]) as r(id)
+    cross join unnest(${sql.param(requested)}::text[]) as r(id)
     join "user" u on u.id = r.id
     where c.id = ${row.id} and c.voided_at is null
     for share of c
