@@ -13,7 +13,6 @@ const { auth, store, blob, nav } = vi.hoisted(() => ({
     confirmQuest: vi.fn(),
     confirmationOutcome: vi.fn(),
     voidConfirmation: vi.fn(),
-    voidCompletion: vi.fn(),
     completionsInClass: vi.fn(),
     findLevelEvent: vi.fn(),
     recordLevelUp: vi.fn(),
@@ -42,7 +41,6 @@ import {
   levelUp,
   logAnswerAttempt,
   lookupPlayer,
-  undoCompletion,
   undoConfirmation,
   undoLevelUp,
 } from "./actions";
@@ -137,16 +135,34 @@ describe("confirmCompletions", () => {
     );
 
   beforeEach(() => {
-    store.findQuestByCode.mockResolvedValue({ id: QUEST, code: "A2C4EF" });
+    store.findQuestByCode.mockResolvedValue({
+      id: QUEST,
+      code: "A2C4EF",
+      active: true,
+    });
   });
 
   it("refuses a quest code that does not name the posted quest, before writing", async () => {
-    store.findQuestByCode.mockResolvedValue({ id: ID, code: "A2C4EF" });
+    store.findQuestByCode.mockResolvedValue({
+      id: ID,
+      code: "A2C4EF",
+      active: true,
+    });
     expect(await submit(["u1"])).toEqual({
       error: "This form is out of date. Reload and try again.",
     });
     store.findQuestByCode.mockResolvedValue(null);
     expect((await submit(["u1"])).error).toMatch(/out of date/);
+    expect(store.confirmQuest).not.toHaveBeenCalled();
+  });
+
+  it("refuses an inactive quest, before writing", async () => {
+    store.findQuestByCode.mockResolvedValue({
+      id: QUEST,
+      code: "A2C4EF",
+      active: false,
+    });
+    expect((await submit(["u1"])).error).toMatch(/not active/);
     expect(store.confirmQuest).not.toHaveBeenCalled();
   });
 
@@ -246,33 +262,6 @@ describe("undoConfirmation", () => {
     store.confirmationOutcome.mockResolvedValue(null);
     expect((await undoConfirmation({}, form({ id: ID }))).error).toMatch(
       /not found/i,
-    );
-  });
-});
-
-describe("undoCompletion", () => {
-  it("needs megagame.manage", async () => {
-    expect(await undoCompletion({}, form({ id: ID }))).toEqual({
-      error: auth.EXPIRED,
-    });
-    expect(store.voidCompletion).not.toHaveBeenCalled();
-    holds("megagame.verify", "megagame.manage");
-    store.voidCompletion.mockResolvedValue(true);
-    expect(await undoCompletion({}, form({ id: ID, reason: "dup" }))).toEqual({
-      done: true,
-    });
-    expect(store.voidCompletion).toHaveBeenCalledWith({
-      id: ID,
-      voidedBy: "v1",
-      reason: "dup",
-    });
-  });
-
-  it("reports a completion that is unknown or already undone", async () => {
-    holds("megagame.verify", "megagame.manage");
-    store.voidCompletion.mockResolvedValue(false);
-    expect((await undoCompletion({}, form({ id: ID }))).error).toMatch(
-      /not found or already undone/i,
     );
   });
 });
@@ -433,58 +422,61 @@ describe("logAnswerAttempt", () => {
     answers: ["Fire", "Flame"],
   };
 
+  const players = ["u1", "u2"];
+
   it("needs megagame.verify and writes nothing without it", async () => {
     holds();
-    expect(await logAnswerAttempt("A2C4EF", "fire")).toEqual({
+    expect(await logAnswerAttempt("A2C4EF", "fire", players)).toEqual({
       error: auth.EXPIRED,
     });
     expect(store.findQuestByCode).not.toHaveBeenCalled();
     expect(store.recordQuestAttempt).not.toHaveBeenCalled();
   });
 
-  it("records the answer as typed, judged against the stored answers", async () => {
+  it("records an attempt for the listed players, judged against the stored answers", async () => {
     store.findQuestByCode.mockResolvedValue(quest);
-    expect(await logAnswerAttempt("A2C4EF", "  FLAME! ")).toEqual({
+    expect(await logAnswerAttempt("A2C4EF", "  FLAME! ", players)).toEqual({
       correct: true,
     });
     expect(store.recordQuestAttempt).toHaveBeenCalledWith({
       questId: QUEST,
-      enteredBy: "v1",
-      enteredAnswer: "FLAME!",
+      userIds: ["u1", "u2"],
       correct: true,
+      enteredBy: "v1",
     });
   });
 
   it("records a wrong answer as incorrect", async () => {
     store.findQuestByCode.mockResolvedValue(quest);
-    expect(await logAnswerAttempt("A2C4EF", "water")).toEqual({
+    expect(await logAnswerAttempt("A2C4EF", "water", players)).toEqual({
       correct: false,
     });
     expect(store.recordQuestAttempt).toHaveBeenCalledWith(
-      expect.objectContaining({ enteredAnswer: "water", correct: false }),
+      expect.objectContaining({ correct: false }),
     );
+  });
+
+  it("judges but does not record when nobody is listed", async () => {
+    store.findQuestByCode.mockResolvedValue(quest);
+    expect(await logAnswerAttempt("A2C4EF", "fire", [])).toEqual({
+      correct: true,
+    });
+    expect(store.recordQuestAttempt).not.toHaveBeenCalled();
   });
 
   it("skips blank input and answers with nothing to match", async () => {
     store.findQuestByCode.mockResolvedValue(quest);
-    expect(await logAnswerAttempt("A2C4EF", " -- ")).toEqual({});
+    expect(await logAnswerAttempt("A2C4EF", " -- ", players)).toEqual({});
     expect(store.recordQuestAttempt).not.toHaveBeenCalled();
-  });
-
-  it("cuts an over-long answer before storing it", async () => {
-    store.findQuestByCode.mockResolvedValue(quest);
-    await logAnswerAttempt("A2C4EF", "x".repeat(1000));
-    const [row] = store.recordQuestAttempt.mock.calls[0];
-    expect(row.enteredAnswer).toHaveLength(200);
   });
 
   it("refuses an unknown quest or one checked by evidence", async () => {
     store.findQuestByCode.mockResolvedValue(null);
-    expect(await logAnswerAttempt("A2C4EF", "fire")).toEqual({
+    expect(await logAnswerAttempt("A2C4EF", "fire", players)).toEqual({
       error: "That quest was not found.",
     });
     store.findQuestByCode.mockResolvedValue({ ...quest, kind: "evidence" });
-    expect(await logAnswerAttempt("A2C4EF", "fire")).toEqual({
+    expect(await logAnswerAttempt("A2C4EF", "fire", players)).toEqual({
       error: "That quest was not found.",
     });
     expect(store.recordQuestAttempt).not.toHaveBeenCalled();
@@ -492,20 +484,31 @@ describe("logAnswerAttempt", () => {
 
   it("normalizes the quest code and skips the lookup for a malformed one", async () => {
     store.findQuestByCode.mockResolvedValue(quest);
-    await logAnswerAttempt("a2c4-ef", "fire");
+    await logAnswerAttempt("a2c4-ef", "fire", players);
     expect(store.findQuestByCode).toHaveBeenCalledWith("A2C4EF");
     store.findQuestByCode.mockClear();
-    expect(await logAnswerAttempt("x".repeat(500), "fire")).toEqual({
+    expect(await logAnswerAttempt("x".repeat(500), "fire", players)).toEqual({
       error: "That quest was not found.",
     });
     expect(store.findQuestByCode).not.toHaveBeenCalled();
   });
 
-  it("refuses input that is not a string", async () => {
+  it("refuses input that is not a string, or players that are not ids", async () => {
     store.findQuestByCode.mockResolvedValue(quest);
+    const stale = { error: "This form is out of date. Reload and try again." };
     expect(
-      await logAnswerAttempt("A2C4EF", { toString: () => "fire" } as never),
-    ).toEqual({ error: "This form is out of date. Reload and try again." });
+      await logAnswerAttempt(
+        "A2C4EF",
+        { toString: () => "fire" } as never,
+        players,
+      ),
+    ).toEqual(stale);
+    expect(await logAnswerAttempt("A2C4EF", "fire", "u1" as never)).toEqual(
+      stale,
+    );
+    expect(await logAnswerAttempt("A2C4EF", "fire", [1] as never)).toEqual(
+      stale,
+    );
     expect(store.recordQuestAttempt).not.toHaveBeenCalled();
   });
 });

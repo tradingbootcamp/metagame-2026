@@ -146,8 +146,6 @@ export type ConfirmationView = {
   outcome: ConfirmationOutcome;
   mayUndo: boolean;
   nameOf: Record<string, string>;
-  /** Per-player completion ids, for managers only. */
-  completionIds: Record<string, string>;
 };
 
 /** Null when the id names no confirmation of this quest. */
@@ -159,22 +157,19 @@ export async function loadConfirmation(
   const outcome = await confirmationOutcome(id);
   if (!outcome || outcome.confirmation.questId !== quest.id) return null;
   const { confirmation } = outcome;
-  const live = outcome.status !== "voided";
-  const [players, completions] = await Promise.all([
-    playersByIds(confirmation.requestedUserIds),
-    live && viewer.manager
-      ? liveCompletions(quest.id, outcome.recorded)
-      : Promise.resolve([]),
-  ]);
+  const ids =
+    outcome.status === "ok"
+      ? [
+          ...outcome.recorded,
+          ...outcome.alreadyCompleted,
+          ...outcome.notRecorded,
+        ]
+      : [];
+  const players = ids.length > 0 ? await playersByIds(ids) : [];
   return {
     outcome,
     mayUndo: viewer.manager || confirmation.confirmedBy === viewer.userId,
     nameOf: Object.fromEntries(players.map((p) => [p.id, p.name])),
-    completionIds: Object.fromEntries(
-      completions
-        .filter((c) => c.confirmationId === id)
-        .map((c) => [c.userId, c.id]),
-    ),
   };
 }
 

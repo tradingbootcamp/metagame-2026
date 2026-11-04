@@ -15,9 +15,12 @@ import { matchAnswer } from "@/lib/megagame-rules";
 export default function AnswerChecker({
   questCode,
   answers,
+  players,
 }: {
   questCode: string;
   answers: string[];
+  /** The listed players, whose attempt counts the log updates. */
+  players: string[];
 }) {
   const [entered, setEntered] = useState("");
   const [revealed, setRevealed] = useState(false);
@@ -27,7 +30,7 @@ export default function AnswerChecker({
   const record = () => {
     if (log.take(entered)) {
       // A failed log must not get in the volunteer's way.
-      logAnswerAttempt(questCode, entered).catch(() => {});
+      logAnswerAttempt(questCode, entered, players).catch(() => {});
     }
   };
 

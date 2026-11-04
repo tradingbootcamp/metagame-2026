@@ -251,13 +251,9 @@ describe("loadConfirmation", () => {
   const quest = { id: "q1" } as never;
   const outcome = {
     status: "ok",
-    confirmation: {
-      questId: "q1",
-      confirmedBy: "v1",
-      requestedUserIds: ["u1"],
-    },
+    confirmation: { questId: "q1", confirmedBy: "v1" },
     recorded: ["u1"],
-    alreadyCompleted: [],
+    alreadyCompleted: ["u2"],
     notRecorded: [],
   };
 
@@ -271,21 +267,17 @@ describe("loadConfirmation", () => {
     ).toBeNull();
   });
 
-  it("lets its volunteer undo it and gives per-player ids only to a manager", async () => {
+  it("names every player in the outcome and lets its volunteer or a manager undo it", async () => {
     store.confirmationOutcome.mockResolvedValue(outcome);
-    store.liveCompletions.mockResolvedValue([
-      { id: "k1", userId: "u1", confirmationId: C },
-    ]);
     const own = await loadConfirmation(C, quest, {
       userId: "v1",
       manager: false,
     });
     expect(own).toMatchObject({
       mayUndo: true,
-      nameOf: { u1: "U1" },
-      completionIds: {},
+      nameOf: { u1: "U1", u2: "U2" },
     });
-    expect(store.liveCompletions).not.toHaveBeenCalled();
+    expect(store.playersByIds).toHaveBeenCalledWith(["u1", "u2"]);
     const other = await loadConfirmation(C, quest, {
       userId: "v2",
       manager: false,
@@ -295,7 +287,20 @@ describe("loadConfirmation", () => {
       userId: "m1",
       manager: true,
     });
-    expect(boss).toMatchObject({ mayUndo: true, completionIds: { u1: "k1" } });
+    expect(boss?.mayUndo).toBe(true);
+  });
+
+  it("looks nobody up for an undone confirmation", async () => {
+    store.confirmationOutcome.mockResolvedValue({
+      status: "voided",
+      confirmation: { questId: "q1", confirmedBy: "v1" },
+    });
+    const view = await loadConfirmation(C, quest, {
+      userId: "v1",
+      manager: false,
+    });
+    expect(view?.nameOf).toEqual({});
+    expect(store.playersByIds).not.toHaveBeenCalled();
   });
 });
 

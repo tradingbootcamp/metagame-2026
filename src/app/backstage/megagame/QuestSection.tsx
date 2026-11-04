@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { undoCompletion, undoConfirmation } from "./actions";
+import { undoConfirmation } from "./actions";
 import AnswerChecker from "./AnswerChecker";
 import { boardHref, type BoardParams } from "./board-params";
 import ConfirmForm from "./ConfirmForm";
@@ -189,6 +189,7 @@ async function CheckAndConfirm({
             key={quest.code}
             questCode={quest.code}
             answers={quest.answers}
+            players={params.players}
           />
         )}
       </div>
@@ -229,7 +230,7 @@ async function ConfirmationResult({
       </div>
     );
   }
-  const { outcome, nameOf, completionIds } = view;
+  const { outcome, nameOf } = view;
   const name = (uid: string) => nameOf[uid] ?? "Deleted account";
 
   if (outcome.status === "voided") {
@@ -255,15 +256,8 @@ async function ConfirmationResult({
       {outcome.recorded.length > 0 ? (
         <ul className="flex flex-col divide-y divide-line rounded-xl border border-line bg-white">
           {outcome.recorded.map((uid) => (
-            <li key={uid} className="flex flex-col gap-2 p-3">
-              <span className="font-medium text-navy">{name(uid)}</span>
-              {completionIds[uid] && (
-                <UndoForm
-                  action={undoCompletion}
-                  id={completionIds[uid]}
-                  label="Undo this player"
-                />
-              )}
+            <li key={uid} className="p-3 font-medium text-navy">
+              {name(uid)}
             </li>
           ))}
         </ul>

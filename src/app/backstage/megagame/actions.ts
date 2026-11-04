@@ -23,7 +23,6 @@ import {
   recordLevelUp,
   recordQuestAttempt,
   searchPlayers,
-  voidCompletion,
   voidConfirmation,
   voidLevelEvent,
   type PlayerSummary,
@@ -106,6 +105,9 @@ export async function confirmCompletions(
   if (!isUuid(id) || !isUuid(questId)) return { error: STALE };
   const quest = await findQuestByCode(str(formData, "questCode"));
   if (quest?.id !== questId) return { error: STALE };
+  if (!quest.active) {
+    return { error: "That quest is not active, so it can't be confirmed." };
+  }
   const players = formData
     .getAll("player")
     .map(String)
@@ -141,16 +143,23 @@ export async function confirmCompletions(
 
 const MAX_ANSWER_CHARS = 200;
 
-/** Logs what the volunteer typed into the checker. The match is judged here, not by the browser. */
+/** Logs an attempt for the listed players. The match is judged here, not by the browser. */
 export async function logAnswerAttempt(
   questCode: string,
   answer: string,
+  players: string[],
 ): Promise<{ correct?: boolean; error?: string }> {
   const access = await verify();
   if (!access) return { error: EXPIRED };
-  if (typeof questCode !== "string" || typeof answer !== "string") {
+  if (
+    typeof questCode !== "string" ||
+    typeof answer !== "string" ||
+    !Array.isArray(players) ||
+    !players.every((p) => typeof p === "string")
+  ) {
     return { error: STALE };
   }
+  const userIds = players.filter(Boolean).slice(0, MAX_PLAYERS);
   const entered = answer.trim().slice(0, MAX_ANSWER_CHARS);
   if (normalizeAnswer(entered) === "") return {};
   const code = normalizeMegagameCode(questCode);
@@ -159,12 +168,14 @@ export async function logAnswerAttempt(
     : null;
   if (quest?.kind !== "answer") return { error: "That quest was not found." };
   const { matched } = matchAnswer(entered, quest.answers);
-  await recordQuestAttempt({
-    questId: quest.id,
-    enteredBy: access.userId,
-    enteredAnswer: entered,
-    correct: matched,
-  });
+  if (userIds.length > 0) {
+    await recordQuestAttempt({
+      questId: quest.id,
+      userIds,
+      correct: matched,
+      enteredBy: access.userId,
+    });
+  }
   return { correct: matched };
 }
 
@@ -187,27 +198,6 @@ export async function undoConfirmation(
     voidedBy: access.userId,
     reason: optional(formData, "reason"),
   });
-  revalidatePath(TOOL, "layout");
-  return { done: true };
-}
-
-/** One player's completion out of a group: megagame.manage only. */
-export async function undoCompletion(
-  _prev: UndoState,
-  formData: FormData,
-): Promise<UndoState> {
-  const access = await requireAccess("megagame.manage");
-  if (!access) return { error: EXPIRED };
-  const id = str(formData, "id");
-  if (!isUuid(id)) return { error: STALE };
-  const voided = await voidCompletion({
-    id,
-    voidedBy: access.userId,
-    reason: optional(formData, "reason"),
-  });
-  if (!voided) {
-    return { error: "That completion was not found or already undone." };
-  }
   revalidatePath(TOOL, "layout");
   return { done: true };
 }

@@ -148,9 +148,7 @@ function ActionText({
   const what =
     v.kind === "confirmation"
       ? `confirmation of ${v.questTitle}`
-      : v.kind === "completion"
-        ? `${player} on ${v.questTitle}`
-        : `${player} at level ${v.level} ${classLabel(v.class)}`;
+      : `${player} at level ${v.level} ${classLabel(v.class)}`;
   return (
     <>
       <Header at={action.at} title={`Undid ${what}`} />
