@@ -41,7 +41,8 @@ export const PERMISSIONS = {
     group: "Users",
     level: "edit",
     label: "Edit users",
-    description: "Change other accounts' roles and per-user permissions.",
+    description:
+      "Change other accounts' roles, per-user permissions and Megagame faction levels.",
     implies: ["users.view"],
   },
   // Attendee, not team: team audience opens the whole /backstage index via

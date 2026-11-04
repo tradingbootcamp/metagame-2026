@@ -10,11 +10,26 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { removeUser, setBanned, setRole, type Result } from "./actions";
+import {
+  removeUser,
+  setBanned,
+  setMegagameLevel,
+  setRole,
+  type Result,
+} from "./actions";
 import { assignRole } from "./[id]/actions";
 import NewUserDialog, { type Created } from "./NewUserDialog";
 import { fieldClass, selectClass, selectStyle, smallButtonClass } from "../ui";
 import { ticketBadge } from "@/lib/admin-tickets";
+import {
+  CLASS_LABELS,
+  FACTION_NAMES,
+  MAX_LEVEL,
+  MEGAGAME_CLASSES,
+  classLevelLabel,
+  type MegagameClass,
+} from "@/lib/megagame-levels";
+import { FactionMedal } from "@/v2/components/megagame/FactionPatch";
 import { Button } from "@/v2/components/ui/button";
 import {
   Dialog,
@@ -42,15 +57,18 @@ export type UserRow = {
   self: boolean;
   /** Tickets they've claimed. */
   tickets: number;
+  /** The Megagame factions they've joined, with their level in each. */
+  factions: { class: MegagameClass; level: number }[];
 };
 
-type SortKey = "name" | "email" | "tickets" | "joined" | "roles";
+type SortKey = "name" | "email" | "tickets" | "factions" | "joined" | "roles";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "name", label: "Name" },
   { key: "email", label: "Email" },
   { key: "tickets", label: "Ticket" },
+  { key: "factions", label: "Factions" },
   { key: "joined", label: "Joined" },
   { key: "roles", label: "Roles" },
 ];
@@ -61,6 +79,29 @@ const roleText = (u: UserRow) =>
     .filter(Boolean)
     .join(", ");
 
+/** "Astral College (Wizard), Brethren Fleet (Pirate)" or "factionless": what
+ * search sees (one word, so "no" from "no ticket" can't match it). */
+const factionText = (u: UserRow) =>
+  u.factions.length === 0
+    ? "factionless"
+    : u.factions
+        .map((f) => `${FACTION_NAMES[f.class]} (${CLASS_LABELS[f.class]})`)
+        .join(", ");
+
+const levelIn = (u: UserRow, c: MegagameClass) =>
+  u.factions.find((f) => f.class === c)?.level ?? 0;
+
+/** More factions first, then the higher level, class by class. */
+const compareFactions = (a: UserRow, b: UserRow): number => {
+  if (a.factions.length !== b.factions.length)
+    return a.factions.length - b.factions.length;
+  for (const c of MEGAGAME_CLASSES) {
+    const d = levelIn(a, c) - levelIn(b, c);
+    if (d !== 0) return d;
+  }
+  return 0;
+};
+
 const compare = (a: UserRow, b: UserRow, key: SortKey): number => {
   switch (key) {
     case "name":
@@ -69,6 +110,8 @@ const compare = (a: UserRow, b: UserRow, key: SortKey): number => {
       return a.email.localeCompare(b.email);
     case "tickets":
       return a.tickets - b.tickets;
+    case "factions":
+      return compareFactions(a, b);
     case "joined":
       return a.joinedAt - b.joinedAt;
     case "roles":
@@ -87,6 +130,110 @@ function TicketCell({ id, count }: { id: string; count: number }) {
       <TicketIcon className="size-4" aria-label="Tickets" />
       {label && <span className="text-xs font-semibold">{label}</span>}
     </Link>
+  );
+}
+
+/** The medals of the factions someone has joined, each with its level. */
+function FactionCell({ u, dark }: { u: UserRow; dark?: boolean }) {
+  if (u.factions.length === 0)
+    return <span className={dark ? "text-cream/40" : "text-ink/25"}>None</span>;
+  return (
+    <span className="inline-flex items-center gap-2">
+      {u.factions.map((f) => (
+        <span
+          key={f.class}
+          title={`${FACTION_NAMES[f.class]} · ${classLevelLabel(f.class, f.level)}`}
+          className="inline-flex items-center gap-1"
+        >
+          <FactionMedal faction={f.class} className="size-5" />
+          <span className="font-mono text-xs">{f.level}</span>
+          <span className="sr-only">
+            {FACTION_NAMES[f.class]}, {classLevelLabel(f.class, f.level)}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * One row per faction with its level and − / + to take or grant experience:
+ * + on 0 joins, − on 1 leaves. `dark` restyles it for the navy sheet.
+ */
+function FactionLevels({
+  u,
+  pending,
+  run,
+  dark,
+}: {
+  u: UserRow;
+  pending: boolean;
+  run: (userId: string, action: () => Promise<Result>) => void;
+  dark?: boolean;
+}) {
+  const step = `inline-flex size-6 items-center justify-center rounded border text-sm leading-none disabled:opacity-30 ${
+    dark
+      ? "border-cream/30 text-cream hover:enabled:bg-cream/10"
+      : "border-line text-navy hover:enabled:bg-cream"
+  }`;
+  const muted = dark ? "text-cream/50" : "text-ink/50";
+  return (
+    <ul className="space-y-1">
+      {MEGAGAME_CLASSES.map((c) => {
+        const level = levelIn(u, c);
+        const set = (to: number) =>
+          run(u.id, () => setMegagameLevel(u.id, c, to));
+        return (
+          <li key={c} className="flex items-center gap-2 rounded px-2 py-1">
+            <FactionMedal
+              faction={c}
+              className={`size-5 ${level === 0 ? "opacity-40 grayscale" : ""}`}
+            />
+            <span className="min-w-0 flex-1">
+              <span
+                className={`block text-sm font-semibold ${level === 0 ? muted : dark ? "text-cream" : "text-navy"}`}
+              >
+                {FACTION_NAMES[c]}
+              </span>
+              <span className={`block text-xs ${muted}`}>
+                {level === 0 ? "Not joined" : classLevelLabel(c, level)}
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <button
+                type="button"
+                disabled={pending || level === 0}
+                onClick={() => set(level - 1)}
+                aria-label={
+                  level === 1
+                    ? `Remove from the ${FACTION_NAMES[c]}`
+                    : `Take a ${CLASS_LABELS[c]} level`
+                }
+                className={step}
+              >
+                −
+              </button>
+              <span className="w-4 text-center font-mono text-xs tabular-nums">
+                {level}
+              </span>
+              <button
+                type="button"
+                disabled={pending || level === MAX_LEVEL}
+                onClick={() => set(level + 1)}
+                aria-label={
+                  level === 0
+                    ? `Add to the ${FACTION_NAMES[c]}`
+                    : `Grant a ${CLASS_LABELS[c]} level`
+                }
+                className={step}
+              >
+                +
+              </button>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -127,6 +274,7 @@ export default function UsersTable({
   const [deleting, setDeleting] = useState<UserRow | null>(null);
   const [promoting, setPromoting] = useState<UserRow | null>(null);
   const [openRoles, setOpenRoles] = useState<string | null>(null);
+  const [openFactions, setOpenFactions] = useState<string | null>(null);
   // An id, not a row: rows refresh after each action and the sheet must follow.
   const [openId, setOpenId] = useState<string | null>(null);
   const openUser = rows.find((u) => u.id === openId) ?? null;
@@ -136,6 +284,8 @@ export default function UsersTable({
   const [query, setQuery] = useState(initialQuery);
   /** "" = everyone, "admin", "none", or a role id. */
   const [roleFilter, setRoleFilter] = useState("");
+  /** "" = everyone, a class, or "none". */
+  const [factionFilter, setFactionFilter] = useState("");
   const [sort, setSort] = useState<Sort>({ key: "joined", dir: "desc" });
 
   const shown = useMemo(() => {
@@ -151,6 +301,13 @@ export default function UsersTable({
         !u.roles.some((r) => r.id === roleFilter)
       )
         return false;
+      if (factionFilter === "none" && u.factions.length > 0) return false;
+      if (
+        factionFilter &&
+        factionFilter !== "none" &&
+        !u.factions.some((f) => f.class === factionFilter)
+      )
+        return false;
       if (terms.length === 0) return true;
       const hay = [
         u.name,
@@ -160,6 +317,7 @@ export default function UsersTable({
         u.banned ? "banned" : "",
         u.emailVerified ? "" : "unverified",
         u.tickets > 0 ? "ticket" : "no ticket",
+        factionText(u),
       ]
         .join(" ")
         .toLowerCase();
@@ -171,13 +329,19 @@ export default function UsersTable({
       return sort.dir === "asc" ? c : -c;
     });
     return out;
-  }, [rows, query, roleFilter, sort]);
+  }, [rows, query, roleFilter, factionFilter, sort]);
 
   const toggleSort = (key: SortKey) =>
     setSort((s) =>
       s.key === key
         ? { key, dir: s.dir === "asc" ? "desc" : "asc" }
-        : { key, dir: key === "joined" || key === "tickets" ? "desc" : "asc" },
+        : {
+            key,
+            dir:
+              key === "joined" || key === "tickets" || key === "factions"
+                ? "desc"
+                : "asc",
+          },
     );
 
   const run = (userId: string, action: () => Promise<Result>) => {
@@ -193,7 +357,8 @@ export default function UsersTable({
   };
 
   const canPickRoles = viewerCanEdit || viewerIsAdmin;
-  const filtered = query.trim() !== "" || roleFilter !== "";
+  const filtered =
+    query.trim() !== "" || roleFilter !== "" || factionFilter !== "";
 
   return (
     <div className="space-y-4">
@@ -202,7 +367,7 @@ export default function UsersTable({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.currentTarget.value)}
-          placeholder="Search name, email, role…"
+          placeholder="Search name, email, role, faction…"
           aria-label="Search accounts"
           className={`${fieldClass} min-w-56 flex-1`}
         />
@@ -221,6 +386,21 @@ export default function UsersTable({
             </option>
           ))}
           <option value="none">No roles</option>
+        </select>
+        <select
+          value={factionFilter}
+          onChange={(e) => setFactionFilter(e.currentTarget.value)}
+          aria-label="Filter by Megagame faction"
+          className={selectClass}
+          style={selectStyle}
+        >
+          <option value="">All factions</option>
+          {MEGAGAME_CLASSES.map((c) => (
+            <option key={c} value={c}>
+              {FACTION_NAMES[c]}
+            </option>
+          ))}
+          <option value="none">No faction</option>
         </select>
         {viewerCanCreate && (
           <button
@@ -264,7 +444,7 @@ export default function UsersTable({
           menu when the list is only a row or two tall — so let the box
           overflow while a menu is open. */}
       <div
-        className={`hidden rounded-xl border border-line bg-white shadow-sm md:block ${openRoles ? "overflow-visible" : "overflow-x-auto"}`}
+        className={`hidden rounded-xl border border-line bg-white shadow-sm md:block ${openRoles || openFactions ? "overflow-visible" : "overflow-x-auto"}`}
       >
         <table className="w-full text-left text-sm">
           <thead className="text-xs tracking-wide text-ink/50 uppercase">
@@ -327,6 +507,47 @@ export default function UsersTable({
                   </td>
                   <td className="px-4 py-2">
                     <TicketCell id={u.id} count={u.tickets} />
+                  </td>
+                  <td className="px-4 py-2 whitespace-nowrap">
+                    {viewerCanEdit ? (
+                      <span className="relative inline-block">
+                        <button
+                          type="button"
+                          disabled={pending}
+                          aria-haspopup="menu"
+                          aria-expanded={openFactions === u.id}
+                          onClick={() =>
+                            setOpenFactions(openFactions === u.id ? null : u.id)
+                          }
+                          className={`${smallButtonClass} inline-flex items-center gap-1.5`}
+                        >
+                          <FactionCell u={u} />
+                          <ChevronDownIcon className="size-3.5" />
+                        </button>
+                        {openFactions === u.id && (
+                          <>
+                            <button
+                              type="button"
+                              aria-label="Close"
+                              onClick={() => setOpenFactions(null)}
+                              className="fixed inset-0 z-10 cursor-default"
+                            />
+                            <div
+                              role="menu"
+                              className="absolute left-0 z-20 mt-1 w-64 rounded-lg border border-line bg-white p-2 text-left shadow-lg"
+                            >
+                              <FactionLevels
+                                u={u}
+                                pending={pending}
+                                run={run}
+                              />
+                            </div>
+                          </>
+                        )}
+                      </span>
+                    ) : (
+                      <FactionCell u={u} />
+                    )}
                   </td>
                   <td
                     className="px-4 py-2 whitespace-nowrap"
@@ -420,7 +641,7 @@ export default function UsersTable({
             })}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-ink/50">
+                <td colSpan={7} className="px-4 py-6 text-center text-ink/50">
                   No accounts{filtered && " match"}.
                 </td>
               </tr>
@@ -446,6 +667,13 @@ export default function UsersTable({
                   {u.email}
                 </span>
               </span>
+              {u.factions.map((f) => (
+                <FactionMedal
+                  key={f.class}
+                  faction={f.class}
+                  className="-ml-1 size-4"
+                />
+              ))}
               {u.tickets > 0 && (
                 <TicketIcon
                   className="size-4 shrink-0 text-navy"
@@ -742,6 +970,17 @@ function UserDetail({
             <span className="text-cream/40">None</span>
           )}
         </Field>
+        <div className="col-span-2">
+          <Field label="Factions">
+            {viewerCanEdit || viewerIsAdmin ? (
+              <div className="-mx-2 mt-1">
+                <FactionLevels u={u} pending={pending} run={run} dark />
+              </div>
+            ) : (
+              <FactionCell u={u} dark />
+            )}
+          </Field>
+        </div>
         <div className="col-span-2">
           <Field label="Roles">
             {pickable ? (

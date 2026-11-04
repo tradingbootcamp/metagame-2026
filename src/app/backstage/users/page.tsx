@@ -4,6 +4,7 @@ import UsersTable, { type UserRow } from "./UsersTable";
 import ToolSignIn from "@/components/ToolSignIn";
 import { getDb, schema } from "@/db";
 import { teamAccess } from "@/lib/access";
+import { activeClasses } from "@/lib/megagame-levels";
 import { listRoles, rolesFor } from "@/lib/permission-store";
 import { claimedCounts } from "@/lib/ticket-store";
 
@@ -46,6 +47,9 @@ export default async function AdminUsersPage(
       role: user.role,
       banned: user.banned,
       createdAt: user.createdAt,
+      wizard: user.wizardLevel,
+      pirate: user.pirateLevel,
+      alien: user.alienLevel,
     })
     .from(user)
     .orderBy(desc(user.createdAt))
@@ -71,6 +75,7 @@ export default async function AdminUsersPage(
       joinedAt: at.getTime(),
       self: u.id === access.session.user.id,
       tickets: claimed.get(u.id) ?? 0,
+      factions: activeClasses(u),
     };
   });
 

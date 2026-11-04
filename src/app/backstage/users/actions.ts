@@ -7,6 +7,12 @@ import { getDb, schema } from "@/db";
 import { teamAccess } from "@/lib/access";
 import { getAuth } from "@/lib/auth";
 import { sendAccountInviteEmail } from "@/lib/email";
+import {
+  isMegagameClass,
+  MAX_LEVEL,
+  type MegagameClass,
+} from "@/lib/megagame-levels";
+import { loadMegagameLevels, setMegagameLevels } from "@/lib/megagame-store";
 import { listRoles, setUserRole } from "@/lib/permission-store";
 import { PERMISSIONS } from "@/lib/permissions";
 import {
@@ -111,6 +117,34 @@ export async function removeUser(userId: string): Promise<Result> {
   }
   invalidateSchedule();
   revalidatePath("/backstage/users");
+  return {};
+}
+
+/**
+ * Sets one class's level on an account: 0 leaves the faction, 1 joins it,
+ * higher grants experience. Needs users.edit like roles do; unlike roles,
+ * your own account is fine, since a level isn't access.
+ */
+export async function setMegagameLevel(
+  userId: string,
+  cls: MegagameClass,
+  level: number,
+): Promise<Result> {
+  const access = await teamAccess();
+  if (!access?.permissions.has("users.edit"))
+    return { error: "Sign in with an account that edits users." };
+  if (!isMegagameClass(cls)) return { error: "That isn't a Megagame class." };
+  if (!Number.isInteger(level) || level < 0 || level > MAX_LEVEL)
+    return { error: `Levels run from 0 to ${MAX_LEVEL}.` };
+  try {
+    const current = await loadMegagameLevels(userId);
+    await setMegagameLevels(userId, { ...current, [cls]: level });
+  } catch (err) {
+    return { error: message(err) };
+  }
+  revalidatePath("/backstage/users");
+  revalidatePath(`/backstage/users/${userId}`);
+  revalidatePath(`/u/${userId}`);
   return {};
 }
 
