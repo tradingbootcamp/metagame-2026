@@ -4,7 +4,7 @@ import { buildDays } from "@/lib/schedule";
 import { parseView, VIEW_COOKIE } from "@/lib/schedule-view";
 import ContentPage from "@/v2/components/ContentPage";
 import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
-import { loadMySessionIds, loadPublicSchedule } from "./data";
+import { loadBoard, loadMySessionIds, loadPublicSchedule } from "./data";
 
 // The schedule stays mounted under /schedule/<slug>, whose page is just the
 // session modal on top of it.
@@ -16,11 +16,9 @@ export default async function ScheduleLayout({
   // Rendered per request: which rooms and plans show depends on the viewer,
   // and a build has no database to prerender from.
   await connection();
-  const [{ locations, sessions }, mine, cookieStore] = await Promise.all([
-    loadPublicSchedule(),
-    loadMySessionIds(),
-    cookies(),
-  ]);
+  const [{ locations, sessions }, board, mine, cookieStore] = await Promise.all(
+    [loadPublicSchedule(), loadBoard(), loadMySessionIds(), cookies()],
+  );
   return (
     <>
       <ContentPage eyebrow="Nov 6–8 at Lighthaven" title="Schedule" wide>
@@ -29,6 +27,7 @@ export default async function ScheduleLayout({
           locations={locations}
           mine={mine}
           initialView={parseView(cookieStore.get(VIEW_COOKIE)?.value)}
+          board={board}
         />
       </ContentPage>
       {children}

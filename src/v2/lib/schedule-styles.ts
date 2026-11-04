@@ -3,6 +3,7 @@
 // lightness so every pair stays distinct under red-green colorblindness;
 // keep min ΔE ≳ 12 in protan/deutan simulation when retuning.
 import type { CSSProperties } from "react";
+import type { NoteColor } from "@/lib/unconference";
 import type { Category, Session } from "@/v2/lib/last-year-schedule";
 
 interface Swatch {
@@ -18,6 +19,17 @@ export const CATEGORY_STYLES: Record<Category, Swatch> = {
 };
 
 const KIDS_STYLE: Swatch = { background: "#fce985", borderColor: "#d8ba1a" };
+
+// The unconference post-it palette, mirroring the unconference_note_color
+// pgEnum. Pale fills so the dark-purple note text stays legible on all six.
+export const NOTE_STYLES: Record<NoteColor, Swatch> = {
+  butter: { background: "#fbec9a", borderColor: "#d9bf3c" },
+  rose: { background: "#f8ccd9", borderColor: "#d1708f" },
+  sky: { background: "#c3dcf7", borderColor: "#5f9ad9" },
+  mint: { background: "#c6e6cb", borderColor: "#5fa772" },
+  tangerine: { background: "#fad3a8", borderColor: "#d98b3c" },
+  lilac: { background: "#dcd0f2", borderColor: "#8b74c4" },
+};
 
 // Megagames run continuously — the striped fill echoes the 2025 site, recolored
 // to the 2026 orange + a soft violet.

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   closeSessionHref,
   openSessionHref,
+  samePage,
   sessionPageSlug,
 } from "./session-link";
 
@@ -47,5 +48,19 @@ describe("closeSessionHref", () => {
       "/account?tab=sessions",
     );
     expect(closeSessionHref("/", "")).toBe("/");
+  });
+});
+
+describe("samePage", () => {
+  const at = "https://x.test/schedule?view=list";
+  it("is the page with any query", () => {
+    expect(samePage("/schedule?session=foo", at)).toBe(true);
+    expect(samePage("/schedule", at)).toBe(true);
+  });
+  it("is not another page", () => {
+    expect(samePage("/schedule/foo", at)).toBe(false);
+    expect(
+      samePage("/schedule?session=foo", "https://x.test/schedule/bar"),
+    ).toBe(false);
   });
 });

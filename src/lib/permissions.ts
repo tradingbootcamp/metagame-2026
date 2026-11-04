@@ -131,6 +131,16 @@ export const PERMISSIONS = {
     description: "Drag rooms to reorder the grid's columns for everyone.",
     implies: ["schedule.manage"],
   },
+  // Attendee, not team: team audience would open the whole /backstage index
+  // via hasTeamPermission(), and every ticket holder gets this one.
+  "unconference.post": {
+    audience: "attendee",
+    group: "Unconference",
+    level: "edit",
+    label: "Post to the board",
+    description:
+      "Pin a note on the unconference bulletin board, and edit or remove your own.",
+  },
   "promo.view": {
     audience: "team",
     group: "Promo codes",

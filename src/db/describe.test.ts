@@ -34,6 +34,8 @@ describe("describeSchema", () => {
       "site_settings",
       "tickets",
       "token_ledger",
+      "unconference_note_reactions",
+      "unconference_notes",
       "user",
       "user_permission_grants",
       "user_roles",
@@ -74,6 +76,8 @@ describe("describeSchema", () => {
       "tickets",
       "token_ledger",
       "token_ledger",
+      "unconference_note_reactions",
+      "unconference_notes",
       "user_permission_grants",
       "user_roles",
     ]);
@@ -112,6 +116,7 @@ describe("describeSchema", () => {
       "session_dropins",
       "discord_status",
       "location_visibility",
+      "unconference_note_color",
       "rubric_grade",
       "shepherd_match",
       "topic_area",
@@ -132,6 +137,23 @@ describe("describeSchema", () => {
     ).toBe("locations");
     expect(column("sessions", "phase").nullable).toBe(true);
     expect(column("sessions", "verdict").nullable).toBe(true);
+  });
+
+  it("hangs unconference notes off a room and an account, both cascading", () => {
+    expect(column("unconference_notes", "location_id").references).toEqual({
+      table: "locations",
+      column: "id",
+      onDelete: "cascade",
+    });
+    expect(
+      column("unconference_notes", "author_user_id").references?.onDelete,
+    ).toBe("cascade");
+    expect(column("unconference_notes", "x").type).toBe("real");
+    expect(column("unconference_notes", "x").default).toBe("0");
+    expect(column("unconference_notes", "board_day").type).toBe("date");
+    expect(column("locations", "board_starts_at").type).toBe(
+      "timestamp with time zone",
+    );
   });
 
   it("marks keys and uniqueness", () => {
@@ -179,6 +201,8 @@ describe("describeSchema", () => {
       "session_hosts",
       "rsvps",
       "bookmarks",
+      "unconference_notes",
+      "unconference_note_reactions",
       "session_grades",
       "session_grade_space_options",
       "xero_connections",

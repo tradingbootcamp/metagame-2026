@@ -43,6 +43,7 @@
 import { createHash, scryptSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { neon } from "@neondatabase/serverless";
+import { textDoc } from "../src/lib/notice-doc.ts";
 import { SPEAKER_ACCOUNTS } from "../src/v2/data/speaker-accounts.ts";
 
 for (const file of [
@@ -294,6 +295,9 @@ const profile = (u) => {
     is_adult: u.kind === "attendee" || u === users.attendee ? true : null,
     bringing_children: u.kind === "attendee" ? i % 8 === 1 : null,
     share_with_recruiters: u.kind === "attendee" ? i % 3 === 0 : null,
+    wizard_level: u.levels?.wizard ?? 0,
+    pirate_level: u.levels?.pirate ?? 0,
+    alien_level: u.levels?.alien ?? 0,
   };
 };
 
@@ -303,7 +307,9 @@ const profile = (u) => {
 // prettier-ignore
 const ROOMS = [
   ["foodtruck", "Food Truck Parking", null, "Behind E", 0, "hidden"],
-  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1],
+  // The bulletin board, where anyone with a ticket pitches something, takes
+  // over Rat Park's whole column Friday to Sunday, one board a day.
+  ["ratpark", "Rat Park", 300, "Outdoors, behind B", 1, "public", false, [at(6, 0), at(9, 0)]],
   ["eigen", "Eigen Hall", 40, "Building E, 1st floor", 2],
   ["cantor", "Cantor's Diagonal", 60, "Building C", 3],
   ["glass", "Glass Hall", 35, "Building A, 1st floor", 4],
@@ -331,6 +337,7 @@ const locations = Object.fromEntries(
         display_order,
         visibility = "public",
         synced = true,
+        [board_starts_at, board_ends_at] = [null, null],
       ],
       k,
     ) => [
@@ -342,6 +349,8 @@ const locations = Object.fromEntries(
         campus_location,
         display_order,
         visibility,
+        board_starts_at,
+        board_ends_at,
         airtable_record_id: synced
           ? `recSEEDLOC${String(k + 1).padStart(7, "0")}`
           : null,
@@ -360,6 +369,71 @@ for (const { id, name } of await sql.query(
   room.id = id;
   reusedRooms.add(room);
 }
+// Pitches on the bulletin board, one board per day it is up (Fri–Sun of
+// November). created_at is spelled out because the board paints the NEWEST
+// note on top, so the stack is only worth looking at when the times differ.
+// x/y are fractions of that day's board.
+// prettier-ignore
+const NOTES = [
+  [1801, "attendee", "butter", 6, 0, 0, 6, 10, "Diplomacy, 3 hours", "I'll bring the map and the grudges. Need six more."],
+  [1802, "host", "rose", 6, 1, 0, 6, 11, "Lightning talks", "Five minutes each, no slides. Sign up underneath this one."],
+  [1803, "attendee", "sky", 7, 1, 0, 6, 14, "Megagame prediction market", "I have whiteboard markers and too many opinions."],
+  [1804, "newcomer", "mint", 7, 0, 0.2, 6, 17, "Walking tour of campus?", "First Metagame — would love one from someone who knows the place."],
+  [1805, "team", "tangerine", 8, 0.5, 0.1, 7, 9, "Teaching Hanabi, all weekend", null],
+  [1806, "attendee", "lilac", 8, 1, 0.35, 7, 13, "Werewolf at 10pm — need a co-moderator", "Happy to run it if someone else takes the night phase."],
+].map(([n, who, color, boardDay, x, y, day, hour, title, body]) => {
+  // Fixed item ids, so a re-run writes the same documents.
+  const fixed = (doc, tag) => ({
+    ...doc,
+    items: doc.items.map((it, i) => ({ ...it, id: `seed${n}${tag}${i}` })),
+  });
+  const sticky = fixed(
+    textDoc("sticky", [{ text: title, size: "l", bold: true }]),
+    "s",
+  );
+  const poster = fixed(
+    textDoc(
+      "poster",
+      [
+        { text: title, size: "xl", bold: true },
+        { text: "" },
+        ...(body ? [{ text: body, size: "m" }] : []),
+      ],
+      { x: 36, y: 40 },
+      "cream",
+    ),
+    "p",
+  );
+  return {
+    id: uuid(n),
+    location_id: locations.ratpark.id,
+    board_day: `2026-11-0${boardDay}`,
+    author_user_id: users[who].id,
+    title,
+    sticky: JSON.stringify(sticky),
+    poster: JSON.stringify(poster),
+    color,
+    x,
+    y,
+    created_at: at(day, hour),
+    updated_at: at(day, hour),
+  };
+});
+// A session poster: the team's full-width notice, drawn at Night Market's
+// own time on Friday's board and opening the session. Its documents and
+// position go unused.
+const POSTERS = [
+  {
+    id: uuid(1810),
+    location_id: locations.ratpark.id,
+    board_day: "2026-11-06",
+    session_id: uuid(190),
+    author_user_id: users.admin.id,
+    title: "Night Market",
+    color: "butter",
+  },
+];
+
 const slugify = (title) =>
   `seed-${title
     .toLowerCase()
@@ -483,7 +557,7 @@ const program = [
   [113, 6, 16, 60, "attic", "other", "Sunset Tea & Unconference Pitches", "Pitch a Sunday session in sixty seconds.", "all", 25],
   [114, 6, 19, 180, "courtyard", "game", "Megagame Briefing: The Orchard Accords", "Faction leads, read your sealed envelopes.", "all", 80, { megagame_integration_level: "deep" }],
   [115, 6, 21, 120, "thingspace", "game", "Werewolf After Dark", "The classic, with a moderator who holds grudges.", "adults", 20],
-  [116, 7, 8, 60, "ratpark", "other", "Morning Run: Fog of War", "A 5k where the route is revealed one checkpoint at a time.", "all", 30],
+  [116, 7, 8, 60, "gardens", "other", "Morning Run: Fog of War", "A 5k where the route is revealed one checkpoint at a time.", "all", 30],
   [117, 7, 10, 90, "courtyard", "talk", "Why Your Board Game Prototype Is Boring", "A design critique panel, by request only.", "all", 80],
   [118, 7, 10, 120, "cantor", "game", "Escape Room: The Librarian's Lament", "Two rooms, one key, forty minutes per team.", "all", 16, { min_capacity: 4, needs: "Padlocks, a red herring" }],
   [119, 7, 10, 60, "d2", "workshop", "Teaching Kids Go", "Nine-by-nine boards, no stones thrown.", "kids", 12],
@@ -502,6 +576,7 @@ const program = [
   [132, 8, 14, 60, "gardens", "game", "Kids vs Grownups Relay", "A relay. The kids usually win.", "all", 40],
   [133, 8, 15, 60, "courtyard", "talk", "Closing Ceremony & Awards", "Prizes, confessions, and the last hot sauce.", "all", 80],
   [134, 8, 16, 120, "gardens", "other", "Teardown & Pickup Soccer", "Fold a chair, kick a ball.", "all", 40],
+  [190, 6, 19, 180, "ratpark", "other", "Night Market", "Booths, snacks and games from attendees and friends, open to the public.", "all", 300],
 ].map(([n, day, hour, minutes, room, category, title, description, ages, cap, extra]) => ({
   id: uuid(n),
   slug: slugify(title),
@@ -983,6 +1058,11 @@ for (const table of ["session_hosts"]) {
     SEED_UUID,
   ]);
 }
+await sql.query(
+  `delete from unconference_notes where id::text like $1
+   and not (id::text = any($2::text[]))`,
+  [SEED_UUID, pgArray([...NOTES, ...POSTERS].map((n) => n.id))],
+);
 await sql.query(`delete from session_grades where id::text like $1`, [
   SEED_UUID,
 ]);
@@ -1018,9 +1098,6 @@ const userRow = (u) => ({
   role: u.role ?? "user",
   banned: u.banned ?? false,
   ban_reason: u.ban_reason ?? null,
-  wizard_level: u.levels?.wizard ?? 0,
-  pirate_level: u.levels?.pirate ?? 0,
-  alien_level: u.levels?.alien ?? 0,
 });
 const credential = (u) => ({
   id: `${u.id}-credential`,
@@ -1041,7 +1118,7 @@ counts.profiles = await upsert("profiles", ["user_id"], everyone.map(profile));
 // Team holds everything short of admin.
 const roleRows = await Promise.all(
   [
-    { name: "Attendee", permissions: ["schedule.rsvps"] },
+    { name: "Attendee", permissions: ["schedule.rsvps", "unconference.post"] },
     {
       name: "Team",
       permissions: [
@@ -1111,7 +1188,24 @@ counts.locations = await upsert(
   ["id"],
   rooms.filter((l) => !reusedRooms.has(l)),
 );
+counts.unconference_notes = await upsert("unconference_notes", ["id"], NOTES);
 counts.sessions = await upsert("sessions", ["id"], sessions);
+// After the sessions, which they point at. A poster pinned by hand for one of
+// those sessions carries a random id the prune leaves alone, and a session
+// holds one poster, so it goes before the seed's takes its place.
+await sql.query(
+  `delete from unconference_notes where session_id = any($1::uuid[])
+   and not (id = any($2::uuid[]))`,
+  [
+    pgArray(POSTERS.map((p) => p.session_id)),
+    pgArray(POSTERS.map((p) => p.id)),
+  ],
+);
+counts.unconference_notes += await upsert(
+  "unconference_notes",
+  ["id"],
+  POSTERS,
+);
 counts.session_hosts = await upsert(
   "session_hosts",
   ["session_id", "position"],

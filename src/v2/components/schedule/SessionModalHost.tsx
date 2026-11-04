@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Component,
   createContext,
@@ -8,6 +9,8 @@ import {
   useContext,
   useEffect,
   useState,
+  type ComponentProps,
+  type MouseEvent,
   type ReactNode,
 } from "react";
 import { sessionDetails } from "@/app/(v2)/schedule/details";
@@ -15,6 +18,7 @@ import { sessionHref } from "@/lib/schedule";
 import {
   closeSessionHref,
   openSessionHref,
+  samePage,
   SESSION_PARAM,
   SESSION_TITLE_ID,
   sessionPageSlug,
@@ -34,6 +38,54 @@ export function useSessionHref(): (slug: string) => string {
   const hosted = useContext(HostContext);
   return (slug) =>
     hosted ? openSessionHref(pathname, slug) : sessionHref({ slug });
+}
+
+/** Opens the session: over this page by rewriting the URL (a router
+ *  navigation would refetch the page and scroll to its top), else routed. */
+export function useOpenSession(): (slug: string) => void {
+  const href = useSessionHref();
+  const router = useRouter();
+  return (slug) => {
+    const to = href(slug);
+    if (samePage(to, window.location.href)) {
+      window.history.pushState(null, "", to);
+    } else {
+      router.push(to, { scroll: false });
+    }
+  };
+}
+
+function plainClick(e: MouseEvent) {
+  return (
+    e.button === 0 &&
+    !e.metaKey &&
+    !e.ctrlKey &&
+    !e.shiftKey &&
+    !e.altKey &&
+    !e.defaultPrevented
+  );
+}
+
+/** A session link that opens the modal in place when it's over this page;
+ *  modified clicks and other pages navigate. */
+export function SessionLink({
+  href,
+  onClick,
+  ...rest
+}: Omit<ComponentProps<typeof Link>, "href"> & { href: string }) {
+  return (
+    <Link
+      {...rest}
+      href={href}
+      scroll={false}
+      onClick={(e) => {
+        onClick?.(e);
+        if (!plainClick(e) || !samePage(href, window.location.href)) return;
+        e.preventDefault();
+        window.history.pushState(null, "", href);
+      }}
+    />
+  );
 }
 
 /**

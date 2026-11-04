@@ -5,6 +5,7 @@ import type {
   AccountSessions,
 } from "@/lib/account-sessions";
 import { openSessionHref } from "@/lib/session-link";
+import { SessionLink } from "@/v2/components/schedule/SessionModalHost";
 import PlanButtons from "@/v2/components/schedule/PlanButtons";
 
 const TAG = "rounded px-1.5 py-0.5 text-xs font-semibold";
@@ -23,13 +24,12 @@ function Row({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="text-base font-semibold text-ink">
           {linkable && s.listed ? (
-            <Link
+            <SessionLink
               href={openSessionHref("/account", s.slug, "tab=sessions")}
-              scroll={false}
               className="underline-offset-2 hover:underline"
             >
               {s.title}
-            </Link>
+            </SessionLink>
           ) : (
             s.title
           )}

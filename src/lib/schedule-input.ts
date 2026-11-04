@@ -47,8 +47,8 @@ export type SessionFields = {
 
 export type LocationFields = Omit<
   ScheduleLocation,
-  "id" | "thumbnailUrl" | "imageUrl"
->;
+  "id" | "thumbnailUrl" | "imageUrl" | "boardStartsAt" | "boardEndsAt"
+> & { boardStartsAt: Date | null; boardEndsAt: Date | null };
 
 /**
  * What a session's own host may change. Placement, status and slug are the
@@ -292,6 +292,15 @@ export function parseSessionFields(raw: Raw): Parsed<SessionFields> {
   };
 }
 
+/** Pacific midnight starting the day `offset` days after `date`, or null. */
+function dayStart(date: string, offset: number): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const d = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setUTCDate(d.getUTCDate() + offset);
+  return fromPacificWall(`${d.toISOString().slice(0, 10)}T00:00`);
+}
+
 export function parseLocationFields(raw: Raw): Parsed<LocationFields> {
   const name = str(raw, "name");
   if (!name) return { ok: false, field: "name", error: "Required." };
@@ -310,6 +319,31 @@ export function parseLocationFields(raw: Raw): Parsed<LocationFields> {
       error: `One of ${LOCATION_VISIBILITIES.join(", ")}.`,
     };
   }
+  // The board's first and last days, as Pacific dates ("2026-11-06"); the
+  // board covers each whole day. Stored as the instants the first day starts
+  // and the day after the last one starts. Empty means no board.
+  const boardFromRaw = str(raw, "boardStartsAt");
+  const boardUntilRaw = str(raw, "boardEndsAt");
+  const boardStartsAt = boardFromRaw ? dayStart(boardFromRaw, 0) : null;
+  const boardEndsAt = boardUntilRaw ? dayStart(boardUntilRaw, 1) : null;
+  if (boardFromRaw && !boardStartsAt)
+    return { ok: false, field: "boardStartsAt", error: "Not a date." };
+  if (boardUntilRaw && !boardEndsAt)
+    return { ok: false, field: "boardEndsAt", error: "Not a date." };
+  if (boardEndsAt && !boardStartsAt) {
+    return {
+      ok: false,
+      field: "boardStartsAt",
+      error: "Give the board a first day too.",
+    };
+  }
+  if (boardStartsAt && boardEndsAt && boardEndsAt <= boardStartsAt) {
+    return {
+      ok: false,
+      field: "boardEndsAt",
+      error: "The last day can't be before the first.",
+    };
+  }
   return {
     ok: true,
     value: {
@@ -319,6 +353,8 @@ export function parseLocationFields(raw: Raw): Parsed<LocationFields> {
       description: optional(raw, "description"),
       displayOrder,
       visibility: visibility ?? "hidden",
+      boardStartsAt,
+      boardEndsAt,
     },
   };
 }

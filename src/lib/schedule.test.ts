@@ -18,6 +18,8 @@ import {
   outsideHours,
   overlapLanes,
   overlapWarning,
+  boardOnDay,
+  boardRows,
   planConflicts,
   rsvpPrompt,
   slotLabel,
@@ -63,7 +65,9 @@ describe("titleLines", () => {
   });
   it("grows with the block, leaving room for the hosts", () => {
     expect(titleLines(timed(60))).toBe(5);
-    expect(titleLines(timed(120))).toBe(12);
+    // 13, not 12, since META-4874 made the badge row conditional and this
+    // block carries no badges: (240 - 12 padding - 16 hosts) / 16.
+    expect(titleLines(timed(120))).toBe(13);
   });
   it("gives a line up to the Sponsor tag", () => {
     expect(titleLines({ ...timed(60), sponsored: true })).toBe(4);
@@ -608,5 +612,35 @@ describe("nowLinePx", () => {
     expect(nowLinePx(friday, 14 * 60, new Date("2026-11-07T05:30:00Z"))).toBe(
       450 * 2,
     );
+  });
+});
+
+// Rat Park: Friday to Sunday, whole days (Fri 00:00 to Mon 00:00 Pacific).
+const ratPark = {
+  boardStartsAt: "2026-11-06T08:00:00.000Z",
+  boardEndsAt: "2026-11-09T08:00:00.000Z",
+};
+
+describe("boardOnDay / boardRows", () => {
+  const slots = Array.from({ length: 28 }, (_, i) => 600 + i * 30);
+  it("makes one whole-column board per day, ending at Sunday midnight", () => {
+    expect(
+      [
+        "2026-11-05",
+        "2026-11-06",
+        "2026-11-07",
+        "2026-11-08",
+        "2026-11-09",
+      ].map((d) => boardOnDay(ratPark, d)),
+    ).toEqual([false, true, true, true, false]);
+    expect(boardRows(ratPark, "2026-11-06", slots)).toEqual([0, 28]);
+    expect(boardRows(ratPark, "2026-11-09", slots)).toBeNull();
+  });
+  it("runs to the end of the schedule with no end set", () => {
+    const open = { ...ratPark, boardEndsAt: null };
+    expect(boardOnDay(open, "2026-11-09")).toBe(true);
+    expect(
+      boardOnDay({ boardStartsAt: null, boardEndsAt: null }, "2026-11-07"),
+    ).toBe(false);
   });
 });

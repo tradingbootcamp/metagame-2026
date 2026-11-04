@@ -163,6 +163,41 @@ describe("parseLocationFields", () => {
     expect(
       blamed(parseLocationFields({ name: "Hall", visibility: "on" })),
     ).toBe("visibility");
+    expect(
+      blamed(parseLocationFields({ name: "Hall", boardStartsAt: "soon" })),
+    ).toBe("boardStartsAt");
+    expect(
+      blamed(parseLocationFields({ name: "Hall", boardEndsAt: "2026-11-08" })),
+    ).toBe("boardStartsAt");
+    expect(
+      blamed(
+        parseLocationFields({
+          name: "Hall",
+          boardStartsAt: "2026-11-07",
+          boardEndsAt: "2026-11-06",
+        }),
+      ),
+    ).toBe("boardEndsAt");
+  });
+
+  // A save replaces the whole row, so a form that drops the window takes the
+  // board down.
+  it("reads the board days as whole Pacific days, or none at all", () => {
+    expect(
+      parseLocationFields({
+        name: "Rat Park",
+        boardStartsAt: "2026-11-06",
+        boardEndsAt: "2026-11-08",
+      }),
+    ).toMatchObject({
+      value: {
+        boardStartsAt: new Date("2026-11-06T08:00:00Z"),
+        boardEndsAt: new Date("2026-11-09T08:00:00Z"),
+      },
+    });
+    expect(parseLocationFields({ name: "Hall" })).toMatchObject({
+      value: { boardStartsAt: null, boardEndsAt: null },
+    });
   });
 });
 

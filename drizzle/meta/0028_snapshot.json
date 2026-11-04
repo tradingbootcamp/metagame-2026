@@ -1,5 +1,5 @@
 {
-  "id": "c2ff0e91-a3e6-4ba2-935d-1d0b5eb64dc0",
+  "id": "1042f07c-af8a-44fc-9743-63658bf56146",
   "prevId": "6fa48d92-6e6f-4ed5-8b21-9a8d3391fced",
   "version": "7",
   "dialect": "postgresql",
@@ -477,41 +477,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "wizard_level": {
-          "name": "wizard_level",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "pirate_level": {
-          "name": "pirate_level",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "alien_level": {
-          "name": "alien_level",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "tokens": {
-          "name": "tokens",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "loan_tokens": {
-          "name": "loan_tokens",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -538,24 +503,7 @@
         }
       },
       "policies": {},
-      "checkConstraints": {
-        "user_wizard_level_range": {
-          "name": "user_wizard_level_range",
-          "value": "\"user\".\"wizard_level\" between 0 and 5"
-        },
-        "user_pirate_level_range": {
-          "name": "user_pirate_level_range",
-          "value": "\"user\".\"pirate_level\" between 0 and 5"
-        },
-        "user_alien_level_range": {
-          "name": "user_alien_level_range",
-          "value": "\"user\".\"alien_level\" between 0 and 5"
-        },
-        "user_loan_tokens_nonnegative": {
-          "name": "user_loan_tokens_nonnegative",
-          "value": "\"user\".\"loan_tokens\" >= 0"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.verification": {
@@ -690,6 +638,27 @@
           "primaryKey": false,
           "notNull": false
         },
+        "wizard_level": {
+          "name": "wizard_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "pirate_level": {
+          "name": "pirate_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "alien_level": {
+          "name": "alien_level",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -724,6 +693,18 @@
         "profiles_image_url_https": {
           "name": "profiles_image_url_https",
           "value": "\"profiles\".\"image_url\" like 'https://%'"
+        },
+        "profiles_wizard_level_range": {
+          "name": "profiles_wizard_level_range",
+          "value": "\"profiles\".\"wizard_level\" between 0 and 5"
+        },
+        "profiles_pirate_level_range": {
+          "name": "profiles_pirate_level_range",
+          "value": "\"profiles\".\"pirate_level\" between 0 and 5"
+        },
+        "profiles_alien_level_range": {
+          "name": "profiles_alien_level_range",
+          "value": "\"profiles\".\"alien_level\" between 0 and 5"
         }
       },
       "isRLSEnabled": false
@@ -2346,178 +2327,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.site_settings": {
-      "name": "site_settings",
-      "schema": "",
-      "columns": {
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_by": {
-          "name": "updated_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "site_settings_updated_by_user_id_fk": {
-          "name": "site_settings_updated_by_user_id_fk",
-          "tableFrom": "site_settings",
-          "tableTo": "user",
-          "columnsFrom": ["updated_by"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.token_ledger": {
-      "name": "token_ledger",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tokens_delta": {
-          "name": "tokens_delta",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "loan_delta": {
-          "name": "loan_delta",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "actor_id": {
-          "name": "actor_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "token_ledger_user_id_created_at_idx": {
-          "name": "token_ledger_user_id_created_at_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "token_ledger_created_at_idx": {
-          "name": "token_ledger_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "token_ledger_user_id_user_id_fk": {
-          "name": "token_ledger_user_id_user_id_fk",
-          "tableFrom": "token_ledger",
-          "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "token_ledger_actor_id_user_id_fk": {
-          "name": "token_ledger_actor_id_user_id_fk",
-          "tableFrom": "token_ledger",
-          "tableTo": "user",
-          "columnsFrom": ["actor_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "token_ledger_kind": {
-          "name": "token_ledger_kind",
-          "value": "\"token_ledger\".\"kind\" in ('loan', 'adjustment')"
-        },
-        "token_ledger_changes_something": {
-          "name": "token_ledger_changes_something",
-          "value": "\"token_ledger\".\"tokens_delta\" <> 0 or \"token_ledger\".\"loan_delta\" <> 0"
-        }
-      },
       "isRLSEnabled": false
     }
   },

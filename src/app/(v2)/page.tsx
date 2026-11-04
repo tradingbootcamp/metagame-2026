@@ -60,8 +60,16 @@ import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { env } from "@/env";
 import { activeFactions, NO_LEVELS } from "@/lib/megagame-levels";
 import { loadMegagameLevelsFor } from "@/lib/megagame-store";
-import { buildDays, hostedSessions, publicSchedule } from "@/lib/schedule";
+import {
+  buildDays,
+  hostedSessions,
+  hostsBoard,
+  publicSchedule,
+  type PublicLocation,
+} from "@/lib/schedule";
 import { loadSchedule } from "@/lib/schedule-store";
+import { boardNote, type BoardData } from "@/lib/unconference";
+import { listNotesIn } from "@/lib/unconference-store";
 import lighthavenCutout from "../../../public/images/lighthaven_cutout.png";
 import megagameChess from "../../../public/images/megagame-chess.jpg";
 import nightMarketCooks from "../../../public/images/email/night_market_cooks.jpg";
@@ -268,15 +276,51 @@ const FAQS: {
   },
 ];
 
+/**
+ * The unconference board as anyone sees it, for this static page: no viewer,
+ * so nothing is theirs and nothing can be posted or reacted to here. Null
+ * when no public room hosts the board, or if the notes can't be read — the
+ * schedule still shows without them.
+ */
+async function homeBoard(
+  locations: PublicLocation[],
+): Promise<BoardData | null> {
+  const rooms = locations.filter(hostsBoard);
+  if (rooms.length === 0) return null;
+  try {
+    const notes = await listNotesIn(
+      rooms.map((r) => r.id),
+      null,
+    );
+    return {
+      notes: notes.map((n) => boardNote(n, null, { withPoster: false })),
+      signedIn: false,
+      canPost: false,
+      isTeam: false,
+      readOnly: true,
+    };
+  } catch (e) {
+    console.error("home board notes", e);
+    return null;
+  }
+}
+
 export default async function Home() {
   // Public rooms only and no per-viewer state, so the page stays static. CI
   // prerenders it with no database (Vercel builds have one), so the grid is
-  // skipped rather than failing the build.
+  // skipped rather than failing the build. The same goes for a database the
+  // code is ahead of: a deploy builds before it migrates, so a schema change
+  // the schedule reads would otherwise fail the build that ships it. The
+  // page revalidates every ten minutes and fills in once the migration has
+  // run.
   // The speakers' Megagame picks ride along for their cards' medals; they're
   // decoration, so if that query fails the cards just go without.
   const [raw, levels] = env.DATABASE_URL
     ? await Promise.all([
-        loadSchedule(),
+        loadSchedule().catch((e: unknown) => {
+          console.error("home schedule", e);
+          return null;
+        }),
         loadMegagameLevelsFor(SPEAKERS.map((s) => s.userId)).catch(
           (e: unknown) => {
             console.error("speaker megagame levels", e);
@@ -286,6 +330,7 @@ export default async function Home() {
       ])
     : [null, null];
   const schedule = raw && publicSchedule(raw, "public");
+  const board = schedule && (await homeBoard(schedule.locations));
   // The sessions each speaker hosts, for the backs of their cards.
   const speaking = raw && schedule && hostedSessions(raw, schedule);
   const earlyBird = isEarlyBirdActive();
@@ -352,6 +397,7 @@ export default async function Home() {
             <PublicSchedule
               days={buildDays(schedule.sessions)}
               locations={schedule.locations}
+              board={board}
               mine={null}
             />
           </div>

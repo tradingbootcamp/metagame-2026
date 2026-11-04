@@ -1,21 +1,25 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FaStar } from "react-icons/fa";
 import { toast } from "sonner";
 import {
   onlySessions,
   openingDayKey,
+  boardRows,
+  hostsBoard,
+  SLOT_PX,
   selectedDay,
   type Day,
   type PublicLocation,
   type PublicSession,
 } from "@/lib/schedule";
 import { SESSION_PARAM, sessionPageSlug } from "@/lib/session-link";
+import type { BoardData } from "@/lib/unconference";
 import { readViewCookie, writeViewCookie } from "@/lib/schedule-view";
 import { ScheduleLegend } from "./SessionBits";
-import { useSessionHref } from "./SessionModalHost";
+import { useOpenSession, useSessionHref } from "./SessionModalHost";
 import {
   buildColumns,
   DayTabs,
@@ -27,8 +31,10 @@ import {
   ViewToggle,
   type View,
 } from "./ScheduleViews";
+import BoardNotes from "./NoteBoard";
 import ScheduleMoments from "./ScheduleMoments";
 import ScheduleSearch from "./ScheduleSearch";
+import UnconferenceBoard, { NoteList } from "./UnconferenceBoard";
 
 type PublicDay = Day<PublicSession>;
 
@@ -43,19 +49,22 @@ export default function PublicSchedule({
   days,
   locations,
   mine,
+  board,
   initialView,
 }: {
   days: PublicDay[];
   locations: PublicLocation[];
   /** Ids of the viewer's own sessions; null when signed out. */
   mine: string[] | null;
+  /** The unconference notes, or null when no room this viewer sees is a board. */
+  board?: BoardData | null;
   /** The view cookie as read on the server; undefined where the page is
    *  cached and the cookie has to be read after mount instead. */
   initialView?: View;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const href = useSessionHref();
+  const openSession = useOpenSession();
   // A session's own page shows its day underneath.
   const [dayKey, setDayKey] = useState(
     () => sessionDayKey(days, sessionPageSlug(pathname)) ?? openingDayKey(days),
@@ -93,7 +102,7 @@ export default function PublicSchedule({
   }, [days]);
 
   const open = (s: PublicSession) => {
-    router.push(href(s.slug), { scroll: false });
+    openSession(s.slug);
   };
 
   const shownDays = useMemo(
@@ -105,8 +114,26 @@ export default function PublicSchedule({
   const roomName = (id: string | null) =>
     locations.find((l) => l.id === id)?.name ?? null;
   const day = selectedDay(shownDays, dayKey);
+  // Each day the board is up is its own board. Notes aren't sessions, so
+  // they can't go through ListDay (shared with the profile pages) or Moments.
+  const noteLists = (board ? locations.filter(hostsBoard) : []).flatMap(
+    (room) => {
+      const rows = boardRows(room, day.key, day.slots);
+      return rows
+        ? [
+            <NoteList
+              key={room.id}
+              locationId={room.id}
+              dayKey={day.key}
+              name={room.name}
+              height={(rows[1] - rows[0]) * SLOT_PX}
+            />,
+          ]
+        : [];
+    },
+  );
 
-  return (
+  const schedule = (
     <div className="flex flex-col gap-5">
       {/* On a phone the view toggle shares this row as icons, and the My
           sessions button keeps only its star; both get their words back from
@@ -165,13 +192,16 @@ export default function PublicSchedule({
       <ScheduleLegend />
 
       {view === "moments" ? (
-        <ScheduleMoments
-          days={shownDays}
-          columns={columns}
-          onOpen={open}
-          dayKey={day.key}
-          onDayChange={setDayKey}
-        />
+        <>
+          <ScheduleMoments
+            days={shownDays}
+            columns={columns}
+            onOpen={open}
+            dayKey={day.key}
+            onDayChange={setDayKey}
+          />
+          {noteLists}
+        </>
       ) : onlyMine && day.sessions.length === 0 ? (
         <EmptyPanel>
           {mine?.length
@@ -179,10 +209,36 @@ export default function PublicSchedule({
             : "Sessions you RSVP to, bookmark or host will show up here."}
         </EmptyPanel>
       ) : view === "grid" && columns.length > 0 ? (
-        <GridDay day={day} columns={columns} href={(s) => href(s.slug)} />
+        <GridDay
+          day={day}
+          columns={columns}
+          href={(s) => href(s.slug)}
+          board={
+            board
+              ? ({ column, dayKey }) => (
+                  <UnconferenceBoard
+                    locationId={column.id}
+                    dayKey={dayKey}
+                    firstSlot={day.slots[0]}
+                    // Every session that day, not just "My sessions".
+                    sessions={
+                      days.find((d) => d.key === dayKey)?.sessions ?? []
+                    }
+                  />
+                )
+              : undefined
+          }
+        />
       ) : (
-        <ListDay day={day} roomName={roomName} href={(s) => href(s.slug)} />
+        <>
+          <ListDay day={day} roomName={roomName} href={(s) => href(s.slug)} />
+          {noteLists}
+        </>
       )}
     </div>
   );
+
+  // The notes live above every view: switching view or day tab must not throw
+  // away a note that was just pinned up, since nothing revalidates the route.
+  return board ? <BoardNotes board={board}>{schedule}</BoardNotes> : schedule;
 }

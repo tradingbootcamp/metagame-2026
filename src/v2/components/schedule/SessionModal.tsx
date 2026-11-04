@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import { samePage } from "@/lib/session-link";
 import { FaTimes } from "react-icons/fa";
 
 /**
@@ -22,7 +23,12 @@ export default function SessionModal({
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => {
-    router.replace(closeHref, { scroll: false });
+    // Over the page it opened on, rewrite the URL as opening did.
+    if (samePage(closeHref, window.location.href)) {
+      window.history.replaceState(null, "", closeHref);
+    } else {
+      router.replace(closeHref, { scroll: false });
+    }
   }, [router, closeHref]);
 
   useEffect(() => {

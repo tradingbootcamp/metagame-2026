@@ -47,12 +47,18 @@ export default function FirstSigninFlow() {
   const hidden = firstSigninHidden(pathname);
   const [status, setStatus] = useState<Open | null>(null);
   const [done, setDone] = useState(false);
+  // Shown once after saving with children: a link, not a redirect, so the
+  // user keeps their place if they'd rather register later.
+  const [childrenNudge, setChildrenNudge] = useState(false);
   const [state, action, pending] = useActionState<FirstSigninState, FormData>(
     async (prev, formData) => {
       const result = await saveFirstSignin(prev, formData).catch(() => ({
         error: "We couldn't save that. Try again.",
       }));
-      if ("saved" in result && result.saved) setDone(true);
+      if ("saved" in result && result.saved) {
+        setChildrenNudge(formData.get("bringingChildren") === "yes");
+        setDone(true);
+      }
       return result;
     },
     {},
@@ -72,7 +78,41 @@ export default function FirstSigninFlow() {
     };
   }, [pathname, hidden, status, done]);
 
-  if (!status || done || hidden) return null;
+  if (!status || hidden) return null;
+  if (done) {
+    if (!childrenNudge) return null;
+    return (
+      <Dialog open onOpenChange={() => setChildrenNudge(false)}>
+        <DialogContent
+          overlayClassName="z-[110]"
+          className="z-[110] flex max-w-[480px] flex-col gap-6 px-6 py-7 sm:px-9 sm:py-8"
+        >
+          <div>
+            <DialogTitle className={`${HEADING} text-[28px] text-cream`}>
+              One more thing
+            </DialogTitle>
+            <DialogDescription className="mt-2 text-[15px] text-cream/80">
+              You marked that you&apos;re bringing a child; please register them
+              on our brief children and childcare form.
+            </DialogDescription>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild>
+              <Link
+                href={CHILD_REGISTRATION_FORM_URL}
+                onClick={() => setChildrenNudge(false)}
+              >
+                Register your children
+              </Link>
+            </Button>
+            <Button variant="ghost" onClick={() => setChildrenNudge(false)}>
+              Later
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
   return (
     <Dialog open>
       <DialogContent
@@ -139,18 +179,10 @@ function InfoForm({
             onChange={setBringingChildren}
           />
           {bringingChildren && (
-            <a
-              href={CHILD_REGISTRATION_FORM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                NEWSLETTER_LINK,
-                "inline-flex items-center gap-1.5 text-sm",
-              )}
-            >
-              Please register your children
-              <ExternalLink className="size-3.5" aria-hidden />
-            </a>
+            <p className="text-sm text-cream/65">
+              After you save, we&apos;ll point you to the child registration
+              form.
+            </p>
           )}
         </div>
       </div>

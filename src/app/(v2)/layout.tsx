@@ -3,6 +3,12 @@ import SiteFooter from "@/v2/components/SiteFooter";
 import SiteShell from "@/v2/components/SiteShell";
 import FirstSigninFlow from "@/v2/components/first-signin/FirstSigninFlow";
 import SessionModalHost from "@/v2/components/schedule/SessionModalHost";
+// The session modal's body arrives from a server action as a rendered tree,
+// serialized against the client manifest of the page it was opened over. A
+// client component is only in that manifest when a server component under
+// the route imports it, so these keep the body's two in every route's.
+import "@/v2/components/schedule/SessionPlans";
+import "@/v2/components/schedule/SessionSignIn";
 import HatToast from "@/v2/hat-trick/HatToast";
 
 // The rewritten site. Everything it renders lives under src/v2/ — see
