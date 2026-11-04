@@ -81,6 +81,8 @@ const CHOICES = { dots: QR_DOTS, corners: QR_CORNERS, logo: QR_LOGOS };
 /** What /backstage/qr accepts: well inside a version-40 code, and still scannable. */
 export const MAX_QR_TEXT = 1000;
 
+/** The background value for no background. */
+export const TRANSPARENT = "none";
 export const DEFAULT_QR_COLORS = { ink: "#000000", bg: "#ffffff" };
 /** `#rrggbb`, lowercased, or null. */
 export function hexColor(value: string | null): string | null {

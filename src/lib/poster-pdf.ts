@@ -17,6 +17,7 @@ import {
   DEFAULT_POSTER_QR,
   DEFAULT_QR_COLORS,
   isPlainQr,
+  TRANSPARENT,
   type PosterQr,
 } from "@/lib/qr-styles";
 import {
@@ -316,12 +317,13 @@ export async function createQrSvg(
   text: string,
   qrStyle: PosterQr,
   colors: { ink: string; bg: string } = DEFAULT_QR_COLORS,
+  // `bg` is a hex or TRANSPARENT.
 ): Promise<string> {
   return styledQrSvg({
     url: text,
     qr: qrStyle,
     ink: hexRgb(colors.ink),
-    bg: hexRgb(colors.bg),
+    bg: colors.bg === TRANSPARENT ? null : hexRgb(colors.bg),
     font: await readFile(path.join(ASSETS, "fonts", "SpaceGrotesk-Bold.ttf")),
   });
 }

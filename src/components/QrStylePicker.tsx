@@ -108,6 +108,7 @@ export function QrArt({
   matrix: QrSampleMatrix;
   className?: string;
   ink?: string;
+  /** A color, or "none" for a checkerboard. */
   bg?: string;
 }) {
   const logo = qr.logo === "none" ? null : qr.logo;
@@ -128,7 +129,15 @@ export function QrArt({
   return (
     <span
       className={`relative block ${className ?? ""}`}
-      style={{ backgroundColor: bg }}
+      style={
+        bg === "none"
+          ? {
+              backgroundImage:
+                "repeating-conic-gradient(#ddd 0 25%, #fff 0 50%)",
+              backgroundSize: "16px 16px",
+            }
+          : { backgroundColor: bg }
+      }
     >
       <svg viewBox={`-1 -1 ${span} ${span}`} className="block size-full">
         <path d={d} fill={ink} />

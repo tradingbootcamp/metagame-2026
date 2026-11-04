@@ -5,6 +5,7 @@ import {
   hexColor,
   MAX_QR_TEXT,
   parsePosterQr,
+  TRANSPARENT,
 } from "@/lib/qr-styles";
 
 export const runtime = "nodejs";
@@ -20,7 +21,8 @@ export async function GET(request: Request) {
   const text = params.get("text") ?? "";
   const qr = parsePosterQr(params);
   const ink = hexColor(params.get("ink") ?? DEFAULT_QR_COLORS.ink);
-  const bg = hexColor(params.get("bg") ?? DEFAULT_QR_COLORS.bg);
+  const bgRaw = params.get("bg") ?? DEFAULT_QR_COLORS.bg;
+  const bg = bgRaw === TRANSPARENT ? TRANSPARENT : hexColor(bgRaw);
   if (!text.trim() || text.length > MAX_QR_TEXT || !qr || !ink || !bg)
     return Response.json(
       {

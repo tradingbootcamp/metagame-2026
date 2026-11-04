@@ -14,6 +14,7 @@ import {
   hexColor,
   MAX_QR_TEXT,
   posterQrQuery,
+  TRANSPARENT,
 } from "@/lib/qr-styles";
 
 const PNG_SIZE = 2048;
@@ -118,6 +119,7 @@ export default function QrTool() {
             label="Background"
             value={colors.bg}
             onChange={(bg) => setColors({ ...colors, bg })}
+            clearable
           />
         </div>
         <div className="space-y-2">
@@ -178,30 +180,39 @@ function ColorField({
   label,
   value,
   onChange,
+  clearable,
 }: {
   label: string;
+  /** A hex, or TRANSPARENT when `clearable`. */
   value: string;
-  onChange: (hex: string) => void;
+  onChange: (value: string) => void;
+  /** Offers a transparent checkbox, keeping the last color for when it's unticked. */
+  clearable?: boolean;
 }) {
   const [typed, setTyped] = useState(value);
   const [editing, setEditing] = useState(false);
-  const shown = editing ? typed : value;
+  const [last, setLast] = useState(value);
+  const clear = value === TRANSPARENT;
+  const color = clear ? last : value;
+  const shown = editing ? typed : color;
   return (
     <label className="block">
       <span className="text-xs font-semibold">{label}</span>
       <span className="mt-1 flex items-center gap-2">
         <input
           type="color"
-          value={value}
+          value={color}
+          disabled={clear}
           onChange={(event) => onChange(event.target.value)}
-          className="size-9 shrink-0 cursor-pointer rounded border border-line bg-white p-0.5"
+          className="size-9 shrink-0 cursor-pointer rounded border border-line bg-white p-0.5 disabled:opacity-40"
         />
         <input
           type="text"
           value={shown}
           spellCheck={false}
+          disabled={clear}
           onFocus={() => {
-            setTyped(value);
+            setTyped(color);
             setEditing(true);
           }}
           onBlur={() => setEditing(false)}
@@ -210,9 +221,24 @@ function ColorField({
             const hex = hexColor(event.target.value);
             if (hex) onChange(hex);
           }}
-          className={`${fieldClass} min-w-0 px-2 py-1.5 font-mono text-sm`}
+          className={`${fieldClass} min-w-0 px-2 py-1.5 font-mono text-sm disabled:opacity-40`}
         />
       </span>
+      {clearable && (
+        <span className="mt-1.5 flex items-center gap-1.5 text-xs">
+          <input
+            type="checkbox"
+            checked={clear}
+            onChange={(event) => {
+              if (event.target.checked) {
+                setLast(color);
+                onChange(TRANSPARENT);
+              } else onChange(last);
+            }}
+          />
+          Transparent
+        </span>
+      )}
     </label>
   );
 }
