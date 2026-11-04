@@ -51,4 +51,3 @@ export const NIGHT_PARTIFUL_PATH = "/partiful-night-market";
 export const NIGHT_MARKET_FORM_URL = "/night-market/apply";
 export const BOOTH_PAYMENT_URL =
   "https://buy.stripe.com/aFacN4343dbxcF58Rcfw40h";
-export const BOOTH_PATH = "/booth";
