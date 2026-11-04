@@ -59,11 +59,14 @@ export default function SessionModalHost({
   load: LoadSession;
   children: ReactNode;
 }) {
+  // Every router refresh hands down a new reference to the same action;
+  // following it would reload the open modal on each one.
+  const [stableLoad] = useState(() => load);
   return (
     <HostContext value>
       {children}
       <Suspense fallback={null}>
-        <ParamModal load={load} />
+        <ParamModal load={stableLoad} />
       </Suspense>
     </HostContext>
   );
