@@ -18,6 +18,7 @@ import { sessionHref } from "@/lib/schedule";
 import {
   closeSessionHref,
   openSessionHref,
+  samePage,
   SESSION_PARAM,
   SESSION_TITLE_ID,
   sessionPageSlug,
@@ -39,18 +40,18 @@ export function useSessionHref(): (slug: string) => string {
     hosted ? openSessionHref(pathname, slug) : sessionHref({ slug });
 }
 
-/**
- * Opens the session over this page. Under a host that only writes the URL:
- * a router navigation would refetch the page and scroll to its top.
- */
+/** Opens the session: over this page by rewriting the URL (a router
+ *  navigation would refetch the page and scroll to its top), else routed. */
 export function useOpenSession(): (slug: string) => void {
   const href = useSessionHref();
-  const hosted = useContext(HostContext);
   const router = useRouter();
   return (slug) => {
     const to = href(slug);
-    if (hosted) window.history.pushState(null, "", to);
-    else router.push(to);
+    if (samePage(to, window.location.href)) {
+      window.history.pushState(null, "", to);
+    } else {
+      router.push(to, { scroll: false });
+    }
   };
 }
 
@@ -65,16 +66,13 @@ function plainClick(e: MouseEvent) {
   );
 }
 
-/**
- * A link to a session: from a hosted page it opens the modal in place (see
- * useOpenSession), while modified clicks and other pages still navigate.
- */
+/** A session link that opens the modal in place when it's over this page;
+ *  modified clicks and other pages navigate. */
 export function SessionLink({
   href,
   onClick,
   ...rest
 }: Omit<ComponentProps<typeof Link>, "href"> & { href: string }) {
-  const hosted = useContext(HostContext);
   return (
     <Link
       {...rest}
@@ -82,7 +80,7 @@ export function SessionLink({
       scroll={false}
       onClick={(e) => {
         onClick?.(e);
-        if (!hosted || !plainClick(e)) return;
+        if (!plainClick(e) || !samePage(href, window.location.href)) return;
         e.preventDefault();
         window.history.pushState(null, "", href);
       }}

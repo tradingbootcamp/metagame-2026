@@ -1,7 +1,5 @@
 "use client";
 
-import { SessionLink } from "./SessionModalHost";
-
 import {
   useEffect,
   useLayoutEffect,
@@ -15,6 +13,7 @@ import { FaMapMarkerAlt, FaUsers } from "react-icons/fa";
 import { formatPacificTime, hostNames } from "@/lib/schedule";
 import type { Column, ViewSession } from "./ScheduleViews";
 import { blockStyle, SessionMarks, SponsorTag } from "./SessionBits";
+import { SessionLink } from "./SessionModalHost";
 
 // One preview card for a whole grid: blocks only carry a data attribute, and
 // listeners on the grid decide which session the card shows, so hovering

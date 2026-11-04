@@ -1,7 +1,5 @@
 "use client";
 
-import { SessionLink } from "./SessionModalHost";
-
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FaClock, FaListUl, FaThLarge } from "react-icons/fa";
 import {
@@ -28,6 +26,7 @@ import {
   SessionMarks,
   SponsorTag,
 } from "./SessionBits";
+import { SessionLink } from "./SessionModalHost";
 import SessionPreview, { PREVIEW_ATTR } from "./SessionPreview";
 
 // The day grid, the day list and the toggles the schedule is built from,

@@ -26,6 +26,12 @@ export function openSessionHref(
   return `${page}?${params}`;
 }
 
+/** Whether `href` is the page at `current` (any query), so the URL can be
+ *  rewritten in place instead of routed. */
+export function samePage(href: string, current: string): boolean {
+  return new URL(href, current).pathname === new URL(current).pathname;
+}
+
 /** The current URL with the session modal closed. */
 export function closeSessionHref(pathname: string, search: string): string {
   const params = new URLSearchParams(search);
