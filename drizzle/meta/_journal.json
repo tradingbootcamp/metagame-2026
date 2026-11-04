@@ -204,6 +204,13 @@
       "when": 1793751900626,
       "tag": "0028_levels_to_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793778322300,
+      "tag": "0029_megagame_tables",
+      "breakpoints": true
     }
   ]
 }

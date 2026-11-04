@@ -30,6 +30,8 @@ export const profiles = pgTable(
     wizardLevel: smallint().notNull().default(0),
     pirateLevel: smallint().notNull().default(0),
     alienLevel: smallint().notNull().default(0),
+    // The six-character Megagame badge code, minted the first time it is needed.
+    megagameCode: text().unique(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true })
       .notNull()
