@@ -14,7 +14,7 @@ The repository is public and attendees read it looking for puzzle hints. The shi
 
 The browser must never receive the schedule beyond what the page shows: the hats on shift now, when the current shift ends, and when the following shift ends. In particular, which hats are on the next shift is never sent. Points are computed server-side from shift changes that have already happened.
 
-The user's rules document (`Hat Tricks - Metagame_LessOnline minigame.md` in the worktree root) is untracked and listed in `.git/info/exclude`. It must never be committed; it contains the schedule pattern and the ransom secrets. Only the four rules and their detail paragraphs (reproduced below) go into the code.
+The user's rules document (`Hat Tricks - Metagame_LessOnline minigame.md` in the worktree root) is untracked and listed in `.git/info/exclude`. It must never be committed. Only the four rules and their detail paragraphs (reproduced below) go into the code.
 
 ## Hats
 
@@ -125,7 +125,7 @@ Sections, top to bottom:
 
    The age line in rule 1 is deliberately left as "young children"; the user has not settled an age.
 
-The page does not show: which hats are on the next shift, how many hats are on the next shift, ransom prices, or anything about scoring beyond the two leaderboard columns. Add a short scoring line under the leaderboards: "5 points per theft, plus points for every shift change you hold a hat through: 1, then 3, then 5, and so on."
+The page does not show: which hats are on the next shift, how many hats are on the next shift, or anything about scoring beyond the two leaderboard columns. Add a short scoring line under the leaderboards: "5 points per theft, plus points for every shift change you hold a hat through: 1, then 3, then 5, and so on."
 
 Display names come from `user.name`. Every user with at least one steal appears; there is no opt-in.
 
@@ -138,8 +138,8 @@ Display names come from `user.name`. Every user with at least one steal appears;
 
 - Unit tests (vitest) for schedule parsing (valid, malformed JSON, unknown hat, overlapping shifts, more than two hats, empty), shift state at various instants (inside, in a gap, before first, after last, at an exact boundary), `shiftChangesBetween`, and scoring as listed above.
 - A rendering test is not required; verify the page with the preview screenshot script against the Vercel preview, on mobile and desktop, per the repo CLAUDE.md.
-- Tests use fake schedules on 2020 dates. A decoy weekend shape (shortening shifts, long nights, gaps, two-hat shifts) is encouraged so the tests exercise the real shapes, as long as it is not the real schedule.
+- Tests use fake schedules on 2020 dates. A decoy weekend shape (shortening shifts, long nights, gaps, two-hat shifts) is encouraged as long as it is not the real schedule.
 
 ## Out of scope
 
-Recording steals (volunteer tool), admin editing of the schedule, the "next hat unlock", night-shift display differences, per-team scores, Discord or TV display modes, photos of the hats.
+Recording steals (volunteer tool), admin editing of the schedule, night-shift display differences, per-team scores, Discord or TV display modes, photos of the hats.
