@@ -92,8 +92,8 @@ export default function FirstSigninFlow() {
               One more thing
             </DialogTitle>
             <DialogDescription className="mt-2 text-[15px] text-cream/80">
-              Every child coming needs to be registered. You can also do this
-              later from your account page.
+              You marked that you&apos;re bringing a child; please register them
+              on our brief children and childcare form.
             </DialogDescription>
           </div>
           <div className="flex flex-wrap gap-3">
