@@ -46,8 +46,5 @@ export const CON_PARTIFUL_PATH = "/partiful";
 export const NIGHT_PARTIFUL_URL = "https://partiful.com/e/TirHoKkdE8DUiWHCt59v";
 export const NIGHT_PARTIFUL_PATH = "/partiful-night-market";
 
-// Night Market booth application, and the $250 booth-only Stripe payment link
-// (/booth redirects to it).
+// Night Market booth application.
 export const NIGHT_MARKET_FORM_URL = "/night-market/apply";
-export const BOOTH_PAYMENT_URL =
-  "https://buy.stripe.com/aFacN4343dbxcF58Rcfw40h";

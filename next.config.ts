@@ -5,8 +5,8 @@ import {
 } from "next/constants";
 import { buildErd } from "./scripts/build-erd.mjs";
 import { validateEnv } from "./src/env";
+import { boothLinks, stripeMode } from "./src/lib/tickets";
 import {
-  BOOTH_PAYMENT_URL,
   CON_PARTIFUL_PATH,
   CON_PARTIFUL_URL,
   NIGHT_PARTIFUL_PATH,
@@ -112,7 +112,7 @@ const nextConfig: NextConfig = {
     // Short link to the booth-only Night Market purchase.
     {
       source: "/booth",
-      destination: BOOTH_PAYMENT_URL,
+      destination: boothLinks[stripeMode],
       permanent: false,
     },
   ],

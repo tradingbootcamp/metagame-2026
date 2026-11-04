@@ -65,6 +65,12 @@ export function getTicket(id: string): TicketTier | undefined {
   return ticketTiers.find((t) => t.id === id);
 }
 
+// The $250 booth-only Night Market purchase; /booth redirects to the active mode's link.
+export const boothLinks: Record<StripeMode, string> = {
+  test: "https://buy.stripe.com/test_eVq4gy7kjefBbB12sOfw40m",
+  live: "https://buy.stripe.com/aFacN4343dbxcF58Rcfw40h",
+};
+
 // ── Supporter tier ──────────────────────────────────────────────────────────
 // A pay-what-you-want tier (floor $525 / ₿0.0087) sitting alongside the standard
 // ticket. USD checkout uses one custom-amount Stripe price per quick-pick amount;
