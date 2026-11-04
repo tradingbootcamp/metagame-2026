@@ -10,7 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { sessionDetails } from "@/app/(v2)/schedule/details";
+import type { sessionDetails } from "@/app/(v2)/schedule/details";
 import { sessionHref } from "@/lib/schedule";
 import {
   closeSessionHref,
@@ -44,26 +44,32 @@ export function useReloadSession() {
   return useContext(ReloadContext);
 }
 
+type LoadSession = typeof sessionDetails;
+
 /**
  * Opens the session named by the page's ?session= param over it. Under a
  * Suspense boundary so the prerendered pages (the home page) stay static.
+ * `load` comes from the server layout: imported only from here, the action's
+ * client components miss the page's client manifest and its body won't load.
  */
 export default function SessionModalHost({
+  load,
   children,
 }: {
+  load: LoadSession;
   children: ReactNode;
 }) {
   return (
     <HostContext value>
       {children}
       <Suspense fallback={null}>
-        <ParamModal />
+        <ParamModal load={load} />
       </Suspense>
     </HostContext>
   );
 }
 
-function ParamModal() {
+function ParamModal({ load }: { load: LoadSession }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const slug = params.get(SESSION_PARAM);
@@ -75,7 +81,7 @@ function ParamModal() {
       closeHref={closeSessionHref(pathname, params.toString())}
       labelledBy={SESSION_TITLE_ID}
     >
-      <LoadedSession slug={slug} />
+      <LoadedSession slug={slug} load={load} />
     </SessionModal>
   );
 }
@@ -91,7 +97,7 @@ function Note({ children }: { children: ReactNode }) {
 const LOADING = <Note>Loading&hellip;</Note>;
 
 /** The session's details, rendered on the server once the modal opens. */
-function LoadedSession({ slug }: { slug: string }) {
+function LoadedSession({ slug, load }: { slug: string; load: LoadSession }) {
   const [attempt, setAttempt] = useState(0);
   const [body, setBody] = useState<ReactNode>(LOADING);
   const reload = () => {
@@ -101,7 +107,7 @@ function LoadedSession({ slug }: { slug: string }) {
 
   useEffect(() => {
     let live = true;
-    sessionDetails(slug)
+    load(slug)
       .then((node) => {
         if (live)
           setBody(
@@ -114,7 +120,7 @@ function LoadedSession({ slug }: { slug: string }) {
     return () => {
       live = false;
     };
-  }, [slug, attempt]);
+  }, [slug, load, attempt]);
 
   // The body streams in from the action: parts of it can still be pending or
   // throw while rendering, and both should stay inside the modal.

@@ -4,6 +4,7 @@ import SiteShell from "@/v2/components/SiteShell";
 import FirstSigninFlow from "@/v2/components/first-signin/FirstSigninFlow";
 import SessionModalHost from "@/v2/components/schedule/SessionModalHost";
 import HatToast from "@/v2/hat-trick/HatToast";
+import { sessionDetails } from "./schedule/details";
 
 // The rewritten site. Everything it renders lives under src/v2/ — see
 // src/v2/README.md. The previous one-pager is still served at /legacy.
@@ -18,7 +19,7 @@ export default function SiteLayout({
   return (
     <div className="flex min-h-dvh flex-col bg-background font-[family-name:var(--font-inter)] leading-[1.55] text-ink">
       <ContactProvider>
-        <SessionModalHost>
+        <SessionModalHost load={sessionDetails}>
           <SiteShell>{children}</SiteShell>
           <SiteFooter />
         </SessionModalHost>
