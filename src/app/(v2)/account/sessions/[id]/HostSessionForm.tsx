@@ -43,7 +43,7 @@ function Note({ state }: { state: SaveState }) {
 
 export default function HostSessionForm({
   sessionId,
-  initial: values,
+  initial: stored,
   rsvpIsCommitment,
   hosts,
   viewerId,
@@ -63,6 +63,10 @@ export default function HostSessionForm({
     initial,
   );
   const [removing, startRemove] = useTransition();
+  const draft = state.values ?? stored;
+  const commitment = state.values
+    ? "rsvpIsCommitment" in state.values
+    : rsvpIsCommitment;
 
   return (
     <div className="mt-8 flex max-w-[640px] flex-col gap-10">
@@ -71,7 +75,7 @@ export default function HostSessionForm({
           Title
           <input
             name="title"
-            defaultValue={values.title}
+            defaultValue={draft.title}
             required
             className={field}
           />
@@ -80,7 +84,7 @@ export default function HostSessionForm({
           Description
           <textarea
             name="description"
-            defaultValue={values.description}
+            defaultValue={draft.description}
             rows={6}
             className={field}
           />
@@ -88,9 +92,11 @@ export default function HostSessionForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={label}>
             Kind
+            {/* Keyed: React ignores a select's defaultValue after mount. */}
             <select
+              key={draft.category}
               name="category"
-              defaultValue={values.category}
+              defaultValue={draft.category}
               className={field}
             >
               <option value="">—</option>
@@ -103,7 +109,12 @@ export default function HostSessionForm({
           </label>
           <label className={label}>
             Ages
-            <select name="ages" defaultValue={values.ages} className={field}>
+            <select
+              key={draft.ages}
+              name="ages"
+              defaultValue={draft.ages}
+              className={field}
+            >
               <option value="">—</option>
               {AGES.map((a) => (
                 <option key={a} value={a}>
@@ -118,7 +129,7 @@ export default function HostSessionForm({
               name="maxCapacity"
               type="number"
               min={1}
-              defaultValue={values.maxCapacity}
+              defaultValue={draft.maxCapacity}
               className={field}
             />
           </label>
@@ -128,7 +139,7 @@ export default function HostSessionForm({
               name="minCapacity"
               type="number"
               min={0}
-              defaultValue={values.minCapacity}
+              defaultValue={draft.minCapacity}
               className={field}
             />
           </label>
@@ -137,7 +148,7 @@ export default function HostSessionForm({
           What you need
           <textarea
             name="needs"
-            defaultValue={values.needs}
+            defaultValue={draft.needs}
             rows={3}
             className={field}
           />
@@ -146,7 +157,7 @@ export default function HostSessionForm({
           <input
             type="checkbox"
             name="rsvpIsCommitment"
-            defaultChecked={rsvpIsCommitment}
+            defaultChecked={commitment}
             className="mt-0.5 size-4 accent-meeple"
           />
           <span>

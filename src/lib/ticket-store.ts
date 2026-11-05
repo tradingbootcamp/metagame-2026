@@ -294,7 +294,7 @@ async function attemptClaim(
   code: string,
 ): Promise<ClaimResult> {
   const db = getDb();
-  const [ticket] = await db
+  const update = db
     .update(tickets)
     .set({ ownerUserId: userId, claimedAt: new Date() })
     .where(
@@ -309,6 +309,23 @@ async function attemptClaim(
       ),
     )
     .returning();
+  // That holds only behind this lock: a statement reads one snapshot, so alone
+  // it can't see a claim of a different code still committing. The second claim
+  // waits here, then reads afresh, as READ COMMITTED does per statement. A batch
+  // is the only transaction Neon's HTTP driver has. PGlite has no batch, but
+  // with its one connection there is nothing to wait for.
+  const rows =
+    "batch" in db
+      ? (
+          await db.batch([
+            db.execute(
+              sql`select pg_advisory_xact_lock(hashtextextended(${`ticket-claim:${userId}`}, 0))`,
+            ),
+            update,
+          ])
+        )[1]
+      : await update;
+  const [ticket] = rows;
   if (ticket) return { ok: true, ticket };
 
   const [existing] = await db
