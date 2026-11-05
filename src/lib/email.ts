@@ -470,3 +470,72 @@ export async function sendAccountInviteEmail({
   });
   if (error) throw new Error(`Resend send failed: ${error.message}`);
 }
+
+export type WaitlistPromotion = {
+  to: string;
+  name: string | null;
+  title: string;
+  /** The session's slug, for the link to its page. */
+  slug: string;
+  /** The session's day and time, ready to read. */
+  when: string;
+};
+
+export function renderWaitlistPromotionEmail({
+  name,
+  title,
+  slug,
+  when,
+}: WaitlistPromotion) {
+  const url = `${SITE}/schedule/${encodeURIComponent(slug)}`;
+  const greeting = name?.trim() || "there";
+  return {
+    subject: `You're off the waitlist: ${title}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+        <div style="text-align: center; margin: 24px 0;">
+          <img src="${SITE}/images/dice_logo.png" alt="METAGAME" width="240" style="max-width: 100%; height: auto;" />
+        </div>
+        <p>Hi ${escapeHtml(greeting)},</p>
+        <p>A seat opened up, so you've moved off the waitlist and you're now going to:</p>
+        <p style="margin: 20px 0;"><strong>${escapeHtml(title)}</strong><br />${escapeHtml(when)}</p>
+        <p>If you can't make it any more, <a href="${url}">cancel your RSVP</a> so the next person gets the seat.</p>
+        <p style="font-size: 12px; color: #888;">&copy; 2026 Arbor</p>
+      </div>
+    `,
+    text: `Hi ${greeting},\n\nA seat opened up, so you've moved off the waitlist and you're now going to:\n\n${title}\n${when}\n\nIf you can't make it any more, cancel your RSVP so the next person gets the seat: ${url}`,
+  };
+}
+
+// Resend's limit on one batch.
+const BATCH_SIZE = 100;
+
+/**
+ * Sent as a batch because Resend rate-limits per request, and a raised capacity
+ * can seat a whole waitlist at once. Throws on failure; the caller decides what
+ * that means.
+ */
+export async function sendWaitlistPromotionEmails(
+  promotions: WaitlistPromotion[],
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) {
+    console.warn(
+      `[email] Resend not configured — ${promotions.length} waitlist notice(s) not sent`,
+    );
+    return;
+  }
+  for (let i = 0; i < promotions.length; i += BATCH_SIZE) {
+    const { error } = await retryRateLimited(() =>
+      resend.batch.send(
+        promotions.slice(i, i + BATCH_SIZE).map((promotion) => ({
+          from: FROM,
+          to: promotion.to,
+          replyTo: [TEAM],
+          ...renderWaitlistPromotionEmail(promotion),
+        })),
+      ),
+    );
+    if (error) throw new Error(`Resend send failed: ${error.message}`);
+  }
+}

@@ -169,7 +169,8 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                     <span className="text-sm text-ink/70">
                       Unclaim this ticket? You&apos;ll keep it with a new code,
                       so you can pass it on or claim it again. The old code
-                      stops working.
+                      stops working, and you&apos;ll lose your RSVPs for
+                      sessions that haven&apos;t started.
                     </span>
                     <Button
                       size="sm"

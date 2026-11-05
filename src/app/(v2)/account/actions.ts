@@ -16,11 +16,13 @@ import {
 import { deleteImage, uploadImage } from "@/lib/blob";
 import { isMegagameClass, starterLevels } from "@/lib/megagame-levels";
 import { loadMegagameLevels, setMegagameLevels } from "@/lib/megagame-store";
-import { invalidateSchedule } from "@/lib/schedule-store";
+import { reportError } from "@/lib/error-report";
+import { invalidateSchedule, releaseUpcomingSeats } from "@/lib/schedule-store";
 import { isSpeakerAccount } from "@/v2/data/speakers";
 import {
   claimOwnTicket,
   claimTicket,
+  hasClaimedTicket,
   normalizeTicketCode,
   ticketLabel,
   unclaimTicket,
@@ -268,11 +270,34 @@ export async function claimMine(paymentId: string): Promise<ClaimState> {
 
 export type UnclaimState = { error?: string; released?: string };
 
+// Admins can RSVP without a ticket, so giving one up costs them no seat. The
+// ticket is already gone by now, so a failure here is reported, not returned.
+async function releaseSeatsWithoutTicket(user: {
+  id: string;
+  email: string;
+  role?: string | null;
+}): Promise<void> {
+  try {
+    if (user.role === "admin" || (await hasClaimedTicket(user.id))) return;
+    await releaseUpcomingSeats(user.id, user.email);
+  } catch (error) {
+    console.error("[account] releasing seats failed", user.id, error);
+    await reportError({
+      source: "Unclaim ticket",
+      summary: "A ticket was given up but its RSVP seats may still be held",
+      details: { user: user.id },
+      error,
+      mention: false,
+    });
+  }
+}
+
 /** Gives up the signed-in user's spot on a ticket; they keep it under a new code. */
 export async function unclaimMine(paymentId: string): Promise<UnclaimState> {
   const session = await requireSession();
   const ticket = await unclaimTicket(session.user.id, paymentId);
   if (!ticket) return { error: "That ticket isn't claimed by you." };
+  await releaseSeatsWithoutTicket(session.user);
   revalidatePath("/account");
   return { released: ticketLabel(ticket.tier) };
 }

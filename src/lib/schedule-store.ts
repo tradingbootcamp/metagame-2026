@@ -6,22 +6,30 @@ import {
   gt,
   ilike,
   inArray,
+  isNull,
   like,
   lt,
   ne,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import { revalidateTag, unstable_cache } from "next/cache";
+import { after } from "next/server";
 import { getDb, schema } from "@/db";
 import { env } from "@/env";
 import { can } from "./access";
 import { currentSession, getAuth } from "./auth";
+import { sendWaitlistPromotionEmails } from "./email";
+import { reportError } from "./error-report";
 import type { HostSessionFields } from "./schedule-input";
 import {
   clashDescription,
+  formatPacificDay,
+  formatPacificTime,
   fromPacificWall,
   movedTimes,
+  onGuestList,
   outsideHours,
   roomAllowsOverlap,
   summarizeRsvps,
@@ -35,6 +43,7 @@ import {
   type ScheduleSession,
   type SessionRsvps,
 } from "./schedule";
+import { capacityRefusal } from "./seat-rules";
 
 const {
   locations,
@@ -322,6 +331,9 @@ export async function setSessionHosts(
   invalidateSchedule();
 }
 
+/** A host's capacity cut refused for being below who's already going. */
+export class CapacityBelowGoingError extends Error {}
+
 /**
  * The columns a session's own host may change. Separate from upsertSession,
  * which replaces the whole row: this update names no placement or status
@@ -330,22 +342,56 @@ export async function setSessionHosts(
 export async function updateSessionAsHost(
   sessionId: string,
   fields: HostSessionFields,
+  { allowBelowGoing = false }: { allowBelowGoing?: boolean } = {},
 ): Promise<void> {
-  const [updated] = await getDb()
-    .update(sessions)
-    .set({
-      title: fields.title,
-      description: fields.description,
-      category: fields.category,
-      maxCapacity: fields.maxCapacity,
-      minCapacity: fields.minCapacity,
-      ages: fields.ages,
-      needs: fields.needs,
-      rsvpIsCommitment: fields.rsvpIsCommitment,
-    })
-    .where(eq(sessions.id, sessionId))
-    .returning({ id: sessions.id });
-  if (!updated) throw new Error("That session no longer exists.");
+  const db = getDb();
+  const save = (guard?: SQL) =>
+    db
+      .update(sessions)
+      .set({
+        title: fields.title,
+        description: fields.description,
+        category: fields.category,
+        maxCapacity: fields.maxCapacity,
+        minCapacity: fields.minCapacity,
+        ages: fields.ages,
+        needs: fields.needs,
+        rsvpIsCommitment: fields.rsvpIsCommitment,
+      })
+      .where(and(eq(sessions.id, sessionId), guard))
+      .returning({ id: sessions.id });
+  const next = fields.maxCapacity;
+  if (allowBelowGoing || next === null) {
+    const [updated] = await save();
+    if (!updated) throw new Error("That session no longer exists.");
+  } else {
+    const isGoing = and(
+      eq(rsvps.sessionId, sessionId),
+      eq(rsvps.status, "going"),
+    );
+    // The row lock the capacity trigger takes, held to commit by the batch's
+    // one transaction: no RSVP can take a seat between the count and the save.
+    // A batch can't branch, so the guard says capacityRefusal's rule in SQL. A
+    // null stored capacity makes its second half null, which refuses.
+    const [[stored], [going], [updated]] = await db.batch([
+      db
+        .select({ maxCapacity: sessions.maxCapacity })
+        .from(sessions)
+        .where(eq(sessions.id, sessionId))
+        .for("no key update"),
+      db.select({ n: count() }).from(rsvps).where(isGoing),
+      save(
+        sql`(${next} >= (select count(*) from ${rsvps} where ${isGoing}) or ${next} >= ${sessions.maxCapacity})`,
+      ),
+    ]);
+    if (!stored) throw new Error("That session no longer exists.");
+    if (!updated) {
+      throw new CapacityBelowGoingError(
+        capacityRefusal(next, stored.maxCapacity, going.n) ??
+          "That capacity is below who's going.",
+      );
+    }
+  }
   invalidateSchedule();
   // A raised capacity frees seats for the waitlist.
   await promoteWaitlist(sessionId);
@@ -571,6 +617,31 @@ export async function cancelRsvp(
   await promoteWaitlist(sessionId);
 }
 
+/**
+ * Gives up the account's RSVPs and waitlist spots on sessions yet to start,
+ * moving each waitlist up. A guest list is the team's say-so, ticket or not,
+ * so those stay.
+ */
+export async function releaseUpcomingSeats(
+  userId: string,
+  email: string,
+): Promise<void> {
+  const held = await getDb()
+    .select({ sessionId: rsvps.sessionId, guests: sessions.inviteEmails })
+    .from(rsvps)
+    .innerJoin(sessions, eq(sessions.id, rsvps.sessionId))
+    .where(
+      and(
+        eq(rsvps.userId, userId),
+        or(isNull(sessions.startsAt), gt(sessions.startsAt, new Date())),
+      ),
+    );
+  for (const { sessionId, guests } of held) {
+    if (guests !== null && onGuestList(guests, email)) continue;
+    await cancelRsvp(sessionId, userId);
+  }
+}
+
 /** Seats waitlisted people, earliest first, until the session is full. */
 async function promoteWaitlist(sessionId: string): Promise<void> {
   const db = getDb();
@@ -579,16 +650,94 @@ async function promoteWaitlist(sessionId: string): Promise<void> {
     .from(rsvps)
     .where(and(eq(rsvps.sessionId, sessionId), eq(rsvps.status, "waitlist")))
     .orderBy(asc(rsvps.createdAt));
-  for (const { userId } of waiting) {
-    try {
-      await db
+  const promoted: string[] = [];
+  try {
+    for (const { userId } of waiting) {
+      // Still on the waitlist, so of two cancellations at once only the one
+      // that really moved someone tells them.
+      const moved = await db
         .update(rsvps)
         .set({ status: "going" })
-        .where(and(eq(rsvps.sessionId, sessionId), eq(rsvps.userId, userId)));
-    } catch (err) {
-      if (isFull(err)) return;
-      throw err;
+        .where(
+          and(
+            eq(rsvps.sessionId, sessionId),
+            eq(rsvps.userId, userId),
+            eq(rsvps.status, "waitlist"),
+          ),
+        )
+        .returning({ userId: rsvps.userId });
+      promoted.push(...moved.map((m) => m.userId));
     }
+  } catch (err) {
+    if (!isFull(err)) throw err;
+  } finally {
+    // After the response, so a slow or failing send can't touch the caller.
+    if (promoted.length > 0) {
+      const notify = () => notifyPromoted(sessionId, promoted);
+      try {
+        after(notify);
+      } catch {
+        // Outside a request (a script), so there's no response to wait for.
+        void notify();
+      }
+    }
+  }
+}
+
+/** Never throws: the seats are already taken, and only the notice is lost. */
+async function notifyPromoted(
+  sessionId: string,
+  userIds: string[],
+): Promise<void> {
+  try {
+    const db = getDb();
+    const [[session], people] = await Promise.all([
+      db
+        .select({
+          slug: sessions.slug,
+          title: sessions.title,
+          status: sessions.status,
+          startsAt: sessions.startsAt,
+          endsAt: sessions.endsAt,
+        })
+        .from(sessions)
+        .where(eq(sessions.id, sessionId)),
+      db
+        .select({ name: user.name, email: user.email })
+        .from(user)
+        .where(inArray(user.id, userIds)),
+    ]);
+    // Drafts are the team trying things out, and a finished session's seat is
+    // no news to anyone.
+    if (
+      session?.status !== "published" ||
+      !session.startsAt ||
+      !session.endsAt ||
+      session.endsAt <= new Date()
+    ) {
+      return;
+    }
+    const start = session.startsAt.toISOString();
+    const when = `${formatPacificDay(start)}, ${formatPacificTime(start)} – ${formatPacificTime(session.endsAt.toISOString())} Pacific`;
+    await sendWaitlistPromotionEmails(
+      people.map(({ name, email }) => ({
+        to: email,
+        name,
+        title: session.title,
+        slug: session.slug,
+        when,
+      })),
+    );
+  } catch (error) {
+    console.error("[schedule] waitlist notice failed", sessionId, error);
+    await reportError({
+      source: "Waitlist promotion",
+      summary:
+        "Someone moved off a waitlist into a seat but wasn't emailed about it",
+      details: { session: sessionId, users: userIds.join(", ") },
+      error,
+      mention: false,
+    });
   }
 }
 
