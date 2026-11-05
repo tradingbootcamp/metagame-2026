@@ -20,6 +20,7 @@ import { listRoles, userAccess } from "@/lib/permission-store";
 import { explainPermissions, isPermission } from "@/lib/permissions";
 import { loadSchedule, loadViewerPlans } from "@/lib/schedule-store";
 import { formatTicketCode } from "@/lib/ticket-code-format";
+import { ticketState } from "@/lib/ticket-holder";
 import { ticketLabel, ticketsForUser } from "@/lib/ticket-store";
 import { SESSION_ROLES, TEAM_AUDIENCE, userSessions } from "@/lib/user-profile";
 import UserSessions from "@/v2/components/schedule/UserSessions";
@@ -219,7 +220,7 @@ export default async function AdminUserProfilePage(
                 <li key={t.paymentId} className="flex flex-col gap-1 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold">{ticketLabel(t.tier)}</span>
-                    <StatusTag status={t.status} />
+                    <StatusTag status={ticketState(t)} />
                     {t.test && <TestTag />}
                     <span className="font-mono text-xs text-ink/60">
                       {formatTicketCode(t.ticketCode)}

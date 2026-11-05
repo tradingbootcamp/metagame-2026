@@ -237,6 +237,7 @@ const CLAIM_ERRORS = {
   taken: "Someone else has already claimed that ticket.",
   unpaid: "That ticket's payment hasn't settled yet. Try again later.",
   void: "That ticket's payment didn't go through, so it can't be claimed.",
+  voided: "That ticket has been voided, so it can't be claimed.",
   limited: "Too many codes that didn't work. Try again in an hour.",
 };
 

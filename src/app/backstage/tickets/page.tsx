@@ -19,6 +19,7 @@ import { can } from "@/lib/access";
 import { formatReferralCode } from "@/lib/referral";
 import { referralFacts } from "@/lib/referral-store";
 import { formatTicketCode } from "@/lib/ticket-code-format";
+import { ticketState } from "@/lib/ticket-holder";
 import { allTickets, ticketLabel, ticketsForUser } from "@/lib/ticket-store";
 
 const one = (v: string | string[] | undefined) =>
@@ -33,6 +34,7 @@ export default async function AdminTicketsPage(
   const session = await can("tickets.view");
   if (!session) return <ToolSignIn title="Tickets" next="/backstage/tickets" />;
   const canEdit = (await can("tickets.edit")) !== null;
+  const canVoid = (await can("tickets.void")) !== null;
 
   const params = await props.searchParams;
   const userId = one(params.user);
@@ -87,7 +89,12 @@ export default async function AdminTicketsPage(
         createdAt: t.createdAt,
         claimedAt: t.claimedAt,
         tier: ticketLabel(t.tier),
-        status: t.status,
+        status: ticketState(t),
+        voidedAt: t.voidedAt,
+        voidedBy: t.voidedBy,
+        unvoidedAt: t.unvoidedAt,
+        unvoidedBy: t.unvoidedBy,
+        refunded: t.refundEventId !== null,
         test: t.test,
         code: formatTicketCode(t.ticketCode),
         source: t.source,
@@ -125,7 +132,12 @@ export default async function AdminTicketsPage(
           </Link>
         </p>
       )}
-      <TicketsTable tickets={tickets} initial={initial} canEdit={canEdit} />
+      <TicketsTable
+        tickets={tickets}
+        initial={initial}
+        canEdit={canEdit}
+        canVoid={canVoid}
+      />
     </div>
   );
 }

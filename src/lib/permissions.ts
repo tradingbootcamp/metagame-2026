@@ -1,8 +1,7 @@
 // The permission catalog and the pure resolution over it. One entry per gate
 // the code enforces; the roles and per-user grants that hold them live in
 // Postgres (src/db/schema/permissions.ts) and are read by src/lib/access.ts.
-// Adding a gate means adding its key here, nothing else. Keys with no gate
-// yet wait for their page: checkin.manage lands with the check-in page.
+// Adding a gate means adding its key here, nothing else.
 
 /** Display only: how much a permission lets its holder change. */
 export type PermissionLevel = "view" | "edit" | "delete";
@@ -54,6 +53,16 @@ export const PERMISSIONS = {
     description:
       "Anyone's /u profile page, including the ones not shown to other attendees.",
   },
+  // For volunteers, so kept off tickets.view: no buyer list, no emails. Team
+  // audience so the tool is one tap from the nav; the index lists only it.
+  "checkin.view": {
+    audience: "team",
+    group: "Tickets",
+    level: "view",
+    label: "Door check-in",
+    description:
+      "Look up one ticket by exact code, email or name: valid or not, what it admits, the holder's name.",
+  },
   "tickets.view": {
     audience: "team",
     group: "Tickets",
@@ -67,6 +76,15 @@ export const PERMISSIONS = {
     level: "edit",
     label: "Edit tickets",
     description: "Set or clear which ticket referred a ticket, after the fact.",
+    implies: ["tickets.view"],
+  },
+  // Off tickets.edit: this takes someone's admission away.
+  "tickets.void": {
+    audience: "team",
+    group: "Tickets",
+    level: "edit",
+    label: "Void tickets",
+    description: "Void a ticket and undo a void, on the tickets table.",
     implies: ["tickets.view"],
   },
   // Its own permission, not folded into a role: it exposes parents' contact

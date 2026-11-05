@@ -172,3 +172,16 @@ describe("catalog order", () => {
     }
   });
 });
+
+describe("door check-in", () => {
+  it("opens the door tool and nothing else", () => {
+    expect([...expand(["checkin.view"])]).toEqual(["checkin.view"]);
+    expect(hasTeamPermission(expand(["checkin.view"]))).toBe(true);
+  });
+
+  it("voiding needs its own grant, on top of seeing tickets", () => {
+    expect(expand(["tickets.edit"]).has("tickets.void")).toBe(false);
+    expect(expand(["tickets.void"]).has("tickets.view")).toBe(true);
+    expect(expand(["tickets.void"]).has("checkin.view")).toBe(false);
+  });
+});
