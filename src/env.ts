@@ -138,6 +138,12 @@ const ENV_SPEC: EnvSpec[] = [
       "Bearer token Vercel sends to cron routes (/api/budget/xero/keepalive). Without it the cron route refuses every call.",
   },
   {
+    name: "COMMITTEE_EMAILS",
+    required: false,
+    description:
+      'JSON object of speaker committee name → account email, e.g. {"Name":"name@example.com"}, with the names in COMMITTEE_NAMES (src/lib/rfp-labels.ts). The repo is public, so the addresses never go in source. Without it nobody counts as on the committee: the board\'s grader and shepherd pickers are empty until you type, grader and shepherd changes skip Airtable, and the /api/admin/sessions grade and graders routes refuse every grader with a 400.',
+  },
+  {
     name: "BETTER_AUTH_SECRET",
     required: false,
     description:
@@ -186,6 +192,7 @@ export const env = {
   FAMILY_REFERRAL_COUPON_ID: process.env.FAMILY_REFERRAL_COUPON_ID,
   DATABASE_URL: process.env.DATABASE_URL,
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+  COMMITTEE_EMAILS: process.env.COMMITTEE_EMAILS,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   DISCORD_ERROR_WEBHOOK_URL: process.env.DISCORD_ERROR_WEBHOOK_URL,
   XERO_CLIENT_ID: process.env.XERO_CLIENT_ID,
