@@ -9,6 +9,7 @@ import {
   type MegagameClass,
   type MegagameLevels,
 } from "@/lib/megagame-levels";
+import { retryable } from "@/lib/action-retry";
 import ClassBadges from "@/v2/components/megagame/ClassBadges";
 import FactionPatch from "@/v2/components/megagame/FactionPatch";
 import GuildSeal from "@/v2/components/megagame/GuildSeal";
@@ -29,7 +30,7 @@ const BRIEF =
 
 export default function MegagamePanel({ levels }: { levels: MegagameLevels }) {
   const [state, action, pending] = useActionState<ClassState, FormData>(
-    chooseMegagameClass,
+    retryable(chooseMegagameClass),
     {},
   );
   const joined = activeClasses(levels).length > 0;

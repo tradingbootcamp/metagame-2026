@@ -26,6 +26,7 @@ import {
 } from "@/lib/ticket-store";
 import { boardNote, type BoardData } from "@/lib/unconference";
 import { listNotesIn } from "@/lib/unconference-store";
+import { reportErrorOnce } from "@/lib/error-report";
 
 export const loadRawSchedule = cache(loadSchedule);
 
@@ -57,14 +58,14 @@ export const boardRooms = cache(async (): Promise<PublicLocation[]> => {
  * which rooms survived the visibility filter — so notes pinned in a room the
  * viewer can't see are never read, let alone sent.
  */
-export const loadBoard = cache(async (): Promise<BoardData | null> => {
+const readBoard = cache(async (): Promise<BoardData | null> => {
   const rooms = await boardRooms();
   const [session, access] = await Promise.all([currentSession(), teamAccess()]);
   return boardFor(rooms, session, access);
 });
 
 /** The public sessions the signed-in viewer is in; null when signed out. */
-export const loadMySessionIds = cache(async (): Promise<string[] | null> => {
+const readMySessionIds = cache(async (): Promise<string[] | null> => {
   const account = await currentSession();
   if (!account) return null;
   const [raw, { sessions }] = await Promise.all([
@@ -73,6 +74,26 @@ export const loadMySessionIds = cache(async (): Promise<string[] | null> => {
   ]);
   return mySessionIds(raw, sessions, account);
 });
+
+// The grid comes from a cached read that outlives a database blip, and these
+// two are extras on it, so losing them shouldn't cost attendees the schedule.
+function withoutExtra(what: string) {
+  return async (error: unknown) => {
+    console.error(`schedule ${what}`, error);
+    await reportErrorOnce(`schedule-${what}`, {
+      source: "Schedule page",
+      summary: `Couldn't load the ${what}; the page rendered without it`,
+      error,
+      mention: false,
+    });
+    return null;
+  };
+}
+
+export const loadBoard = () => readBoard().catch(withoutExtra("board"));
+
+export const loadMySessionIds = () =>
+  readMySessionIds().catch(withoutExtra("viewer's plans"));
 
 /**
  * Whether the signed-in viewer may RSVP, and any ticket bought under their
