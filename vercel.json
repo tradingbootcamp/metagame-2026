@@ -1,19 +1,4 @@
 {
-  "git": {
-    "deploymentEnabled": {
-      "**": false
-    }
-  },
-  "crons": [
-    {
-      "path": "/api/budget/xero/keepalive",
-      "schedule": "0 9 * * 1"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/chainmail",
-      "destination": "/chainmail.html"
-    }
-  ]
+  "git": { "deploymentEnabled": { "**": false } },
+  "crons": [{ "path": "/api/budget/xero/keepalive", "schedule": "0 9 * * 1" }]
 }
