@@ -72,7 +72,20 @@ export default function ArriveModal({
 
           {claiming &&
             (forUser === null ? (
-              <AccountPicker suggested={ticket.suggested} onPick={setForUser} />
+              <>
+                {ticket.suggested === null && ticket.purchaserEmail && (
+                  <p className="text-sm text-ink/70">
+                    No Metagame account under{" "}
+                    <span className="font-mono">{ticket.purchaserEmail}</span>{" "}
+                    yet. If they signed in with another email, search for it.
+                    Otherwise they need to sign in on their phone first.
+                  </p>
+                )}
+                <AccountPicker
+                  suggested={ticket.suggested}
+                  onPick={setForUser}
+                />
+              </>
             ) : (
               <div className="flex items-center gap-3 rounded-lg border border-navy/30 bg-navy/5 px-3 py-2">
                 <span className="min-w-0 flex-1">
@@ -168,7 +181,7 @@ export default function ArriveModal({
                 ref={submit}
                 type="submit"
                 disabled={pending || !ready}
-                className={`${buttonClass} w-auto`}
+                className={`${buttonClass} w-auto disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 {pending
                   ? "Working…"
