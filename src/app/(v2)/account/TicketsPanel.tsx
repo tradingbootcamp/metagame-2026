@@ -157,15 +157,14 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                     <ShareCode code={t.code!} />
                   </span>
                 )}
-                {t.mine && t.checkedInAt && (
-                  <span className="ml-auto text-sm text-ink/60">
-                    Checked in — this ticket is yours for the event.
-                  </span>
-                )}
                 {t.mine &&
                   t.status === "paid" &&
-                  !t.checkedInAt &&
-                  confirmingId !== t.id && (
+                  confirmingId !== t.id &&
+                  (t.checkedIn ? (
+                    <span className="ml-auto text-sm text-ink/60">
+                      Checked in, so this ticket can&apos;t be passed on now.
+                    </span>
+                  ) : (
                     <span className="ml-auto flex items-center gap-3">
                       <span className="text-sm text-ink/60">
                         Unclaim this ticket to pass it on to someone else.
@@ -179,7 +178,7 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                         Unclaim
                       </button>
                     </span>
-                  )}
+                  ))}
                 {t.mine && confirmingId === t.id && (
                   <span className="flex basis-full flex-wrap items-center gap-3 pt-1">
                     <span className="text-sm text-ink/70">

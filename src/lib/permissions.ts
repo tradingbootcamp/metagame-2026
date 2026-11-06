@@ -75,8 +75,6 @@ export const PERMISSIONS = {
     label: "Run check-in",
     description:
       "Check attendees in at the desk, assign badge numbers, claim a ticket on an attendee's behalf and undo a check-in.",
-    // The desk searches tickets and sees buyer emails.
-    implies: ["tickets.view"],
   },
   // Its own permission, not folded into a role: it exposes parents' contact
   // details and children's medical notes.

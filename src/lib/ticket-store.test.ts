@@ -1,6 +1,15 @@
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { migrate } from "drizzle-orm/pglite/migrator";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import * as schema from "@/db/schema";
 import { ticketCode } from "./ticket-code";
 
@@ -98,44 +107,15 @@ describe("normalizeTicketCode", () => {
 });
 
 beforeAll(async () => {
+  await migrate(db, { migrationsFolder: "drizzle" });
   await client.exec(`
-    create table "user" (id text primary key);
-    create type ticket_source as enum ('stripe', 'opennode', 'admin');
-    create type ticket_status as enum ('pending', 'paid', 'failed', 'underpaid');
-    create table tickets (
-      payment_id text primary key,
-      ticket_code text not null unique,
-      source ticket_source not null,
-      status ticket_status not null,
-      test boolean not null default false,
-      tier text,
-      amount_cents integer,
-      coupon_code text,
-      purchaser_email text,
-      purchaser_name text,
-      purchaser_discord text,
-      owner_user_id text references "user"(id) on delete set null,
-      claimed_at timestamptz,
-      holder_user_id text references "user"(id) on delete set null,
-      referral_code text unique,
-      referred_by_payment_id text,
-      badge_code integer unique,
-      checked_in_at timestamptz,
-      checked_in_by text references "user"(id) on delete set null,
-      created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now(),
-      constraint tickets_badge_code_range check (badge_code between 0 and 9999)
-    );
-    create table verification (
-      id text primary key,
-      identifier text not null,
-      value text not null,
-      expires_at timestamptz not null,
-      created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now()
-    );
-    insert into "user" (id) values ('ada'), ('bob'), ('desk')`);
+    insert into "user" (id, name, email)
+    values ('ada', 'Ada', 'ada@example.com'),
+           ('bob', 'Bob', 'bob@example.com'),
+           ('desk', 'Desk', 'desk@example.com')`);
 });
+
+afterAll(() => client.close());
 
 beforeEach(async () => {
   await client.exec("delete from tickets; delete from verification");
@@ -147,7 +127,7 @@ async function seed(
   {
     owner = null,
     status = "paid",
-  }: { owner?: string | null; status?: "paid" | "pending" } = {},
+  }: { owner?: string | null; status?: "paid" | "pending" | "failed" } = {},
 ) {
   await client.query(
     `insert into tickets (payment_id, ticket_code, source, status, owner_user_id, claimed_at)
@@ -161,6 +141,7 @@ const fetchRow = async (paymentId: string) => {
     owner_user_id: string | null;
     checked_in_at: Date | null;
     checked_in_by: string | null;
+    claimed_by: string | null;
     badge_code: number | null;
     ticket_code: string;
   }>("select * from tickets where payment_id = $1", [paymentId]);
@@ -170,35 +151,54 @@ const fetchRow = async (paymentId: string) => {
 describe("claimTicketFor", () => {
   it("claims a specific ticket for the attendee", async () => {
     await seed("pi_1");
-    const result = await claimTicketFor("pi_1", "ada");
+    const result = await claimTicketFor("desk", "pi_1", "ada");
     expect(result.ok).toBe(true);
-    expect((await fetchRow("pi_1")).owner_user_id).toBe("ada");
+    const row = await fetchRow("pi_1");
+    expect(row.owner_user_id).toBe("ada");
+    expect(row.claimed_by).toBe("desk");
   });
 
   it("keeps the claim invariants", async () => {
     await seed("pi_1", { owner: "bob" });
     await seed("pi_2");
     await seed("pi_3", { status: "pending" });
-    expect(await claimTicketFor("pi_1", "ada")).toEqual({
+    expect(await claimTicketFor("desk", "pi_1", "ada")).toEqual({
       ok: false,
       reason: "taken",
     });
-    expect(await claimTicketFor("pi_1", "bob")).toEqual({
+    expect(await claimTicketFor("desk", "pi_1", "bob")).toEqual({
       ok: false,
       reason: "yours",
     });
-    expect(await claimTicketFor("pi_2", "bob")).toEqual({
+    expect(await claimTicketFor("desk", "pi_2", "bob")).toEqual({
       ok: false,
       reason: "already",
     });
-    expect(await claimTicketFor("pi_3", "ada")).toEqual({
+    expect(await claimTicketFor("desk", "pi_3", "ada")).toEqual({
       ok: false,
       reason: "unpaid",
     });
-    expect(await claimTicketFor("pi_nope", "ada")).toEqual({
+    expect(await claimTicketFor("desk", "pi_nope", "ada")).toEqual({
       ok: false,
       reason: "unknown",
     });
+  });
+
+  it("won't hand out a checked-in ticket whose owner account is gone", async () => {
+    await seed("pi_1", { owner: "bob" });
+    await checkInTicket("desk", "pi_1");
+    await client.exec(
+      "update tickets set owner_user_id = null where payment_id = 'pi_1'",
+    );
+    expect(await claimTicketFor("desk", "pi_1", "ada")).toEqual({
+      ok: false,
+      reason: "checkedIn",
+    });
+    expect(await claimTicket("ada", ticketCode("pi_1"))).toEqual({
+      ok: false,
+      reason: "checkedIn",
+    });
+    expect((await fetchRow("pi_1")).owner_user_id).toBeNull();
   });
 
   it("ignores the per-account failure throttle", async () => {
@@ -211,7 +211,7 @@ describe("claimTicketFor", () => {
       ok: false,
       reason: "limited",
     });
-    expect((await claimTicketFor("pi_1", "ada")).ok).toBe(true);
+    expect((await claimTicketFor("desk", "pi_1", "ada")).ok).toBe(true);
   });
 });
 
@@ -223,6 +223,7 @@ describe("claimTicket and claimOwnTicket", () => {
       "update tickets set purchaser_email = 'bob@example.com' where payment_id = 'pi_2'",
     );
     expect((await claimTicket("ada", ticketCode("pi_1"))).ok).toBe(true);
+    expect((await fetchRow("pi_1")).claimed_by).toBeNull();
     expect((await claimOwnTicket("bob", "bob@example.com", "pi_2")).ok).toBe(
       true,
     );
@@ -236,13 +237,13 @@ describe("claimTicket and claimOwnTicket", () => {
 describe("checkInTicket", () => {
   it("records who checked a claimed ticket in, once", async () => {
     await seed("pi_1", { owner: "ada" });
-    const first = await checkInTicket("pi_1", "desk");
+    const first = await checkInTicket("desk", "pi_1");
     expect(first.ok).toBe(true);
     const row = await fetchRow("pi_1");
     expect(row.checked_in_by).toBe("desk");
     expect(row.checked_in_at).toBeInstanceOf(Date);
 
-    const again = await checkInTicket("pi_1", "bob");
+    const again = await checkInTicket("bob", "pi_1");
     expect(again).toMatchObject({ ok: false, reason: "already" });
     if (again.ok || again.reason !== "already") throw new Error("unreachable");
     expect(again.ticket.checkedInBy).toBe("desk");
@@ -252,18 +253,35 @@ describe("checkInTicket", () => {
   it("refuses unclaimed, unpaid and unknown tickets", async () => {
     await seed("pi_1");
     await seed("pi_2", { owner: "ada", status: "pending" });
-    expect(await checkInTicket("pi_1", "desk")).toEqual({
+    await seed("pi_3", { owner: "bob", status: "failed" });
+    expect(await checkInTicket("desk", "pi_1")).toEqual({
       ok: false,
       reason: "unclaimed",
     });
-    expect(await checkInTicket("pi_2", "desk")).toEqual({
+    expect(await checkInTicket("desk", "pi_2")).toEqual({
       ok: false,
       reason: "unpaid",
     });
-    expect(await checkInTicket("pi_nope", "desk")).toEqual({
+    expect(await checkInTicket("desk", "pi_3")).toEqual({
+      ok: false,
+      reason: "unpaid",
+    });
+    expect(await checkInTicket("desk", "pi_nope")).toEqual({
       ok: false,
       reason: "unknown",
     });
+  });
+
+  it("lets exactly one of two simultaneous check-ins win", async () => {
+    await seed("pi_1", { owner: "ada" });
+    const results = await Promise.all([
+      checkInTicket("desk", "pi_1"),
+      checkInTicket("bob", "pi_1"),
+    ]);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    expect(results.filter((r) => !r.ok && r.reason === "already")).toHaveLength(
+      1,
+    );
   });
 });
 
@@ -271,7 +289,7 @@ describe("undoCheckIn", () => {
   it("clears both fields and reports a ticket that wasn't checked in", async () => {
     await seed("pi_1", { owner: "ada" });
     expect(await undoCheckIn("pi_1")).toBeNull();
-    await checkInTicket("pi_1", "desk");
+    await checkInTicket("desk", "pi_1");
     const undone = await undoCheckIn("pi_1");
     expect(undone?.checkedInAt).toBeNull();
     expect(undone?.checkedInBy).toBeNull();
@@ -282,15 +300,37 @@ describe("undoCheckIn", () => {
 describe("unclaimTicket", () => {
   it("is refused once the ticket is checked in", async () => {
     await seed("pi_1", { owner: "ada" });
-    await checkInTicket("pi_1", "desk");
-    expect(await unclaimTicket("ada", "pi_1")).toBeNull();
+    await checkInTicket("desk", "pi_1");
+    expect(await unclaimTicket("ada", "pi_1")).toEqual({
+      ok: false,
+      reason: "checkedIn",
+    });
+    expect(await unclaimTicket("bob", "pi_1")).toEqual({
+      ok: false,
+      reason: "notYours",
+    });
     expect((await fetchRow("pi_1")).owner_user_id).toBe("ada");
 
     await undoCheckIn("pi_1");
+    await assignBadgeCode("pi_1", 42);
     const released = await unclaimTicket("ada", "pi_1");
-    expect(released?.ownerUserId).toBeNull();
-    expect(released?.holderUserId).toBe("ada");
-    expect(released?.ticketCode).not.toBe(ticketCode("pi_1"));
+    if (!released.ok) throw new Error("unreachable");
+    expect(released.ticket.ownerUserId).toBeNull();
+    expect(released.ticket.holderUserId).toBe("ada");
+    expect(released.ticket.badgeCode).toBeNull();
+    expect(released.ticket.ticketCode).not.toBe(ticketCode("pi_1"));
+  });
+
+  it("tells a stranger and an unclaimed ticket apart from a checked-in one", async () => {
+    await seed("pi_1");
+    expect(await unclaimTicket("ada", "pi_1")).toEqual({
+      ok: false,
+      reason: "notYours",
+    });
+    expect(await unclaimTicket("ada", "pi_nope")).toEqual({
+      ok: false,
+      reason: "notYours",
+    });
   });
 });
 
@@ -299,7 +339,7 @@ describe("assignBadgeCode", () => {
     await seed("pi_1", { owner: "ada" });
     expect((await assignBadgeCode("pi_1", 42)).ok).toBe(true);
     expect((await fetchRow("pi_1")).badge_code).toBe(42);
-    await checkInTicket("pi_1", "desk");
+    await checkInTicket("desk", "pi_1");
     expect((await assignBadgeCode("pi_1", 7)).ok).toBe(true);
     expect((await fetchRow("pi_1")).badge_code).toBe(7);
     expect((await assignBadgeCode("pi_1", null)).ok).toBe(true);
@@ -318,14 +358,13 @@ describe("assignBadgeCode", () => {
     expect(await assignBadgeCode("pi_1", 9999)).toMatchObject({ ok: true });
   });
 
-  it("names the ticket already wearing a taken code", async () => {
+  it("refuses a code another ticket already wears", async () => {
     await seed("pi_1");
     await seed("pi_2");
     await assignBadgeCode("pi_1", 42);
     expect(await assignBadgeCode("pi_2", 42)).toEqual({
       ok: false,
       reason: "taken",
-      heldBy: "pi_1",
     });
     expect((await fetchRow("pi_2")).badge_code).toBeNull();
     expect(await assignBadgeCode("pi_nope", 1)).toEqual({
