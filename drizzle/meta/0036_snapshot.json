@@ -1,5 +1,5 @@
 {
-  "id": "ae8f2008-5ee0-4c9e-85c9-e93c25a579ca",
+  "id": "53e2705f-92c8-4867-ae42-a4eccfb45ae9",
   "prevId": "fe64fa57-e693-48cb-90ac-e0e7fb0d575f",
   "version": "7",
   "dialect": "postgresql",
@@ -794,6 +794,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "claimed_by": {
+          "name": "claimed_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "holder_user_id": {
           "name": "holder_user_id",
           "type": "text",
@@ -913,6 +919,15 @@
           "tableFrom": "tickets",
           "tableTo": "user",
           "columnsFrom": ["owner_user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "tickets_claimed_by_user_id_fk": {
+          "name": "tickets_claimed_by_user_id_fk",
+          "tableFrom": "tickets",
+          "tableTo": "user",
+          "columnsFrom": ["claimed_by"],
           "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"

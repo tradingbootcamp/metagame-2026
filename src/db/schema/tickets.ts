@@ -30,8 +30,7 @@ export const ticketStatus = pgEnum("ticket_status", [
 // Written by the payment webhooks beside the Airtable row, which stays the
 // ops/finance view. Ownership (owner_user_id) is only ever set by a claim.
 // holder_user_id is who has the code to share or claim; null means the buyer.
-// Unclaiming makes the attendee the holder under a fresh code; a checked-in
-// ticket can't be unclaimed.
+// Unclaiming makes the attendee the holder under a fresh code.
 export const tickets = pgTable(
   "tickets",
   {
@@ -50,6 +49,7 @@ export const tickets = pgTable(
     purchaserDiscord: text(),
     ownerUserId: text().references(() => user.id, { onDelete: "set null" }),
     claimedAt: timestamp({ withTimezone: true }),
+    claimedBy: text().references(() => user.id, { onDelete: "set null" }),
     holderUserId: text().references(() => user.id, { onDelete: "set null" }),
     // Minted when the holder first looks for it on /account; a friend's
     // /invite link carries it.
@@ -60,8 +60,6 @@ export const tickets = pgTable(
       (): AnyPgColumn => tickets.paymentId,
       { onDelete: "set null" },
     ),
-    // Typed in at the check-in desk from the QR sticker put on the badge;
-    // nothing is pre-printed, so it stays null until then.
     badgeCode: integer().unique(),
     checkedInAt: timestamp({ withTimezone: true }),
     checkedInBy: text().references(() => user.id, { onDelete: "set null" }),

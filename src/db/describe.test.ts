@@ -84,6 +84,7 @@ describe("describeSchema", () => {
       "tickets",
       "tickets",
       "tickets",
+      "tickets",
       "unconference_note_reactions",
       "unconference_notes",
       "user_permission_grants",
