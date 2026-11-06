@@ -72,17 +72,18 @@ export default function ArriveModal({
 
           {claiming &&
             (forUser === null ? (
-              <>
-                <AccountPicker
-                  suggested={ticket.suggested}
-                  offerPurchaser={ticket.offerPurchaser}
-                  prefill={{
-                    name: ticket.purchaserName,
-                    email: ticket.purchaserEmail,
-                  }}
-                  onPick={setForUser}
-                />
-              </>
+              <AccountPicker
+                suggested={ticket.suggested}
+                buyer={
+                  ticket.buyerNeedsAccount
+                    ? {
+                        name: ticket.purchaserName,
+                        email: ticket.purchaserEmail,
+                      }
+                    : null
+                }
+                onPick={setForUser}
+              />
             ) : (
               <div className="flex items-center gap-3 rounded-lg border border-navy/30 bg-navy/5 px-3 py-2">
                 <span className="min-w-0 flex-1">
@@ -113,7 +114,7 @@ export default function ArriveModal({
                     htmlFor={badgeId}
                     className="text-sm font-medium text-ink/80"
                   >
-                    {override ? "New sticker number" : "Sticker number"}
+                    {override ? "New badge number" : "Sticker number"}
                   </label>
                   <input
                     id={badgeId}
@@ -139,14 +140,14 @@ export default function ArriveModal({
                   {override && (
                     <p className="text-xs text-ink/60">
                       Only if they lost badge {existing} and you&rsquo;re giving
-                      them a new sticker. {existing} stops working.
+                      them a new one. {existing} stops working.
                     </p>
                   )}
                 </>
               ) : (
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="text-sm text-ink/80">
-                    Sticker on record:{" "}
+                    Badge code:{" "}
                     <span className="font-mono text-lg">{existing}</span>
                   </span>
                   <button
@@ -154,7 +155,7 @@ export default function ArriveModal({
                     onClick={() => setOverride(true)}
                     className={smallButtonClass}
                   >
-                    Give a different sticker
+                    Give a different badge
                   </button>
                 </div>
               )}

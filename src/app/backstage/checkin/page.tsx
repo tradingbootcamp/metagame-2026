@@ -114,7 +114,7 @@ export default async function CheckinPage(
         ? { at: formatPacificTime(t.checkedInAt), by: by?.name ?? "someone" }
         : null,
       suggested: offered,
-      offerPurchaser:
+      buyerNeedsAccount:
         offered === null &&
         !spare &&
         t.ownerUserId === null &&

@@ -14,6 +14,6 @@ export type DeskTicket = {
   checkedIn: { at: string; by: string } | null;
   /** The account to offer first when claiming: the holder's, else the buyer's. */
   suggested: CheckinAccount | null;
-  /** Offer to make the buyer an account: none exists and this isn't a spare pack ticket. */
-  offerPurchaser: boolean;
+  /** The buyer is probably who this is for, but has no account yet (and this isn't a spare pack ticket). */
+  buyerNeedsAccount: boolean;
 };
