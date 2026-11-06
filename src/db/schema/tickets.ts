@@ -57,6 +57,16 @@ export const tickets = pgTable(
       (): AnyPgColumn => tickets.paymentId,
       { onDelete: "set null" },
     ),
+    // Beside status, not in it: status is what the payment did, and webhook
+    // retries rewrite it. Undoing a void keeps who voided it and when.
+    voided: boolean().notNull().default(false),
+    voidedAt: timestamp({ withTimezone: true }),
+    voidedBy: text(),
+    unvoidedAt: timestamp({ withTimezone: true }),
+    unvoidedBy: text(),
+    // The refund event that last applied to this ticket. Staff undoing a void
+    // survives retries because the same refund never applies to a ticket twice.
+    refundEventId: text(),
     ...timestamps,
   },
   (t) => [
@@ -65,4 +75,17 @@ export const tickets = pgTable(
     index("tickets_holder_user_id_idx").on(t.holderUserId),
     index("tickets_referred_by_payment_id_idx").on(t.referredByPaymentId),
   ],
+);
+
+// Full refunds, kept apart from tickets because one can arrive before its
+// tickets are stored. payment_id is the bare payment, without `:ticket:<n>`.
+export const ticketRefunds = pgTable(
+  "ticket_refunds",
+  {
+    stripeEventId: text().primaryKey(),
+    paymentId: text().notNull(),
+    appliedAt: timestamp({ withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [index("ticket_refunds_payment_id_idx").on(t.paymentId)],
 );

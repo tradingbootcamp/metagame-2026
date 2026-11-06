@@ -49,6 +49,7 @@ export function ticketStep(
     TicketRow,
     | "paymentId"
     | "status"
+    | "voided"
     | "ownerUserId"
     | "purchaserEmail"
     | "holderUserId"
@@ -57,11 +58,13 @@ export function ticketStep(
   userId: string,
   email: string,
 ): TicketStep {
-  if (rows.some((t) => t.ownerUserId === userId)) return { kind: "held" };
+  if (rows.some((t) => t.ownerUserId === userId && !t.voided))
+    return { kind: "held" };
   const tickets = rows
     .filter(
       (t) =>
         t.status === "paid" &&
+        !t.voided &&
         t.ownerUserId === null &&
         holdsTicket(t, userId, email),
     )

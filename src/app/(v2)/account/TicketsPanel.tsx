@@ -101,7 +101,7 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [unclaimState, setUnclaimState] = useState<UnclaimState>({});
   // One admission per person, so offer it only until they hold a ticket.
-  const holdsOne = tickets.some((t) => t.mine);
+  const holdsOne = tickets.some((t) => t.mine && t.status === "paid");
 
   return (
     <section className="mt-12 flex max-w-[960px] flex-col gap-4">

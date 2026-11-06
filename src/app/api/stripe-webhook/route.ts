@@ -25,6 +25,7 @@ import { mailingListOptOutUrl } from "@/lib/purchase-buyer";
 import { pickUtm } from "@/lib/utm";
 import { FAMILY_PACK } from "@/lib/family-pack";
 import { recordFamilyPack } from "@/lib/family-pack-purchase";
+import { voidRefundedCharge } from "@/lib/ticket-void";
 
 // Signature verification needs the raw body + Node crypto — keep this off the edge.
 export const runtime = "nodejs";
@@ -117,6 +118,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Processing failed" }, { status: 500 });
     }
 
+    return NextResponse.json({ received: true });
+  }
+
+  // Only reaches us if the Stripe endpoint subscribes to charge.refunded.
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object as Stripe.Charge;
+    try {
+      await voidRefundedCharge(charge, event.id);
+    } catch (err) {
+      console.error("[stripe-webhook] failed to void refunded ticket:", err);
+      await reportError({
+        source: "Stripe webhook",
+        summary: "Couldn't void a refunded ticket; Stripe will retry",
+        details: { Charge: charge.id, Event: event.id },
+        error: err,
+      });
+      return NextResponse.json({ error: "Processing failed" }, { status: 500 });
+    }
     return NextResponse.json({ received: true });
   }
 

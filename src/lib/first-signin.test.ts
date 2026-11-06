@@ -12,6 +12,7 @@ const row = (
   paymentId: "pi_1",
   tier: "Standard",
   status: "paid",
+  voided: false,
   ownerUserId: null,
   purchaserEmail: "ada@example.com",
   createdAt: new Date("2026-10-03T17:00:00.000Z"),
@@ -20,6 +21,19 @@ const row = (
 });
 
 describe("ticketStep", () => {
+  it("ignores voided tickets, so their owner can claim another", () => {
+    expect(
+      ticketStep(
+        [
+          row({ paymentId: "a", voided: true, ownerUserId: "u1" }),
+          row({ paymentId: "b", voided: true }),
+        ],
+        "u1",
+        "ada@example.com",
+      ),
+    ).toEqual({ kind: "code" });
+  });
+
   it("offers the code entry when there are no tickets", () => {
     expect(ticketStep([], "u1", "ada@example.com")).toEqual({ kind: "code" });
   });

@@ -20,6 +20,7 @@ import { cleanDiscordHandle } from "@/lib/discord-handle";
 import { sendAdminErrorEmail } from "@/lib/email";
 import { ticketCode, withFreshTicketCode } from "@/lib/ticket-code";
 import { emailKey } from "@/lib/ticket-holder";
+import { applyEarlierRefund } from "@/lib/ticket-void";
 import { getDayPass, getTicket, supporterTier } from "@/lib/tickets";
 
 export { normalizeTicketCode } from "@/lib/ticket-code-format";
@@ -36,6 +37,12 @@ export const visible =
   process.env.NEXT_PUBLIC_VERCEL_ENV === "production"
     ? eq(tickets.test, false)
     : undefined;
+
+/** Paid and not voided: the only tickets that admit anyone. */
+export const admitting = and(
+  eq(tickets.status, "paid"),
+  eq(tickets.voided, false),
+);
 
 /** holdsTicket as a WHERE clause. */
 const heldBy = (userId: string, email: string) =>
@@ -131,6 +138,7 @@ export async function recordTicket(
     .insert(schema.tickets)
     .values(row)
     .onConflictDoUpdate({ target: schema.tickets.paymentId, set });
+  await applyEarlierRefund(row.paymentId);
 }
 
 /**
@@ -212,9 +220,7 @@ export async function hasClaimedTicket(userId: string): Promise<boolean> {
   const [row] = await getDb()
     .select({ id: tickets.paymentId })
     .from(tickets)
-    .where(
-      and(visible, eq(tickets.ownerUserId, userId), eq(tickets.status, "paid")),
-    )
+    .where(and(visible, eq(tickets.ownerUserId, userId), admitting))
     .limit(1);
   return row !== undefined;
 }
@@ -230,6 +236,7 @@ export type ClaimResult =
         | "taken"
         | "unpaid"
         | "void"
+        | "voided"
         | "limited";
     };
 
@@ -302,10 +309,10 @@ async function attemptClaim(
         visible,
         eq(tickets.ticketCode, code),
         isNull(tickets.ownerUserId),
-        eq(tickets.status, "paid"),
+        admitting,
         // One admission per person, checked in the same statement so two
         // claims at once can't both win.
-        sql`not exists (select 1 from "tickets" mine where mine."owner_user_id" = ${userId} and mine."status" = 'paid')`,
+        sql`not exists (select 1 from "tickets" mine where mine."owner_user_id" = ${userId} and mine."status" = 'paid' and not mine."voided")`,
       ),
     )
     .returning();
@@ -317,11 +324,12 @@ async function attemptClaim(
     .where(and(visible, eq(tickets.ticketCode, code)))
     .limit(1);
   if (!existing) return { ok: false, reason: "unknown" };
+  if (existing.voided) return { ok: false, reason: "voided" };
   if (existing.ownerUserId === userId) return { ok: false, reason: "yours" };
   const [held] = await db
     .select({ id: tickets.paymentId })
     .from(tickets)
-    .where(and(eq(tickets.ownerUserId, userId), eq(tickets.status, "paid")))
+    .where(and(eq(tickets.ownerUserId, userId), admitting))
     .limit(1);
   if (held) return { ok: false, reason: "already" };
   if (existing.ownerUserId) return { ok: false, reason: "taken" };
@@ -354,7 +362,7 @@ export async function unclaimTicket(
           visible,
           eq(tickets.paymentId, paymentId),
           eq(tickets.ownerUserId, userId),
-          eq(tickets.status, "paid"),
+          admitting,
         ),
       )
       .returning();

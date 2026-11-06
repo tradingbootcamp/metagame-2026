@@ -3,6 +3,7 @@ import {
   BookOpenIcon,
   CalendarIcon,
   DatabaseIcon,
+  DoorOpenIcon,
   DicesIcon,
   DollarSignIcon,
   KeyIcon,
@@ -73,6 +74,13 @@ const TOOLS: {
     name: "Tickets",
     blurb: "Every ticket with its buyer, holder and attendee.",
     perm: "tickets.view",
+  },
+  {
+    href: "/backstage/door",
+    icon: DoorOpenIcon,
+    name: "Door",
+    blurb: "Check a ticket at the door by code, email or name.",
+    perm: "checkin.view",
   },
   {
     href: "/backstage/children",

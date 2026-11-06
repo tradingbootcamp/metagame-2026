@@ -46,6 +46,14 @@ from Airtable once (2026-10-20). A ticket is
 owned only once its code is claimed; a matching purchaser email shows the
 buyer their tickets but never grants ownership.
 
+A voided ticket (`tickets.voided`, beside `status`, which stays what the payment
+did) admits nobody: staff void and undo on `/backstage/tickets`
+(`tickets.void`), and a full refund voids through `charge.refunded`, which the
+Stripe endpoint has to subscribe to. Check `admitting` or `ticketState()`, not
+`status` alone. A refund that beats its ticket waits in `ticket_refunds` until
+`recordTicket()` stores the ticket. `/backstage/door` (`checkin.view`) is the
+volunteers' lookup; it never returns a code, payment id or email.
+
 ## Accounts
 
 Better Auth, built lazily by `getAuth()` in `src/lib/auth.ts` over the Drizzle
