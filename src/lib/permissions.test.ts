@@ -84,6 +84,7 @@ describe("expand", () => {
       "schedule.view",
       "schedule.preview",
       "schedule.volunteer_rooms",
+      "schedule.session_notes",
     ]);
     expect(expand([]).size).toBe(0);
   });
@@ -103,6 +104,7 @@ describe("effectivePermissions", () => {
       "promo.view",
       "schedule.manage",
       "schedule.preview",
+      "schedule.session_notes",
       "schedule.view",
       "schedule.volunteer_rooms",
       "tickets.view",
@@ -114,6 +116,7 @@ describe("effectivePermissions", () => {
     expect([...got].sort()).toEqual([
       "schedule.manage",
       "schedule.preview",
+      "schedule.session_notes",
       "schedule.view",
       "schedule.volunteer_rooms",
     ]);
