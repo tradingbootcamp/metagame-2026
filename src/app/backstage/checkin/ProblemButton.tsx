@@ -6,13 +6,7 @@ import { reportProblem } from "./actions";
 import { Dialog, DialogContent, DialogTitle } from "@/v2/components/ui/dialog";
 
 /** Posts a note to the website-errors Discord channel with the desk context. */
-export default function ProblemButton({
-  q,
-  paymentId,
-}: {
-  q: string;
-  paymentId?: string;
-}) {
+export default function ProblemButton({ q }: { q: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -23,26 +17,12 @@ export default function ProblemButton({
       >
         Report issue
       </button>
-      {open && (
-        <ReportModal
-          q={q}
-          paymentId={paymentId}
-          onClose={() => setOpen(false)}
-        />
-      )}
+      {open && <ReportModal q={q} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-function ReportModal({
-  q,
-  paymentId,
-  onClose,
-}: {
-  q: string;
-  paymentId?: string;
-  onClose: () => void;
-}) {
+function ReportModal({ q, onClose }: { q: string; onClose: () => void }) {
   const [state, run, pending] = useActionState(reportProblem, {});
   const id = useId();
   return (
@@ -53,9 +33,6 @@ function ReportModal({
       >
         <form action={run} className="flex flex-col gap-4">
           <input type="hidden" name="q" value={q} />
-          {paymentId && (
-            <input type="hidden" name="paymentId" value={paymentId} />
-          )}
           <DialogTitle className="text-lg font-semibold text-navy">
             Report an issue
           </DialogTitle>

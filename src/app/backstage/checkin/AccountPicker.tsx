@@ -22,20 +22,24 @@ function AccountLine({ account }: { account: CheckinAccount }) {
 /** Picks the account a ticket is for: the one on the purchase, or one searched for. */
 export default function AccountPicker({
   suggested,
+  offerPurchaser,
   prefill,
   onPick,
 }: {
   suggested: CheckinAccount | null;
+  offerPurchaser: boolean;
   /** From the purchase, for a new account. */
   prefill: { name: string | null; email: string | null };
   onPick: (account: CheckinAccount) => void;
 }) {
-  const purchaser = prefill.email !== null;
-  const [searching, setSearching] = useState(suggested === null && !purchaser);
+  const [searching, setSearching] = useState(
+    suggested === null && !offerPurchaser,
+  );
   // Who the new-account form is for: the purchaser, or someone else (blank).
   const [minting, setMinting] = useState<"purchaser" | "other" | null>(null);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<CheckinAccount[]>([]);
+  const [searchedFor, setSearchedFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [search] = useState(latestRequest);
@@ -51,6 +55,7 @@ export default function AccountPicker({
         if (!isCurrent()) return;
         setError(res.error ?? null);
         setHits(res.accounts ?? []);
+        setSearchedFor(res.error ? null : q);
       });
     }, 300);
     return () => {
@@ -86,7 +91,7 @@ export default function AccountPicker({
     <div className="flex flex-col gap-3">
       {suggested
         ? pick(suggested)
-        : purchaser && (
+        : offerPurchaser && (
             <button
               type="button"
               onClick={() => setMinting("purchaser")}
@@ -136,7 +141,8 @@ export default function AccountPicker({
           />
           {pending && <p className="text-sm text-ink/60">Searching…</p>}
           {!pending &&
-            query.trim().length >= CHECKIN_MIN_CHARS &&
+            searchedFor !== null &&
+            searchedFor === query.trim() &&
             hits.length === 0 && (
               <p className="text-sm text-ink/60">
                 No account matches. They need to sign in at metagame.games/login
@@ -220,6 +226,7 @@ function MintForm({
         onClick={() =>
           start(async () => {
             const res = await mintAccount({ name, email });
+            // An existing account under that email is the same person.
             if (res.account) onPick(res.account);
             else setError(res.error ?? "Couldn't create the account.");
           })

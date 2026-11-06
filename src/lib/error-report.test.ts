@@ -104,7 +104,7 @@ describe("reportError", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(
       reportError({ source: "s", summary: "t", mention: false }),
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(false);
     expect(error).toHaveBeenCalled();
     error.mockRestore();
   });

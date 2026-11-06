@@ -75,6 +75,7 @@ export default function ArriveModal({
               <>
                 <AccountPicker
                   suggested={ticket.suggested}
+                  offerPurchaser={ticket.offerPurchaser}
                   prefill={{
                     name: ticket.purchaserName,
                     email: ticket.purchaserEmail,
@@ -167,7 +168,11 @@ export default function ArriveModal({
           )}
           {state.done && (
             <p className="text-sm font-semibold text-moss">
-              Checked in. Hand them badge {existing ?? badge} and a swag bag.
+              Checked in. Hand them badge{" "}
+              {state.badge === undefined
+                ? existing
+                : formatBadgeCode(state.badge)}{" "}
+              and a swag bag.
             </p>
           )}
 

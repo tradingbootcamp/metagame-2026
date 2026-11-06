@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { message } from "@/lib/admin-api";
 import { EXPIRED, requireAccess } from "@/lib/admin-auth";
 import { formatBadgeCode } from "@/lib/badge-code";
 import {
@@ -12,7 +14,11 @@ import {
 import { badgeWearer, deskTicket } from "@/lib/checkin-store";
 import { sendAccountInviteEmail } from "@/lib/email";
 import { reportError } from "@/lib/error-report";
-import { ensureAccount, searchAccounts } from "@/lib/schedule-store";
+import {
+  ensureAccount,
+  findAccount,
+  searchAccounts,
+} from "@/lib/schedule-store";
 import {
   assignBadgeCode,
   checkInTicket,
@@ -29,7 +35,7 @@ const str = (formData: FormData, key: string, max = 500) =>
 
 const manage = () => requireAccess("checkin.manage");
 
-export type DeskState = { error?: string; done?: string };
+export type DeskState = { error?: string; done?: string; badge?: number };
 
 const CLAIM_ERRORS = {
   unknown: "That ticket no longer exists. Search again.",
@@ -97,7 +103,8 @@ export async function arriveAction(
 
   const result = await checkInTicket(access.userId, paymentId);
   revalidatePath(TOOL);
-  if (result.ok) return { done: "Checked in" };
+  if (result.ok)
+    return { done: "Checked in", badge: result.ticket.badgeCode ?? undefined };
   if (result.reason === "already") return { error: CLAIM_ERRORS.checkedIn };
   if (result.reason === "unpaid") return { error: CLAIM_ERRORS.unpaid };
   if (result.reason === "unclaimed")
@@ -142,22 +149,40 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function mintAccount(input: {
   name: string;
   email: string;
-}): Promise<{ account?: CheckinAccount; error?: string }> {
+}): Promise<{ account?: CheckinAccount; existed?: boolean; error?: string }> {
   if (!(await manage())) return { error: EXPIRED };
   const name = String(input.name).trim().slice(0, 200);
   const email = String(input.email).trim().toLowerCase().slice(0, 254);
   if (!name)
     return { error: "Type their name as it should read on the badge." };
   if (!EMAIL.test(email)) return { error: "That email doesn't look right." };
-  const {
-    userId,
-    name: storedName,
-    email: storedEmail,
-  } = await ensureAccount(name, email);
-  sendAccountInviteEmail({ to: storedEmail, name: storedName }).catch((err) =>
-    console.error("[checkin] invite email failed", storedEmail, err),
-  );
-  return { account: { id: userId, name: storedName, email: storedEmail } };
+  try {
+    const existing = await findAccount(email);
+    if (existing) {
+      return {
+        account: {
+          id: existing.userId,
+          name: existing.name,
+          email: existing.email,
+        },
+        existed: true,
+      };
+    }
+    const {
+      userId,
+      name: storedName,
+      email: storedEmail,
+    } = await ensureAccount(name, email);
+    after(() =>
+      sendAccountInviteEmail({ to: storedEmail, name: storedName }).catch(
+        (err) =>
+          console.error("[checkin] invite email failed", storedEmail, err),
+      ),
+    );
+    return { account: { id: userId, name: storedName, email: storedEmail } };
+  } catch (err) {
+    return { error: message(err) };
+  }
 }
 
 export async function reportProblem(
@@ -168,14 +193,14 @@ export async function reportProblem(
   if (!access) return { error: EXPIRED };
   const text = str(formData, "text", 1200);
   if (!text) return { error: "Say what's wrong first." };
-  await reportError({
+  const sent = await reportError({
     source: "Check-in desk",
     summary: text,
     details: {
       Volunteer: access.name,
       Search: str(formData, "q", CHECKIN_QUERY_MAX),
-      Ticket: str(formData, "paymentId"),
     },
   });
+  if (!sent) return { error: "Couldn't send. Grab Brian or Sparr directly." };
   return { done: "Sent to Brian and Sparr." };
 }

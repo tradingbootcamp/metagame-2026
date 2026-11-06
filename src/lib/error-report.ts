@@ -85,9 +85,10 @@ function reportContext(): ReportContext {
 /**
  * Tell the team something broke: a message in the Discord error channel
  * (DISCORD_ERROR_WEBHOOK_URL), or the admin email while that isn't set.
- * Best-effort — never throws, so it's safe inside a catch.
+ * Best-effort — never throws, so it's safe inside a catch. False when the
+ * report didn't go out.
  */
-export async function reportError(report: ErrorReport): Promise<void> {
+export async function reportError(report: ErrorReport): Promise<boolean> {
   const text = formatErrorReport(report, reportContext());
   const webhook = env.DISCORD_ERROR_WEBHOOK_URL;
   try {
@@ -95,7 +96,7 @@ export async function reportError(report: ErrorReport): Promise<void> {
       await sendAdminErrorEmail(
         `${report.source} — ${report.summary}\n\n${text}`,
       );
-      return;
+      return true;
     }
     const res = await fetch(webhook, {
       method: "POST",
@@ -110,6 +111,7 @@ export async function reportError(report: ErrorReport): Promise<void> {
     });
     if (!res.ok)
       throw new Error(`Discord responded ${res.status}: ${await res.text()}`);
+    return true;
   } catch (err) {
     console.error(
       `[error-report] couldn't report "${report.source}":`,
@@ -117,5 +119,6 @@ export async function reportError(report: ErrorReport): Promise<void> {
       "\n",
       text,
     );
+    return false;
   }
 }
