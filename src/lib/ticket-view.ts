@@ -1,4 +1,5 @@
 import { formatReferralCode } from "@/lib/referral";
+import { formatBadgeCode } from "@/lib/badge-code";
 import { formatTicketCode } from "@/lib/ticket-code-format";
 import {
   emailKey,
@@ -23,6 +24,8 @@ export type TicketView = {
   referralCode: string | null;
   /** Who the ticket was bought on a referral from, by name or email. */
   referredBy: string | null;
+  /** Four-digit badge number, once the ticket has one. */
+  badgeCode: string | null;
 };
 
 export function ticketView(
@@ -48,5 +51,6 @@ export function ticketView(
         ? formatReferralCode(t.referralCode)
         : null,
     referredBy,
+    badgeCode: t.badgeCode === null ? null : formatBadgeCode(t.badgeCode),
   };
 }

@@ -57,6 +57,9 @@ export const tickets = pgTable(
       (): AnyPgColumn => tickets.paymentId,
       { onDelete: "set null" },
     ),
+    // Printed on the attendee's badge and encoded, zero-padded to four
+    // digits, in its QR sticker; the stickers are printed ahead of time.
+    badgeCode: integer().unique(),
     ...timestamps,
   },
   (t) => [

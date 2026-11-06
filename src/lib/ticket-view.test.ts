@@ -19,6 +19,7 @@ const row = (over: Partial<TicketRow> = {}): TicketRow => ({
   holderUserId: null,
   referralCode: null,
   referredByPaymentId: null,
+  badgeCode: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...over,
@@ -39,7 +40,12 @@ describe("ticketView", () => {
       transferred: false,
       referralCode: null,
       referredBy: null,
+      badgeCode: null,
     });
+  });
+
+  it("pads the badge number to four digits", () => {
+    expect(ticketView(row({ badgeCode: 42 }), ...ada).badgeCode).toBe("0042");
   });
 
   it("shows the referral code to the holder and the owner, nobody else", () => {
