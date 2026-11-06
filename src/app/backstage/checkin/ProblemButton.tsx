@@ -8,11 +8,9 @@ import { reportProblem } from "./actions";
 export default function ProblemButton({
   q,
   paymentId,
-  compact = false,
 }: {
   q: string;
   paymentId?: string;
-  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [state, run, pending] = useActionState(reportProblem, {});
@@ -25,13 +23,9 @@ export default function ProblemButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={
-          compact
-            ? "text-sm text-ink/50 underline-offset-2 hover:text-meeple hover:underline"
-            : `${smallButtonClass} py-2`
-        }
+        className={`${smallButtonClass} py-2`}
       >
-        Something’s wrong
+        Report issue
       </button>
     );
   }

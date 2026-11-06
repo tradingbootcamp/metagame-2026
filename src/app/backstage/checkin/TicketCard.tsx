@@ -84,7 +84,7 @@ export default function TicketCard({
             </>
           )}
           <div className="flex justify-end">
-            <ProblemButton q={q} paymentId={ticket.paymentId} compact />
+            <ProblemButton q={q} paymentId={ticket.paymentId} />
           </div>
         </div>
       )}
