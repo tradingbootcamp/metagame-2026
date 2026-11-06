@@ -108,10 +108,12 @@ describe("followUpTicketPurchase", () => {
     vi.clearAllMocks();
     send.mockResolvedValue(ok);
     createContact.mockResolvedValue(ok);
+    vi.useFakeTimers({ toFake: ["Date"] });
   });
   afterEach(() => void vi.useRealTimers());
 
-  it("adds the contact and sends the email once per payment", async () => {
+  it("sends the email until the event starts", async () => {
+    vi.setSystemTime(new Date("2026-11-06T21:59:59Z"));
     await followUp();
     expect(createContact).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledTimes(1);
@@ -120,8 +122,21 @@ describe("followUpTicketPurchase", () => {
     });
   });
 
+  it.each(["2026-11-06T22:00:00Z", "2026-11-08T20:00:00Z"])(
+    "keeps only the contact step at %s",
+    async (now) => {
+      vi.setSystemTime(new Date(now));
+      await followUp();
+      expect(createContact).toHaveBeenCalledTimes(1);
+      expect(send).not.toHaveBeenCalled();
+      expect(reportError).not.toHaveBeenCalled();
+    },
+  );
+
   it("rides out a rate limit on both steps", async () => {
+    vi.useRealTimers();
     vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-05T20:00:00Z"));
     const limited = {
       data: null,
       error: { name: "rate_limit_exceeded", message: "Too many requests" },
