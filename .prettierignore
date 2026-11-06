@@ -9,3 +9,5 @@ src/v2/components/dice/dice3d/takes/*.json
 emails/
 # generated ER diagram site
 public/schema-erd/
+# sign maker: hand-compact source and its byte-exact build output
+assets/signs/*.html
