@@ -10,7 +10,19 @@ import {
   shepherdWrite,
 } from "./rfp-mirror";
 
-vi.mock("@/env", () => ({ env: { AIRTABLE_API_KEY: "test" } }));
+vi.mock("@/env", async () => {
+  const { COMMITTEE_NAMES } = await import("./rfp-labels");
+  const emails = COMMITTEE_NAMES.map((name) => [
+    name,
+    `${name.split(" ")[0].toLowerCase()}@example.com`,
+  ]);
+  return {
+    env: {
+      AIRTABLE_API_KEY: "test",
+      COMMITTEE_EMAILS: JSON.stringify(Object.fromEntries(emails)),
+    },
+  };
+});
 
 const grade: GradeValues = {
   operationalEase: "good",
@@ -54,13 +66,14 @@ describe("gradeFields", () => {
 
 describe("graderWrite", () => {
   it("uses the committee name, else the display name, with typecast on", () => {
-    expect(graderWrite({ email: "jbromels@gmail.com", name: "John" })).toEqual({
+    expect(graderWrite({ email: "john@example.com", name: "John" })).toEqual({
       fields: { "Rubric: Grader": "John Bromels" },
       typecast: true,
     });
-    expect(
-      graderWrite({ email: "ja.kopczynski@gmail.com", name: "Jan" }),
-    ).toEqual({ fields: { "Rubric: Grader": "Jisk" }, typecast: true });
+    expect(graderWrite({ email: "jisk@example.com", name: "Jan" })).toEqual({
+      fields: { "Rubric: Grader": "Jisk" },
+      typecast: true,
+    });
     expect(graderWrite({ email: "new@example.com", name: "Pat" })).toEqual({
       fields: { "Rubric: Grader": "Pat" },
       typecast: true,
@@ -87,9 +100,10 @@ describe("graderWrite", () => {
 
 describe("shepherdWrite", () => {
   it("uses the committee name, else the display name, with typecast on", () => {
-    expect(
-      shepherdWrite({ email: "jbromels@gmail.com", name: "John" }),
-    ).toEqual({ fields: { Shepherd: "John Bromels" }, typecast: true });
+    expect(shepherdWrite({ email: "john@example.com", name: "John" })).toEqual({
+      fields: { Shepherd: "John Bromels" },
+      typecast: true,
+    });
     expect(shepherdWrite({ email: "new@example.com", name: "Pat" })).toEqual({
       fields: { Shepherd: "Pat" },
       typecast: true,

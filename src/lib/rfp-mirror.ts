@@ -2,7 +2,7 @@ import { after } from "next/server";
 import { env } from "@/env";
 import { airtableConfig } from "./airtable-config";
 import type { GradeValues, SessionText, SessionTextKey } from "./grade-input";
-import { committeeName } from "./rfp-committee";
+import { committeeConfigured, committeeName } from "./rfp-committee";
 import type { MirrorState, SpeakerTier } from "./rfp-sessions";
 import {
   DROPINS_LABELS,
@@ -47,6 +47,16 @@ export type Write = { fields: Fields; typecast: boolean };
 export type MirrorGroup = Fields | Write | null;
 
 /**
+ * Without the committee's emails a member's display name would replace their
+ * committee name in the cell and, with typecast on, mint a new select option.
+ */
+function committeeUnknown(column: string): boolean {
+  if (committeeConfigured()) return false;
+  console.warn(`[rfp-mirror] COMMITTEE_EMAILS unset; skipping ${column}`);
+  return true;
+}
+
+/**
  * "Rubric: Grader" for the attributed grader, by committee name else display
  * name. Typecast is on, so a grader the select doesn't list — the committee
  * members it never had an option for included — is added to it as it saves.
@@ -59,6 +69,7 @@ export function graderWrite(
   if (grader === null) {
     return { fields: { "Rubric: Grader": "Unassigned" }, typecast: true };
   }
+  if (committeeUnknown("Rubric: Grader")) return null;
   const name = committeeName(grader.email) ?? (grader.name.trim() || null);
   // An email would become a Grader option.
   const option = !name || name.includes("@") ? "Other" : name;
@@ -73,6 +84,7 @@ export function shepherdWrite(
   shepherd: { email: string; name: string } | null,
 ): Write | null {
   if (shepherd === null) return { fields: { Shepherd: null }, typecast: true };
+  if (committeeUnknown("Shepherd")) return null;
   const name = committeeName(shepherd.email) ?? (shepherd.name.trim() || null);
   // An email would become a Shepherd option; better to leave the cell alone.
   if (!name || name.includes("@")) {

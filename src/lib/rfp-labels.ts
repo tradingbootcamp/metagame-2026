@@ -175,8 +175,8 @@ export function nextStepsFor(
 
 /**
  * Committee members as the Grader and Shepherd selects name them. Their
- * account emails live server-side in rfp-committee.ts; this file is bundled
- * for the browser. The Grader select lacks Jisk and Julian Wise.
+ * account emails live in the server-only COMMITTEE_EMAILS env var; this file
+ * is bundled for the browser. The Grader select lacks Jisk and Julian Wise.
  */
 export const COMMITTEE_NAMES: readonly string[] = [
   "John Bromels",
