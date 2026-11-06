@@ -25,6 +25,8 @@ export function parseCheckinQuery(raw: string): CheckinQuery {
   };
 }
 
+export type CheckinAccount = { id: string; name: string; email: string };
+
 export type CheckinState = "unpaid" | "unclaimed" | "claimed" | "checkedIn";
 
 export function checkinState(t: {

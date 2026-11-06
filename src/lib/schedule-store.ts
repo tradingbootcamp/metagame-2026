@@ -16,6 +16,7 @@ import { revalidateTag, unstable_cache } from "next/cache";
 import { getDb, schema } from "@/db";
 import { env } from "@/env";
 import { can } from "./access";
+import { likeContains } from "./like";
 import { currentSession, getAuth } from "./auth";
 import type { HostSessionFields } from "./schedule-input";
 import {
@@ -451,7 +452,7 @@ export async function roomClash(
 export async function searchAccounts(
   query: string,
 ): Promise<ScheduleAccount[]> {
-  const q = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
+  const q = likeContains(query);
   return getDb()
     .select(accountColumns)
     .from(user)

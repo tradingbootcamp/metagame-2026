@@ -9,9 +9,8 @@ import {
 } from "react";
 import { buttonClass, fieldClass, smallButtonClass } from "../ui";
 import { claimFor, findAccounts } from "./actions";
-import type { DeskAccount } from "./desk";
 import { latestRequest } from "../megagame/latest";
-import { CHECKIN_MIN_CHARS } from "@/lib/checkin";
+import { CHECKIN_MIN_CHARS, type CheckinAccount } from "@/lib/checkin";
 
 /** Claims the ticket for an account: the purchaser's when we know it, else one searched for. */
 export default function ClaimPicker({
@@ -19,11 +18,11 @@ export default function ClaimPicker({
   suggested,
 }: {
   paymentId: string;
-  suggested: DeskAccount | null;
+  suggested: CheckinAccount | null;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<DeskAccount[]>([]);
+  const [hits, setHits] = useState<CheckinAccount[]>([]);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [searching, start] = useTransition();
   const [search] = useState(latestRequest);
@@ -48,7 +47,7 @@ export default function ClaimPicker({
     };
   }, [query, search]);
 
-  const claim = (account: DeskAccount) => (
+  const claim = (account: CheckinAccount) => (
     <form action={run} className="flex items-center gap-3">
       <input type="hidden" name="paymentId" value={paymentId} />
       <input type="hidden" name="forUserId" value={account.id} />

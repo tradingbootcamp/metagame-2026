@@ -6,7 +6,8 @@ import { badgeAction, undoAction } from "./actions";
 import ClaimPicker from "./ClaimPicker";
 import type { DeskTicket } from "./desk";
 import ProblemButton from "./ProblemButton";
-import type { CheckinState } from "@/lib/checkin";
+import { formatBadgeCode } from "@/lib/badge-code";
+import { parseBadgeInput, type CheckinState } from "@/lib/checkin";
 
 const PILL: Record<CheckinState, { label: string; className: string }> = {
   unpaid: { label: "Unpaid", className: "bg-meeple/10 text-meeple" },
@@ -23,6 +24,7 @@ export default function TicketCard({
   q: string;
 }) {
   const pill = PILL[ticket.state];
+  const badge = ticket.badge === null ? null : formatBadgeCode(ticket.badge);
   return (
     <article className="flex flex-col gap-3 rounded-xl border border-line bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -37,9 +39,9 @@ export default function TicketCard({
           )}
           <p className="text-sm text-ink/70">
             {ticket.tier} ·{" "}
-            {ticket.badge ? (
+            {badge ? (
               <>
-                badge <span className="font-mono">{ticket.badge}</span>
+                badge <span className="font-mono">{badge}</span>
               </>
             ) : (
               "no badge"
@@ -65,17 +67,14 @@ export default function TicketCard({
           suggested={ticket.suggested}
         />
       )}
-      {ticket.state === "claimed" && (
-        // Keyed on the badge so a save or a sibling's edit resets the field.
-        <BadgeForm key={ticket.badge ?? ""} ticket={ticket} checkIn />
-      )}
+      {ticket.state === "claimed" && <BadgeForm ticket={ticket} checkIn />}
       {ticket.state === "checkedIn" && ticket.checkedIn && (
         <>
           <p className="text-sm text-ink/70">
             Checked in at {ticket.checkedIn.at} by {ticket.checkedIn.by}
           </p>
           <div className="flex flex-wrap items-end gap-3">
-            <BadgeForm key={ticket.badge ?? ""} ticket={ticket} />
+            <BadgeForm ticket={ticket} />
             <UndoForm paymentId={ticket.paymentId} />
           </div>
         </>
@@ -96,9 +95,16 @@ function BadgeForm({
   checkIn?: boolean;
 }) {
   const [state, run, pending] = useActionState(badgeAction, {});
-  const [value, setValue] = useState(ticket.badge ?? "");
+  const stored = ticket.badge === null ? "" : formatBadgeCode(ticket.badge);
+  const [value, setValue] = useState(stored);
+  const [seen, setSeen] = useState(stored);
+  // A save or a sibling's edit changes the stored badge under the field.
+  if (stored !== seen) {
+    setSeen(stored);
+    setValue(stored);
+  }
   const id = useId();
-  const changed = value.trim() !== (ticket.badge ?? "");
+  const changed = parseBadgeInput(value) !== ticket.badge;
   return (
     <form action={run} className="flex flex-1 flex-col gap-2">
       <input type="hidden" name="paymentId" value={ticket.paymentId} />

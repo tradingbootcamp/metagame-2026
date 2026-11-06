@@ -5,28 +5,29 @@ import ProblemButton from "./ProblemButton";
 import SearchBox from "./SearchBox";
 import TicketCard from "./TicketCard";
 import { toolAccess } from "@/lib/admin-auth";
-import { formatBadgeCode } from "@/lib/badge-code";
 import {
   attendeeName,
   CHECKIN_MIN_CHARS,
   checkinState,
   formatPacificTime,
   groupByPack,
+  packKey,
   parseCheckinQuery,
+  type CheckinAccount,
 } from "@/lib/checkin";
 import {
   checkinAccounts,
   checkinCounts,
   searchCheckinTickets,
 } from "@/lib/checkin-store";
-import { ticketLabel } from "@/lib/ticket-store";
+import { ticketLabel, type TicketRow } from "@/lib/ticket-store";
 
 export default async function CheckinPage(
   props: PageProps<"/backstage/checkin">,
 ) {
   await connection();
   const sp = await props.searchParams;
-  const { text: q } = parseCheckinQuery(String([sp.q].flat()[0] ?? ""));
+  const { text: q, badge } = parseCheckinQuery(String([sp.q].flat()[0] ?? ""));
   const self = `/backstage/checkin${q ? `?q=${encodeURIComponent(q)}` : ""}`;
 
   const access = await toolAccess("checkin.manage");
@@ -37,6 +38,21 @@ export default async function CheckinPage(
     searchCheckinTickets(q),
   ]);
   const { byId, byEmail } = await checkinAccounts(rows);
+  const owners = new Set(rows.map((t) => t.ownerUserId));
+  // A pack's buyer is offered once, on its first unclaimed ticket.
+  const buyerOffered = new Set<string>();
+  const suggested = (t: TicketRow): CheckinAccount | null => {
+    if (t.ownerUserId !== null) return null;
+    if (t.holderUserId !== null) return byId.get(t.holderUserId) ?? null;
+    if (t.purchaserEmail === null) return null;
+    const pack = packKey(t.paymentId);
+    if (pack !== null) {
+      if (buyerOffered.has(pack)) return null;
+      buyerOffered.add(pack);
+    }
+    const buyer = byEmail.get(t.purchaserEmail);
+    return buyer && !owners.has(buyer.id) ? buyer : null;
+  };
   const tickets: DeskTicket[] = rows.map((t) => {
     const by = t.checkedInBy ? byId.get(t.checkedInBy) : undefined;
     return {
@@ -52,15 +68,12 @@ export default async function CheckinPage(
       }),
       purchaserEmail: t.purchaserEmail,
       tier: ticketLabel(t.tier),
-      badge: t.badgeCode === null ? null : formatBadgeCode(t.badgeCode),
+      badge: t.badgeCode,
       state: checkinState(t),
       checkedIn: t.checkedInAt
         ? { at: formatPacificTime(t.checkedInAt), by: by?.name ?? "someone" }
         : null,
-      suggested:
-        t.ownerUserId === null && t.purchaserEmail
-          ? (byEmail.get(t.purchaserEmail) ?? null)
-          : null,
+      suggested: suggested(t),
     };
   });
   const groups = groupByPack(tickets);
@@ -75,7 +88,7 @@ export default async function CheckinPage(
         <ProblemButton q={q} />
       </div>
       <SearchBox initial={q} />
-      {q.length > 0 && q.length < CHECKIN_MIN_CHARS && (
+      {q.length > 0 && q.length < CHECKIN_MIN_CHARS && badge === null && (
         <p className="text-sm text-ink/60">Type at least two characters.</p>
       )}
       {q.length >= CHECKIN_MIN_CHARS && tickets.length === 0 && (

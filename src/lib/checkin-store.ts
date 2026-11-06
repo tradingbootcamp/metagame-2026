@@ -12,7 +12,13 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getDb, schema } from "@/db";
-import { CHECKIN_MIN_CHARS, parseCheckinQuery } from "@/lib/checkin";
+import {
+  CHECKIN_MIN_CHARS,
+  packKey,
+  parseCheckinQuery,
+  type CheckinAccount,
+} from "@/lib/checkin";
+import { escapeLike, likeContains } from "@/lib/like";
 import { accountName } from "@/lib/schedule-store";
 import { emailKey } from "@/lib/ticket-holder";
 import { visible, type TicketRow } from "@/lib/ticket-store";
@@ -21,34 +27,33 @@ const { tickets, user } = schema;
 
 export const CHECKIN_SEARCH_LIMIT = 25;
 
-export type CheckinAccount = { id: string; name: string; email: string };
-
 /** Only paid tickets and ones still waiting on payment matter at the desk. */
 const atDesk = and(visible, inArray(tickets.status, ["paid", "pending"]));
 
-const pattern = (text: string) => `%${text.replace(/[\\%_]/g, "\\$&")}%`;
-
 /**
  * Tickets matching what the volunteer typed, with the rest of any pack a hit
- * belongs to so the buyer's tickets sit together. Empty when the query is too
- * short to mean anything.
+ * belongs to so the buyer's tickets sit together. Digits look up a badge
+ * number only; anything else searches names and emails, with an exact ticket
+ * code first. Empty when the query is too short to mean anything.
  */
 export async function searchCheckinTickets(raw: string): Promise<TicketRow[]> {
   const { text, code, badge } = parseCheckinQuery(raw);
-  if (text.length < CHECKIN_MIN_CHARS && badge === null) return [];
+  if (badge === null && text.length < CHECKIN_MIN_CHARS) return [];
   const owner = alias(user, "owner");
   const holder = alias(user, "holder");
-  const q = pattern(text);
-  const matches: (SQL | undefined)[] = [
-    ilike(tickets.purchaserName, q),
-    ilike(tickets.purchaserEmail, q),
-    ilike(owner.name, q),
-    ilike(owner.email, q),
-    ilike(holder.name, q),
-    ilike(holder.email, q),
-    code ? eq(tickets.ticketCode, code) : undefined,
-    badge !== null ? eq(tickets.badgeCode, badge) : undefined,
-  ];
+  const q = likeContains(text);
+  const matches: (SQL | undefined)[] =
+    badge !== null
+      ? [eq(tickets.badgeCode, badge)]
+      : [
+          code ? eq(tickets.ticketCode, code) : undefined,
+          ilike(tickets.purchaserName, q),
+          ilike(tickets.purchaserEmail, q),
+          ilike(owner.name, q),
+          ilike(owner.email, q),
+          ilike(holder.name, q),
+          ilike(holder.email, q),
+        ];
   const db = getDb();
   const hits = await db
     .select({ ticket: tickets })
@@ -57,6 +62,7 @@ export async function searchCheckinTickets(raw: string): Promise<TicketRow[]> {
     .leftJoin(holder, eq(holder.id, tickets.holderUserId))
     .where(and(atDesk, or(...matches.filter((m) => m !== undefined))))
     .orderBy(
+      ...(code ? [sql`(${tickets.ticketCode} = ${code}) desc`] : []),
       asc(sql`lower(coalesce(${owner.name}, ${tickets.purchaserName}, ''))`),
       asc(tickets.paymentId),
     )
@@ -64,11 +70,7 @@ export async function searchCheckinTickets(raw: string): Promise<TicketRow[]> {
   const rows = hits.map((h) => h.ticket);
 
   const packs = [
-    ...new Set(
-      rows
-        .map((t) => /^(.+):ticket:\d+$/.exec(t.paymentId)?.[1])
-        .filter((p) => p !== undefined),
-    ),
+    ...new Set(rows.map((t) => packKey(t.paymentId)).filter((p) => p !== null)),
   ];
   if (packs.length === 0) return rows;
   const seen = new Set(rows.map((t) => t.paymentId));
@@ -78,7 +80,11 @@ export async function searchCheckinTickets(raw: string): Promise<TicketRow[]> {
     .where(
       and(
         atDesk,
-        or(...packs.map((p) => like(tickets.paymentId, `${p}:ticket:%`))),
+        or(
+          ...packs.map((p) =>
+            like(tickets.paymentId, `${escapeLike(p)}:ticket:%`),
+          ),
+        ),
       ),
     )
     .orderBy(asc(tickets.paymentId));
@@ -125,30 +131,24 @@ export async function checkinCounts(): Promise<{
   checkedIn: number;
   paid: number;
 }> {
-  const [row] = await getDb()
+  const [{ paid, checkedIn }] = await getDb()
     .select({
       paid: count(),
       checkedIn: count(tickets.checkedInAt),
     })
     .from(tickets)
     .where(and(visible, eq(tickets.status, "paid")));
-  return row ?? { checkedIn: 0, paid: 0 };
+  return { paid, checkedIn };
 }
 
-/** Accounts whose name or email contains the query, for claiming on someone's behalf. */
-export async function searchCheckinAccounts(
-  query: string,
-  limit = 8,
-): Promise<CheckinAccount[]> {
-  const text = query.trim();
-  if (text.length < CHECKIN_MIN_CHARS) return [];
-  const q = pattern(text);
-  return getDb()
-    .select({ id: user.id, name: accountName, email: user.email })
-    .from(user)
-    .where(or(ilike(user.name, q), ilike(user.email, q)))
-    .orderBy(asc(accountName))
-    .limit(limit);
+/** The ticket as the desk sees it, before writing to it. */
+export async function deskTicket(paymentId: string): Promise<TicketRow | null> {
+  const [row] = await getDb()
+    .select()
+    .from(tickets)
+    .where(and(visible, eq(tickets.paymentId, paymentId)))
+    .limit(1);
+  return row ?? null;
 }
 
 /** Who wears a badge number already, for the "taken" message. */

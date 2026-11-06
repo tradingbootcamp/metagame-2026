@@ -1,6 +1,4 @@
-import type { CheckinState } from "@/lib/checkin";
-
-export type DeskAccount = { id: string; name: string; email: string };
+import type { CheckinAccount, CheckinState } from "@/lib/checkin";
 
 /** What a card shows; never the claim code. */
 export type DeskTicket = {
@@ -8,9 +6,9 @@ export type DeskTicket = {
   name: string;
   purchaserEmail: string | null;
   tier: string;
-  badge: string | null;
+  badge: number | null;
   state: CheckinState;
   checkedIn: { at: string; by: string } | null;
-  /** The account the purchaser email belongs to, offered first when claiming. */
-  suggested: DeskAccount | null;
+  /** The account to offer first when claiming: the holder's, else the buyer's. */
+  suggested: CheckinAccount | null;
 };

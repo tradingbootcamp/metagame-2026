@@ -25,6 +25,14 @@ describe("parseCheckinQuery", () => {
     expect(parseCheckinQuery("Ada").code).toBeNull();
   });
 
+  it("keeps a code-shaped name as text too, since surnames can be six letters", () => {
+    expect(parseCheckinQuery("Smiley")).toEqual({
+      text: "Smiley",
+      code: "SM11EY",
+      badge: null,
+    });
+  });
+
   it("caps the text", () => {
     expect(parseCheckinQuery("x".repeat(500)).text).toHaveLength(100);
   });

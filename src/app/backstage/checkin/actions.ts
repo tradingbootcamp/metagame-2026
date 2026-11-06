@@ -1,12 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { DeskAccount } from "./desk";
 import { EXPIRED, requireAccess } from "@/lib/admin-auth";
 import { formatBadgeCode } from "@/lib/badge-code";
-import { CHECKIN_QUERY_MAX, parseBadgeInput } from "@/lib/checkin";
-import { badgeWearer, searchCheckinAccounts } from "@/lib/checkin-store";
+import {
+  CHECKIN_MIN_CHARS,
+  CHECKIN_QUERY_MAX,
+  parseBadgeInput,
+  type CheckinAccount,
+} from "@/lib/checkin";
+import { badgeWearer, deskTicket } from "@/lib/checkin-store";
 import { reportError } from "@/lib/error-report";
+import { searchAccounts } from "@/lib/schedule-store";
 import {
   assignBadgeCode,
   checkInTicket,
@@ -35,6 +40,7 @@ const CLAIM_ERRORS = {
   checkedIn: "That ticket is already checked in.",
   limited: "Too many attempts. Try again in an hour.",
 };
+const UNCLAIMED = "Claim the ticket for them first.";
 
 export async function claimFor(
   _prev: DeskState,
@@ -73,6 +79,14 @@ export async function badgeAction(
     return { error: "Type the badge number before checking in." };
   }
 
+  const before = checkingIn ? await deskTicket(paymentId) : null;
+  if (checkingIn) {
+    if (!before) return { error: CLAIM_ERRORS.unknown };
+    if (before.checkedInAt) return { error: CLAIM_ERRORS.checkedIn };
+    if (before.status !== "paid") return { error: CLAIM_ERRORS.unpaid };
+    if (before.ownerUserId === null) return { error: UNCLAIMED };
+  }
+
   const assigned = await assignBadgeCode(paymentId, badge);
   if (!assigned.ok) {
     if (assigned.reason === "taken" && badge !== null)
@@ -81,17 +95,17 @@ export async function badgeAction(
       return { error: "Badge numbers are up to four digits." };
     return { error: CLAIM_ERRORS.unknown };
   }
-  if (!checkingIn) {
+  if (!checkingIn || !before) {
     revalidatePath(TOOL);
     return { done: badge === null ? "Badge removed" : "Badge saved" };
   }
 
   const result = await checkInTicket(access.userId, paymentId);
+  if (!result.ok) await assignBadgeCode(paymentId, before.badgeCode);
   revalidatePath(TOOL);
   if (result.ok) return { done: "Checked in" };
-  if (result.reason === "already") return { done: "Already checked in" };
-  if (result.reason === "unclaimed")
-    return { error: "Claim the ticket for them first." };
+  if (result.reason === "already") return { error: CLAIM_ERRORS.checkedIn };
+  if (result.reason === "unclaimed") return { error: UNCLAIMED };
   if (result.reason === "unpaid") return { error: CLAIM_ERRORS.unpaid };
   return { error: CLAIM_ERRORS.unknown };
 }
@@ -109,10 +123,17 @@ export async function undoAction(
 
 export async function findAccounts(
   query: string,
-): Promise<{ accounts?: DeskAccount[]; error?: string }> {
+): Promise<{ accounts?: CheckinAccount[]; error?: string }> {
   if (!(await manage())) return { error: EXPIRED };
+  const q = String(query).trim().slice(0, CHECKIN_QUERY_MAX);
+  if (q.length < CHECKIN_MIN_CHARS) return { accounts: [] };
+  const found = await searchAccounts(q);
   return {
-    accounts: await searchCheckinAccounts(String(query).slice(0, 100)),
+    accounts: found.map(({ userId, name, email }) => ({
+      id: userId,
+      name,
+      email,
+    })),
   };
 }
 

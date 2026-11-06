@@ -12,6 +12,7 @@ export default function SearchBox({ initial }: { initial: string }) {
   const [value, setValue] = useState(initial);
   const [pending, start] = useTransition();
   const input = useRef<HTMLInputElement>(null);
+  const submitted = useRef(initial);
 
   // A keyboard would cover half a phone; only laptops get the cursor for free.
   useEffect(() => {
@@ -20,14 +21,18 @@ export default function SearchBox({ initial }: { initial: string }) {
 
   useEffect(() => {
     const q = value.trim();
-    if (q === initial) return;
+    if (q === submitted.current) return;
     const timer = setTimeout(() => {
+      submitted.current = q;
       start(() => {
-        router.replace(q ? `${pathname}?q=${encodeURIComponent(q)}` : pathname);
+        router.replace(
+          q ? `${pathname}?q=${encodeURIComponent(q)}` : pathname,
+          { scroll: false },
+        );
       });
     }, 300);
     return () => clearTimeout(timer);
-  }, [value, initial, pathname, router]);
+  }, [value, pathname, router]);
 
   return (
     <div className="relative">
