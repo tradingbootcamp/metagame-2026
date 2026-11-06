@@ -125,23 +125,28 @@ export default function ArriveModal({
                     name="badge"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    maxLength={4}
+                    maxLength={5}
                     autoComplete="off"
                     autoFocus
-                    value={badge}
+                    value={badge === "" ? "" : badge.padStart(4, "0")}
                     onChange={(e) =>
-                      setBadge(e.target.value.replace(/\D/g, ""))
+                      // Calculator entry: digits shift in from the right.
+                      setBadge(
+                        e.target.value
+                          .replace(/\D/g, "")
+                          .replace(/^0+/, "")
+                          .slice(-4),
+                      )
                     }
                     placeholder="0000"
                     className={`${fieldClass} w-32 py-3 text-center font-mono text-2xl tracking-widest`}
                   />
-                  <p className="text-xs text-ink/60">
-                    {override
-                      ? `Only if they lost badge ${existing} and you're giving them a new sticker. ${existing} stops working.`
-                      : badge.length > 0 && badge.length < 4
-                        ? `Saved as ${badge.padStart(4, "0")}.`
-                        : "Short numbers pad to four digits."}
-                  </p>
+                  {override && (
+                    <p className="text-xs text-ink/60">
+                      Only if they lost badge {existing} and you&rsquo;re giving
+                      them a new sticker. {existing} stops working.
+                    </p>
+                  )}
                 </>
               ) : (
                 <div className="flex flex-wrap items-center gap-3">
