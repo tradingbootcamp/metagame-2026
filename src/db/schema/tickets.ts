@@ -30,7 +30,8 @@ export const ticketStatus = pgEnum("ticket_status", [
 // Written by the payment webhooks beside the Airtable row, which stays the
 // ops/finance view. Ownership (owner_user_id) is only ever set by a claim.
 // holder_user_id is who has the code to share or claim; null means the buyer.
-// Unclaiming makes the attendee the holder under a fresh code.
+// Unclaiming makes the attendee the holder under a fresh code; a checked-in
+// ticket can't be unclaimed.
 export const tickets = pgTable(
   "tickets",
   {
@@ -59,7 +60,11 @@ export const tickets = pgTable(
       (): AnyPgColumn => tickets.paymentId,
       { onDelete: "set null" },
     ),
+    // Typed in at the check-in desk from the QR sticker put on the badge;
+    // nothing is pre-printed, so it stays null until then.
     badgeCode: integer().unique(),
+    checkedInAt: timestamp({ withTimezone: true }),
+    checkedInBy: text().references(() => user.id, { onDelete: "set null" }),
     ...timestamps,
   },
   (t) => [
@@ -67,7 +72,7 @@ export const tickets = pgTable(
     index("tickets_owner_user_id_idx").on(t.ownerUserId),
     index("tickets_holder_user_id_idx").on(t.holderUserId),
     index("tickets_referred_by_payment_id_idx").on(t.referredByPaymentId),
-    // The printed QR stickers encode four digits.
+    // The QR stickers encode four digits.
     check("tickets_badge_code_range", sql`${t.badgeCode} between 0 and 9999`),
   ],
 );
