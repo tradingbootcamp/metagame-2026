@@ -92,8 +92,9 @@ export default function AccountPicker({
                 <span className="shrink-0 text-xs text-ink/60">no account</span>
               </div>
               <p className="text-sm text-ink/70">
-                If it&rsquo;s them, they sign in at metagame.games/login first
-                (one code to that email), then search for them below.
+                If being claimed by this purchaser: they sign in at
+                metagame.games/login first (one code to that email), then search
+                for them below.
               </p>
             </div>
           )}
