@@ -73,12 +73,6 @@ export default function ArriveModal({
           {claiming &&
             (forUser === null ? (
               <>
-                {ticket.suggested === null && ticket.purchaserEmail && (
-                  <p className="rounded-lg bg-tan/20 px-3 py-2 text-sm text-ink/80">
-                    No account under that email yet. Search another email, or
-                    have them sign in first.
-                  </p>
-                )}
                 <AccountPicker
                   suggested={ticket.suggested}
                   prefill={{

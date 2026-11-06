@@ -30,8 +30,10 @@ export default function AccountPicker({
   prefill: { name: string | null; email: string | null };
   onPick: (account: CheckinAccount) => void;
 }) {
-  const [searching, setSearching] = useState(suggested === null);
-  const [minting, setMinting] = useState(false);
+  const purchaser = prefill.email !== null;
+  const [searching, setSearching] = useState(suggested === null && !purchaser);
+  // Who the new-account form is for: the purchaser, or someone else (blank).
+  const [minting, setMinting] = useState<"purchaser" | "other" | null>(null);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<CheckinAccount[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -71,23 +73,48 @@ export default function AccountPicker({
   if (minting) {
     return (
       <MintForm
-        prefill={prefill}
+        prefill={
+          minting === "purchaser" ? prefill : { name: null, email: null }
+        }
         onPick={onPick}
-        onBack={() => setMinting(false)}
+        onBack={() => setMinting(null)}
       />
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
-      {suggested && pick(suggested)}
+      {suggested
+        ? pick(suggested)
+        : purchaser && (
+            <button
+              type="button"
+              onClick={() => setMinting("purchaser")}
+              className="flex w-full items-center gap-3 rounded-lg border-2 border-navy bg-white px-3 py-3 hover:bg-navy/5"
+            >
+              <span className="min-w-0 flex-1 text-left">
+                <span className="block truncate font-medium text-navy">
+                  {prefill.name ?? prefill.email}
+                </span>
+                <span className="block truncate font-mono text-xs text-ink/60">
+                  {prefill.name ? prefill.email : "no name on the purchase"}
+                </span>
+              </span>
+              <span className="shrink-0 text-right text-sm font-semibold text-navy">
+                It&rsquo;s them
+                <span className="block text-xs font-normal text-ink/60">
+                  makes their account
+                </span>
+              </span>
+            </button>
+          )}
       {!searching ? (
         <button
           type="button"
           onClick={() => setSearching(true)}
           className={`${smallButtonClass} self-start py-2`}
         >
-          Someone else…
+          Someone else is claiming this ticket…
         </button>
       ) : (
         <div className="flex flex-col gap-2">
@@ -126,13 +153,15 @@ export default function AccountPicker({
           {error}
         </p>
       )}
-      <button
-        type="button"
-        onClick={() => setMinting(true)}
-        className={`${smallButtonClass} self-start py-2`}
-      >
-        Make them an account…
-      </button>
+      {searching && (
+        <button
+          type="button"
+          onClick={() => setMinting("other")}
+          className={`${smallButtonClass} self-start py-2`}
+        >
+          They have no account yet…
+        </button>
+      )}
     </div>
   );
 }
