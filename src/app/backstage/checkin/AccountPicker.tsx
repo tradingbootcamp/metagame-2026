@@ -68,6 +68,16 @@ export default function AccountPicker({
     </button>
   );
 
+  if (minting) {
+    return (
+      <MintForm
+        prefill={prefill}
+        onPick={onPick}
+        onBack={() => setMinting(false)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {suggested && pick(suggested)}
@@ -116,17 +126,13 @@ export default function AccountPicker({
           {error}
         </p>
       )}
-      {minting ? (
-        <MintForm prefill={prefill} onPick={onPick} />
-      ) : (
-        <button
-          type="button"
-          onClick={() => setMinting(true)}
-          className={`${smallButtonClass} self-start py-2`}
-        >
-          Make them an account…
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setMinting(true)}
+        className={`${smallButtonClass} self-start py-2`}
+      >
+        Make them an account…
+      </button>
     </div>
   );
 }
@@ -134,9 +140,11 @@ export default function AccountPicker({
 function MintForm({
   prefill,
   onPick,
+  onBack,
 }: {
   prefill: { name: string | null; email: string | null };
   onPick: (account: CheckinAccount) => void;
+  onBack: () => void;
 }) {
   const [name, setName] = useState(prefill.name ?? "");
   const [email, setEmail] = useState(prefill.email ?? "");
@@ -190,6 +198,13 @@ function MintForm({
         className={`${smallButtonClass} self-start py-2 font-semibold text-navy disabled:opacity-40`}
       >
         {pending ? "Creating…" : "Create account & pick"}
+      </button>
+      <button
+        type="button"
+        onClick={onBack}
+        className="self-start text-sm text-ink/60 underline-offset-2 hover:underline"
+      >
+        Back to search
       </button>
     </div>
   );
