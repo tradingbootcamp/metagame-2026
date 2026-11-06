@@ -122,6 +122,7 @@ small.help { display: block; color: var(--ui-muted); margin-top: 4px; font-size:
   <span class="spacer"></span>
   <button id="btn-load">Open project…</button>
   <button id="btn-save">Save project</button>
+  <select id="export-dpi" title="Export resolution" style="width:auto"><option value="300">300 dpi</option><option value="200">200 dpi</option><option value="150">150 dpi</option></select>
   <button id="btn-export">Export PNG</button>
   <button id="btn-export-all" class="primary">Export all (zip)</button>
   <input type="file" id="file-project" accept=".json" hidden>
@@ -397,6 +398,7 @@ function save() {
 function load() {
   try { const j = localStorage.getItem("metagame-signs"); if (j) project = JSON.parse(j); } catch {}
   if (!project.roll) project.roll = { width: 24, overlap: 0.5, guides: true };
+  if (!project.exportDpi) project.exportDpi = 300;
   for (const s of project.signs) {
     if (!s.images) s.images = [];
     if (s.bg.tone === undefined) { s.bg.tone = -(s.bg.dim || 0); delete s.bg.dim; }
@@ -611,12 +613,29 @@ function updateThumb(s) {
   thumbs.set(s.id, c.toDataURL("image/jpeg", 0.7));
   const el = document.querySelector(`#signs li[data-id="${s.id}"] .thumb`); if (el) el.style.backgroundImage = `url(${thumbs.get(s.id)})`;
 }
-// Full-resolution export, capped at what the browser can allocate.
+// Stamp a pHYs chunk (pixels per metre) after IHDR so print software reads the
+// physical size instead of assuming 72 dpi. Browsers never write one.
+const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xffffffff; for (const x of b) c = CRC_TABLE[(c ^ x) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
+async function withDpi(blob, dpi) {
+  const png = new Uint8Array(await blob.arrayBuffer());
+  const ppm = Math.round(dpi / 0.0254);
+  const chunk = new Uint8Array(21), dv = new DataView(chunk.buffer);
+  dv.setUint32(0, 9); chunk.set([112, 72, 89, 115], 4); dv.setUint32(8, ppm); dv.setUint32(12, ppm); chunk[16] = 1;
+  dv.setUint32(17, crc32(chunk.subarray(4, 17)));
+  const ihdrEnd = 8 + 12 + 13; // signature + IHDR chunk
+  return new Blob([png.subarray(0, ihdrEnd), chunk, png.subarray(ihdrEnd)], { type: "image/png" });
+}
+// Export scale: the chosen dpi, lowered only when the canvas would exceed what the browser can allocate.
+function exportScale(w, h) {
+  const want = project.exportDpi / DPI, k = Math.min(want, fitScale(w, h));
+  if (k < want) toast(`Too big for ${project.exportDpi} dpi in a browser; exported at ${Math.round(DPI * k)} dpi`);
+  return k;
+}
 async function renderExport(s) {
-  const { W, H } = signPx(s); const k = fitScale(W, H);
+  const { W, H } = signPx(s); const k = exportScale(W, H);
   await renderTo(s, full, { scale: k });
-  if (k < 1) toast(`Too big for 300 dpi in a browser; exported at ${Math.round(DPI * k)} dpi`);
-  return new Promise((r) => full.toBlob(r, "image/png"));
+  return withDpi(await new Promise((r) => full.toBlob(r, "image/png")), DPI * k);
 }
 function changed() { save(); redraw(); }
 
@@ -911,6 +930,8 @@ function wire() {
   $("btn-template").onclick = () => { const sel = $("tpl-select"); sel.style.display = ""; sel.focus(); sel.showPicker?.(); };
   $("tpl-select").onchange = () => { const t = TEMPLATES.find((x) => x.name === $("tpl-select").value); if (t) addSign(fromTemplate(t)); $("tpl-select").style.display = "none"; };
   $("tpl-select").onblur = () => { $("tpl-select").style.display = "none"; };
+  $("export-dpi").value = String(project.exportDpi);
+  $("export-dpi").onchange = () => { project.exportDpi = +$("export-dpi").value; save(); showRollPlan(active()); };
   $("btn-export").onclick = async () => { const s = active(); download(await renderExport(s), fileName(s) + ".png"); };
   $("btn-export-all").onclick = exportAll;
   $("btn-save").onclick = () => download(new Blob([JSON.stringify(project)], { type: "application/json" }), "metagame-signs.json");
@@ -1087,8 +1108,9 @@ function showRollPlan(s) {
 }
 function describeRollPlan(p) {
   const r = project.roll.width;
-  if (p.strips === 1) return `Prints in one piece: ${p.across}″ across the ${r}″ roll × ${p.along}″ long${p.rotate ? " (rotated)" : ""}.`;
-  return `Both sides exceed ${r}″: exports ${p.strips} strips of ${r}″ × ${p.along}″${p.rotate ? " (rotated)" : ""} with ${project.roll.overlap}″ overlap.`;
+  const dpi = Math.round(DPI * Math.min(project.exportDpi / DPI, fitScale((p.strips === 1 ? p.across : r) * DPI, p.along * DPI)));
+  if (p.strips === 1) return `Prints in one piece: ${p.across}″ across the ${r}″ roll × ${p.along}″ long${p.rotate ? " (rotated)" : ""}, at ${dpi} dpi.`;
+  return `Both sides exceed ${r}″: exports ${p.strips} strips of ${r}″ × ${p.along}″${p.rotate ? " (rotated)" : ""} with ${project.roll.overlap}″ overlap, at ${dpi} dpi.`;
 }
 async function exportRoll() {
   const s = active(), p = rollPlan(s), R = project.roll.width, ov = project.roll.overlap;
@@ -1097,8 +1119,7 @@ async function exportRoll() {
     // output space: x across the roll, y along it; each strip is rendered on its own at the best dpi that fits
     const acrossPx = Math.round(p.across * DPI), alongPx = Math.round(p.along * DPI);
     const stripPx = p.strips === 1 ? acrossPx : Math.round(R * DPI);
-    const k = fitScale(stripPx, alongPx);
-    if (k < 1) toast(`Too long for 300 dpi in a browser; strips exported at ${Math.round(DPI * k)} dpi`);
+    const k = exportScale(stripPx, alongPx);
     const ovPx = Math.round(ov * DPI), step = stripPx - ovPx, rects = stripRects(s, p);
     const out = document.createElement("canvas"), blobs = [];
     for (let i = 0; i < p.strips; i++) {
@@ -1113,7 +1134,7 @@ async function exportRoll() {
         octx.restore();
       }
       const name = p.strips === 1 ? fileName(s) + "_roll.png" : `${fileName(s)}_strip${i + 1}of${p.strips}.png`;
-      blobs.push([name, await new Promise((r) => out.toBlob(r, "image/png"))]);
+      blobs.push([name, await withDpi(await new Promise((r) => out.toBlob(r, "image/png")), DPI * k)]);
     }
     if (blobs.length === 1) await download(blobs[0][1], blobs[0][0]);
     else {

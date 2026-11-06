@@ -1,5 +1,5 @@
 {
-  "id": "f7b37cbe-6577-459f-a4b0-0247683e057f",
+  "id": "0a410e56-62be-4676-b07f-86f5ce4a4710",
   "prevId": "86bc1e35-4786-4d52-b9a6-78351fa39386",
   "version": "7",
   "dialect": "postgresql",
@@ -812,6 +812,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "badge_code": {
+          "name": "badge_code",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -929,10 +935,20 @@
           "name": "tickets_referralCode_unique",
           "nullsNotDistinct": false,
           "columns": ["referral_code"]
+        },
+        "tickets_badgeCode_unique": {
+          "name": "tickets_badgeCode_unique",
+          "nullsNotDistinct": false,
+          "columns": ["badge_code"]
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "tickets_badge_code_range": {
+          "name": "tickets_badge_code_range",
+          "value": "\"tickets\".\"badge_code\" between 0 and 9999"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.bookmarks": {
@@ -2611,89 +2627,6 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.sign_drafts": {
-      "name": "sign_drafts",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sign": {
-          "name": "sign",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "thumbnail": {
-          "name": "thumbnail",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_by": {
-          "name": "updated_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "sign_drafts_created_by_user_id_fk": {
-          "name": "sign_drafts_created_by_user_id_fk",
-          "tableFrom": "sign_drafts",
-          "tableTo": "user",
-          "columnsFrom": ["created_by"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "sign_drafts_updated_by_user_id_fk": {
-          "name": "sign_drafts_updated_by_user_id_fk",
-          "tableFrom": "sign_drafts",
-          "tableTo": "user",
-          "columnsFrom": ["updated_by"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

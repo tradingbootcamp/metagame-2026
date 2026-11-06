@@ -21,8 +21,11 @@ describe("describeSchema", () => {
       "bookmarks",
       "budget_ignored_lines",
       "budget_import_runs",
+      "level_events",
       "locations",
       "profiles",
+      "quest_progress",
+      "quests",
       "role_permissions",
       "roles",
       "rsvps",
@@ -64,7 +67,13 @@ describe("describeSchema", () => {
       "account",
       "apikey",
       "bookmarks",
+      "level_events",
+      "level_events",
+      "level_events",
       "profiles",
+      "quest_progress",
+      "quest_progress",
+      "quest_progress",
       "rsvps",
       "session",
       "session_grades",
@@ -179,6 +188,7 @@ describe("describeSchema", () => {
       "Schedule",
       "Grading",
       "Budget",
+      "Megagame",
       "Signs",
     ]);
     expect(info.groups.flatMap((g) => g.tables.map((t) => t.name))).toEqual([
@@ -205,7 +215,52 @@ describe("describeSchema", () => {
       "xero_connections",
       "budget_import_runs",
       "budget_ignored_lines",
+      "quests",
+      "quest_progress",
+      "level_events",
       "sign_drafts",
     ]);
+  });
+
+  it("keeps megagame history when a quest or account goes away", () => {
+    expect(column("quest_progress", "quest_id").references?.onDelete).toBe(
+      "restrict",
+    );
+    expect(column("quest_progress", "user_id").references?.onDelete).toBe(
+      "cascade",
+    );
+    expect(column("quest_progress", "confirmed_by").references?.onDelete).toBe(
+      "set null",
+    );
+    expect(column("quest_progress", "undone_by").references?.onDelete).toBe(
+      "set null",
+    );
+    expect(column("quest_progress", "undone_at").nullable).toBe(true);
+    expect(column("quest_progress", "undo_reason").type).toBe("text");
+    expect(table("quest_progress").columns.map((c) => c.name)).not.toContain(
+      "confirmation_id",
+    );
+    expect(column("level_events", "user_id").references?.onDelete).toBe(
+      "set null",
+    );
+    expect(column("quests", "answers").type).toBe("text[]");
+    expect(
+      table("quest_progress").indexes.find(
+        (i) => i.name === "quest_progress_user_quest_unique",
+      ),
+    ).toEqual({
+      name: "quest_progress_user_quest_unique",
+      columns: ["user_id", "quest_id"],
+      unique: true,
+    });
+    expect(
+      table("level_events").indexes.find(
+        (i) => i.name === "level_events_live_unique",
+      ),
+    ).toEqual({
+      name: "level_events_live_unique",
+      columns: ["user_id", "class", "level"],
+      unique: true,
+    });
   });
 });
