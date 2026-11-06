@@ -4,10 +4,12 @@ import {
   desc,
   eq,
   inArray,
+  isNotNull,
   isNull,
   lte,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { env } from "@/env";
@@ -18,7 +20,11 @@ import {
 } from "@/lib/airtable";
 import { cleanDiscordHandle } from "@/lib/discord-handle";
 import { sendAdminErrorEmail } from "@/lib/email";
-import { ticketCode, withFreshTicketCode } from "@/lib/ticket-code";
+import {
+  isUniqueViolation,
+  ticketCode,
+  withFreshTicketCode,
+} from "@/lib/ticket-code";
 import { emailKey } from "@/lib/ticket-holder";
 import { getDayPass, getTicket, supporterTier } from "@/lib/tickets";
 
@@ -288,11 +294,19 @@ export async function claimOwnTicket(
   return attemptClaim(userId, ticket.ticketCode);
 }
 
+const attemptClaim = (userId: string, code: string) =>
+  claimMatching(userId, eq(tickets.ticketCode, code));
+
+/**
+ * A check-in volunteer claims this ticket for the attendee standing at the
+ * desk. No failure throttle, since the volunteer picks the ticket rather
+ * than guessing a code; the claim invariants still hold.
+ */
+export const claimTicketFor = (paymentId: string, userId: string) =>
+  claimMatching(userId, eq(tickets.paymentId, paymentId));
+
 // One conditional UPDATE, so two people entering the same code can't both win.
-async function attemptClaim(
-  userId: string,
-  code: string,
-): Promise<ClaimResult> {
+async function claimMatching(userId: string, match: SQL): Promise<ClaimResult> {
   const db = getDb();
   const [ticket] = await db
     .update(tickets)
@@ -300,7 +314,7 @@ async function attemptClaim(
     .where(
       and(
         visible,
-        eq(tickets.ticketCode, code),
+        match,
         isNull(tickets.ownerUserId),
         eq(tickets.status, "paid"),
         // One admission per person, checked in the same statement so two
@@ -314,7 +328,7 @@ async function attemptClaim(
   const [existing] = await db
     .select()
     .from(tickets)
-    .where(and(visible, eq(tickets.ticketCode, code)))
+    .where(and(visible, match))
     .limit(1);
   if (!existing) return { ok: false, reason: "unknown" };
   if (existing.ownerUserId === userId) return { ok: false, reason: "yours" };
@@ -355,6 +369,8 @@ export async function unclaimTicket(
           eq(tickets.paymentId, paymentId),
           eq(tickets.ownerUserId, userId),
           eq(tickets.status, "paid"),
+          // Checked in means the badge is on someone; the spot can't be passed on.
+          isNull(tickets.checkedInAt),
         ),
       )
       .returning();
@@ -372,4 +388,98 @@ export async function unclaimTicket(
     );
   }
   return ticket;
+}
+
+export type CheckInResult =
+  | { ok: true; ticket: TicketRow }
+  | { ok: false; reason: "unknown" | "unclaimed" | "unpaid" }
+  | { ok: false; reason: "already"; ticket: TicketRow };
+
+/** Marks a claimed, paid ticket checked in at the desk. */
+export async function checkInTicket(
+  paymentId: string,
+  byUserId: string,
+): Promise<CheckInResult> {
+  const db = getDb();
+  const [ticket] = await db
+    .update(tickets)
+    .set({ checkedInAt: new Date(), checkedInBy: byUserId })
+    .where(
+      and(
+        visible,
+        eq(tickets.paymentId, paymentId),
+        isNotNull(tickets.ownerUserId),
+        eq(tickets.status, "paid"),
+        isNull(tickets.checkedInAt),
+      ),
+    )
+    .returning();
+  if (ticket) return { ok: true, ticket };
+
+  const [existing] = await db
+    .select()
+    .from(tickets)
+    .where(and(visible, eq(tickets.paymentId, paymentId)))
+    .limit(1);
+  if (!existing) return { ok: false, reason: "unknown" };
+  if (existing.checkedInAt)
+    return { ok: false, reason: "already", ticket: existing };
+  if (existing.status !== "paid") return { ok: false, reason: "unpaid" };
+  return { ok: false, reason: "unclaimed" };
+}
+
+/** Reverses a check-in; null when the ticket isn't checked in. */
+export async function undoCheckIn(
+  paymentId: string,
+): Promise<TicketRow | null> {
+  const [ticket] = await getDb()
+    .update(tickets)
+    .set({ checkedInAt: null, checkedInBy: null })
+    .where(
+      and(
+        visible,
+        eq(tickets.paymentId, paymentId),
+        isNotNull(tickets.checkedInAt),
+      ),
+    )
+    .returning();
+  return ticket ?? null;
+}
+
+export const BADGE_CODE_MAX = 9999;
+
+export type BadgeCodeResult =
+  | { ok: true; ticket: TicketRow }
+  | { ok: false; reason: "unknown" | "invalid" }
+  /** `heldBy` is the payment id already wearing the code, if it could be found. */
+  | { ok: false; reason: "taken"; heldBy: string | null };
+
+/** Sets the badge number typed in from the sticker; null takes it off. */
+export async function assignBadgeCode(
+  paymentId: string,
+  code: number | null,
+): Promise<BadgeCodeResult> {
+  if (
+    code !== null &&
+    (!Number.isInteger(code) || code < 0 || code > BADGE_CODE_MAX)
+  ) {
+    return { ok: false, reason: "invalid" };
+  }
+  const db = getDb();
+  try {
+    const [ticket] = await db
+      .update(tickets)
+      .set({ badgeCode: code })
+      .where(and(visible, eq(tickets.paymentId, paymentId)))
+      .returning();
+    return ticket ? { ok: true, ticket } : { ok: false, reason: "unknown" };
+  } catch (e) {
+    if (code === null || !isUniqueViolation(e)) throw e;
+    const [holder] = await db
+      .select({ paymentId: tickets.paymentId })
+      .from(tickets)
+      .where(and(visible, eq(tickets.badgeCode, code)))
+      .limit(1);
+    return { ok: false, reason: "taken", heldBy: holder?.paymentId ?? null };
+  }
 }

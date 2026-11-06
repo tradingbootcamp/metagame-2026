@@ -20,6 +20,8 @@ const row = (over: Partial<TicketRow> = {}): TicketRow => ({
   referralCode: null,
   referredByPaymentId: null,
   badgeCode: null,
+  checkedInAt: null,
+  checkedInBy: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...over,
@@ -41,6 +43,7 @@ describe("ticketView", () => {
       referralCode: null,
       referredBy: null,
       badgeCode: null,
+      checkedInAt: null,
     });
   });
 
