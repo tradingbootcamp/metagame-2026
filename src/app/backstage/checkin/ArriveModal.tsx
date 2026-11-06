@@ -24,7 +24,9 @@ export default function ArriveModal({
 }) {
   // Fixed at open: the row's state moves underneath once the action lands.
   const [claiming] = useState(ticket.state === "unclaimed");
-  const [forUser, setForUser] = useState<CheckinAccount | null>(null);
+  const [forUser, setForUser] = useState<CheckinAccount | null>(
+    ticket.suggested,
+  );
   const [override, setOverride] = useState(false);
   const [badge, setBadge] = useState("");
   const [state, run, pending] = useActionState(arriveAction, {});
@@ -54,7 +56,11 @@ export default function ArriveModal({
           )}
           <div className="flex flex-col gap-1">
             <DialogTitle className="text-lg font-semibold text-navy">
-              {claiming ? "Who is this ticket for?" : ticket.name}
+              {claiming
+                ? forUser
+                  ? `Claim for ${forUser.name}`
+                  : "Who is this ticket for?"
+                : ticket.name}
             </DialogTitle>
             <DialogDescription className="font-mono text-xs text-ink/60">
               {ticket.tier} ticket
