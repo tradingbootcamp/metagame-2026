@@ -21,10 +21,19 @@ const PILL: Record<CheckinState, { label: string; className: string }> = {
   checkedIn: { label: "Checked in", className: "bg-moss/15 text-moss" },
 };
 
-const ACTION: Partial<Record<CheckinState, string>> = {
-  unclaimed: "Claim",
-  claimed: "Check in",
-  checkedIn: "Undo",
+const ACTION: Partial<
+  Record<CheckinState, { label: string; className: string }>
+> = {
+  unclaimed: {
+    label: "Claim",
+    className:
+      "rounded-lg border-2 border-navy bg-white px-3 py-1.5 text-sm font-semibold text-navy hover:bg-navy/5",
+  },
+  claimed: {
+    label: "Check in",
+    className: `${buttonClass} w-auto px-3 py-2 text-sm`,
+  },
+  checkedIn: { label: "Undo", className: `${smallButtonClass} py-2` },
 };
 
 export default function TicketRow({ ticket }: { ticket: DeskTicket }) {
@@ -55,13 +64,9 @@ export default function TicketRow({ ticket }: { ticket: DeskTicket }) {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className={
-              ticket.state === "checkedIn"
-                ? `${smallButtonClass} py-2`
-                : `${buttonClass} w-auto px-3 py-2 text-sm`
-            }
+            className={action.className}
           >
-            {action}
+            {action.label}
           </button>
         )}
       </span>
