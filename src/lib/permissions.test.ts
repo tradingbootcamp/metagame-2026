@@ -75,6 +75,15 @@ describe("unconference.post", () => {
   it("implies nothing, so it can't drag a team permission along", () => {
     expect([...expand(["unconference.post"])]).toEqual(["unconference.post"]);
   });
+
+  it("keeps session notes off the backstage index", () => {
+    expect(PERMISSIONS["schedule.session_notes"].audience).toBe("attendee");
+    expect(
+      hasTeamPermission(
+        expand(["schedule.session_notes", "schedule.volunteer_rooms"]),
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("expand", () => {
