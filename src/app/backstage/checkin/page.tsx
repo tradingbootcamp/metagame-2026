@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import SignIn from "../SignIn";
 import type { DeskTicket } from "./desk";
@@ -6,6 +7,7 @@ import ProblemButton from "./ProblemButton";
 import SearchBox from "./SearchBox";
 import DeskRow from "./TicketRow";
 import { toolAccess } from "@/lib/admin-auth";
+import { formatBadgeCode } from "@/lib/badge-code";
 import {
   attendeeName,
   CHECKIN_MIN_CHARS,
@@ -18,6 +20,7 @@ import {
 } from "@/lib/checkin";
 import {
   CHECKIN_PAGE_SIZE,
+  CHECKIN_SEARCH_LIMIT,
   checkinAccounts,
   checkinCounts,
   listCheckinTickets,
@@ -48,6 +51,7 @@ export default async function CheckinPage(
     listed.total === null
       ? 1
       : Math.max(1, Math.ceil(listed.total / CHECKIN_PAGE_SIZE));
+  if (!q && page > pages) redirect(`/backstage/checkin?page=${pages}`);
   const { byId, byEmail } = await checkinAccounts(rows);
   const owners = new Set(rows.map((t) => t.ownerUserId));
   // A pack's buyer is offered once, on its first unclaimed ticket.
@@ -64,21 +68,44 @@ export default async function CheckinPage(
     const buyer = byEmail.get(t.purchaserEmail);
     return buyer && !owners.has(buyer.id) ? buyer : null;
   };
+  const packSize = new Map<string, number>();
+  for (const t of rows) {
+    const pack = packKey(t.paymentId);
+    if (pack !== null) packSize.set(pack, (packSize.get(pack) ?? 0) + 1);
+  }
+  const packSeen = new Map<string, number>();
   const tickets: DeskTicket[] = rows.map((t) => {
     const by = t.checkedInBy ? byId.get(t.checkedInBy) : undefined;
+    const pack = packKey(t.paymentId);
+    const nth = pack === null ? 0 : (packSeen.get(pack) ?? 0) + 1;
+    if (pack !== null) packSeen.set(pack, nth);
+    const named = attendeeName({
+      ownerName: t.ownerUserId ? (byId.get(t.ownerUserId)?.name ?? null) : null,
+      holderName: t.holderUserId
+        ? (byId.get(t.holderUserId)?.name ?? null)
+        : null,
+      purchaserName: null,
+      purchaserEmail: null,
+    });
+    const tier = ticketLabel(t.tier);
+    // A spare pack ticket is nobody's yet; naming it after the buyer reads as a duplicate.
+    const spare = pack !== null && named === null && t.ownerUserId === null;
+    const name =
+      named ??
+      (spare
+        ? "Pack ticket, nobody yet"
+        : t.purchaserName?.trim() || t.purchaserEmail || "No name on purchase");
+    const subtitle = spare
+      ? `${nth} of ${packSize.get(pack)}`
+      : t.purchaserEmail && name !== t.purchaserEmail
+        ? t.purchaserEmail
+        : tier;
     return {
       paymentId: t.paymentId,
-      name: attendeeName({
-        ownerName: t.ownerUserId
-          ? (byId.get(t.ownerUserId)?.name ?? null)
-          : null,
-        holderName: t.holderUserId
-          ? (byId.get(t.holderUserId)?.name ?? null)
-          : null,
-        purchaserName: t.purchaserName,
-      }),
+      name,
+      subtitle,
       purchaserEmail: t.purchaserEmail,
-      tier: ticketLabel(t.tier),
+      tier,
       badge: t.badgeCode,
       state: checkinState(t),
       checkedIn: t.checkedInAt
@@ -102,10 +129,18 @@ export default async function CheckinPage(
       {q.length > 0 && q.length < CHECKIN_MIN_CHARS && badge === null && (
         <p className="text-sm text-ink/60">Type at least two characters.</p>
       )}
-      {q.length >= CHECKIN_MIN_CHARS && tickets.length === 0 && (
+      {(q.length >= CHECKIN_MIN_CHARS || badge !== null) &&
+        tickets.length === 0 && (
+          <p className="text-sm text-ink/60">
+            {badge !== null
+              ? `No ticket has badge ${formatBadgeCode(badge)}.`
+              : `No ticket matches “${q}”. Try the purchaser’s email or the ticket code from their confirmation.`}
+          </p>
+        )}
+      {q && rows.length >= CHECKIN_SEARCH_LIMIT && (
         <p className="text-sm text-ink/60">
-          No ticket matches “{q}”. Try the purchaser’s email or the ticket code
-          from their confirmation.
+          Showing the first {CHECKIN_SEARCH_LIMIT} matches. Add more of the name
+          or the email.
         </p>
       )}
       <ul className="divide-y divide-line rounded-xl border border-line">
@@ -145,7 +180,7 @@ export default async function CheckinPage(
           {page > 1 ? (
             <Link
               href={`/backstage/checkin?page=${page - 1}`}
-              className="font-semibold text-navy"
+              className="px-4 py-3 font-semibold text-navy"
             >
               ← Previous
             </Link>
@@ -158,7 +193,7 @@ export default async function CheckinPage(
           {page < pages ? (
             <Link
               href={`/backstage/checkin?page=${page + 1}`}
-              className="font-semibold text-navy"
+              className="px-4 py-3 font-semibold text-navy"
             >
               Next →
             </Link>

@@ -121,7 +121,7 @@ export async function findAccounts(
   if (!(await manage())) return { error: EXPIRED };
   const q = String(query).trim().slice(0, CHECKIN_QUERY_MAX);
   if (q.length < CHECKIN_MIN_CHARS) return { accounts: [] };
-  const found = await searchAccounts(q);
+  const found = await searchAccounts(q, { banned: false });
   return {
     accounts: found.map(({ userId, name, email }) => ({
       id: userId,

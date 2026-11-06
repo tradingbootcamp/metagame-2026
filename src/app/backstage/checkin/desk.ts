@@ -1,9 +1,11 @@
 import type { CheckinAccount, CheckinState } from "@/lib/checkin";
 
-/** What a card shows; never the claim code. */
+/** What a row and its modal show; never the claim code. */
 export type DeskTicket = {
   paymentId: string;
   name: string;
+  /** The row's second line: the purchase email, the tier, or the place in a pack. */
+  subtitle: string;
   purchaserEmail: string | null;
   tier: string;
   badge: number | null;

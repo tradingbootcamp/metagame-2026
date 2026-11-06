@@ -70,16 +70,20 @@ export function groupByPack<T extends { paymentId: string }>(
   return groups;
 }
 
-/** Who the desk greets: the attendee's account, else whoever holds or bought it. */
+/**
+ * Who the desk greets: the attendee's account, else whoever holds or bought
+ * it, else the purchase email. Null when the ticket names nobody at all.
+ */
 export function attendeeName(t: {
   ownerName: string | null;
   holderName: string | null;
   purchaserName: string | null;
-}): string {
-  return (
-    [t.ownerName, t.holderName, t.purchaserName].find((n) => n?.trim()) ??
-    "Unknown"
-  ).trim();
+  purchaserEmail: string | null;
+}): string | null {
+  const name = [t.ownerName, t.holderName, t.purchaserName].find((n) =>
+    n?.trim(),
+  );
+  return name?.trim() ?? t.purchaserEmail ?? null;
 }
 
 /** Typed badge digits as a number; null when blank, undefined when not a badge. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useId, useRef, useState } from "react";
 import { buttonClass, fieldClass, smallButtonClass } from "../ui";
 import AccountPicker from "./AccountPicker";
 import { arriveAction } from "./actions";
@@ -14,8 +14,6 @@ import {
   DialogTitle,
 } from "@/v2/components/ui/dialog";
 
-const MODAL = "max-w-[440px] border-line bg-white p-5 text-ink";
-
 /** Everything an arriving attendee needs: who the ticket is for, their sticker, check in. */
 export default function ArriveModal({
   ticket,
@@ -24,7 +22,8 @@ export default function ArriveModal({
   ticket: DeskTicket;
   onClose: () => void;
 }) {
-  const claiming = ticket.state === "unclaimed";
+  // Fixed at open: the row's state moves underneath once the action lands.
+  const [claiming] = useState(ticket.state === "unclaimed");
   const [forUser, setForUser] = useState<CheckinAccount | null>(null);
   const [override, setOverride] = useState(false);
   const [badge, setBadge] = useState("");
@@ -33,10 +32,21 @@ export default function ArriveModal({
   const existing = ticket.badge === null ? null : formatBadgeCode(ticket.badge);
   const needsPick = claiming && forUser === null;
   const typing = existing === null || override;
+  const ready = !needsPick && (!typing || badge.length === 4);
+  const submit = useRef<HTMLButtonElement>(null);
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className={MODAL} showCloseButton={false}>
+      <DialogContent
+        className="max-h-[calc(100dvh-2rem)] max-w-[440px] overflow-y-auto border-line bg-white p-5 text-ink"
+        showCloseButton={false}
+        // With a sticker on record, Enter should check in, not open the override.
+        onOpenAutoFocus={(e) => {
+          if (typing) return;
+          e.preventDefault();
+          submit.current?.focus();
+        }}
+      >
         <form action={run} className="flex flex-col gap-4">
           <input type="hidden" name="paymentId" value={ticket.paymentId} />
           {forUser && (
@@ -47,7 +57,7 @@ export default function ArriveModal({
               {claiming ? "Who is this ticket for?" : ticket.name}
             </DialogTitle>
             <DialogDescription className="font-mono text-xs text-ink/60">
-              {ticket.tier}
+              {ticket.tier} ticket
               {ticket.purchaserEmail
                 ? ` · bought by ${ticket.purchaserEmail}`
                 : ""}
@@ -67,17 +77,19 @@ export default function ArriveModal({
                     {forUser.email}
                   </span>
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setForUser(null)}
-                  className={smallButtonClass}
-                >
-                  Change
-                </button>
+                {!state.done && (
+                  <button
+                    type="button"
+                    onClick={() => setForUser(null)}
+                    className={smallButtonClass}
+                  >
+                    Change
+                  </button>
+                )}
               </div>
             ))}
 
-          {!needsPick && (
+          {!needsPick && !state.done && (
             <div className="flex flex-col gap-2">
               {typing ? (
                 <>
@@ -102,25 +114,24 @@ export default function ArriveModal({
                     placeholder="0000"
                     className={`${fieldClass} w-32 py-3 text-center font-mono text-2xl tracking-widest`}
                   />
-                  {override && (
-                    <p className="text-xs text-ink/60">
-                      Only if you&rsquo;re handing them a sticker different from{" "}
-                      {existing}, the one already on record. The old number
-                      stops working.
-                    </p>
-                  )}
+                  <p className="text-xs text-ink/60">
+                    {override
+                      ? `Only if they lost badge ${existing} and you're giving them a new sticker. ${existing} stops working.`
+                      : "4 digits, as printed on the sticker."}
+                  </p>
                 </>
               ) : (
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className="text-sm text-ink/80">
-                    Badge <span className="font-mono text-lg">{existing}</span>
+                    Sticker on record:{" "}
+                    <span className="font-mono text-lg">{existing}</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => setOverride(true)}
                     className={smallButtonClass}
                   >
-                    Override code
+                    Give a different sticker
                   </button>
                 </div>
               )}
@@ -132,8 +143,10 @@ export default function ArriveModal({
               {state.error}
             </p>
           )}
-          {state.done && !state.error && (
-            <p className="text-sm text-moss">{state.done}</p>
+          {state.done && (
+            <p className="text-sm font-semibold text-moss">
+              Checked in. Hand them badge {existing ?? badge} and a swag bag.
+            </p>
           )}
 
           <div className="flex items-center justify-end gap-2">
@@ -146,8 +159,9 @@ export default function ArriveModal({
             </button>
             {!state.done && (
               <button
+                ref={submit}
                 type="submit"
-                disabled={pending || needsPick}
+                disabled={pending || !ready}
                 className={`${buttonClass} w-auto`}
               >
                 {pending

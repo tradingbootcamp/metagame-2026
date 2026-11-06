@@ -84,15 +84,18 @@ describe("attendeeName", () => {
       ownerName: "Owen",
       holderName: "Hal",
       purchaserName: "Pat",
+      purchaserEmail: "pat@example.com",
     };
     expect(attendeeName(names)).toBe("Owen");
     expect(attendeeName({ ...names, ownerName: null })).toBe("Hal");
     expect(attendeeName({ ...names, ownerName: " ", holderName: null })).toBe(
       "Pat",
     );
-    expect(
-      attendeeName({ ownerName: null, holderName: null, purchaserName: null }),
-    ).toBe("Unknown");
+    const nobody = { ownerName: null, holderName: null, purchaserName: null };
+    expect(attendeeName({ ...nobody, purchaserEmail: "pat@example.com" })).toBe(
+      "pat@example.com",
+    );
+    expect(attendeeName({ ...nobody, purchaserEmail: null })).toBeNull();
   });
 });
 
