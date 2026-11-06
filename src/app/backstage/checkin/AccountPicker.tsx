@@ -1,32 +1,38 @@
 "use client";
 
-import {
-  useActionState,
-  useEffect,
-  useId,
-  useState,
-  useTransition,
-} from "react";
-import { buttonClass, fieldClass, smallButtonClass } from "../ui";
-import { claimFor, findAccounts } from "./actions";
+import { useEffect, useId, useState, useTransition } from "react";
+import { fieldClass, smallButtonClass } from "../ui";
+import { findAccounts } from "./actions";
 import { latestRequest } from "../megagame/latest";
 import { CHECKIN_MIN_CHARS, type CheckinAccount } from "@/lib/checkin";
 
-/** Claims the ticket for an account: the purchaser's when we know it, else one searched for. */
-export default function ClaimPicker({
-  paymentId,
+function AccountLine({ account }: { account: CheckinAccount }) {
+  return (
+    <span className="min-w-0 flex-1 text-left">
+      <span className="block truncate font-medium text-navy">
+        {account.name}
+      </span>
+      <span className="block truncate font-mono text-xs text-ink/60">
+        {account.email}
+      </span>
+    </span>
+  );
+}
+
+/** Picks the account a ticket is for: the one on the purchase, or one searched for. */
+export default function AccountPicker({
   suggested,
+  onPick,
 }: {
-  paymentId: string;
   suggested: CheckinAccount | null;
+  onPick: (account: CheckinAccount) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [searching, setSearching] = useState(suggested === null);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<CheckinAccount[]>([]);
-  const [lookupError, setLookupError] = useState<string | null>(null);
-  const [searching, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
   const [search] = useState(latestRequest);
-  const [state, run, pending] = useActionState(claimFor, {});
   const searchId = useId();
 
   useEffect(() => {
@@ -37,7 +43,7 @@ export default function ClaimPicker({
       start(async () => {
         const res = await findAccounts(q);
         if (!isCurrent()) return;
-        setLookupError(res.error ?? null);
+        setError(res.error ?? null);
         setHits(res.accounts ?? []);
       });
     }, 300);
@@ -47,40 +53,27 @@ export default function ClaimPicker({
     };
   }, [query, search]);
 
-  const claim = (account: CheckinAccount) => (
-    <form action={run} className="flex items-center gap-3">
-      <input type="hidden" name="paymentId" value={paymentId} />
-      <input type="hidden" name="forUserId" value={account.id} />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium text-navy">
-          {account.name}
-        </span>
-        <span className="block truncate font-mono text-xs text-ink/60">
-          {account.email}
-        </span>
-      </span>
-      <button
-        type="submit"
-        disabled={pending}
-        className={`${buttonClass} w-auto py-2`}
-      >
-        {pending ? "Claiming…" : "Claim for them"}
-      </button>
-    </form>
+  const pick = (account: CheckinAccount) => (
+    <button
+      type="button"
+      onClick={() => onPick(account)}
+      className="flex w-full items-center gap-3 rounded-lg border border-line bg-white px-3 py-3 hover:border-navy"
+    >
+      <AccountLine account={account} />
+      <span className="shrink-0 text-sm font-semibold text-navy">Pick</span>
+    </button>
   );
-
-  const error = state.error ?? lookupError;
 
   return (
     <div className="flex flex-col gap-3">
-      {suggested && claim(suggested)}
-      {!open ? (
+      {suggested && pick(suggested)}
+      {!searching ? (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() => setSearching(true)}
           className={`${smallButtonClass} self-start py-2`}
         >
-          {suggested ? "Claim for someone else…" : "Claim for…"}
+          Someone else…
         </button>
       ) : (
         <div className="flex flex-col gap-2">
@@ -100,8 +93,8 @@ export default function ClaimPicker({
             placeholder="At least two letters"
             className={fieldClass}
           />
-          {searching && <p className="text-sm text-ink/60">Searching…</p>}
-          {!searching &&
+          {pending && <p className="text-sm text-ink/60">Searching…</p>}
+          {!pending &&
             query.trim().length >= CHECKIN_MIN_CHARS &&
             hits.length === 0 && (
               <p className="text-sm text-ink/60">
@@ -109,15 +102,9 @@ export default function ClaimPicker({
                 first, then search again.
               </p>
             )}
-          {hits.length > 0 && (
-            <ul className="flex flex-col divide-y divide-line rounded-lg border border-line bg-white">
-              {hits.map((a) => (
-                <li key={a.id} className="px-3 py-2.5">
-                  {claim(a)}
-                </li>
-              ))}
-            </ul>
-          )}
+          {hits.map((a) => (
+            <div key={a.id}>{pick(a)}</div>
+          ))}
         </div>
       )}
       {error && (

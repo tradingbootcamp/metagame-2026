@@ -40,9 +40,18 @@ const CLAIM_ERRORS = {
   checkedIn: "That ticket is already checked in.",
   limited: "Too many attempts. Try again in an hour.",
 };
-const UNCLAIMED = "Claim the ticket for them first.";
 
-export async function claimFor(
+async function takenMessage(code: number): Promise<string> {
+  const wearer = await badgeWearer(code);
+  return `Badge ${formatBadgeCode(code)} is already on ${wearer ?? "another ticket"}.`;
+}
+
+/**
+ * The arrival flow in one submit: claim the ticket for the chosen account if
+ * nobody has, put the sticker number on it, and check it in. A claim that
+ * lands before a later step fails stays, since it was right regardless.
+ */
+export async function arriveAction(
   _prev: DeskState,
   formData: FormData,
 ): Promise<DeskState> {
@@ -50,63 +59,48 @@ export async function claimFor(
   if (!access) return { error: EXPIRED };
   const paymentId = str(formData, "paymentId");
   const forUserId = str(formData, "forUserId");
-  if (!paymentId || !forUserId) return { error: "Pick an account first." };
-  const result = await claimTicketFor(access.userId, paymentId, forUserId);
-  if (!result.ok) return { error: CLAIM_ERRORS[result.reason] };
-  revalidatePath(TOOL);
-  return { done: "Claimed" };
-}
-
-async function takenMessage(code: number): Promise<string> {
-  const wearer = await badgeWearer(code);
-  return `Badge ${formatBadgeCode(code)} is already on ${wearer ?? "another ticket"}.`;
-}
-
-/** Saves the badge number, and with intent=checkin also checks the ticket in. */
-export async function badgeAction(
-  _prev: DeskState,
-  formData: FormData,
-): Promise<DeskState> {
-  const access = await manage();
-  if (!access) return { error: EXPIRED };
-  const paymentId = str(formData, "paymentId");
-  const checkingIn = str(formData, "intent") === "checkin";
-  const badge = parseBadgeInput(str(formData, "badge", 20));
+  const typed = str(formData, "badge", 20);
+  const badge = typed === "" ? null : parseBadgeInput(typed);
   if (badge === undefined) {
     return { error: "Badge numbers are up to four digits." };
   }
-  if (checkingIn && badge === null) {
-    return { error: "Type the badge number before checking in." };
+
+  const ticket = await deskTicket(paymentId);
+  if (!ticket) return { error: CLAIM_ERRORS.unknown };
+  if (ticket.checkedInAt) return { error: CLAIM_ERRORS.checkedIn };
+  if (ticket.status !== "paid") return { error: CLAIM_ERRORS.unpaid };
+  if (badge === null && ticket.badgeCode === null) {
+    return { error: "Type the sticker number before checking in." };
   }
 
-  const before = checkingIn ? await deskTicket(paymentId) : null;
-  if (checkingIn) {
-    if (!before) return { error: CLAIM_ERRORS.unknown };
-    if (before.checkedInAt) return { error: CLAIM_ERRORS.checkedIn };
-    if (before.status !== "paid") return { error: CLAIM_ERRORS.unpaid };
-    if (before.ownerUserId === null) return { error: UNCLAIMED };
+  if (ticket.ownerUserId === null) {
+    if (!forUserId) return { error: "Pick who this ticket is for first." };
+    const claimed = await claimTicketFor(access.userId, paymentId, forUserId);
+    if (!claimed.ok) {
+      revalidatePath(TOOL);
+      return { error: CLAIM_ERRORS[claimed.reason] };
+    }
   }
 
-  const assigned = await assignBadgeCode(paymentId, badge);
-  if (!assigned.ok) {
-    if (assigned.reason === "taken" && badge !== null)
-      return { error: await takenMessage(badge) };
-    if (assigned.reason === "invalid")
-      return { error: "Badge numbers are up to four digits." };
-    return { error: CLAIM_ERRORS.unknown };
-  }
-  if (!checkingIn || !before) {
-    revalidatePath(TOOL);
-    return { done: badge === null ? "Badge removed" : "Badge saved" };
+  if (badge !== null && badge !== ticket.badgeCode) {
+    const assigned = await assignBadgeCode(paymentId, badge);
+    if (!assigned.ok) {
+      revalidatePath(TOOL);
+      if (assigned.reason === "taken")
+        return { error: await takenMessage(badge) };
+      if (assigned.reason === "invalid")
+        return { error: "Badge numbers are up to four digits." };
+      return { error: CLAIM_ERRORS.unknown };
+    }
   }
 
   const result = await checkInTicket(access.userId, paymentId);
-  if (!result.ok) await assignBadgeCode(paymentId, before.badgeCode);
   revalidatePath(TOOL);
   if (result.ok) return { done: "Checked in" };
   if (result.reason === "already") return { error: CLAIM_ERRORS.checkedIn };
-  if (result.reason === "unclaimed") return { error: UNCLAIMED };
   if (result.reason === "unpaid") return { error: CLAIM_ERRORS.unpaid };
+  if (result.reason === "unclaimed")
+    return { error: "The claim didn't stick. Search again and retry." };
   return { error: CLAIM_ERRORS.unknown };
 }
 

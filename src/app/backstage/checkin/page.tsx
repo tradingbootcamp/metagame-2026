@@ -4,7 +4,7 @@ import SignIn from "../SignIn";
 import type { DeskTicket } from "./desk";
 import ProblemButton from "./ProblemButton";
 import SearchBox from "./SearchBox";
-import TicketCard from "./TicketCard";
+import DeskRow from "./TicketRow";
 import { toolAccess } from "@/lib/admin-auth";
 import {
   attendeeName,
@@ -88,7 +88,6 @@ export default async function CheckinPage(
     };
   });
   const groups = groupByPack(tickets);
-  const single = q.length > 0 && tickets.length === 1;
 
   return (
     <>
@@ -113,7 +112,7 @@ export default async function CheckinPage(
         {groups.map((g) =>
           g.pack === null ? (
             <li key={g.tickets[0].paymentId}>
-              <TicketCard ticket={g.tickets[0]} q={q} defaultOpen={single} />
+              <DeskRow ticket={g.tickets[0]} />
             </li>
           ) : (
             <li key={g.pack} className="border-l-4 border-navy/40">
@@ -134,7 +133,7 @@ export default async function CheckinPage(
               </p>
               <div className="divide-y divide-line">
                 {g.tickets.map((t) => (
-                  <TicketCard key={t.paymentId} ticket={t} q={q} />
+                  <DeskRow key={t.paymentId} ticket={t} />
                 ))}
               </div>
             </li>
