@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import SignIn from "../SignIn";
 import type { DeskTicket } from "./desk";
@@ -16,8 +17,10 @@ import {
   type CheckinAccount,
 } from "@/lib/checkin";
 import {
+  CHECKIN_PAGE_SIZE,
   checkinAccounts,
   checkinCounts,
+  listCheckinTickets,
   searchCheckinTickets,
 } from "@/lib/checkin-store";
 import { ticketLabel, type TicketRow } from "@/lib/ticket-store";
@@ -28,15 +31,23 @@ export default async function CheckinPage(
   await connection();
   const sp = await props.searchParams;
   const { text: q, badge } = parseCheckinQuery(String([sp.q].flat()[0] ?? ""));
-  const self = `/backstage/checkin${q ? `?q=${encodeURIComponent(q)}` : ""}`;
+  const page = Math.max(1, Math.floor(Number([sp.page].flat()[0]) || 1));
+  const self = `/backstage/checkin${q ? `?q=${encodeURIComponent(q)}` : page > 1 ? `?page=${page}` : ""}`;
 
   const access = await toolAccess("checkin.manage");
   if (!access) return <SignIn next={self} />;
 
-  const [counts, rows] = await Promise.all([
+  const [counts, listed] = await Promise.all([
     checkinCounts(),
-    searchCheckinTickets(q),
+    q
+      ? searchCheckinTickets(q).then((rows) => ({ rows, total: null }))
+      : listCheckinTickets(page),
   ]);
+  const rows = listed.rows;
+  const pages =
+    listed.total === null
+      ? 1
+      : Math.max(1, Math.ceil(listed.total / CHECKIN_PAGE_SIZE));
   const { byId, byEmail } = await checkinAccounts(rows);
   const owners = new Set(rows.map((t) => t.ownerUserId));
   // A pack's buyer is offered once, on its first unclaimed ticket.
@@ -130,6 +141,33 @@ export default async function CheckinPage(
           ),
         )}
       </ul>
+      {!q && pages > 1 && (
+        <nav className="flex items-center justify-between gap-3 text-sm">
+          {page > 1 ? (
+            <Link
+              href={`/backstage/checkin?page=${page - 1}`}
+              className="font-semibold text-navy"
+            >
+              ← Previous
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="text-ink/60">
+            Page {page} of {pages}
+          </span>
+          {page < pages ? (
+            <Link
+              href={`/backstage/checkin?page=${page + 1}`}
+              className="font-semibold text-navy"
+            >
+              Next →
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
+      )}
     </>
   );
 }

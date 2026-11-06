@@ -26,6 +26,7 @@ import { visible, type TicketRow } from "@/lib/ticket-store";
 const { tickets, user } = schema;
 
 export const CHECKIN_SEARCH_LIMIT = 25;
+export const CHECKIN_PAGE_SIZE = 50;
 
 /** Only paid tickets and ones still waiting on payment matter at the desk. */
 const atDesk = and(visible, inArray(tickets.status, ["paid", "pending"]));
@@ -89,6 +90,30 @@ export async function searchCheckinTickets(raw: string): Promise<TicketRow[]> {
     )
     .orderBy(asc(tickets.paymentId));
   return [...rows, ...siblings.filter((t) => !seen.has(t.paymentId))];
+}
+
+/** Every paid ticket, alphabetical by attendee, one page at a time. */
+export async function listCheckinTickets(
+  page: number,
+): Promise<{ rows: TicketRow[]; total: number }> {
+  const owner = alias(user, "owner");
+  const paid = and(visible, eq(tickets.status, "paid"));
+  const db = getDb();
+  const [[{ total }], hits] = await Promise.all([
+    db.select({ total: count() }).from(tickets).where(paid),
+    db
+      .select({ ticket: tickets })
+      .from(tickets)
+      .leftJoin(owner, eq(owner.id, tickets.ownerUserId))
+      .where(paid)
+      .orderBy(
+        asc(sql`lower(coalesce(${owner.name}, ${tickets.purchaserName}, ''))`),
+        asc(tickets.paymentId),
+      )
+      .limit(CHECKIN_PAGE_SIZE)
+      .offset((page - 1) * CHECKIN_PAGE_SIZE),
+  ]);
+  return { rows: hits.map((h) => h.ticket), total };
 }
 
 /** Everyone these tickets name: owner, holder, who checked them in, and buyers by email. */
