@@ -78,7 +78,7 @@ export default function AccountPicker({
       ) : (
         <div className="flex flex-col gap-2">
           <label htmlFor={searchId} className="text-sm font-medium text-ink/80">
-            Find their Metagame account (name or email)
+            Search accounts by name or email
           </label>
           <input
             id={searchId}

@@ -74,11 +74,9 @@ export default function ArriveModal({
             (forUser === null ? (
               <>
                 {ticket.suggested === null && ticket.purchaserEmail && (
-                  <p className="text-sm text-ink/70">
-                    No Metagame account under{" "}
-                    <span className="font-mono">{ticket.purchaserEmail}</span>{" "}
-                    yet. If they signed in with another email, search for it.
-                    Otherwise they need to sign in on their phone first.
+                  <p className="rounded-lg bg-tan/20 px-3 py-2 text-sm text-ink/80">
+                    No account under that email yet. Search another email, or
+                    have them sign in first.
                   </p>
                 )}
                 <AccountPicker
@@ -176,7 +174,7 @@ export default function ArriveModal({
             >
               {state.done ? "Close" : "Cancel"}
             </button>
-            {!state.done && (
+            {!state.done && !needsPick && (
               <button
                 ref={submit}
                 type="submit"
