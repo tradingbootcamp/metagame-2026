@@ -114,7 +114,7 @@ export default function ArriveModal({
                     htmlFor={badgeId}
                     className="text-sm font-medium text-ink/80"
                   >
-                    {override ? "New badge number" : "Sticker number"}
+                    {override ? "New badge code" : "Sticker number"}
                   </label>
                   <input
                     id={badgeId}
@@ -139,8 +139,8 @@ export default function ArriveModal({
                   />
                   {override && (
                     <p className="text-xs text-ink/60">
-                      Only if they lost badge {existing} and you&rsquo;re giving
-                      them a new one. {existing} stops working.
+                      Only if they lost badge {existing}. Type the code on the
+                      replacement badge; {existing} stops working.
                     </p>
                   )}
                 </>
@@ -155,7 +155,7 @@ export default function ArriveModal({
                     onClick={() => setOverride(true)}
                     className={smallButtonClass}
                   >
-                    Give a different badge
+                    Issue a new badge code
                   </button>
                 </div>
               )}
