@@ -258,21 +258,22 @@ async function api(method, query, body) {
   if (!r.ok) throw new Error(j.error || `${r.status}`);
   return j;
 }
-const UPLOAD_LIMIT = 4 * 1024 * 1024;
-async function uploadFile(blobOrFile, name) {
-  if (blobOrFile.size > UPLOAD_LIMIT) throw new Error(`${name} is ${(blobOrFile.size / 1048576).toFixed(1)} MB; uploads are limited to 4 MB`);
-  const fd = new FormData(); fd.append("file", blobOrFile, name);
-  return (await api("POST", "", fd)).url;
+// Vercel Blob client upload: our API signs a short-lived token, then the file goes
+// straight from the browser to Blob, so a 40 MB banner photo never touches a
+// serverless function (whose request bodies are capped at 4.5 MB). Mirrors
+// @vercel/blob/client's upload() for API version 13.
+const BLOB_API = "https://vercel.com/api/blob", BLOB_API_VERSION = "13";
+async function uploadFile(file, name) {
+  const pathname = `signs/${(name || "file").replace(/[^\w.\-]+/g, "_")}`;
+  const { clientToken } = await api("POST", "", { type: "blob.generate-client-token", payload: { pathname, clientPayload: null, multipart: false } });
+  const storeId = clientToken.split("_")[3] || "";
+  const r = await fetch(`${BLOB_API}/?pathname=${encodeURIComponent(pathname)}`, {
+    method: "PUT", body: file,
+    headers: { authorization: `Bearer ${clientToken}`, "x-api-version": BLOB_API_VERSION, "x-vercel-blob-store-id": storeId, "x-vercel-blob-access": "public", "x-content-length": String(file.size), ...(file.type ? { "x-content-type": file.type } : {}) },
+  });
+  if (!r.ok) throw new Error(`Blob upload failed (${r.status})`);
+  return (await r.json()).url;
 }
-// Downscale for upload: try the requested size, then smaller, then JPEG, until under the limit.
-async function uploadImageFile(f, max, keepAlpha) {
-  for (const [px, alpha] of [[max, keepAlpha], [2000, keepAlpha], [2000, false], [1400, false]]) {
-    const blob = await dataUrlToBlob(await downscale(f, px, alpha));
-    if (blob.size <= UPLOAD_LIMIT) return uploadFile(blob, f.name);
-  }
-  throw new Error(`${f.name} is too large even after shrinking`);
-}
-const dataUrlToBlob = async (d) => (await fetch(d)).blob();
 const PALETTE = { cream:"#fff5f2", paper:"#fffbf2", white:"#ffffff", ink:"#1b1b1b", navy:"#173059", navy2:"#1f3352", blue:"#4d9ff7", logoBlue:"#2b9bf0", tan:"#e2a85c", orange:"#ffa83f", meeple:"#d8502b", salmon:"#fa8072", sky:"#cee1ff", peach:"#ffd8a5", moss:"#6a9a6b" };
 const SIZES = [
   ["letter", "Letter 8.5×11", 8.5, 11], ["letter-l", "Letter 11×8.5", 11, 8.5],
@@ -801,7 +802,7 @@ async function addImages(files) {
   const s = active(); if (!files.length) return;
   for (const f of files) {
     let data;
-    if (HOSTED) { try { data = await uploadImageFile(f, 3000, true); } catch (e) { toast("Upload failed: " + e.message); continue; } }
+    if (HOSTED) { try { data = await uploadFile(f, f.name); } catch (e) { toast("Upload failed: " + e.message); continue; } }
     else data = await downscale(f, 3000, true);
     s.images.push({ id: uid(), name: f.name.replace(/\.[^.]+$/, ""), data, size: 30, opacity: 100, rot: 0, above: false });
   }
@@ -825,7 +826,7 @@ function wire() {
   $("bg-file").onchange = async () => {
     const f = $("bg-file").files[0]; if (!f) return;
     let data;
-    if (HOSTED) { try { data = await uploadImageFile(f, 3600, false); } catch (e) { toast("Upload failed: " + e.message); return; } }
+    if (HOSTED) { try { data = await uploadFile(f, f.name); } catch (e) { toast("Upload failed: " + e.message); return; } }
     else data = await downscale(f, 3600);
     const s = active(); s.bg.image = data; s.bg.type = "image"; s.bg.x = 0; s.bg.y = 0; s.bg.zoom = 100; bind(); changed(); $("bg-file").value = "";
   };

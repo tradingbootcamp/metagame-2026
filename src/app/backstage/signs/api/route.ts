@@ -1,8 +1,8 @@
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { desc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getDb, schema } from "@/db";
 import { toolAccess } from "@/lib/admin-auth";
-import { uploadImage } from "@/lib/blob";
 
 export const runtime = "nodejs";
 
@@ -11,9 +11,13 @@ export const runtime = "nodejs";
 //
 //   GET                     list drafts (no sign body)
 //   GET ?id=                one draft with its sign
-//   POST  application/json  { id?, name, sign, thumbnail? } -> { id }
-//   POST  multipart file    upload a photo or font to Blob -> { url }
+//   POST  { id?, name, sign, thumbnail? }         -> { id }
+//   POST  { type: "blob.generate-client-token" }  -> { clientToken }
 //   DELETE ?id=
+//
+// Uploads are Vercel Blob client uploads: the tool asks here for a token and
+// then PUTs the file to Blob itself, so a banner photo of any size never
+// passes through a function (bodies there are capped at 4.5 MB).
 //
 // Deleting a draft leaves its Blob files alone: "Save as new" forks share
 // the same URLs, so a file can't be tied to one draft.
@@ -26,21 +30,11 @@ const json = (body: unknown, status = 200) =>
   Response.json(body, { status, headers });
 const forbidden = () => json({ error: "Forbidden." }, 403);
 
-// Vercel rejects function bodies over 4.5 MB before the route runs; the tool
-// shrinks uploads to fit (UPLOAD_LIMIT in assets/signs/template.html).
-const UPLOAD_MAX_BYTES = 4.5 * 1024 * 1024;
-const UPLOAD_TYPES: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-  "image/svg+xml": "svg",
-  "font/ttf": "ttf",
-  "font/otf": "otf",
-  "font/woff": "woff",
-  "font/woff2": "woff2",
-};
-// Browsers often send fonts with no or a generic type; go by extension then.
-const FONT_EXT = /\.(ttf|otf|woff2?)$/i;
+const UPLOAD_MAX_BYTES = 200 * 1024 * 1024;
+// Browsers send fonts with no or a generic type, so the token allows
+// application/* too and the extension check below does the real gating.
+const UPLOAD_TYPES = ["image/*", "font/*", "application/*"];
+const UPLOAD_EXT = /\.(png|jpe?g|webp|svg|ttf|otf|woff2?)$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const THUMBNAIL = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 const THUMBNAIL_MAX_CHARS = 20_000;
@@ -79,23 +73,33 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const access = await toolAccess("misc.signs");
   if (!access) return forbidden();
-  const type = request.headers.get("content-type") ?? "";
-
-  if (type.startsWith("multipart/form-data")) {
-    const file = (await request.formData()).get("file");
-    if (!(file instanceof File)) return json({ error: "No file." }, 400);
-    const ext =
-      UPLOAD_TYPES[file.type] ?? file.name.match(FONT_EXT)?.[1]?.toLowerCase();
-    if (!ext) return json({ error: "Use an image or a font file." }, 415);
-    if (file.size > UPLOAD_MAX_BYTES)
-      return json({ error: "That file is over 4.5 MB." }, 413);
-    const url = await uploadImage("signs", file, UPLOAD_MAX_BYTES, ext);
-    return json({ url });
-  }
-
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object")
     return json({ error: "Bad body." }, 400);
+
+  if ((body as { type?: unknown }).type === "blob.generate-client-token") {
+    try {
+      const result = await handleUpload({
+        request,
+        body: body as HandleUploadBody,
+        onBeforeGenerateToken: async (pathname) => {
+          if (!pathname.startsWith("signs/") || !UPLOAD_EXT.test(pathname))
+            throw new Error("Use an image or a font file.");
+          return {
+            allowedContentTypes: UPLOAD_TYPES,
+            maximumSizeInBytes: UPLOAD_MAX_BYTES,
+            addRandomSuffix: true,
+            allowOverwrite: false,
+          };
+        },
+        // No completion callback: the tool stores the URL in the draft itself.
+        onUploadCompleted: async () => {},
+      });
+      return json(result);
+    } catch (err) {
+      return json({ error: (err as Error).message }, 400);
+    }
+  }
   const { id, name, sign, thumbnail } = body as {
     id?: unknown;
     name?: unknown;

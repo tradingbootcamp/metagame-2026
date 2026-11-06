@@ -10,22 +10,18 @@ const TYPES: Record<string, string> = {
   "image/png": "png",
 };
 
-/**
- * Stores a file under `folder/` in Vercel Blob and returns its public URL.
- * `ext` overrides the extension taken from the MIME type, for callers that
- * accept more than the image types above.
- */
+/** Stores an image under `folder/` in Vercel Blob and returns its public URL. */
 export async function uploadImage(
   folder: string,
   file: File,
   maxBytes = THUMBNAIL_MAX_BYTES,
-  ext = TYPES[file.type],
 ): Promise<string> {
+  const ext = TYPES[file.type];
   if (!ext) throw new Error("Use a WebP, JPEG or PNG image.");
   if (file.size > maxBytes) throw new Error("That image is too large.");
   const { url } = await put(`${folder}/${crypto.randomUUID()}.${ext}`, file, {
     access: "public",
-    contentType: file.type || undefined,
+    contentType: file.type,
   });
   return url;
 }
