@@ -34,7 +34,7 @@ export default function ArriveModal({
   const existing = ticket.badge === null ? null : formatBadgeCode(ticket.badge);
   const needsPick = claiming && forUser === null;
   const typing = existing === null || override;
-  const ready = !needsPick && (!typing || badge.length === 4);
+  const ready = !needsPick && (!typing || badge.length > 0);
   const submit = useRef<HTMLButtonElement>(null);
 
   return (
@@ -138,7 +138,9 @@ export default function ArriveModal({
                   <p className="text-xs text-ink/60">
                     {override
                       ? `Only if they lost badge ${existing} and you're giving them a new sticker. ${existing} stops working.`
-                      : "4 digits, as printed on the sticker."}
+                      : badge.length > 0 && badge.length < 4
+                        ? `Saved as ${badge.padStart(4, "0")}.`
+                        : "Short numbers pad to four digits."}
                   </p>
                 </>
               ) : (
