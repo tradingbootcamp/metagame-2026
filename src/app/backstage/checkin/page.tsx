@@ -88,6 +88,7 @@ export default async function CheckinPage(
     };
   });
   const groups = groupByPack(tickets);
+  const single = q.length > 0 && tickets.length === 1;
 
   return (
     <>
@@ -108,18 +109,15 @@ export default async function CheckinPage(
           from their confirmation.
         </p>
       )}
-      <ul className="flex flex-col gap-4">
+      <ul className="divide-y divide-line rounded-xl border border-line">
         {groups.map((g) =>
           g.pack === null ? (
             <li key={g.tickets[0].paymentId}>
-              <TicketCard ticket={g.tickets[0]} q={q} />
+              <TicketCard ticket={g.tickets[0]} q={q} defaultOpen={single} />
             </li>
           ) : (
-            <li
-              key={g.pack}
-              className="flex flex-col gap-3 rounded-xl border border-dashed border-navy/40 p-3"
-            >
-              <p className="text-sm text-ink/70">
+            <li key={g.pack} className="border-l-4 border-navy/40">
+              <p className="px-3 pt-2 text-xs text-ink/70">
                 <span className="font-semibold text-navy">
                   Family &amp; Friends Pack
                 </span>{" "}
@@ -134,9 +132,11 @@ export default async function CheckinPage(
                   </>
                 )}
               </p>
-              {g.tickets.map((t) => (
-                <TicketCard key={t.paymentId} ticket={t} q={q} />
-              ))}
+              <div className="divide-y divide-line">
+                {g.tickets.map((t) => (
+                  <TicketCard key={t.paymentId} ticket={t} q={q} />
+                ))}
+              </div>
             </li>
           ),
         )}

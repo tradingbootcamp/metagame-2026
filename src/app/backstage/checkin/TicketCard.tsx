@@ -19,69 +19,75 @@ const PILL: Record<CheckinState, { label: string; className: string }> = {
 export default function TicketCard({
   ticket,
   q,
+  defaultOpen = false,
 }: {
   ticket: DeskTicket;
   q: string;
+  defaultOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(defaultOpen);
   const pill = PILL[ticket.state];
   const badge = ticket.badge === null ? null : formatBadgeCode(ticket.badge);
   return (
-    <article className="flex flex-col gap-3 rounded-xl border border-line bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="truncate text-xl font-semibold text-navy">
+    <article className={open ? "bg-white" : ""}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-white"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-semibold text-navy">
             {ticket.name}
-          </h2>
+          </span>
           {ticket.purchaserEmail && (
-            <p className="truncate font-mono text-sm text-ink/60">
+            <span className="block truncate font-mono text-xs text-ink/60">
               {ticket.purchaserEmail}
-            </p>
+            </span>
           )}
-          <p className="text-sm text-ink/70">
-            {ticket.tier} ·{" "}
-            {badge ? (
-              <>
-                badge <span className="font-mono">{badge}</span>
-              </>
-            ) : (
-              "no badge"
-            )}
-          </p>
-        </div>
+        </span>
+        <span className="w-12 shrink-0 text-right font-mono text-sm text-ink/70">
+          {badge ?? "—"}
+        </span>
         <span
-          className={`rounded-full px-3 py-1 text-sm font-semibold ${pill.className}`}
+          className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${pill.className}`}
         >
           {pill.label}
         </span>
-      </div>
+      </button>
 
-      {ticket.state === "unpaid" && (
-        <p className="text-sm text-ink/70">
-          Not paid. Send them to the ticket page, or check the purchase under{" "}
-          {ticket.purchaserEmail ?? "their email"}.
-        </p>
-      )}
-      {ticket.state === "unclaimed" && (
-        <ClaimPicker
-          paymentId={ticket.paymentId}
-          suggested={ticket.suggested}
-        />
-      )}
-      {ticket.state === "claimed" && <BadgeForm ticket={ticket} checkIn />}
-      {ticket.state === "checkedIn" && ticket.checkedIn && (
-        <>
-          <p className="text-sm text-ink/70">
-            Checked in at {ticket.checkedIn.at} by {ticket.checkedIn.by}
-          </p>
-          <div className="flex flex-wrap items-end gap-3">
-            <BadgeForm ticket={ticket} />
-            <UndoForm paymentId={ticket.paymentId} />
+      {open && (
+        <div className="flex flex-col gap-3 px-3 pb-4">
+          <p className="text-sm text-ink/70">{ticket.tier}</p>
+          {ticket.state === "unpaid" && (
+            <p className="text-sm text-ink/70">
+              Not paid. Send them to the ticket page, or check the purchase
+              under {ticket.purchaserEmail ?? "their email"}.
+            </p>
+          )}
+          {ticket.state === "unclaimed" && (
+            <ClaimPicker
+              paymentId={ticket.paymentId}
+              suggested={ticket.suggested}
+            />
+          )}
+          {ticket.state === "claimed" && <BadgeForm ticket={ticket} checkIn />}
+          {ticket.state === "checkedIn" && ticket.checkedIn && (
+            <>
+              <p className="text-sm text-ink/70">
+                Checked in at {ticket.checkedIn.at} by {ticket.checkedIn.by}
+              </p>
+              <div className="flex flex-wrap items-end gap-3">
+                <BadgeForm ticket={ticket} />
+                <UndoForm paymentId={ticket.paymentId} />
+              </div>
+            </>
+          )}
+          <div className="flex justify-end">
+            <ProblemButton q={q} paymentId={ticket.paymentId} compact />
           </div>
-        </>
+        </div>
       )}
-      <div className="flex justify-end">
-        <ProblemButton q={q} paymentId={ticket.paymentId} compact />
-      </div>
     </article>
   );
 }
