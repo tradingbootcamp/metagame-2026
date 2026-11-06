@@ -7,6 +7,7 @@ export type DeskTicket = {
   /** The row's second line: the purchase email, the tier, or the place in a pack. */
   subtitle: string;
   purchaserEmail: string | null;
+  purchaserName: string | null;
   tier: string;
   badge: number | null;
   state: CheckinState;

@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState, useTransition } from "react";
 import { fieldClass, smallButtonClass } from "../ui";
-import { findAccounts } from "./actions";
+import { findAccounts, mintAccount } from "./actions";
 import { latestRequest } from "../megagame/latest";
 import { CHECKIN_MIN_CHARS, type CheckinAccount } from "@/lib/checkin";
 
@@ -22,12 +22,16 @@ function AccountLine({ account }: { account: CheckinAccount }) {
 /** Picks the account a ticket is for: the one on the purchase, or one searched for. */
 export default function AccountPicker({
   suggested,
+  prefill,
   onPick,
 }: {
   suggested: CheckinAccount | null;
+  /** From the purchase, for a new account. */
+  prefill: { name: string | null; email: string | null };
   onPick: (account: CheckinAccount) => void;
 }) {
   const [searching, setSearching] = useState(suggested === null);
+  const [minting, setMinting] = useState(false);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<CheckinAccount[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +116,81 @@ export default function AccountPicker({
           {error}
         </p>
       )}
+      {minting ? (
+        <MintForm prefill={prefill} onPick={onPick} />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setMinting(true)}
+          className={`${smallButtonClass} self-start py-2`}
+        >
+          Make them an account…
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MintForm({
+  prefill,
+  onPick,
+}: {
+  prefill: { name: string | null; email: string | null };
+  onPick: (account: CheckinAccount) => void;
+}) {
+  const [name, setName] = useState(prefill.name ?? "");
+  const [email, setEmail] = useState(prefill.email ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const nameId = useId();
+  const emailId = useId();
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-line bg-white p-3">
+      <label htmlFor={nameId} className="text-sm font-medium text-ink/80">
+        Name, as it should read on the badge
+      </label>
+      <input
+        id={nameId}
+        autoFocus
+        autoComplete="off"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className={fieldClass}
+      />
+      <label htmlFor={emailId} className="text-sm font-medium text-ink/80">
+        Email they&rsquo;ll sign in with
+      </label>
+      <input
+        id={emailId}
+        type="email"
+        inputMode="email"
+        autoComplete="off"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className={fieldClass}
+      />
+      <p className="text-xs text-ink/60">
+        Read the email back to them. They get a sign-in link there.
+      </p>
+      {error && (
+        <p role="alert" className="text-sm text-meeple">
+          {error}
+        </p>
+      )}
+      <button
+        type="button"
+        disabled={pending || !name.trim() || !email.trim()}
+        onClick={() =>
+          start(async () => {
+            const res = await mintAccount({ name, email });
+            if (res.account) onPick(res.account);
+            else setError(res.error ?? "Couldn't create the account.");
+          })
+        }
+        className={`${smallButtonClass} self-start py-2 font-semibold text-navy disabled:opacity-40`}
+      >
+        {pending ? "Creating…" : "Create account & pick"}
+      </button>
     </div>
   );
 }

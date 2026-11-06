@@ -81,6 +81,10 @@ export default function ArriveModal({
                 )}
                 <AccountPicker
                   suggested={ticket.suggested}
+                  prefill={{
+                    name: ticket.purchaserName,
+                    email: ticket.purchaserEmail,
+                  }}
                   onPick={setForUser}
                 />
               </>

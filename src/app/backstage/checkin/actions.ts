@@ -10,8 +10,9 @@ import {
   type CheckinAccount,
 } from "@/lib/checkin";
 import { badgeWearer, deskTicket } from "@/lib/checkin-store";
+import { sendAccountInviteEmail } from "@/lib/email";
 import { reportError } from "@/lib/error-report";
-import { searchAccounts } from "@/lib/schedule-store";
+import { ensureAccount, searchAccounts } from "@/lib/schedule-store";
 import {
   assignBadgeCode,
   checkInTicket,
@@ -129,6 +130,34 @@ export async function findAccounts(
       email,
     })),
   };
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * An account for someone at the desk with none. Unverified and passwordless,
+ * like a host invite: their first code sign-in claims it, and the invite
+ * email tells them how.
+ */
+export async function mintAccount(input: {
+  name: string;
+  email: string;
+}): Promise<{ account?: CheckinAccount; error?: string }> {
+  if (!(await manage())) return { error: EXPIRED };
+  const name = String(input.name).trim().slice(0, 200);
+  const email = String(input.email).trim().toLowerCase().slice(0, 254);
+  if (!name)
+    return { error: "Type their name as it should read on the badge." };
+  if (!EMAIL.test(email)) return { error: "That email doesn't look right." };
+  const {
+    userId,
+    name: storedName,
+    email: storedEmail,
+  } = await ensureAccount(name, email);
+  sendAccountInviteEmail({ to: storedEmail, name: storedName }).catch((err) =>
+    console.error("[checkin] invite email failed", storedEmail, err),
+  );
+  return { account: { id: userId, name: storedName, email: storedEmail } };
 }
 
 export async function reportProblem(

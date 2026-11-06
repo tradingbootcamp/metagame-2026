@@ -105,6 +105,7 @@ export default async function CheckinPage(
       name,
       subtitle,
       purchaserEmail: t.purchaserEmail,
+      purchaserName: t.purchaserName?.trim() || null,
       tier,
       badge: t.badgeCode,
       state: checkinState(t),
