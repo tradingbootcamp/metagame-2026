@@ -24,7 +24,7 @@ export type TicketView = {
   referralCode: string | null;
   /** Who the ticket was bought on a referral from, by name or email. */
   referredBy: string | null;
-  /** Four-digit badge number, once the ticket has one. */
+  /** Four-digit badge number, shown to the owner once the ticket has one. */
   badgeCode: string | null;
 };
 
@@ -51,6 +51,7 @@ export function ticketView(
         ? formatReferralCode(t.referralCode)
         : null,
     referredBy,
-    badgeCode: t.badgeCode === null ? null : formatBadgeCode(t.badgeCode),
+    badgeCode:
+      mine && t.badgeCode !== null ? formatBadgeCode(t.badgeCode) : null,
   };
 }

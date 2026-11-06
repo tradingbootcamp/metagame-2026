@@ -128,10 +128,12 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                 >
                   {b.text}
                 </span>
-                {t.badgeCode && (
+                {t.mine && (
                   <span className="text-sm text-ink/70">
                     Badge{" "}
-                    <span className="font-mono text-ink">#{t.badgeCode}</span>
+                    <span className="font-mono text-ink">
+                      {t.badgeCode ? `#${t.badgeCode}` : "—"}
+                    </span>
                   </span>
                 )}
                 {shareable(t) && !holdsOne && (

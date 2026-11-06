@@ -44,8 +44,11 @@ describe("ticketView", () => {
     });
   });
 
-  it("pads the badge number to four digits", () => {
-    expect(ticketView(row({ badgeCode: 42 }), ...ada).badgeCode).toBe("0042");
+  it("shows the padded badge number to the owner only", () => {
+    const r = row({ badgeCode: 42, ownerUserId: "u2" });
+    expect(ticketView(r, "u2", "bob@example.com").badgeCode).toBe("0042");
+    expect(ticketView(r, ...ada).badgeCode).toBeNull();
+    expect(ticketView(row({ badgeCode: 42 }), ...ada).badgeCode).toBeNull();
   });
 
   it("shows the referral code to the holder and the owner, nobody else", () => {
