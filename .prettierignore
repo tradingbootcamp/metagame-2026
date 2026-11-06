@@ -9,5 +9,7 @@ src/v2/components/dice/dice3d/takes/*.json
 emails/
 # generated ER diagram site
 public/schema-erd/
+# standalone puzzle page, kept as written
+public/chainmail.html
 # sign maker: hand-compact source and its byte-exact build output
 assets/signs/*.html
