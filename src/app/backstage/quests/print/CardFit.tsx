@@ -43,14 +43,15 @@ export function fitCards(root: ParentNode): string[] {
 }
 
 /**
- * Runs the fit once fonts and pictures have loaded, then offers the print
- * button. Lists the cards whose text could not be made to fit.
+ * Runs the fit once fonts and pictures have loaded, flags the document for the
+ * PDF route, then offers the download. Lists the cards whose text could not be
+ * made to fit.
  */
 export default function CardFit({ count }: { count: number }) {
-  const [state, setState] = useState<{ done: boolean; overflow: string[] }>({
-    done: false,
-    overflow: [],
-  });
+  const [state, setState] = useState<{
+    href: string | null;
+    overflow: string[];
+  }>({ href: null, overflow: [] });
   useEffect(() => {
     let cancelled = false;
     const images = [...document.images].filter((img) => !img.complete);
@@ -65,25 +66,34 @@ export default function CardFit({ count }: { count: number }) {
       ),
     ]).then(() => {
       if (cancelled) return;
-      setState({ done: true, overflow: fitCards(document) });
+      setState({
+        href: `/backstage/quests/print/pdf${window.location.search}`,
+        overflow: fitCards(document),
+      });
+      document.documentElement.dataset.fitDone = "1";
     });
     return () => {
       cancelled = true;
+      delete document.documentElement.dataset.fitDone;
     };
   }, [count]);
   return (
     <>
-      <button
-        type="button"
-        onClick={() => window.print()}
-        disabled={!state.done}
-        className="rounded-md bg-navy px-3 py-1.5 font-semibold text-white disabled:opacity-50"
-      >
-        {state.done ? "Print" : "Laying out…"}
-      </button>
+      {state.href ? (
+        <a
+          href={state.href}
+          download
+          className="rounded-md bg-navy px-3 py-1.5 font-semibold text-white"
+        >
+          Download PDF
+        </a>
+      ) : (
+        <span className="rounded-md bg-navy px-3 py-1.5 font-semibold text-white opacity-50">
+          Laying out…
+        </span>
+      )}
       <span>
-        {count} card{count === 1 ? "" : "s"}, one per US Letter page. Set
-        margins to none and keep background graphics on.
+        {count} card{count === 1 ? "" : "s"}, one per US Letter page.
       </span>
       {state.overflow.length > 0 && (
         <span role="alert" className="font-semibold text-[#c0392b]">
