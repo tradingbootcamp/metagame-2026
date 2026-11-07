@@ -13,7 +13,7 @@ import {
 
 export type ProfileView = {
   profile: PublicProfile;
-  /** Which of the three tiers let this viewer in; drives the page's notice. */
+  /** Which tier let this viewer in; drives the page's notice. */
   access: Exclude<ProfileAccess, "none">;
 };
 

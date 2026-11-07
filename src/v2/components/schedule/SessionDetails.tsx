@@ -188,7 +188,6 @@ export default async function SessionDetails({ slug }: { slug: string }) {
   const [rsvps, plans, editor, raw, shown, ticket] = await Promise.all([
     loadSessionRsvps(session.id),
     viewerId ? loadViewerPlans(viewerId) : null,
-    // PublicSession carries host names but no ids, so ownership is its own read.
     viewerId ? editSessionAccess(session.id) : null,
     // Host ids and shepherds aren't public, so clashes read the raw schedule.
     viewerId ? loadRawSchedule() : null,

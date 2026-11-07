@@ -23,8 +23,6 @@ import { HEADING } from "@/v2/components/styles";
 // An attendee's profile. Signed-in only, and everything on it is either
 // something the person typed into their own profile form or a session they're
 // hosting; see PUBLIC_AUDIENCE in src/lib/user-profile.ts for what's left out.
-// A profile its owner hasn't shown still has a page, with just the name and
-// the (already public) sessions they host, so links from the schedule land.
 
 const NOTICE = "mb-8 rounded-xl border px-4 py-3 text-sm";
 
@@ -78,7 +76,7 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
   const [schedule, viewer, levels] = await Promise.all([
     loadSchedule(),
     scheduleViewer(),
-    loadMegagameLevels(id),
+    access === "private" ? null : loadMegagameLevels(id),
   ]);
   const { sessions, locations } = userSessions(
     id,
@@ -92,12 +90,12 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
     <ContentPage title="Profile" wide>
       {access === "own-preview" && (
         <p className={`${NOTICE} border-tan/60 bg-peach/30 text-ink/80`}>
-          Only you and the team can see this page. Tick “Show my profile to
+          Other attendees only see your name here. Tick “Show my profile to
           other attendees” on your{" "}
           <Link href="/account" className="underline underline-offset-2">
             account
           </Link>{" "}
-          to show it to everyone else with an account.
+          to show them the rest.
         </p>
       )}
       {access === "private" && (
@@ -126,7 +124,7 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
           {profile.pronouns && (
             <Field label="Pronouns">{profile.pronouns}</Field>
           )}
-          {access !== "private" && activeClasses(levels).length > 0 && (
+          {levels && activeClasses(levels).length > 0 && (
             <Field label="Megagame classes">
               <ClassBadges levels={levels} />
             </Field>
