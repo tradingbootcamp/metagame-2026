@@ -5,7 +5,8 @@ import ToolSignIn from "@/components/ToolSignIn";
 import { getDb, schema } from "@/db";
 import { teamAccess } from "@/lib/access";
 import { listRoles, rolesFor } from "@/lib/permission-store";
-import { claimedCounts } from "@/lib/ticket-store";
+import { formatBadgeCode } from "@/lib/badge-code";
+import { badgeCodesFor, claimedCounts } from "@/lib/ticket-store";
 
 // Every account comes down and the table sorts, filters and searches in the
 // browser; revisit once the list is in the thousands.
@@ -50,8 +51,9 @@ export default async function AdminUsersPage(
     .orderBy(desc(user.createdAt))
     .limit(CAP);
   const ids = users.map((u) => u.id);
-  const [claimed, held, allRoles] = await Promise.all([
+  const [claimed, badges, held, allRoles] = await Promise.all([
     claimedCounts(ids),
+    badgeCodesFor(ids),
     rolesFor(ids),
     listRoles(),
   ]);
@@ -70,6 +72,7 @@ export default async function AdminUsersPage(
       joinedAt: at.getTime(),
       self: u.id === access.session.user.id,
       tickets: claimed.get(u.id) ?? 0,
+      badge: badges.has(u.id) ? formatBadgeCode(badges.get(u.id)!) : null,
     };
   });
 
