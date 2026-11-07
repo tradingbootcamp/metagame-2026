@@ -3,9 +3,9 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type {
-  Attendee,
   PlanConflict,
   RsvpStatus,
+  PublicPerson,
   RsvpTicket,
   SessionRsvps,
 } from "@/lib/schedule";
@@ -122,7 +122,7 @@ function Attendees({ rsvps }: { rsvps: SessionRsvps }) {
     .filter(Boolean)
     .join(" · ");
   if (!rsvps.names) return <p className="text-[15px]">{counts}</p>;
-  const list = (title: string, names: Attendee[]) =>
+  const list = (title: string, names: PublicPerson[]) =>
     names.length > 0 && (
       <div>
         <p className="mb-1 text-xs tracking-[0.12em] text-[#1b1530]/55 uppercase">
