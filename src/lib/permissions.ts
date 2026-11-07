@@ -60,14 +60,22 @@ export const PERMISSIONS = {
     label: "View tickets",
     description: "Each ticket with its buyer, holder and attendee.",
   },
+  "tickets.badges": {
+    audience: "team",
+    group: "Tickets",
+    level: "edit",
+    label: "Edit badge codes",
+    description:
+      "Fix or remove the badge number on a ticket after the desk assigned it.",
+    implies: ["tickets.view"],
+  },
   "tickets.edit": {
     audience: "team",
     group: "Tickets",
     level: "edit",
     label: "Edit tickets",
-    description:
-      "Fix a ticket's badge code or which ticket referred it, after the fact.",
-    implies: ["tickets.view"],
+    description: "Set or clear which ticket referred a ticket, after the fact.",
+    implies: ["tickets.badges"],
   },
   "checkin.manage": {
     audience: "team",

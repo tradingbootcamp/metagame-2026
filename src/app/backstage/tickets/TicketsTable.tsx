@@ -83,10 +83,14 @@ export default function TicketsTable({
   tickets,
   initial,
   canEdit,
+  canEditBadges,
 }: {
   tickets: AdminTicket[];
   initial: TableState;
+  /** `tickets.edit`: the referrer editor. */
   canEdit: boolean;
+  /** `tickets.badges`: the badge editor. */
+  canEditBadges: boolean;
 }) {
   const [state, setState] = useState(initial);
   const [rows, setRows] = useState(tickets);
@@ -330,6 +334,7 @@ export default function TicketsTable({
             <TicketDetail
               ticket={open}
               canEdit={canEdit}
+              canEditBadges={canEditBadges}
               onReferrer={applyReferrer}
               onBadge={applyBadge}
             />
@@ -456,11 +461,13 @@ function Person({ person }: { person: TicketPerson | null }) {
 function TicketDetail({
   ticket: { t, people },
   canEdit,
+  canEditBadges,
   onReferrer,
   onBadge,
 }: {
   ticket: AdminTicket;
   canEdit: boolean;
+  canEditBadges: boolean;
   onReferrer: (id: string, referredBy: string | null) => void;
   onBadge: (id: string, badgeCode: string | null) => void;
 }) {
@@ -536,19 +543,19 @@ function TicketDetail({
           )}
         </Field>
       </dl>
+      {canEditBadges && (
+        <BadgeEditor
+          id={t.id}
+          badgeCode={t.badgeCode}
+          onChange={(code) => onBadge(t.id, code)}
+        />
+      )}
       {canEdit && (
-        <>
-          <BadgeEditor
-            id={t.id}
-            badgeCode={t.badgeCode}
-            onChange={(code) => onBadge(t.id, code)}
-          />
-          <ReferrerEditor
-            id={t.id}
-            referredBy={t.referredBy}
-            onChange={(code) => onReferrer(t.id, code)}
-          />
-        </>
+        <ReferrerEditor
+          id={t.id}
+          referredBy={t.referredBy}
+          onChange={(code) => onReferrer(t.id, code)}
+        />
       )}
     </>
   );
