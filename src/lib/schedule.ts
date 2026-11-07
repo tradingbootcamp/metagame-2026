@@ -119,22 +119,24 @@ export type ViewerPlans = {
 };
 
 /** One session's RSVPs as the public page may show them. */
+/** Who someone is to other attendees: their public name and profile id. */
+export type Attendee = { userId: string; name: string };
+
 export type SessionRsvps = {
   going: number;
   waitlist: number;
   /** Null unless the viewer may see who's coming. */
-  names: { going: string[]; waitlist: string[] } | null;
+  names: { going: Attendee[]; waitlist: Attendee[] } | null;
 };
 
 /** Counts for everyone; names only when `showNames`. Rows earliest first. */
 export function summarizeRsvps(
-  rows: { status: RsvpStatus; name: string }[],
+  rows: (Attendee & { status: RsvpStatus })[],
   showNames: boolean,
 ): SessionRsvps {
-  const going = rows.filter((r) => r.status === "going").map((r) => r.name);
-  const waitlist = rows
-    .filter((r) => r.status === "waitlist")
-    .map((r) => r.name);
+  const attendee = ({ userId, name }: Attendee): Attendee => ({ userId, name });
+  const going = rows.filter((r) => r.status === "going").map(attendee);
+  const waitlist = rows.filter((r) => r.status === "waitlist").map(attendee);
   return {
     going: going.length,
     waitlist: waitlist.length,
@@ -942,7 +944,7 @@ export type PublicSession = Pick<
 > & {
   startsAt: string;
   endsAt: string;
-  hosts: { name: string }[];
+  hosts: Attendee[];
   /** Only guests may RSVP; who they are stays off the public schedule. */
   inviteOnly: boolean;
 };
@@ -1014,7 +1016,10 @@ export function publicSchedule(
       sponsored: s.sponsored,
       rsvpsOpen: s.rsvpsOpen,
       inviteOnly: s.inviteEmails !== null,
-      hosts: s.hosts.map((h) => ({ name: publicAccountName(h) })),
+      hosts: s.hosts.map((h) => ({
+        userId: h.userId,
+        name: publicAccountName(h),
+      })),
     }));
   const locations = rooms.map((l) => ({
     id: l.id,

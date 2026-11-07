@@ -16,7 +16,6 @@ import { gradingSummary } from "@/lib/rfp-sessions";
 import {
   formatPacificDay,
   formatPacificTime,
-  hostNames,
   linkedSession,
   onGuestList,
   planConflicts,
@@ -34,6 +33,7 @@ import SessionPlans from "@/v2/components/schedule/SessionPlans";
 import SessionSignIn from "@/v2/components/schedule/SessionSignIn";
 import { blockStyle } from "@/v2/components/schedule/SessionBits";
 import { SESSION_TITLE_ID } from "@/lib/session-link";
+import ProfileLink from "@/v2/components/ProfileLink";
 import { HEADING } from "@/v2/components/styles";
 
 const CATEGORY_LABEL: Record<Category, string> = {
@@ -285,7 +285,14 @@ export default async function SessionDetails({ slug }: { slug: string }) {
           <div className="flex items-center gap-2.5">
             <dt className="sr-only">Hosts</dt>
             <FaUserFriends aria-hidden className="shrink-0 text-[#eaa35a]" />
-            <dd>{hostNames(session)}</dd>
+            <dd>
+              {session.hosts.map((host, i) => (
+                <span key={host.userId}>
+                  {i > 0 && ", "}
+                  <ProfileLink userId={host.userId} name={host.name} />
+                </span>
+              ))}
+            </dd>
           </div>
         )}
         {cap !== null && (

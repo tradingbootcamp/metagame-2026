@@ -3,12 +3,14 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type {
+  Attendee,
   PlanConflict,
   RsvpStatus,
   RsvpTicket,
   SessionRsvps,
 } from "@/lib/schedule";
 import { sessionPageSlug } from "@/lib/session-link";
+import ProfileLink from "../ProfileLink";
 import PlanButtons from "./PlanButtons";
 import { announcePlanChange, countsAsMine } from "./plan-sync";
 
@@ -120,15 +122,17 @@ function Attendees({ rsvps }: { rsvps: SessionRsvps }) {
     .filter(Boolean)
     .join(" · ");
   if (!rsvps.names) return <p className="text-[15px]">{counts}</p>;
-  const list = (title: string, names: string[]) =>
+  const list = (title: string, names: Attendee[]) =>
     names.length > 0 && (
       <div>
         <p className="mb-1 text-xs tracking-[0.12em] text-[#1b1530]/55 uppercase">
           {title}
         </p>
         <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[15px]">
-          {names.map((name, i) => (
-            <li key={i}>{name}</li>
+          {names.map(({ userId, name }) => (
+            <li key={userId}>
+              <ProfileLink userId={userId} name={name} />
+            </li>
           ))}
         </ul>
       </div>

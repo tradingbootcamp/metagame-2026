@@ -23,6 +23,8 @@ import { HEADING } from "@/v2/components/styles";
 // An attendee's profile. Signed-in only, and everything on it is either
 // something the person typed into their own profile form or a session they're
 // hosting; see PUBLIC_AUDIENCE in src/lib/user-profile.ts for what's left out.
+// A profile its owner hasn't shown still has a page, with just the name and
+// the (already public) sessions they host, so links from the schedule land.
 
 const NOTICE = "mb-8 rounded-xl border px-4 py-3 text-sm";
 
@@ -98,6 +100,11 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
           to show it to everyone else with an account.
         </p>
       )}
+      {access === "private" && (
+        <p className={`${NOTICE} border-line bg-sky/40 text-ink/80`}>
+          {profile.name} hasn’t shown their profile to other attendees.
+        </p>
+      )}
       {access === "team-private" && (
         <p className={`${NOTICE} border-line bg-sky/40 text-ink/80`}>
           {profile.name} hasn’t shown this profile to other attendees. You can
@@ -119,7 +126,7 @@ export default async function PublicProfilePage(props: PageProps<"/u/[id]">) {
           {profile.pronouns && (
             <Field label="Pronouns">{profile.pronouns}</Field>
           )}
-          {activeClasses(levels).length > 0 && (
+          {access !== "private" && activeClasses(levels).length > 0 && (
             <Field label="Megagame classes">
               <ClassBadges levels={levels} />
             </Field>
