@@ -8,6 +8,7 @@ import {
   smallButtonClass,
 } from "../../ui";
 import ActiveToggle from "../ActiveToggle";
+import RangeSelectBody from "../RangeSelectBody";
 import { toolAccess } from "@/lib/admin-auth";
 import { CLASS_LABELS, isMegagameClass } from "@/lib/megagame-levels";
 import { cardBackground, stampList, stampsOf } from "@/lib/megagame-quests";
@@ -129,7 +130,7 @@ export default async function QuestList(props: PageProps<"/backstage/quests">) {
                 <th className="p-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-line">
+            <RangeSelectBody className="divide-y divide-line">
               {quests.map((quest) => (
                 <Row
                   key={quest.id}
@@ -150,7 +151,7 @@ export default async function QuestList(props: PageProps<"/backstage/quests">) {
                   </td>
                 </tr>
               )}
-            </tbody>
+            </RangeSelectBody>
           </table>
         </div>
       </div>
