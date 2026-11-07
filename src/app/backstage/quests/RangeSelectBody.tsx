@@ -2,8 +2,9 @@
 
 import { useRef, type MouseEvent, type ReactNode } from "react";
 
-/** A tbody where shift-clicking a checkbox extends the selection from the
- *  last clicked one. */
+const isCheckbox = (t: EventTarget | null): t is HTMLInputElement =>
+  t instanceof HTMLInputElement && t.type === "checkbox";
+
 export default function RangeSelectBody({
   className,
   children,
@@ -11,27 +12,34 @@ export default function RangeSelectBody({
   className?: string;
   children: ReactNode;
 }) {
-  const last = useRef<number | null>(null);
+  const last = useRef<HTMLInputElement | null>(null);
 
   function onClick(e: MouseEvent<HTMLTableSectionElement>) {
     const target = e.target;
-    if (!(target instanceof HTMLInputElement) || target.type !== "checkbox")
-      return;
+    if (!isCheckbox(target)) return;
     const boxes = Array.from(
       e.currentTarget.querySelectorAll<HTMLInputElement>(
-        'input[type="checkbox"]',
+        `input[type="checkbox"][name="${target.name}"]`,
       ),
     );
-    const index = boxes.indexOf(target);
-    if (e.shiftKey && last.current !== null) {
-      const [from, to] = [last.current, index].sort((a, b) => a - b);
-      for (const box of boxes.slice(from, to + 1)) box.checked = target.checked;
+    const from = last.current ? boxes.indexOf(last.current) : -1;
+    const to = boxes.indexOf(target);
+    if (e.shiftKey && from !== -1) {
+      for (const box of boxes.slice(Math.min(from, to), Math.max(from, to) + 1))
+        box.checked = target.checked;
     }
-    last.current = index;
+    last.current = target;
   }
 
   return (
-    <tbody className={className} onClick={onClick}>
+    <tbody
+      className={className}
+      onClick={onClick}
+      // Shift-click would otherwise extend the page's text selection.
+      onMouseDown={(e) => {
+        if (e.shiftKey && isCheckbox(e.target)) e.preventDefault();
+      }}
+    >
       {children}
     </tbody>
   );
