@@ -65,7 +65,13 @@ const TABLE_GROUPS: Record<string, string[]> = {
   ],
   Grading: ["session_grades", "session_grade_space_options"],
   Budget: ["xero_connections", "budget_import_runs", "budget_ignored_lines"],
-  Megagame: ["quests", "quest_progress", "level_events"],
+  Megagame: [
+    "quests",
+    "quest_progress",
+    "level_events",
+    "hat_steals",
+    "hat_schedule",
+  ],
   Signs: ["sign_drafts"],
 };
 
@@ -122,6 +128,10 @@ const TABLE_NOTES: Record<string, string> = {
     "One row per player and quest (unique index). A volunteer's confirm at /backstage/megagame sets status to completed with completed_at and confirmed_by; confirming a row that is already completed changes nothing, so a retry is a no-op. Undo sets status back to attempted and fills undone_at, undone_by and undo_reason; nothing is deleted. attempt_count and first_attempt_at are reserved for an answer checker and are not written yet. Deleting the account deletes its rows.",
   level_events:
     "The audit log of Megagame level changes; current levels are the profiles level columns. source is picker (joining a class on /account) or volunteer (the level-up action). A partial unique index allows one live event per player, class and level. checks_passed false with override_reason records a volunteer's \"Yes, I'm sure\". Undo voids the row and recomputes the profile column from what remains.",
+  hat_steals:
+    "One row per hat theft in the Hat Tricks minigame (/hat-tricks). user_id is the thief; recorded_by is who logged it at /backstage/hat-tricks (null for backfills). Scores are computed from these rows and hat_schedule.",
+  hat_schedule:
+    "The Hat Tricks shift schedule, edited at /backstage/hat-tricks. A single row (check constraint); shifts is the whole schedule as JSON. It is secret until each shift starts, so it must not be read into anything public beyond what /hat-tricks shows. No row or an empty list means only the pirate tricorn can be stolen, at any time.",
 };
 
 function columnName(column: PgColumn): string {
