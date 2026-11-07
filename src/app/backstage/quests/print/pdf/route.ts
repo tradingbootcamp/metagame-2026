@@ -4,11 +4,16 @@ import { toolAccess } from "@/lib/admin-auth";
 import { questsByIds } from "@/lib/megagame-store";
 import { formatTicketCode } from "@/lib/ticket-code-format";
 import { isUuid } from "../../../megagame/uuid";
+import { OVERFLOW_HEADER } from "../overflow";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
+const STEP_TIMEOUT_MS = 20_000;
 const FIT_TIMEOUT_MS = 30_000;
+
+// One unpack per instance: concurrent first requests would both write /tmp.
+let serverlessExecutable: Promise<string> | undefined;
 
 /**
  * The print page as a PDF: headless Chromium loads /backstage/quests/print
@@ -21,7 +26,7 @@ export async function GET(request: Request) {
     return new Response("Sign in required.", { status: 401 });
 
   const url = new URL(request.url);
-  const origin = requestOrigin(request, url);
+  const origin = url.origin;
   const target = `${origin}/backstage/quests/print${url.search}`;
   const filename = await pdfName(url.searchParams.getAll("id"));
 
@@ -32,7 +37,8 @@ export async function GET(request: Request) {
     serverless
       ? {
           args: chromium.args,
-          executablePath: await chromium.executablePath(),
+          executablePath: await (serverlessExecutable ??=
+            chromium.executablePath()),
           headless: true,
         }
       : { headless: true },
@@ -42,12 +48,25 @@ export async function GET(request: Request) {
     const cookies = parseCookies(request.headers.get("cookie"), origin);
     if (cookies.length > 0) await context.addCookies(cookies);
     const page = await context.newPage();
+    page.setDefaultTimeout(STEP_TIMEOUT_MS);
     await page.emulateMedia({ media: "print" });
     await page.goto(target, { waitUntil: "load" });
-    await page.waitForSelector("html[data-fit-done]", {
-      timeout: FIT_TIMEOUT_MS,
-      state: "attached",
-    });
+    const fitDone = await page
+      .waitForSelector("html[data-fit-done]", {
+        timeout: FIT_TIMEOUT_MS,
+        state: "attached",
+      })
+      .then((html) => html.getAttribute("data-fit-done"))
+      .catch(() => null);
+    if (fitDone === null) {
+      const signedIn = (await page.$("[data-card]")) !== null;
+      return new Response(
+        signedIn
+          ? "The cards didn\u2019t finish laying out in time; try again."
+          : "The PDF renderer couldn\u2019t sign in to the print page.",
+        { status: 500 },
+      );
+    }
     const pdf = await page.pdf({
       format: "Letter",
       printBackground: true,
@@ -60,19 +79,15 @@ export async function GET(request: Request) {
         "Content-Disposition": `attachment; filename="${filename}"`,
         "Cache-Control": "no-store",
         "X-Robots-Tag": "noindex, nofollow",
+        ...(fitDone !== "ok" && { [OVERFLOW_HEADER]: fitDone }),
       },
     });
+  } catch (e) {
+    const reason = e instanceof Error ? e.message.split("\n")[0] : String(e);
+    return new Response(`PDF render failed: ${reason}`, { status: 500 });
   } finally {
     await browser.close();
   }
-}
-
-/** The origin the browser reached, so the headless page hits this deployment. */
-function requestOrigin(request: Request, url: URL): string {
-  const host = request.headers.get("x-forwarded-host") ?? url.host;
-  const proto =
-    request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
-  return `${proto}://${host}`;
 }
 
 function parseCookies(header: string | null, origin: string) {
