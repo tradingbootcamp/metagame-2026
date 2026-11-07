@@ -14,7 +14,7 @@ const refresh = () => PAGES.forEach((p) => revalidatePath(p));
 
 /** `{badgeCode}`: the sticker number, one to four digits. */
 export async function PUT(request: Request, ctx: Ctx) {
-  const access = await authorize("tickets.badges");
+  const access = await authorize("tickets.edit");
   if (access instanceof Response) return access;
   const body = await readBody(request);
   if (body instanceof Response) return body;
@@ -42,7 +42,7 @@ export async function PUT(request: Request, ctx: Ctx) {
 }
 
 export async function DELETE(_request: Request, ctx: Ctx) {
-  const access = await authorize("tickets.badges");
+  const access = await authorize("tickets.edit");
   if (access instanceof Response) return access;
   const { id } = await ctx.params;
   const result = await assignBadgeCode(id, null);

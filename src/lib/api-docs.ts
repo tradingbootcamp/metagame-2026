@@ -612,7 +612,7 @@ export const API_AREAS: Area[] = [
       {
         method: "PUT",
         path: "/api/admin/tickets/{id}/badge",
-        permission: "tickets.badges",
+        permission: "tickets.edit",
         summary:
           "Puts badge number {badgeCode} on ticket {id}, replacing any it had. 409 when another ticket wears that number; 404 if the ticket is missing.",
         body: [
@@ -628,7 +628,7 @@ export const API_AREAS: Area[] = [
       {
         method: "DELETE",
         path: "/api/admin/tickets/{id}/badge",
-        permission: "tickets.badges",
+        permission: "tickets.edit",
         summary: "Takes the badge number off ticket {id}.",
         response: "{ badgeCode: null }",
       },

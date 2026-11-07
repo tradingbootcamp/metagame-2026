@@ -58,7 +58,7 @@ const del = (id: string, key: string | null = KEY) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  auth.keys = { [KEY]: ["tickets.badges"], mg_view: ["tickets.view"] };
+  auth.keys = { [KEY]: ["tickets.edit"], mg_view: ["tickets.view"] };
   vi.mocked(assignBadgeCode).mockImplementation(async (id, code) =>
     id === "pi_nope"
       ? { ok: false, reason: "unknown" }
@@ -69,11 +69,11 @@ beforeEach(() => {
   vi.mocked(badgeWearer).mockResolvedValue("Ada");
 });
 
-it("needs a key whose account holds tickets.badges", async () => {
+it("needs a key whose account holds tickets.edit", async () => {
   expect((await put("pi_1", { badgeCode: "7" }, null)).status).toBe(401);
   const view = await put("pi_1", { badgeCode: "7" }, "mg_view");
   expect(view.status).toBe(403);
-  expect((await view.json()).error).toContain("tickets.badges");
+  expect((await view.json()).error).toContain("tickets.edit");
   expect((await del("pi_1", "mg_view")).status).toBe(403);
   expect(assignBadgeCode).not.toHaveBeenCalled();
 });

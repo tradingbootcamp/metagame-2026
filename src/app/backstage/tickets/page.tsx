@@ -33,10 +33,7 @@ export default async function AdminTicketsPage(
 
   const session = await can("tickets.view");
   if (!session) return <ToolSignIn title="Tickets" next="/backstage/tickets" />;
-  const [canEdit, canEditBadges] = await Promise.all([
-    can("tickets.edit").then((s) => s !== null),
-    can("tickets.badges").then((s) => s !== null),
-  ]);
+  const canEdit = (await can("tickets.edit")) !== null;
 
   const params = await props.searchParams;
   const userId = one(params.user);
@@ -130,12 +127,7 @@ export default async function AdminTicketsPage(
           </Link>
         </p>
       )}
-      <TicketsTable
-        tickets={tickets}
-        initial={initial}
-        canEdit={canEdit}
-        canEditBadges={canEditBadges}
-      />
+      <TicketsTable tickets={tickets} initial={initial} canEdit={canEdit} />
     </div>
   );
 }
