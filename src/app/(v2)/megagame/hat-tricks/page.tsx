@@ -12,12 +12,12 @@ export const metadata: Metadata = {
 };
 
 const HATS = [
-  { id: "wizard", name: "Wizard hat" },
-  { id: "saucer", name: "Alien saucer" },
-  { id: "fuzzy", name: "Sparkly fuzzy hat" },
-  { id: "slouch", name: "Satin slouch hat" },
-  { id: "tricorn", name: "Tricorn" },
-  { id: "crown", name: "Spiked crown" },
+  { id: "wizard", tilt: "-8deg", lift: 10, drift: "3.4s", delay: "0s" },
+  { id: "saucer", tilt: "5deg", lift: 34, drift: "4.1s", delay: "-1.2s" },
+  { id: "fuzzy", tilt: "-3deg", lift: 4, drift: "3.7s", delay: "-0.5s" },
+  { id: "slouch", tilt: "9deg", lift: 26, drift: "4.4s", delay: "-2.1s" },
+  { id: "tricorn", tilt: "-6deg", lift: 14, drift: "3.2s", delay: "-0.9s" },
+  { id: "crown", tilt: "4deg", lift: 38, drift: "4.7s", delay: "-1.7s" },
 ];
 
 export default function HatTricksPage() {
@@ -43,33 +43,28 @@ export default function HatTricksPage() {
         </div>
       </div>
 
-      <section className="mt-14">
-        <h2
-          className={`${HEADING} mb-2 text-[clamp(22px,2.5vw,28px)] text-navy`}
-        >
-          The six hats
-        </h2>
-        <p className="mb-6 text-base text-ink/70">
-          Learn them now. You&rsquo;ll want to recognise one across a crowded
-          room.
-        </p>
-        <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3">
-          {HATS.map((hat) => (
-            <li
-              key={hat.id}
-              className="flex flex-col items-center gap-3 rounded-lg border border-line bg-white p-5 text-center"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- static line art, no layout shift to fix */}
-              <img
-                src={`/images/hat-tricks/${hat.id}.svg`}
-                alt=""
-                className="size-20 sm:size-24"
-              />
-              <h3 className={`${HEADING} text-[18px] text-navy`}>{hat.name}</h3>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* The hats drift along the bottom: decoration, not a list, so they
+          carry no names and nothing to read. */}
+      <div
+        aria-hidden
+        className="mt-12 flex items-end justify-center gap-2 sm:mt-16 sm:gap-6"
+      >
+        {HATS.map((hat) => (
+          // eslint-disable-next-line @next/next/no-img-element -- static line art, decorative
+          <img
+            key={hat.id}
+            src={`/images/hat-tricks/${hat.id}.svg`}
+            alt=""
+            style={{
+              rotate: hat.tilt,
+              marginBottom: hat.lift,
+              animationDuration: hat.drift,
+              animationDelay: hat.delay,
+            }}
+            className="size-12 shrink-0 opacity-80 motion-safe:animate-[mg-float_3s_ease-in-out_infinite] sm:size-20"
+          />
+        ))}
+      </div>
     </ContentPage>
   );
 }
