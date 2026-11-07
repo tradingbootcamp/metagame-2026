@@ -572,10 +572,11 @@ async function editTicket<T>(
       body: body && JSON.stringify(body),
     },
   );
-  const data = (await res.json()) as Record<string, unknown> & {
-    error?: string;
-  };
-  if (!res.ok) throw new Error(data.error ?? `Failed (${res.status}).`);
+  const data = (await res.json().catch(() => null)) as
+    | (Record<string, unknown> & { error?: string })
+    | null;
+  if (!res.ok || data === null)
+    throw new Error(data?.error ?? `Failed (${res.status}).`);
   return data as T;
 }
 
@@ -618,7 +619,7 @@ function BadgeEditor({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (code.trim()) void send("PUT");
+        if (code) void send("PUT");
       }}
       className="space-y-2 text-sm"
     >
@@ -637,7 +638,7 @@ function BadgeEditor({
         />
         <button
           type="submit"
-          disabled={busy || !code.trim()}
+          disabled={busy || !code}
           className={smallButtonClass}
         >
           {badgeCode ? "Change badge" : "Set badge"}

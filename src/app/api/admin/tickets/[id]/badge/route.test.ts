@@ -33,9 +33,12 @@ vi.mock("@/lib/permission-store", () => ({
   }),
 }));
 vi.mock("@/lib/ticket-store", () => ({ assignBadgeCode: vi.fn() }));
-vi.mock("@/lib/checkin-store", () => ({ badgeWearer: vi.fn() }));
+vi.mock("@/lib/checkin-store", () => ({
+  badgeTakenMessage: vi.fn(),
+  deskTicket: vi.fn(),
+}));
 import { DELETE, PUT } from "./route";
-import { badgeWearer } from "@/lib/checkin-store";
+import { badgeTakenMessage, deskTicket } from "@/lib/checkin-store";
 import { assignBadgeCode } from "@/lib/ticket-store";
 
 const KEY = "mg_tickets";
@@ -66,7 +69,14 @@ beforeEach(() => {
         ? { ok: false, reason: "taken" }
         : { ok: true, ticket: {} as never },
   );
-  vi.mocked(badgeWearer).mockResolvedValue("Ada");
+  vi.mocked(badgeTakenMessage).mockImplementation(
+    async (code) => `Badge ${String(code).padStart(4, "0")} is already on Ada.`,
+  );
+  vi.mocked(deskTicket).mockImplementation(async (id) =>
+    id === "pi_nope"
+      ? null
+      : ({ status: id === "pi_pending" ? "pending" : "paid" } as never),
+  );
 });
 
 it("needs a key whose account holds tickets.edit", async () => {
@@ -83,6 +93,15 @@ it("sets the badge from typed digits, leading zeros optional", async () => {
   expect(res.status).toBe(200);
   expect(await res.json()).toEqual({ badgeCode: "0007" });
   expect(assignBadgeCode).toHaveBeenCalledWith("pi_1", 7);
+  expect((await put("pi_1", { badgeCode: 7 })).status).toBe(200);
+  expect(assignBadgeCode).toHaveBeenLastCalledWith("pi_1", 7);
+});
+
+it("only puts a number on a paid ticket", async () => {
+  const res = await put("pi_pending", { badgeCode: "7" });
+  expect(res.status).toBe(400);
+  expect((await res.json()).error).toContain("paid");
+  expect(assignBadgeCode).not.toHaveBeenCalled();
 });
 
 it("rejects blanks and non-digits before the store sees them", async () => {

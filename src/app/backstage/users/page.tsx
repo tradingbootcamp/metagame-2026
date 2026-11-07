@@ -59,6 +59,7 @@ export default async function AdminUsersPage(
   ]);
   const rows: UserRow[] = users.map((u) => {
     const at = new Date(u.createdAt);
+    const badge = badges.get(u.id);
     return {
       id: u.id,
       name: u.name,
@@ -72,7 +73,7 @@ export default async function AdminUsersPage(
       joinedAt: at.getTime(),
       self: u.id === access.session.user.id,
       tickets: claimed.get(u.id) ?? 0,
-      badge: badges.has(u.id) ? formatBadgeCode(badges.get(u.id)!) : null,
+      badge: badge === undefined ? null : formatBadgeCode(badge),
     };
   });
 
