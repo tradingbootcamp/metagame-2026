@@ -234,7 +234,8 @@
     gap: 12px;
     align-items: center;
     width: 100%;
-    padding: 10px 16px;
+    /* Left padding clears the site's corner nav, as ToolLayout's header does. */
+    padding: 10px 16px 10px 96px;
     background: #fff;
     border-bottom: 1px solid #ccc;
     font-size: 14px;
