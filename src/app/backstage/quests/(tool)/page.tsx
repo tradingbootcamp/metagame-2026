@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import SignIn from "../../SignIn";
-import QuestTable, { type QuestRow } from "./QuestTable";
+import QuestTable, { type QuestFilter, type QuestRow } from "./QuestTable";
 import { toolAccess } from "@/lib/admin-auth";
 import { CLASS_LABELS, isMegagameClass } from "@/lib/megagame-levels";
 import { cardBackground, stampList, stampsOf } from "@/lib/megagame-quests";
@@ -26,6 +26,11 @@ export default async function QuestList(props: PageProps<"/backstage/quests">) {
   const rows = quests.map((quest) =>
     toRow(quest, completions.get(quest.id) ?? 0),
   );
+  const initial: QuestFilter = {
+    q: first(sp.q),
+    class: first(sp.class),
+    active: first(sp.active),
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,7 +39,7 @@ export default async function QuestList(props: PageProps<"/backstage/quests">) {
           Quest deleted.
         </p>
       )}
-      <QuestTable rows={rows} />
+      <QuestTable rows={rows} initial={initial} />
     </div>
   );
 }
@@ -63,10 +68,7 @@ function toRow(quest: Quest, completions: number): QuestRow {
     title: quest.title,
     background: cardBackground(quest),
     needs: needs(quest),
-    stamps:
-      stamps.length === 0
-        ? "—"
-        : stamps.map((s) => `${s.n} ${s.class}`).join(", "),
+    stamps: stamps.map((s) => `${s.n} ${s.class}`).join(", "),
     pictures: `${quest.bodyImages.length}${quest.evidenceImage ? " + evidence" : ""}`,
     completions,
     active: quest.active,

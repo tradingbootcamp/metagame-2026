@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   fieldClass,
   selectClass,
@@ -26,12 +26,20 @@ export type QuestRow = {
   haystack: string;
 };
 
+export type QuestFilter = { q: string; class: string; active: string };
+
 const PRINT_FORM = "print-selected";
 
-export default function QuestTable({ rows }: { rows: QuestRow[] }) {
-  const [query, setQuery] = useState("");
-  const [background, setBackground] = useState("");
-  const [activeFilter, setActiveFilter] = useState("");
+export default function QuestTable({
+  rows,
+  initial,
+}: {
+  rows: QuestRow[];
+  initial: QuestFilter;
+}) {
+  const [query, setQuery] = useState(initial.q);
+  const [background, setBackground] = useState(initial.class);
+  const [activeFilter, setActiveFilter] = useState(initial.active);
 
   const shown = useMemo(() => {
     const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -43,10 +51,24 @@ export default function QuestTable({ rows }: { rows: QuestRow[] }) {
     );
   }, [rows, query, background, activeFilter]);
 
-  const activeCount = shown.filter((r) => r.active).length;
+  // Filters survive Edit → Back and refresh, as the tickets table does.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    for (const [k, v] of Object.entries({
+      q: query,
+      class: background,
+      active: activeFilter,
+    }))
+      v ? url.searchParams.set(k, v) : url.searchParams.delete(k);
+    window.history.replaceState(null, "", url);
+  }, [query, background, activeFilter]);
+
+  // The link prints every active quest of the background, search or not.
+  const activeCount = rows.filter(
+    (r) => r.active && (!background || r.background === background),
+  ).length;
   const printAll = new URLSearchParams({ active: "1" });
   if (background) printAll.set("class", background);
-  const filtered = query.trim() !== "" || background || activeFilter;
 
   return (
     <>
@@ -54,7 +76,11 @@ export default function QuestTable({ rows }: { rows: QuestRow[] }) {
         <h1 className="font-bebas text-3xl tracking-wide text-navy">
           Quests{" "}
           <span className="text-ink/50">
-            ({filtered ? `${shown.length} of ${rows.length}` : rows.length})
+            (
+            {shown.length === rows.length
+              ? rows.length
+              : `${shown.length} of ${rows.length}`}
+            )
           </span>
         </h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -185,7 +211,7 @@ function Row({ row }: { row: QuestRow }) {
         )}
       </td>
       <td className="p-2 whitespace-nowrap">{row.needs}</td>
-      <td className="p-2 whitespace-nowrap">{row.stamps}</td>
+      <td className="p-2 whitespace-nowrap">{row.stamps || "—"}</td>
       <td className="p-2 tabular-nums">{row.pictures}</td>
       <td className="p-2 tabular-nums">{row.completions}</td>
       <td className="p-2">
