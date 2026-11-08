@@ -34,6 +34,10 @@ const nextConfig: NextConfig = {
       "./node_modules/playwright-core/**",
       "./node_modules/@sparticuz/chromium/bin/**",
     ],
+    "/backstage/quests/print/pdf-lib": [
+      "./assets/posters/fonts/*.ttf",
+      "./public/megagame/quest-art/*",
+    ],
     "/api/posters": [
       "./assets/posters/*.pdf",
       "./assets/posters/sponsors/*.png",
