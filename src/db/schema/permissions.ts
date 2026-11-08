@@ -1,4 +1,6 @@
+import { sql } from "drizzle-orm";
 import {
+  check,
   index,
   pgTable,
   primaryKey,
@@ -47,8 +49,9 @@ export const userRoles = pgTable(
   ],
 );
 
-// Permissions an account holds on top of its roles. Grants only: there is no
-// deny, so removing access means removing the role or the grant.
+// Per-account overrides on top of the roles: an allow adds the permission, a
+// deny takes it away along with everything that implies it, even when a role
+// carries it.
 export const userPermissionGrants = pgTable(
   "user_permission_grants",
   {
@@ -56,7 +59,16 @@ export const userPermissionGrants = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     permission: text().notNull(),
+    effect: text({ enum: ["allow", "deny"] })
+      .notNull()
+      .default("allow"),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.permission] })],
+  (t) => [
+    primaryKey({ columns: [t.userId, t.permission] }),
+    check(
+      "user_permission_grants_effect_known",
+      sql`${t.effect} in ('allow', 'deny')`,
+    ),
+  ],
 );

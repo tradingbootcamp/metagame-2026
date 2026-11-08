@@ -2,8 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { teamAccess, type TeamAccess } from "@/lib/access";
-import { listRoles, setUserGrant, setUserRole } from "@/lib/permission-store";
-import { isPermission, PERMISSIONS, type Permission } from "@/lib/permissions";
+import {
+  listRoles,
+  setUserOverride,
+  setUserRole,
+  userOverrides,
+} from "@/lib/permission-store";
+import {
+  isPermission,
+  overrideConflict,
+  PERMISSIONS,
+  type OverrideEffect,
+  type Permission,
+} from "@/lib/permissions";
 
 export type Result = { error?: string };
 
@@ -13,7 +24,8 @@ const message = (err: unknown) =>
 // Your own access is off limits so a users.edit holder can't lock
 // themselves out (an admin can always put it back). Handing out access is
 // bounded by what you hold: no granting a permission you lack, so users.edit
-// can't be parlayed into more through a second account.
+// can't be parlayed into more through a second account. Denying takes access
+// away, so it needs no such check.
 async function run(
   userId: string,
   work: (viewer: TeamAccess) => Promise<void | string>,
@@ -56,15 +68,26 @@ export async function assignRole(
   });
 }
 
+/** Allow, deny, or (`null`) leave it to the roles. */
 export async function setGrant(
   userId: string,
   permission: string,
-  granted: boolean,
+  effect: OverrideEffect | null,
 ): Promise<Result> {
   if (!isPermission(permission)) return { error: "Unknown permission." };
+  if (effect !== null && effect !== "allow" && effect !== "deny")
+    return { error: "Unknown effect." };
   return run(userId, async (viewer) => {
-    if (granted && lacking(viewer, [permission]).length > 0)
+    if (effect === "allow" && lacking(viewer, [permission]).length > 0)
       return "You can't grant a permission you don't hold.";
-    await setUserGrant(userId, permission, granted);
+    if (effect) {
+      const conflict = overrideConflict(
+        await userOverrides(userId),
+        permission,
+        effect,
+      );
+      if (conflict) return conflict;
+    }
+    await setUserOverride(userId, permission, effect);
   });
 }

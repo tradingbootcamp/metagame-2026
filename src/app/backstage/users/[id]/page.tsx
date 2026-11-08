@@ -106,6 +106,7 @@ export default async function AdminUserProfilePage(
       })),
     auto: held.roles.filter((r) => r.auto).map((r) => `${r.name} (${r.auto})`),
     grants: held.grants.filter(isPermission),
+    denies: held.denies.filter(isPermission),
     explanation: explainPermissions(held),
   };
   const { accounts, byEmail } = await ticketAccounts(tickets);

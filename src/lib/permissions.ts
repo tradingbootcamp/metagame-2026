@@ -1,5 +1,5 @@
 // The permission catalog and the pure resolution over it. One entry per gate
-// the code enforces; the roles and per-user grants that hold them live in
+// the code enforces; the roles and per-user overrides that hold them live in
 // Postgres (src/db/schema/permissions.ts) and are read by src/lib/access.ts.
 // Adding a gate means adding its key here, nothing else.
 
@@ -362,11 +362,17 @@ export type AccessInput = {
   }[];
   /** Per-user grants on top of the roles. */
   grants: readonly string[];
+  /** Per-user denies; each also strips whatever implies it, beating roles and grants. */
+  denies: readonly string[];
 };
 
-/** Why an account holds a permission, in precedence order. */
+export type OverrideEffect = "allow" | "deny";
+
+/** Why an account holds a permission, or doesn't, in precedence order. */
 export type Source =
   | { kind: "admin" }
+  | { kind: "denied" }
+  | { kind: "denied_via"; by: Permission }
   | { kind: "grant" }
   | { kind: "role"; role: string; auto?: string }
   | { kind: "implied"; by: Permission };
@@ -393,13 +399,54 @@ const implied = (p: Permission): readonly Permission[] =>
   ((PERMISSIONS[p] as { implies?: readonly Permission[] }).implies ??
     []) as readonly Permission[];
 
-/** Effective = expand(role permissions ∪ grants). */
+/** These permissions plus everything that implies them: what denying them takes away. */
+export function withImpliers(permissions: Iterable<string>): Set<Permission> {
+  const targets = [...permissions].filter(isPermission);
+  if (targets.length === 0) return new Set();
+  return new Set(
+    PERMISSION_KEYS.filter((q) => {
+      const reach = expand([q]);
+      return targets.some((t) => reach.has(t));
+    }),
+  );
+}
+
+/** Effective = expand(role permissions ∪ grants) minus withImpliers(denies). */
 export function effectivePermissions(input: AccessInput): Set<Permission> {
   if (input.admin) return new Set(PERMISSION_KEYS);
-  return expand([
+  const out = expand([
     ...input.roles.flatMap((r) => r.permissions),
     ...input.grants,
   ]);
+  for (const p of withImpliers(input.denies)) out.delete(p);
+  return out;
+}
+
+/**
+ * Why setting `effect` on `permission` would contradict the account's other
+ * overrides, or null. The permission's own row is replaced, so it never
+ * conflicts with itself.
+ */
+export function overrideConflict(
+  overrides: Pick<AccessInput, "grants" | "denies">,
+  permission: Permission,
+  effect: OverrideEffect,
+): string | null {
+  const label = (p: Permission) => PERMISSIONS[p].label;
+  if (effect === "deny") {
+    const grant = [...withImpliers([permission])].find(
+      (q) => q !== permission && overrides.grants.includes(q),
+    );
+    return grant
+      ? `${label(grant)} is granted and includes ${label(permission)}; remove that grant first.`
+      : null;
+  }
+  const denied = [...expand([permission])].find(
+    (q) => q !== permission && overrides.denies.includes(q),
+  );
+  return denied
+    ? `${label(permission)} includes ${label(denied)}, which is denied; remove that deny first.`
+    : null;
 }
 
 /** `effectivePermissions` plus where each one comes from, for the admin UI. */
@@ -411,6 +458,11 @@ export function explainPermissions(
   for (const p of PERMISSION_KEYS) {
     const sources: Source[] = [];
     if (input.admin) sources.push({ kind: "admin" });
+    if (input.denies.includes(p)) sources.push({ kind: "denied" });
+    for (const d of expand([p])) {
+      if (d !== p && input.denies.includes(d))
+        sources.push({ kind: "denied_via", by: d });
+    }
     if (input.grants.includes(p)) sources.push({ kind: "grant" });
     for (const r of input.roles) {
       if (r.permissions.includes(p))
@@ -437,6 +489,10 @@ export function describeSource(source: Source): string {
   switch (source.kind) {
     case "admin":
       return "Admin";
+    case "denied":
+      return "Denied";
+    case "denied_via":
+      return `Denied (includes ${PERMISSIONS[source.by].group}: ${PERMISSIONS[source.by].label})`;
     case "grant":
       return "Granted";
     case "role":
