@@ -21,19 +21,20 @@ import {
   UsersIcon,
   WalletIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { connection } from "next/server";
 import SignIn from "../SignIn";
+import ToolsGrid from "./ToolsGrid";
 import { teamAccess } from "@/lib/access";
 import { toolAccess } from "@/lib/admin-auth";
 import type { Permission } from "@/lib/permissions";
 
-// `perm`: holding any one of them lists the tool.
+// `perm`: holding any one of them lists the tool. `keywords` only feed the search box.
 const TOOLS: {
   href: string;
   name: string;
   blurb: string;
   icon: LucideIcon;
+  keywords?: string[];
   perm: Permission | Permission[];
 }[] = [
   {
@@ -49,6 +50,7 @@ const TOOLS: {
     name: "Emails",
     blurb:
       "The announcements and other emails we've sent, plus drafts in progress.",
+    keywords: ["newsletter"],
     perm: "emails.view",
   },
   {
@@ -56,6 +58,7 @@ const TOOLS: {
     icon: DollarSignIcon,
     name: "Promo codes",
     blurb: "Mint comp and discount codes on Stripe or BTC.",
+    keywords: ["coupon"],
     perm: "promo.view",
   },
   {
@@ -92,6 +95,7 @@ const TOOLS: {
     name: "Children",
     blurb:
       "Every registered child, with childcare sessions and parent contacts.",
+    keywords: ["kids"],
     perm: "children.view",
   },
   {
@@ -106,6 +110,7 @@ const TOOLS: {
     icon: MicIcon,
     name: "Speaker committee",
     blurb: "Session proposals from grading through scheduling.",
+    keywords: ["speakers", "talks"],
     perm: "schedule.manage",
   },
   {
@@ -113,6 +118,7 @@ const TOOLS: {
     icon: SwordsIcon,
     name: "Quest Board",
     blurb: "Confirm quest completions and record level-ups.",
+    keywords: ["megagame", "quests"],
     perm: "megagame.verify",
   },
   {
@@ -127,6 +133,7 @@ const TOOLS: {
     icon: CrownIcon,
     name: "Hat Tricks",
     blurb: "Record hat steals and set the shift schedule.",
+    keywords: ["megagame"],
     perm: "megagame.verify",
   },
   {
@@ -134,6 +141,7 @@ const TOOLS: {
     icon: WalletIcon,
     name: "Budget",
     blurb: "New Xero lines, categorized for review into the budget sheet.",
+    keywords: ["expenses", "spending"],
     perm: "budget.view",
   },
   {
@@ -149,6 +157,7 @@ const TOOLS: {
     icon: BookOpenIcon,
     name: "API docs",
     blurb: "Every admin API endpoint, plus a guide to hand to an agent.",
+    keywords: ["claude"],
     perm: "api_docs.view",
   },
   {
@@ -156,6 +165,7 @@ const TOOLS: {
     icon: DatabaseIcon,
     name: "Database schema",
     blurb: "ER diagram and column-by-column reference for the Postgres schema.",
+    keywords: ["tables"],
     perm: "schema.view",
   },
   {
@@ -179,6 +189,7 @@ const TOOLS: {
     name: "Sign maker",
     blurb:
       "Print-ready event signs and banners, with drafts shared across the team.",
+    keywords: ["poster"],
     perm: "misc.signs",
   },
 ];
@@ -197,27 +208,20 @@ export default async function AdminIndexPage() {
       <h1 className="font-bebas mb-4 text-2xl tracking-wide text-navy">
         Tools
       </h1>
-      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {tools.map((t) => (
-          <li key={t.href}>
-            <Link
-              href={t.href}
-              className="group flex h-full gap-3 rounded-xl border border-line bg-white p-4 shadow-sm transition-colors hover:border-navy"
-            >
-              <t.icon
-                aria-hidden="true"
-                className="mt-0.5 size-5 shrink-0 text-navy/70 group-hover:text-meeple"
-              />
-              <div>
-                <span className="font-semibold text-navy group-hover:text-meeple">
-                  {t.name}
-                </span>
-                <p className="text-sm text-ink/60">{t.blurb}</p>
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <ToolsGrid
+        tools={tools.map(({ href, name, blurb, keywords, icon: Icon }) => ({
+          href,
+          name,
+          blurb,
+          keywords,
+          icon: (
+            <Icon
+              aria-hidden="true"
+              className="mt-0.5 size-5 shrink-0 text-navy/70 group-hover:text-meeple"
+            />
+          ),
+        }))}
+      />
     </>
   );
 }
