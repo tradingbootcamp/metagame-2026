@@ -103,6 +103,10 @@ export default async function HatTricksPage({
           5 points per theft, plus points for every shift change you hold a hat
           through: 1, then 3, then 5, and so on.
         </p>
+        <p className="mt-2 text-sm text-ink/70">
+          The Quest Board volunteers can register a steal with their Backstage
+          powers.
+        </p>
       </section>
 
       <section>
