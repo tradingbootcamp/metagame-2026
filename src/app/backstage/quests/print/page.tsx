@@ -5,10 +5,8 @@ import SignIn from "../../SignIn";
 import CardFit from "./CardFit";
 import styles from "./card.module.css";
 import QuestCard from "./QuestCard";
+import { printQuests } from "./quests";
 import { toolAccess } from "@/lib/admin-auth";
-import { cardBackground } from "@/lib/megagame-quests";
-import { listQuests, questsByIds } from "@/lib/megagame-store";
-import { isUuid } from "../../megagame/uuid";
 
 export const metadata: Metadata = {
   title: "Print quests — Metagame",
@@ -28,14 +26,10 @@ export default async function PrintQuests(
   if (!(await toolAccess("megagame.manage")))
     return <SignIn next="/backstage/quests" />;
 
-  const ids = [sp.id ?? []].flat().filter(isUuid);
-  const cls = [sp.class].flat()[0] ?? "";
-  const quests =
-    ids.length > 0
-      ? await questsByIds(ids)
-      : (await listQuests()).filter(
-          (q) => q.active && (!cls || cardBackground(q) === cls),
-        );
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(sp))
+    for (const v of [value ?? []].flat()) params.append(key, v);
+  const { quests } = await printQuests(params);
 
   return (
     <div className={styles.sheet}>

@@ -6,6 +6,9 @@ import { OVERFLOW_HEADER } from "./overflow";
 const TITLE_PT = { max: 44, min: 18, step: 2 };
 const BODY_PT = { min: 9, step: 0.5 };
 
+/** pdf-lib draws the cards itself; pdf prints this page with headless Chromium. */
+type Route = "pdf-lib" | "pdf";
+
 const fits = (box: HTMLElement) =>
   box.scrollHeight <= box.clientHeight + 1 &&
   box.scrollWidth <= box.clientWidth + 1;
@@ -57,10 +60,10 @@ export default function CardFit({ count }: { count: number }) {
     done: false,
     overflow: [],
   });
-  const [download, setDownload] = useState<{ busy: boolean; error: string }>({
-    busy: false,
-    error: "",
-  });
+  const [download, setDownload] = useState<{
+    busy: Route | null;
+    error: string;
+  }>({ busy: null, error: "" });
   useEffect(() => {
     let cancelled = false;
     const images = [...document.images].filter((img) => !img.complete);
@@ -85,11 +88,11 @@ export default function CardFit({ count }: { count: number }) {
     };
   }, [count]);
 
-  async function downloadPdf() {
-    setDownload({ busy: true, error: "" });
+  async function downloadPdf(route: Route) {
+    setDownload({ busy: route, error: "" });
     try {
       const res = await fetch(
-        `/backstage/quests/print/pdf${window.location.search}`,
+        `/backstage/quests/print/${route}${window.location.search}`,
       );
       if (!res.ok) throw new Error(await res.text());
       const name =
@@ -105,33 +108,38 @@ export default function CardFit({ count }: { count: number }) {
       URL.revokeObjectURL(url);
       const overflow = res.headers.get(OVERFLOW_HEADER);
       setDownload({
-        busy: false,
+        busy: null,
         error: overflow
-          ? `In the PDF: ${overflowMessage(overflow.split(","))}`
+          ? `Check ${overflow} in the PDF: text that doesn’t fit, or characters the fonts can’t print.`
           : "",
       });
     } catch (e) {
       setDownload({
-        busy: false,
+        busy: null,
         error: e instanceof Error && e.message ? e.message : "Download failed.",
       });
     }
   }
 
+  const button = (route: Route, label: string) => (
+    <button
+      type="button"
+      onClick={() => downloadPdf(route)}
+      disabled={!fit.done || count === 0 || download.busy !== null}
+      className="rounded-md bg-navy px-3 py-1.5 font-semibold text-white disabled:opacity-50"
+    >
+      {!fit.done
+        ? "Laying out\u2026"
+        : download.busy === route
+          ? "Generating\u2026"
+          : label}
+    </button>
+  );
+
   return (
     <>
-      <button
-        type="button"
-        onClick={downloadPdf}
-        disabled={!fit.done || download.busy}
-        className="rounded-md bg-navy px-3 py-1.5 font-semibold text-white disabled:opacity-50"
-      >
-        {!fit.done
-          ? "Laying out\u2026"
-          : download.busy
-            ? "Generating\u2026"
-            : "Download PDF"}
-      </button>
+      {button("pdf-lib", "Download PDF")}
+      {button("pdf", "Download PDF (old)")}
       <span>
         {count} card{count === 1 ? "" : "s"}, one per US Letter page.
       </span>
