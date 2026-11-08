@@ -110,7 +110,7 @@ export default function CardFit({ count }: { count: number }) {
       setDownload({
         busy: null,
         error: overflow
-          ? `In the PDF: ${overflowMessage(overflow.split(","))}`
+          ? `Check ${overflow} in the PDF: text that doesn’t fit, or characters the fonts can’t print.`
           : "",
       });
     } catch (e) {
@@ -125,7 +125,7 @@ export default function CardFit({ count }: { count: number }) {
     <button
       type="button"
       onClick={() => downloadPdf(route)}
-      disabled={!fit.done || download.busy !== null}
+      disabled={!fit.done || count === 0 || download.busy !== null}
       className="rounded-md bg-navy px-3 py-1.5 font-semibold text-white disabled:opacity-50"
     >
       {!fit.done

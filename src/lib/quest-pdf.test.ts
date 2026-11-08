@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { PDFDocument } from "pdf-lib";
+import sharp from "sharp";
 import type { Quest } from "./megagame-store";
-import { createQuestPdf } from "./quest-pdf";
+import { createQuestPdf, prepareQuestImage } from "./quest-pdf";
 
 const quest = (over: Partial<Quest> = {}): Quest => ({
   id: "00000000-0000-4000-8000-000000000001",
@@ -52,5 +53,40 @@ describe("quest PDF", () => {
     );
     expect(tooLong.overflow).toEqual(["A2C-4EF"]);
     expect((await PDFDocument.load(tooLong.bytes)).getPageCount()).toBe(1);
+  });
+
+  it("reports characters the fonts cannot draw", async () => {
+    const { overflow } = await createQuestPdf(
+      [quest({ title: "★ Pirate Hunt 🏴‍☠️" })],
+      new Map(),
+    );
+    expect(overflow).toEqual(["A2C-4EF"]);
+  });
+
+  it("shrinks pictures, keeping transparency only where it is used", async () => {
+    const make = (alpha: number) =>
+      sharp({
+        create: {
+          width: 1600,
+          height: 1200,
+          channels: 4,
+          background: { r: 200, g: 40, b: 40, alpha },
+        },
+      })
+        .png()
+        .toBuffer();
+    const opaque = await prepareQuestImage(await make(1));
+    const clear = await prepareQuestImage(await make(0.5));
+    expect(opaque.kind).toBe("jpeg");
+    expect(clear.kind).toBe("png");
+    expect((await sharp(opaque.data).metadata()).width).toBe(1200);
+
+    const url = "https://example.test/picture.png";
+    const { bytes, overflow } = await createQuestPdf(
+      [quest({ bodyImages: [url] })],
+      new Map([[url, clear]]),
+    );
+    expect(overflow).toEqual([]);
+    expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
   });
 });

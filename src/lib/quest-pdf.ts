@@ -57,7 +57,16 @@ const IMAGES = { minHeight: 3.6 * IN, gap: 0.2 * IN };
 const FOOTER = { height: 0.8 * IN };
 const REWARD = { icon: 0.42 * IN, size: 16, gap: 0.16 * IN, inner: 0.05 * IN };
 const REWARD_LABEL = { size: 12, opacity: 0.75 };
-const AUTHOR = { size: 11, opacity: 0.75, padX: 0.2 * IN, padBottom: 0.1 * IN };
+const AUTHOR = {
+  size: 11,
+  min: 7,
+  step: 0.5,
+  maxLines: 2,
+  lineHeight: 1.2,
+  opacity: 0.75,
+  padX: 0.2 * IN,
+  padBottom: 0.1 * IN,
+};
 const CODE = {
   size: 16,
   tracking: 0.06,
@@ -81,6 +90,8 @@ const PEOPLE_ICON = {
 /** Long edge of an embedded picture; the uploads are ~2400px and several MB each. */
 const IMAGE_MAX_PX = 1200;
 const IMAGE_JPEG_QUALITY = 80;
+const IMAGE_FETCH_MS = 15_000;
+const IMAGE_CONCURRENCY = 6;
 
 const FONTS = path.join(process.cwd(), "assets/posters/fonts");
 const ART = path.join(process.cwd(), "public/megagame/quest-art");
@@ -88,7 +99,7 @@ const ART = path.join(process.cwd(), "public/megagame/quest-art");
 export type QuestImage = { data: Uint8Array; kind: "jpeg" | "png" };
 
 type Fonts = { title: PDFFont; body: PDFFont; bold: PDFFont; mono: PDFFont };
-export type QuestPdfAssets = {
+type QuestPdfAssets = {
   fonts: Fonts;
   paper: PDFImage;
   emblems: Record<MegagameClass | "star", PDFImage>;
@@ -99,14 +110,16 @@ export type QuestPdfAssets = {
 export async function prepareQuestImage(
   bytes: Uint8Array,
 ): Promise<QuestImage> {
-  const image = sharp(bytes).resize({
+  // rotate() bakes in EXIF orientation, which phone photos rely on.
+  const image = sharp(bytes).rotate().resize({
     width: IMAGE_MAX_PX,
     height: IMAGE_MAX_PX,
     fit: "inside",
     withoutEnlargement: true,
   });
-  const { isOpaque } = await sharp(bytes).stats();
-  return isOpaque
+  const { hasAlpha } = await image.metadata();
+  const opaque = !hasAlpha || (await image.stats()).isOpaque;
+  return opaque
     ? {
         data: await image.jpeg({ quality: IMAGE_JPEG_QUALITY }).toBuffer(),
         kind: "jpeg",
@@ -114,25 +127,40 @@ export async function prepareQuestImage(
     : { data: await image.png().toBuffer(), kind: "png" };
 }
 
-/** Every picture the cards use, fetched once each. */
+/** Every picture the cards use, fetched once each, a few at a time. */
 export async function loadQuestImages(
   quests: readonly Quest[],
 ): Promise<Map<string, QuestImage>> {
   const urls = [...new Set(quests.flatMap((q) => q.bodyImages))];
-  const images = await Promise.all(
-    urls.map(async (url) => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Picture ${url} failed: ${res.status}`);
-      return [
+  const images = new Map<string, QuestImage>();
+  const load = async (url: string) => {
+    const quest = quests.find((q) => q.bodyImages.includes(url));
+    try {
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(IMAGE_FETCH_MS),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      images.set(
         url,
         await prepareQuestImage(new Uint8Array(await res.arrayBuffer())),
-      ] as const;
+      );
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
+      throw new Error(
+        `Picture on ${formatTicketCode(quest?.code ?? "")} (${url}): ${reason}`,
+      );
+    }
+  };
+  const queue = [...urls];
+  await Promise.all(
+    Array.from({ length: IMAGE_CONCURRENCY }, async () => {
+      for (let url = queue.shift(); url; url = queue.shift()) await load(url);
     }),
   );
-  return new Map(images);
+  return images;
 }
 
-/** One US Letter page per quest; `overflow` lists the codes whose text was clipped at 9pt. */
+/** One US Letter page per quest; `overflow` lists the codes of cards drawn imperfectly. */
 export async function createQuestPdf(
   quests: readonly Quest[],
   images: ReadonlyMap<string, QuestImage>,
@@ -176,8 +204,11 @@ export async function createQuestPdf(
   return { bytes: await doc.save(), overflow };
 }
 
-/** Draws one card; false if the body text did not fit even at the smallest size. */
-export function drawQuestCard(
+/**
+ * Draws one card; false if the title, body or author did not fit even at the
+ * smallest size, or uses characters the fonts cannot draw.
+ */
+function drawQuestCard(
   page: PDFPage,
   quest: Quest,
   assets: QuestPdfAssets,
@@ -186,7 +217,7 @@ export function drawQuestCard(
   drawPaper(page, assets, cardBackground(quest));
 
   let top = FRAME.top;
-  drawTitle(page, quest.title, fonts.title, top);
+  const titleFits = drawTitle(page, quest.title, fonts.title, top);
   top += TITLE.height + GAP;
   drawRequirements(page, quest, assets, top);
   top += REQS.icon + GAP;
@@ -206,18 +237,9 @@ export function drawQuestCard(
     pictures.length > 0,
     available,
   );
-  drawLines(
-    page,
-    body.lines,
-    fonts.body,
-    body.size,
-    BODY.lineHeight,
-    FRAME.side,
-    top,
-    {
-      justify: true,
-    },
-  );
+  drawLines(page, body.lines, fonts.body, body.size, BODY.lineHeight, top, {
+    justify: true,
+  });
   const bodyHeight = Math.max(
     BODY.minHeight,
     body.lines.length * body.size * BODY.lineHeight,
@@ -226,8 +248,20 @@ export function drawQuestCard(
   if (pictures.length > 0)
     drawPictures(page, pictures, top, footerTop - GAP - top);
 
-  drawFooter(page, quest, assets, footerTop);
-  return body.fits;
+  const footerFits = drawFooter(page, quest, assets, footerTop);
+  const drawable =
+    canDraw(fonts.title, quest.title) &&
+    canDraw(fonts.body, quest.bodyText) &&
+    canDraw(fonts.body, quest.author ?? "");
+  return titleFits && body.fits && footerFits && drawable;
+}
+
+/** pdf-lib draws a box for any code point the font lacks (emoji, ★, …). */
+function canDraw(font: PDFFont, text: string) {
+  const glyphs = new Set(font.getCharacterSet());
+  return [...text].every(
+    (ch) => /\s/.test(ch) || glyphs.has(ch.codePointAt(0) as number),
+  );
 }
 
 function drawPaper(
@@ -288,11 +322,19 @@ function drawTitle(page: PDFPage, title: string, font: PDFFont, top: number) {
     }
     lines = wrap(title, font, size, width);
   }
-  const blockTop =
-    top + (TITLE.height - lines.length * size * TITLE.lineHeight) / 2;
-  drawLines(page, lines, font, size, TITLE.lineHeight, FRAME.side, blockTop, {
-    center: true,
-  });
+  const height = lines.length * size * TITLE.lineHeight;
+  drawLines(
+    page,
+    lines,
+    font,
+    size,
+    TITLE.lineHeight,
+    top + (TITLE.height - height) / 2,
+    {
+      center: true,
+    },
+  );
+  return height <= TITLE.height;
 }
 
 function drawRequirements(
@@ -302,23 +344,20 @@ function drawRequirements(
   top: number,
 ) {
   const { bold } = assets.fonts;
-  const cls =
-    quest.class !== null && isMegagameClass(quest.class) ? quest.class : null;
-  const players = `${quest.minPlayers}+`;
-  const level =
-    cls === null
-      ? null
-      : quest.minLevel !== null && quest.maxLevel !== null
+  const items: { icon: PDFImage | "people"; text: string }[] = [
+    { icon: "people", text: `${quest.minPlayers}+` },
+  ];
+  if (quest.class !== null && isMegagameClass(quest.class)) {
+    const level =
+      quest.minLevel !== null && quest.maxLevel !== null
         ? `Lv.${quest.minLevel}–${quest.maxLevel}`
         : quest.minLevel !== null
           ? `Lv.${quest.minLevel}+`
           : quest.maxLevel !== null
             ? `Lv.≤${quest.maxLevel}`
-            : CLASS_LABELS[cls];
-  const items: { icon: PDFImage | "people"; text: string }[] = [
-    { icon: "people", text: players },
-    ...(cls && level ? [{ icon: assets.emblems[cls], text: level }] : []),
-  ];
+            : CLASS_LABELS[quest.class];
+    items.push({ icon: assets.emblems[quest.class], text: level });
+  }
   const itemWidth = (item: (typeof items)[number]) =>
     REQS.icon + REQS.inner + bold.widthOfTextAtSize(item.text, REQS.size);
   const joinWidth = bold.widthOfTextAtSize("&", JOIN.size);
@@ -365,7 +404,8 @@ function drawPeopleIcon(page: PDFPage, x: number, top: number, size: number) {
       y: PAGE.height - top,
       scale,
       borderColor: INK,
-      borderWidth: PEOPLE_ICON.stroke * scale,
+      // drawSvgPath scales the path before setting the line width.
+      borderWidth: PEOPLE_ICON.stroke,
       borderLineCap: LineCapStyle.Round,
     });
 }
@@ -498,30 +538,34 @@ function drawFooter(
     cx += mono.widthOfTextAtSize(ch, CODE.size) + tracking;
   }
 
-  // Author, centred in whatever is left between them, on the footer's baseline.
-  if (quest.author) {
-    const left = rewardsRight + AUTHOR.padX;
-    const right = pillLeft - AUTHOR.padX;
-    const text = `Quest by ${quest.author}`;
-    let size = AUTHOR.size;
-    while (size > 6 && body.widthOfTextAtSize(text, size) > right - left)
-      size -= 0.5;
-    const width = body.widthOfTextAtSize(text, size);
-    const descent =
-      body.heightAtSize(size) - body.heightAtSize(size, { descender: false });
+  // Author, centred in whatever is left between them, up from the footer's
+  // baseline; wraps like the HTML flex item, then shrinks.
+  if (!quest.author) return true;
+  const left = rewardsRight + AUTHOR.padX;
+  const width = pillLeft - AUTHOR.padX - left;
+  if (width <= 0) return false;
+  const text = `Quest by ${quest.author}`;
+  let size = AUTHOR.size;
+  let lines = wrap(text, body, size, width);
+  while (lines.length > AUTHOR.maxLines && size > AUTHOR.min) {
+    size = Math.max(AUTHOR.min, size - AUTHOR.step);
+    lines = wrap(text, body, size, width);
+  }
+  const descent =
+    body.heightAtSize(size) - body.heightAtSize(size, { descender: false });
+  for (const [i, line] of [...lines].reverse().entries()) {
+    const lineWidth = body.widthOfTextAtSize(line.text, size);
     drawText(
       page,
-      text,
+      line.text,
       body,
       size,
-      left + (right - left - width) / 2,
-      bottom - AUTHOR.padBottom - descent,
-      {
-        opacity: AUTHOR.opacity,
-        italic: true,
-      },
+      left + (width - lineWidth) / 2,
+      bottom - AUTHOR.padBottom - descent - i * size * AUTHOR.lineHeight,
+      { opacity: AUTHOR.opacity, italic: true },
     );
   }
+  return lines.length <= AUTHOR.maxLines;
 }
 
 /** The /q/<code> link as plain modules with a one-module white quiet zone, as the HTML card. */
@@ -574,14 +618,12 @@ function wrap(
         flush();
         continue;
       }
-      let n = word.length - 1;
-      while (n > 1 && !fits(word.slice(0, n))) n--;
-      lines.push({
-        text: word.slice(0, n),
-        words: [word.slice(0, n)],
-        last: false,
-      });
-      word = word.slice(n);
+      const chars = [...word];
+      let n = chars.length - 1;
+      while (n > 1 && !fits(chars.slice(0, n).join(""))) n--;
+      const head = chars.slice(0, n).join("");
+      lines.push({ text: head, words: [head], last: false });
+      word = chars.slice(n).join("");
     }
     if (word) words.push(word);
   }
@@ -609,16 +651,17 @@ function drawLines(
   font: PDFFont,
   size: number,
   lineHeight: number,
-  left: number,
   top: number,
   options: { center?: boolean; justify?: boolean } = {},
 ) {
-  const ascent = font.heightAtSize(size, { descender: false });
-  const descent = font.heightAtSize(size) - ascent;
+  const left = FRAME.side;
   for (const [i, line] of lines.entries()) {
-    const lineTop = top + i * size * lineHeight;
-    const baseline =
-      lineTop + (size * lineHeight - ascent - descent) / 2 + ascent;
+    const baseline = centeredBaseline(
+      font,
+      size,
+      top + i * size * lineHeight,
+      size * lineHeight,
+    );
     const width = font.widthOfTextAtSize(line.text, size);
     if (options.justify && !line.last && line.words.length > 1) {
       const space = (FRAME_WIDTH - width) / (line.words.length - 1);

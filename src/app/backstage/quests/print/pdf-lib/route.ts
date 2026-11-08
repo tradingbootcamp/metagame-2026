@@ -1,10 +1,8 @@
 import { toolAccess } from "@/lib/admin-auth";
-import { cardBackground } from "@/lib/megagame-quests";
-import { listQuests, questsByIds } from "@/lib/megagame-store";
 import { createQuestPdf, loadQuestImages } from "@/lib/quest-pdf";
 import { formatTicketCode } from "@/lib/ticket-code-format";
-import { isUuid } from "../../../megagame/uuid";
 import { OVERFLOW_HEADER } from "../overflow";
+import { printQuests } from "../quests";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -18,15 +16,9 @@ export async function GET(request: Request) {
   if (!(await toolAccess("megagame.manage")))
     return new Response("Sign in required.", { status: 401 });
 
-  const params = new URL(request.url).searchParams;
-  const ids = [...new Set(params.getAll("id").filter(isUuid))];
-  const cls = params.get("class") ?? "";
-  const quests =
-    ids.length > 0
-      ? await questsByIds(ids)
-      : (await listQuests()).filter(
-          (q) => q.active && (!cls || cardBackground(q) === cls),
-        );
+  const { quests, ids } = await printQuests(new URL(request.url).searchParams);
+  if (quests.length === 0)
+    return new Response("No quests to print.", { status: 404 });
   const filename =
     ids.length === 1 && quests[0]
       ? `${formatTicketCode(quests[0].code)}.pdf`
@@ -35,7 +27,8 @@ export async function GET(request: Request) {
   try {
     const images = await loadQuestImages(quests);
     const { bytes, overflow } = await createQuestPdf(quests, images);
-    return new Response(new Uint8Array(bytes), {
+    // Streamed, which Vercel exempts from its 4.5 MB response cap.
+    return new Response(new Blob([new Uint8Array(bytes)]).stream(), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
