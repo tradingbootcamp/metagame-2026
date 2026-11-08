@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 /**
  * A room header that stays at the top of the page over a body that scrolls
@@ -18,15 +18,24 @@ export default function StickyHeadScroll({
 }) {
   const headRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+
+  // Native and non-passive so a sideways swipe over the head can be consumed;
+  // otherwise nothing scrolls and macOS reads it as a back/forward gesture.
+  useEffect(() => {
+    const head = headRef.current;
+    if (!head) return;
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      if (bodyRef.current) bodyRef.current.scrollLeft += e.deltaX;
+    };
+    head.addEventListener("wheel", onWheel, { passive: false });
+    return () => head.removeEventListener("wheel", onWheel);
+  }, []);
+
   return (
     <>
-      <div
-        ref={headRef}
-        className="sticky top-0 z-30 overflow-hidden"
-        onWheel={(e) => {
-          if (bodyRef.current) bodyRef.current.scrollLeft += e.deltaX;
-        }}
-      >
+      <div ref={headRef} className="sticky top-0 z-30 overflow-hidden">
         {head}
       </div>
       <div
