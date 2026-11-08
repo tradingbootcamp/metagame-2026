@@ -223,7 +223,7 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
             {permissionGroups().flatMap(({ group, keys }) => [
               <tr key={group}>
                 <td
-                  className={`${STICKY} ${RULE} bg-linear-to-b from-peach/40 to-peach/40 px-4 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap text-navy uppercase`}
+                  className={`${STICKY} ${RULE} bg-linear-to-b from-peach/40 to-peach/40 px-4 py-1.5 text-xs font-bold tracking-wide text-navy uppercase`}
                 >
                   {group}
                   {GROUP_NOTES[group] && (
