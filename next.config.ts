@@ -26,7 +26,14 @@ const nextConfig: NextConfig = {
   // where Vercel's id isn't known yet — so the workflows mint one. Unset
   // locally, which just means no `?dpl=` on asset URLs.
   deploymentId: process.env.DEPLOYMENT_ID,
+  // Headless Chromium for the quest-card PDF; Next must not bundle these.
+  serverExternalPackages: ["@sparticuz/chromium", "playwright-core"],
   outputFileTracingIncludes: {
+    // playwright-core reads browsers.json by a path the tracer can't follow.
+    "/backstage/quests/print/pdf": [
+      "./node_modules/playwright-core/**",
+      "./node_modules/@sparticuz/chromium/bin/**",
+    ],
     "/api/posters": [
       "./assets/posters/*.pdf",
       "./assets/posters/sponsors/*.png",

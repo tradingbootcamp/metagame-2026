@@ -129,17 +129,18 @@ export default function QuestTable({
           target="_blank"
           className="flex flex-wrap items-center gap-2"
         >
-          <button className={smallButtonClass}>Print selected</button>
+          <button className={smallButtonClass}>Download selected</button>
           <Link
             href={`/backstage/quests/print?${printAll}`}
             target="_blank"
             className={smallButtonClass}
           >
-            Print all active{background ? ` ${background}` : ""} ({activeCount})
+            Download all active{background ? ` ${background}` : ""} (
+            {activeCount})
           </Link>
           <span className="text-xs text-ink/60">
-            Opens a page with one US Letter card per quest; print it from the
-            browser.
+            Opens a preview with one US Letter card per quest and a Download PDF
+            button.
           </span>
         </form>
         <div className="overflow-x-auto rounded-xl border border-line bg-white">
@@ -226,7 +227,7 @@ function Row({ row }: { row: QuestRow }) {
           target="_blank"
           className="ml-2 text-navy underline underline-offset-2"
         >
-          Print
+          PDF
         </Link>
       </td>
     </tr>
