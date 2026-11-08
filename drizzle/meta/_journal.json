@@ -288,6 +288,13 @@
       "when": 1794032992726,
       "tag": "0040_hat_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794100670682,
+      "tag": "0041_user_permission_denies",
+      "breakpoints": true
     }
   ]
 }

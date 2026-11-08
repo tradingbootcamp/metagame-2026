@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  describeSource,
   effectivePermissions,
   expand,
   explainPermissions,
   hasTeamPermission,
+  overrideConflict,
   permissionGroups,
   PERMISSION_KEYS,
   PERMISSIONS,
+  withImpliers,
   type AccessInput,
 } from "./permissions";
 
@@ -14,6 +17,7 @@ const input = (over: Partial<AccessInput>): AccessInput => ({
   admin: false,
   roles: [],
   grants: [],
+  denies: [],
   ...over,
 });
 
@@ -144,6 +148,93 @@ describe("effectivePermissions", () => {
   });
 });
 
+describe("denies", () => {
+  it("collects a key and everything that implies it, transitively", () => {
+    expect([...withImpliers(["schedule.view"])].sort()).toEqual([
+      "schedule.manage",
+      "schedule.rooms",
+      "schedule.view",
+    ]);
+    expect([...withImpliers(["gone.away"])]).toEqual([]);
+  });
+
+  it("strips the denied key and its impliers but leaves what they imply", () => {
+    const got = effectivePermissions(
+      input({
+        roles: [{ name: "Ops", permissions: ["schedule.rooms"] }],
+        denies: ["schedule.view"],
+      }),
+    );
+    expect([...got].sort()).toEqual([
+      "schedule.preview",
+      "schedule.session_notes",
+      "schedule.volunteer_rooms",
+    ]);
+  });
+
+  it("beats a personal grant", () => {
+    const got = effectivePermissions(
+      input({ grants: ["promo.manage"], denies: ["promo.view"] }),
+    );
+    expect(got.size).toBe(0);
+  });
+
+  it("doesn't apply to admins", () => {
+    const got = effectivePermissions(
+      input({ admin: true, denies: ["users.view"] }),
+    );
+    expect(got.size).toBe(PERMISSION_KEYS.length);
+  });
+});
+
+describe("overrideConflict", () => {
+  it("refuses a deny under a personal grant that includes it", () => {
+    const got = overrideConflict(
+      input({ grants: ["promo.manage"] }),
+      "promo.view",
+      "deny",
+    );
+    expect(got).toMatch(/Manage promo codes is granted/);
+    expect(
+      overrideConflict(
+        input({ grants: ["promo.view"] }),
+        "promo.manage",
+        "deny",
+      ),
+    ).toBeNull();
+  });
+
+  it("refuses a grant whose expansion is personally denied", () => {
+    expect(
+      overrideConflict(
+        input({ denies: ["promo.view"] }),
+        "promo.manage",
+        "allow",
+      ),
+    ).toMatch(/which is denied/);
+    expect(
+      overrideConflict(
+        input({ denies: ["promo.manage"] }),
+        "promo.view",
+        "allow",
+      ),
+    ).toBeNull();
+  });
+
+  it("lets a permission's own row flip between allow and deny", () => {
+    expect(
+      overrideConflict(input({ grants: ["promo.view"] }), "promo.view", "deny"),
+    ).toBeNull();
+    expect(
+      overrideConflict(
+        input({ denies: ["promo.view"] }),
+        "promo.view",
+        "allow",
+      ),
+    ).toBeNull();
+  });
+});
+
 describe("explainPermissions", () => {
   it("names the deciding source first", () => {
     const got = explainPermissions(
@@ -164,6 +255,30 @@ describe("explainPermissions", () => {
       ],
     });
     expect(got["users.view"]).toEqual({ effective: false, sources: [] });
+  });
+
+  it("puts a deny ahead of the roles that would grant it", () => {
+    const got = explainPermissions(
+      input({
+        roles: [{ name: "Ops", permissions: ["schedule.manage"] }],
+        denies: ["schedule.view"],
+      }),
+    );
+    expect(got["schedule.view"]).toEqual({
+      effective: false,
+      sources: [{ kind: "denied" }],
+    });
+    expect(got["schedule.manage"]).toEqual({
+      effective: false,
+      sources: [
+        { kind: "denied_via", by: "schedule.view" },
+        { kind: "role", role: "Ops" },
+      ],
+    });
+    expect(got["schedule.preview"]).toEqual({ effective: true, sources: [] });
+    expect(describeSource(got["schedule.manage"].sources[0])).toBe(
+      "Denied (includes Schedule: View schedule data)",
+    );
   });
 
   it("shows the admin bypass ahead of everything", () => {
