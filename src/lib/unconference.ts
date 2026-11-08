@@ -250,8 +250,7 @@ export type NoteEditor = { via: "author" | "team" };
 
 /**
  * Who this viewer is to the note, pure so it can be tested without a
- * database. Author wins over team: an author who is also on the team still
- * gets to edit their own note, which `via: "team"` would refuse.
+ * database. Author wins over team, so a tile reads as "mine" to its author.
  */
 export function noteEditor(
   viewerId: string | null,
@@ -273,15 +272,15 @@ export function boardEditor(
   return viewer.isTeam ? { via: "team" } : null;
 }
 
-/** Only the author rewrites or recolours a note. */
+/** The author or the team rewrites or recolours a note. */
 export const canEditNote = (editor: NoteEditor | null): boolean =>
-  editor?.via === "author";
+  editor !== null;
 
 /** The author or the team takes one down. */
 export const canDeleteNote = (editor: NoteEditor | null): boolean =>
   editor !== null;
 
-/** Only the author moves their own note around the board. */
+/** The author or the team moves a note around the board. */
 export const canMoveNote = canEditNote;
 
 // Posting is open to every ticket holder, so one account can't paper the

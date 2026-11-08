@@ -149,7 +149,7 @@ describe("noteEditor", () => {
     const team = noteEditor("bo", "ana", true);
     const stranger = noteEditor("cy", "ana", false);
     expect([canEditNote(author), canDeleteNote(author)]).toEqual([true, true]);
-    expect([canEditNote(team), canDeleteNote(team)]).toEqual([false, true]);
+    expect([canEditNote(team), canDeleteNote(team)]).toEqual([true, true]);
     expect([canEditNote(stranger), canDeleteNote(stranger)]).toEqual([
       false,
       false,
