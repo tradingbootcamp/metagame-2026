@@ -8,6 +8,19 @@ import {
   loadSchedule,
   loadViewerPlans,
 } from "@/lib/schedule-store";
+import type { Attendance } from "@/lib/schedule";
+
+/** The same attendance with every name and email dropped. */
+const countsOnly = (attendance: Attendance): Attendance =>
+  Object.fromEntries(
+    Object.entries(attendance).map(([id, a]) => [
+      id,
+      {
+        ...a,
+        attendees: a.attendees.map((x) => ({ ...x, name: "", email: "" })),
+      },
+    ]),
+  );
 
 export default async function AdminSchedulePage(
   props: PageProps<"/backstage/schedule">,
@@ -16,24 +29,29 @@ export default async function AdminSchedulePage(
   // static at build time.
   await connection();
 
-  const access = await toolAccess("schedule.manage");
+  const access = await toolAccess("schedule.view");
   if (!access) return <SignIn next="/backstage/schedule" />;
 
   const { edit } = await props.searchParams;
-  const [schedule, attendance, plans, canReorder] = await Promise.all([
-    loadSchedule(),
-    loadAttendance(),
-    loadViewerPlans(access.userId),
-    can("schedule.rooms").then(Boolean),
-  ]);
+  const [schedule, attendance, plans, canEdit, canReorder, seesRsvps] =
+    await Promise.all([
+      loadSchedule(),
+      loadAttendance(),
+      loadViewerPlans(access.userId),
+      can("schedule.manage").then(Boolean),
+      can("schedule.rooms").then(Boolean),
+      can("schedule.rsvps").then(Boolean),
+    ]);
   const viewer = { ...plans, userId: access.userId };
   // Mirrors the guard in actions.ts: sample data only against a local database.
-  const canSeed = process.env.NODE_ENV === "development";
+  const canSeed = canEdit && process.env.NODE_ENV === "development";
   return (
     <ScheduleTool
       {...schedule}
-      attendance={attendance}
+      // schedule.view alone is "not RSVP lists": the grid still gets its counts.
+      attendance={canEdit || seesRsvps ? attendance : countsOnly(attendance)}
       viewer={viewer}
+      canEdit={canEdit}
       canSeed={canSeed}
       canReorder={canReorder}
       initialEdit={typeof edit === "string" ? edit : null}

@@ -116,7 +116,8 @@ function SessionBlock({
   /** Shown greyed for reference, with no grip. */
   muted: boolean;
   onOpen: OpenFn;
-  onGrab: GrabFn;
+  /** Without it the block has no grip: a read-only grid. */
+  onGrab?: GrabFn;
 }) {
   const draft = session.status === "draft";
   const isCarried = carrying?.id === session.id;
@@ -134,7 +135,7 @@ function SessionBlock({
         carrying ? "pointer-events-none" : ""
       } ${isCarried ? "opacity-30" : ""}`}
     >
-      {!muted && (
+      {!muted && onGrab && (
         <GrabHandle
           session={session}
           carrying={isCarried}
@@ -147,7 +148,7 @@ function SessionBlock({
         onClick={() => onOpen(session)}
         title={`${session.title}${session.hosts.length ? " — " + hostNames(session) : ""}${draft ? " (draft)" : ""}`}
         // flex-col: a block button would centre its content vertically.
-        className="flex h-full w-full flex-col p-1.5 pr-4 text-left"
+        className={`flex h-full w-full flex-col p-1.5 text-left ${onGrab ? "pr-4" : ""}`}
       >
         <BlockSummary session={session} titleLines={titleLines(session)} />
         {(going > 0 || session.maxCapacity !== null) && (
@@ -228,8 +229,8 @@ function GridDay({
   muted?: (s: ScheduleSession) => boolean;
   onOpen: OpenFn;
   onCreate?: CreateFn;
-  onGrab: GrabFn;
-  onDrop: DropFn;
+  onGrab?: GrabFn;
+  onDrop?: DropFn;
   onEditLocation?: (location: ScheduleLocation) => void;
   confirmClash?: boolean;
 }) {
@@ -383,7 +384,7 @@ function GridDay({
                         e.preventDefault();
                         const t = target(slotStart, col.id);
                         if (t && !t.blocked)
-                          onDrop(t.startsAt, t.locationId, t.clash, t.cut);
+                          onDrop?.(t.startsAt, t.locationId, t.clash, t.cut);
                       }}
                       onClick={() => {
                         if (!carrying) {
@@ -396,7 +397,7 @@ function GridDay({
                         }
                         const t = target(slotStart, col.id);
                         if (t && !t.blocked)
-                          onDrop(t.startsAt, t.locationId, t.clash, t.cut);
+                          onDrop?.(t.startsAt, t.locationId, t.clash, t.cut);
                       }}
                       className={`absolute inset-0 transition-colors enabled:hover:bg-navy/[0.06] ${
                         !carrying
@@ -535,8 +536,9 @@ export default function ScheduleGrid({
   onOpen: OpenFn;
   /** Clicking an empty slot; without it empty slots only take drops. */
   onCreate?: CreateFn;
-  onGrab: GrabFn;
-  onDrop: DropFn;
+  /** Moving sessions; without both, the grid is read-only. */
+  onGrab?: GrabFn;
+  onDrop?: DropFn;
   /** Shows a pencil in each room's column header. */
   onEditLocation?: (location: ScheduleLocation) => void;
   /** Let drops onto an overlap through (with its clash) instead of refusing them. */

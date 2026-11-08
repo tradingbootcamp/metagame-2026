@@ -29,9 +29,9 @@ import { listNotesIn } from "@/lib/unconference-store";
 
 export const loadRawSchedule = cache(loadSchedule);
 
-/** Which rooms this access may see; whoever edits the schedule sees them all. */
+/** Which rooms this access may see; whoever reads the whole schedule sees them all. */
 const viewerOf = (access: TeamAccess | null): ScheduleViewer => {
-  if (access?.permissions.has("schedule.manage")) return "team";
+  if (access?.permissions.has("schedule.view")) return "team";
   if (access?.permissions.has("schedule.volunteer_rooms")) return "volunteer";
   return "public";
 };

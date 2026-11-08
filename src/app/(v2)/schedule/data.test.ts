@@ -45,7 +45,7 @@ describe("loadScheduleSnapshot", () => {
   it.each([
     [[], ["open"]],
     [["schedule.volunteer_rooms"], ["open", "crew"]],
-    [["schedule.manage"], ["open", "crew", "team"]],
+    [["schedule.view"], ["open", "crew", "team"]],
   ])("with %j shows and reads notes only in %j", async (permissions, rooms) => {
     signedIn(permissions);
     const { locations } = await loadScheduleSnapshot();
