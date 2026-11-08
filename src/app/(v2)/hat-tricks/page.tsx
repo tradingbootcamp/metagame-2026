@@ -59,6 +59,11 @@ export default async function HatTricksPage({
       title="Hat Tricks"
       intro="A hat trick is when you trick someone and take their hat."
     >
+      <p className="mb-10 rounded-lg border border-line bg-white px-5 py-3 text-base text-ink">
+        The Quest Board volunteers can register a steal with their Backstage
+        powers.
+      </p>
+
       <section className="mb-14">
         <h2 className={SECTION_HEADING}>On shift now</h2>
         {state.kind === "on" || state.kind === "standing" ? (
@@ -102,10 +107,6 @@ export default async function HatTricksPage({
         <p className="mt-6 text-sm text-ink/70">
           5 points per theft, plus points for every shift change you hold a hat
           through: 1, then 3, then 5, and so on.
-        </p>
-        <p className="mt-2 text-sm text-ink/70">
-          The Quest Board volunteers can register a steal with their Backstage
-          powers.
         </p>
       </section>
 
