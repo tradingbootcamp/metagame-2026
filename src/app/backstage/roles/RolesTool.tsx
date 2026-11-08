@@ -232,7 +232,9 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
                     </span>
                   )}
                 </td>
-                <td colSpan={roles.length} className="bg-peach/40" />
+                {roles.length > 0 && (
+                  <td colSpan={roles.length} className="bg-peach/40" />
+                )}
               </tr>,
               ...keys.map((key) => {
                 const { label, description, level } = PERMISSIONS[key];
