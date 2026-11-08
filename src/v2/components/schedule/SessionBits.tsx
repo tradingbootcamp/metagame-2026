@@ -85,14 +85,21 @@ export function LegendItem({ children }: { children: ReactNode }) {
 /** Category swatches and the marks above; `children` adds page-specific entries. */
 export function ScheduleLegend({
   className = "justify-center",
+  vertical = false,
   children,
 }: {
   className?: string;
+  /** One entry per line, for a sidebar. */
+  vertical?: boolean;
   children?: ReactNode;
 }) {
   return (
     <div
-      className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 ${className}`}
+      className={
+        vertical
+          ? `flex flex-col gap-y-2.5 ${className}`
+          : `flex flex-wrap items-center gap-x-4 gap-y-1.5 ${className}`
+      }
     >
       {LEGEND.slice(0, 4).map((entry) => (
         <LegendItem key={entry.label}>
@@ -106,8 +113,14 @@ export function ScheduleLegend({
       ))}
       <LegendItem>
         <LimitedSpotsMark />
-        <span className="sm:hidden">RSVP = commitment</span>
-        <span className="hidden sm:inline">{LIMITED_SPOTS}</span>
+        {vertical ? (
+          <span>RSVP = commitment</span>
+        ) : (
+          <>
+            <span className="sm:hidden">RSVP = commitment</span>
+            <span className="hidden sm:inline">{LIMITED_SPOTS}</span>
+          </>
+        )}
       </LegendItem>
       <LegendItem>
         <AgeMark ages="adults" />
