@@ -325,7 +325,7 @@ export default function ExpandingNav() {
       // The backdrop's margin around the die grows a touch on hover; the open
       // bar keeps that grown size. Offsetting top/left by half keeps the die
       // fixed in place while the hexagon swells around it.
-      className={`fixed z-40 flex items-start font-[family-name:var(--font-inter)] [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px]`}
+      className={`fixed z-40 flex items-start font-[family-name:var(--font-inter)] [--bar-h:calc(66px+var(--grow))] [--nav-h:54px] md:[--bar-h:calc(76px+var(--grow))] md:[--nav-h:64px] print:hidden`}
       style={{
         ["--grow" as string]: grow ? "6px" : "0px",
         transition: "--grow 350ms cubic-bezier(0.45,0,0.55,1)",
