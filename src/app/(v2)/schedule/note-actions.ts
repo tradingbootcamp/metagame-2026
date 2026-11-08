@@ -81,6 +81,19 @@ async function poster(): Promise<string | NoteState> {
 }
 
 /**
+ * The account that may rewrite or move an existing note it has standing on:
+ * a ticket holder (the author), or the schedule team without one.
+ */
+async function editor(): Promise<string | NoteState> {
+  const session = await currentSession();
+  if (!session) return { error: SIGN_IN };
+  if (!(await can("unconference.post")) && !(await can("schedule.manage"))) {
+    return { error: NEEDS_TICKET };
+  }
+  return session.user.id;
+}
+
+/**
  * Anyone with a ticket writes here, so a driver message is logged and never
  * relayed: only the constraint messages, which are written for people, go
  * back to the client.
@@ -269,12 +282,12 @@ export async function saveSessionPoster(
   });
 }
 
-/** Rewrite a notice's sticky note, poster and paper. The author only. */
+/** Rewrite a notice's sticky note, poster and paper. The author or the team. */
 export async function saveNote(
   noteId: string,
   input: { sticky: unknown; poster: unknown; color?: unknown },
 ): Promise<NoteState> {
-  const who = await poster();
+  const who = await editor();
   if (typeof who !== "string") return who;
   const faces = parseFaces(input.sticky, input.poster);
   if (!isFaces(faces)) return faces;
@@ -298,7 +311,7 @@ export async function repinNote(
   x: number,
   y: number,
 ): Promise<NoteState> {
-  const who = await poster();
+  const who = await editor();
   if (typeof who !== "string") return who;
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
     return { error: "That spot is off the board." };

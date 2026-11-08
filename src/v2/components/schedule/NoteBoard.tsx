@@ -376,7 +376,9 @@ export default function BoardNotes({
         saveSessionPoster: savePoster,
         // canPost as well as authorship: every write re-checks the permission,
         // so an author who has lost it is offered no drag it can only refuse.
-        canMove: (note) => board.canPost && canMoveNote(editorOf(note)),
+        // The team holds no ticket and the action lets them through without.
+        canMove: (note) =>
+          (board.canPost || board.isTeam) && canMoveNote(editorOf(note)),
         open: (noteId) => setPending({ kind: "open", noteId }),
         // The paper cycles through the pad as that board fills up, so
         // neighbours tend to differ; the author can repaint it anyway.
@@ -416,10 +418,12 @@ export default function BoardNotes({
           note={openNote}
           draftColor={pending.kind === "new" ? pending.color : undefined}
           canEdit={
-            board.canPost && (pending.kind === "new" || canEditNote(editor))
+            pending.kind === "new"
+              ? board.canPost
+              : (board.canPost || board.isTeam) && canEditNote(editor)
           }
-          // Delete is not gated on canPost: a team member clearing the board
-          // holds no ticket, and the action allows them without one.
+          // Edit and delete aren't gated on canPost: a team member tidying the
+          // board holds no ticket, and the actions allow them without one.
           canDelete={!!openNote && canDeleteNote(editor)}
           canReact={board.canPost}
           reactHint={reactHint}
