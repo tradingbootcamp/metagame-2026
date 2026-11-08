@@ -169,108 +169,116 @@ export default function PublicSchedule({
     },
   );
 
+  // From the lg breakpoint the legend moves beside the grid and sticks, so it
+  // stays in view down a long day; narrower screens keep it above, where it
+  // scrolls away but costs no width.
   const schedule = (
-    <div className="flex flex-col gap-5">
-      {/* On a phone the view toggle shares this row as icons, and the My
+    <div className="lg:flex lg:items-start lg:gap-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-5">
+        {/* On a phone the view toggle shares this row as icons, and the My
           sessions button keeps only its star; both get their words back from
           the sm breakpoint. */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        <ScheduleSearch
-          sessions={days.flatMap((d) => d.sessions)}
-          roomName={(s) => roomName(s.locationId)}
-          onPick={(s) => {
-            // Its day underneath, so closing lands on the right tab.
-            const key = sessionDayKey(days, s.slug);
-            if (key) setDayKey(key);
-            open(s);
-          }}
-          className="min-w-0"
-        />
-        {mine && (
-          <button
-            type="button"
-            aria-pressed={onlyMine}
-            onClick={() => {
-              setOnlyMine(!onlyMine);
-              toast(
-                onlyMine
-                  ? "Showing all sessions."
-                  : "Now showing only your sessions.",
-                { id: "schedule-filter" },
-              );
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ScheduleSearch
+            sessions={days.flatMap((d) => d.sessions)}
+            roomName={(s) => roomName(s.locationId)}
+            onPick={(s) => {
+              // Its day underneath, so closing lands on the right tab.
+              const key = sessionDayKey(days, s.slug);
+              if (key) setDayKey(key);
+              open(s);
             }}
-            title="Only my sessions"
-            className={`${TOGGLE} ml-auto shrink-0 items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(onlyMine, 0)}`}
-          >
-            <FaStar size={12} />
-            <span className="sr-only sm:not-sr-only">My sessions</span>
-          </button>
-        )}
-        <ViewToggle
-          view={view}
-          onSelect={selectView}
-          views={["grid", "list", "moments"]}
-          iconsOnly
-          className={`${mine ? "" : "ml-auto"} shrink-0 sm:hidden`}
-        />
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
-        <div className="hidden sm:block">
+            className="min-w-0"
+          />
+          {mine && (
+            <button
+              type="button"
+              aria-pressed={onlyMine}
+              onClick={() => {
+                setOnlyMine(!onlyMine);
+                toast(
+                  onlyMine
+                    ? "Showing all sessions."
+                    : "Now showing only your sessions.",
+                  { id: "schedule-filter" },
+                );
+              }}
+              title="Only my sessions"
+              className={`${TOGGLE} ml-auto shrink-0 items-center gap-2 px-3 py-2.5 text-xs tracking-[0.12em] uppercase transition-colors ${toggleButton(onlyMine, 0)}`}
+            >
+              <FaStar size={12} />
+              <span className="sr-only sm:not-sr-only">My sessions</span>
+            </button>
+          )}
           <ViewToggle
             view={view}
             onSelect={selectView}
             views={["grid", "list", "moments"]}
+            iconsOnly
+            className={`${mine ? "" : "ml-auto"} shrink-0 sm:hidden`}
           />
         </div>
-      </div>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <DayTabs days={days} selected={day.key} onSelect={setDayKey} />
+          <div className="hidden sm:block">
+            <ViewToggle
+              view={view}
+              onSelect={selectView}
+              views={["grid", "list", "moments"]}
+            />
+          </div>
+        </div>
 
-      <ScheduleLegend />
+        <ScheduleLegend className="justify-center lg:hidden" />
 
-      {view === "moments" ? (
-        <>
-          <ScheduleMoments
-            days={shownDays}
+        {view === "moments" ? (
+          <>
+            <ScheduleMoments
+              days={shownDays}
+              columns={columns}
+              onOpen={open}
+              dayKey={day.key}
+              onDayChange={setDayKey}
+            />
+            {noteLists}
+          </>
+        ) : onlyMine && day.sessions.length === 0 ? (
+          <EmptyPanel>
+            {mine?.length
+              ? `None of your sessions are on ${day.name}.`
+              : "Sessions you RSVP to, bookmark or host will show up here."}
+          </EmptyPanel>
+        ) : view === "grid" && columns.length > 0 ? (
+          <GridDay
+            day={day}
             columns={columns}
-            onOpen={open}
-            dayKey={day.key}
-            onDayChange={setDayKey}
+            href={(s) => href(s.slug)}
+            board={
+              board
+                ? ({ column, dayKey }) => (
+                    <UnconferenceBoard
+                      locationId={column.id}
+                      dayKey={dayKey}
+                      firstSlot={day.slots[0]}
+                      // Every session that day, not just "My sessions".
+                      sessions={
+                        days.find((d) => d.key === dayKey)?.sessions ?? []
+                      }
+                    />
+                  )
+                : undefined
+            }
           />
-          {noteLists}
-        </>
-      ) : onlyMine && day.sessions.length === 0 ? (
-        <EmptyPanel>
-          {mine?.length
-            ? `None of your sessions are on ${day.name}.`
-            : "Sessions you RSVP to, bookmark or host will show up here."}
-        </EmptyPanel>
-      ) : view === "grid" && columns.length > 0 ? (
-        <GridDay
-          day={day}
-          columns={columns}
-          href={(s) => href(s.slug)}
-          board={
-            board
-              ? ({ column, dayKey }) => (
-                  <UnconferenceBoard
-                    locationId={column.id}
-                    dayKey={dayKey}
-                    firstSlot={day.slots[0]}
-                    // Every session that day, not just "My sessions".
-                    sessions={
-                      days.find((d) => d.key === dayKey)?.sessions ?? []
-                    }
-                  />
-                )
-              : undefined
-          }
-        />
-      ) : (
-        <>
-          <ListDay day={day} roomName={roomName} href={(s) => href(s.slug)} />
-          {noteLists}
-        </>
-      )}
+        ) : (
+          <>
+            <ListDay day={day} roomName={roomName} href={(s) => href(s.slug)} />
+            {noteLists}
+          </>
+        )}
+      </div>
+      <aside className="hidden lg:sticky lg:top-6 lg:block lg:w-36 lg:shrink-0 lg:pt-1">
+        <ScheduleLegend vertical className="items-start" />
+      </aside>
     </div>
   );
 
