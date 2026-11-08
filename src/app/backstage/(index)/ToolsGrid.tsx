@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { fieldClass } from "../ui";
 
 export type ToolCard = {
@@ -14,6 +14,12 @@ export type ToolCard = {
 
 export default function ToolsGrid({ tools }: { tools: ToolCard[] }) {
   const [query, setQuery] = useState("");
+  const input = useRef<HTMLInputElement>(null);
+  // Not on touch devices: the keyboard would cover the grid at the desk.
+  useEffect(() => {
+    if (window.matchMedia("(hover: hover) and (pointer: fine)").matches)
+      input.current?.focus();
+  }, []);
   const q = query.trim().toLowerCase();
   const shown = q
     ? tools.filter((t) =>
@@ -31,7 +37,7 @@ export default function ToolsGrid({ tools }: { tools: ToolCard[] }) {
         onChange={(e) => setQuery(e.currentTarget.value)}
         placeholder="Search tools…"
         aria-label="Search tools"
-        autoFocus
+        ref={input}
         className={`${fieldClass} mb-4 sm:max-w-sm`}
       />
       {shown.length === 0 ? (
