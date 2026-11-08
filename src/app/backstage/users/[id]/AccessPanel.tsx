@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Check, Minus, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { assignRole, setGrant, type Result } from "./actions";
 import { LevelBadge } from "../../PermissionLevel";
@@ -34,6 +35,36 @@ const CHOICES: { effect: OverrideEffect | null; label: string }[] = [
   { effect: "allow", label: "Allow" },
   { effect: "deny", label: "Deny" },
 ];
+
+type Standing = "held" | "denied" | "missing";
+
+/** Three-state glance at a row: held, actively denied, or simply not granted. */
+function standing({ effective, sources }: Explanation): Standing {
+  if (effective) return "held";
+  const kind = sources[0]?.kind;
+  return kind === "denied" || kind === "denied_via" ? "denied" : "missing";
+}
+
+const STANDING: Record<
+  Standing,
+  { Icon: typeof Check; className: string; label: string }
+> = {
+  held: { Icon: Check, className: "bg-navy text-white", label: "Yes" },
+  denied: { Icon: X, className: "bg-meeple text-white", label: "Denied" },
+  missing: { Icon: Minus, className: "bg-ink/10 text-ink/40", label: "No" },
+};
+
+function StandingMark({ standing: s }: { standing: Standing }) {
+  const { Icon, className, label } = STANDING[s];
+  return (
+    <span
+      className={`inline-flex size-4 items-center justify-center rounded-full ${className}`}
+    >
+      <Icon className="size-3" strokeWidth={3} aria-hidden />
+      <span className="sr-only">{label}</span>
+    </span>
+  );
+}
 
 export default function AccessPanel({ access }: { access: AccessView }) {
   const [error, setError] = useState<string | null>(null);
@@ -110,8 +141,10 @@ export default function AccessPanel({ access }: { access: AccessView }) {
         <table className="w-full text-left">
           <thead className="text-xs tracking-wide text-ink/50 uppercase">
             <tr>
+              <th className="w-0 py-2 pr-0 pl-3">
+                <span className="sr-only">Effective</span>
+              </th>
               <th className="px-3 py-2 font-medium">Permission</th>
-              <th className="px-3 py-2 font-medium">Effective</th>
               <th className="px-3 py-2 font-medium">From</th>
               <th className="px-3 py-2 font-medium">Override</th>
             </tr>
@@ -124,10 +157,16 @@ export default function AccessPanel({ access }: { access: AccessView }) {
                   className="px-3 py-1.5 text-xs font-semibold tracking-wide text-navy uppercase"
                 >
                   {group}
+                  <span className="ml-2 font-normal text-ink/50 normal-case">
+                    {keys.filter((k) => access.explanation[k].effective).length}{" "}
+                    of {keys.length}
+                  </span>
                 </td>
               </tr>,
               ...keys.map((key) => {
-                const { effective, sources } = access.explanation[key];
+                const explanation = access.explanation[key];
+                const { effective, sources } = explanation;
+                const dim = effective ? "" : "text-ink/50";
                 const current: OverrideEffect | null = access.grants.includes(
                   key,
                 )
@@ -136,8 +175,11 @@ export default function AccessPanel({ access }: { access: AccessView }) {
                     ? "deny"
                     : null;
                 return (
-                  <tr key={key} className={effective ? "" : "text-ink/50"}>
-                    <td className="px-3 py-2">
+                  <tr key={key}>
+                    <td className="py-2 pr-0 pl-3 align-middle">
+                      <StandingMark standing={standing(explanation)} />
+                    </td>
+                    <td className={`px-3 py-2 ${dim}`}>
                       <span className="font-semibold">
                         {PERMISSIONS[key].label}
                       </span>
@@ -149,8 +191,7 @@ export default function AccessPanel({ access }: { access: AccessView }) {
                         {key}
                       </span>
                     </td>
-                    <td className="px-3 py-2">{effective ? "Yes" : "No"}</td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className={`px-3 py-2 text-xs ${dim}`}>
                       {sources.length === 0
                         ? "—"
                         : sources.map(describeSource).join(", ")}
