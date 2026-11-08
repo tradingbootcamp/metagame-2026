@@ -21,13 +21,16 @@ export default function StickyHeadScroll({
 
   // Native and non-passive so a sideways swipe over the head can be consumed;
   // otherwise nothing scrolls and macOS reads it as a back/forward gesture.
+  // When the body can't scroll sideways, leave the gesture to the browser.
   useEffect(() => {
     const head = headRef.current;
     if (!head) return;
     const onWheel = (e: WheelEvent) => {
+      const body = bodyRef.current;
       if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      if (!body || body.scrollWidth <= body.clientWidth) return;
       e.preventDefault();
-      if (bodyRef.current) bodyRef.current.scrollLeft += e.deltaX;
+      body.scrollLeft += e.deltaX;
     };
     head.addEventListener("wheel", onWheel, { passive: false });
     return () => head.removeEventListener("wheel", onWheel);
