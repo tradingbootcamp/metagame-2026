@@ -103,7 +103,7 @@ const TOOLS: {
     icon: CalendarIcon,
     name: "Schedule",
     blurb: "Rooms and sessions for the 2026 program, on a day-by-room grid.",
-    perm: "schedule.manage",
+    perm: "schedule.view",
   },
   {
     href: "/backstage/speaker-committee",

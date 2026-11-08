@@ -128,7 +128,7 @@ export const PERMISSIONS = {
     level: "view",
     label: "View schedule data",
     description:
-      "Every session, draft or not, with its needs, over the API. Not RSVP lists.",
+      "Every session, draft or not, with its needs, on the backstage grid and over the API. Not RSVP lists.",
     implies: ["schedule.preview", "schedule.volunteer_rooms"],
   },
   "schedule.manage": {
@@ -136,7 +136,8 @@ export const PERMISSIONS = {
     group: "Schedule",
     level: "edit",
     label: "Edit schedule",
-    description: "On the admin grid and over the API.",
+    description:
+      "Change sessions and rooms on the backstage grid and over the API.",
     implies: ["schedule.view", "schedule.session_notes"],
   },
   // Kept off schedule.manage: column order is one shared view, so only
