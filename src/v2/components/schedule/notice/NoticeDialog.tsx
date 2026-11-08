@@ -60,6 +60,7 @@ export default function NoticeDialog({
   draftColor,
   canEdit,
   canDelete,
+  onMove,
   canReact,
   reactHint,
   onClose,
@@ -73,6 +74,8 @@ export default function NoticeDialog({
   draftColor?: NoteColor;
   canEdit: boolean;
   canDelete: boolean;
+  /** Offered where a drag can't happen (touch): closes, then a tap places it. */
+  onMove?: () => void;
   canReact: boolean;
   /** What to offer instead of reacting, for a viewer who can't. */
   reactHint?: React.ReactNode;
@@ -438,9 +441,18 @@ export default function NoticeDialog({
                 loadReactors={reactors}
               />
             )}
-            {canDelete && liveId && (
+            {(canDelete || onMove) && liveId && (
               <div className="flex items-center gap-2 pt-1 text-xs">
-                {confirmDelete ? (
+                {onMove && !confirmDelete && (
+                  <button
+                    type="button"
+                    onClick={onMove}
+                    className="text-[#1b1530]/55 underline underline-offset-2 hover:text-[#1b1530]"
+                  >
+                    Move
+                  </button>
+                )}
+                {!canDelete ? null : confirmDelete ? (
                   <>
                     <span>Take this notice down for good?</span>
                     <button

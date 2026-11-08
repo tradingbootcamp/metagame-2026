@@ -253,7 +253,9 @@ export default function UnconferenceBoard({
   const dwell = useRef<ReturnType<typeof setTimeout> | null>(null);
   // `sliding`, not the drag ref: a ref read during render is off-limits, and
   // a note under capture keeps these handlers from firing anyway.
-  const pinnable = board.canPost && !sliding;
+  // A note being re-placed by tap waits for a tap on its own board.
+  const placing = notes.some((n) => n.id === board.moving);
+  const pinnable = (board.canPost || placing) && !sliding;
 
   const stopDwell = () => {
     if (dwell.current) clearTimeout(dwell.current);
@@ -287,14 +289,16 @@ export default function UnconferenceBoard({
     const spanY = rect.height - NOTE_H;
     // The point lands where the pin was, so the tile hangs below and right of
     // it the way a real one would.
-    board.compose(
-      locationId,
-      dayKey,
-      clampNotePosition(
-        spanX > 0 ? (e.clientX - rect.left) / spanX : 0,
-        spanY > 0 ? (e.clientY - rect.top) / spanY : 0,
-      ),
+    const spot = clampNotePosition(
+      spanX > 0 ? (e.clientX - rect.left) / spanX : 0,
+      spanY > 0 ? (e.clientY - rect.top) / spanY : 0,
     );
+    if (placing && board.moving) {
+      board.commit(board.moving, spot.x, spot.y);
+      board.cancelMove();
+    } else {
+      board.compose(locationId, dayKey, spot);
+    }
     dropPin();
   }
 
@@ -332,7 +336,7 @@ export default function UnconferenceBoard({
             {notes.length === 0 && (
               <p className="pointer-events-none mx-auto mt-4 w-fit rounded-[3px] border-[1.5px] border-[#1b1530]/40 bg-cream/90 px-2 py-1 text-center text-[11px] text-[#1b1530]/70 shadow-[2px_2px_0_rgba(27,21,48,0.25)]">
                 Nothing pinned up yet.
-                {board.canPost && " Click the cork to add one."}
+                {board.canPost && !placing && " Click the cork to add one."}
               </p>
             )}
             {/* Only after the pin has rested: following the cursor from the first
@@ -343,7 +347,7 @@ export default function UnconferenceBoard({
                 style={{ left: pin.x + 14, top: pin.y + 6 }}
                 className="pointer-events-none absolute rounded-[2px] bg-[#1b1530] px-1.5 py-0.5 text-[10px] whitespace-nowrap text-cream shadow-sm"
               >
-                Add a note
+                {placing ? "Move it here" : "Add a note"}
               </span>
             )}
             {/* Back to front: the newest note is last, so it paints on top. No

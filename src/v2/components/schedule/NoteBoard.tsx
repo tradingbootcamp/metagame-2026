@@ -65,6 +65,9 @@ export type NoteBoard = {
   ) => Promise<NoteState>;
   /** Whether this viewer may drag a note around, by the server's own rule. */
   canMove: (note: BoardNote) => boolean;
+  /** The note being re-placed by tap, for pointers that can't drag. */
+  moving: string | null;
+  cancelMove: () => void;
   open: (noteId: string) => void;
   compose: (locationId: string, day: string, spot: Spot) => void;
   /** Where a drag let go of a note: shown at once, then saved. */
@@ -159,6 +162,7 @@ export default function BoardNotes({
     props: board.notes,
   });
   const [pending, setPending] = useState<Pending>(null);
+  const [moving, setMoving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Drops land in order but an earlier answer can resolve after a later one,
   // so each note's sequence decides which answer may still be applied.
@@ -379,6 +383,8 @@ export default function BoardNotes({
         // The team holds no ticket and the action lets them through without.
         canMove: (note) =>
           (board.canPost || board.isTeam) && canMoveNote(editorOf(note)),
+        moving,
+        cancelMove: () => setMoving(null),
         open: (noteId) => setPending({ kind: "open", noteId }),
         // The paper cycles through the pad as that board fills up, so
         // neighbours tend to differ; the author can repaint it anyway.
@@ -397,6 +403,21 @@ export default function BoardNotes({
       {/* Not beside the notes: a board column is a whole day tall, so a drag
           that failed near the bottom of it would report that hundreds of
           pixels above the viewport. */}
+      {moving && !error && (
+        <div
+          role="status"
+          className="fixed bottom-4 left-1/2 z-[60] flex max-w-[90vw] -translate-x-1/2 items-center gap-3 rounded-lg border border-cream/20 bg-navy px-4 py-2 text-sm text-cream shadow-lg"
+        >
+          <span>Tap the cork board where the note should go.</span>
+          <button
+            type="button"
+            onClick={() => setMoving(null)}
+            className="shrink-0 text-cream/55 underline underline-offset-4 hover:text-cream"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
       {error && (
         <div
           role="status"
@@ -425,6 +446,14 @@ export default function BoardNotes({
           // Edit and delete aren't gated on canPost: a team member tidying the
           // board holds no ticket, and the actions allow them without one.
           canDelete={!!openNote && canDeleteNote(editor)}
+          onMove={
+            openNote && canMoveNote(editor) && (board.canPost || board.isTeam)
+              ? () => {
+                  setPending(null);
+                  setMoving(openNote.id);
+                }
+              : undefined
+          }
           canReact={board.canPost}
           reactHint={reactHint}
           onClose={() => setPending(null)}
