@@ -223,8 +223,7 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
             {permissionGroups().flatMap(({ group, keys }) => [
               <tr key={group}>
                 <td
-                  colSpan={roles.length + 1}
-                  className="sticky left-0 z-10 bg-peach/40 px-4 py-1.5 text-xs font-bold tracking-wide text-navy uppercase"
+                  className={`${STICKY} ${RULE} bg-linear-to-b from-peach/40 to-peach/40 px-4 py-1.5 text-xs font-bold tracking-wide text-navy uppercase`}
                 >
                   {group}
                   {GROUP_NOTES[group] && (
@@ -233,6 +232,9 @@ export default function RolesTool({ roles }: { roles: Role[] }) {
                     </span>
                   )}
                 </td>
+                {roles.length > 0 && (
+                  <td colSpan={roles.length} className="bg-peach/40" />
+                )}
               </tr>,
               ...keys.map((key) => {
                 const { label, description, level } = PERMISSIONS[key];
