@@ -36,7 +36,7 @@ export default function SiteHero() {
         </Button>
         <div className="mt-4 w-full border-t border-navy/15 pt-3 md:mt-5 md:pt-4">
           <p className="mb-2 font-grotesk text-sm text-navy md:text-base">
-            Not ready yet? Get updates by email.
+            Stay updated
           </p>
           <SignupForm light compact />
         </div>
