@@ -42,6 +42,8 @@ const PHASE_MS = 2700; // hold each phase ~3.2s — deliberate but not sluggish
 // its oriented rest tableau (and the align into it), so a full hold reads as a
 // pause. Only the first meta→game is shortened; every later phase uses PHASE_MS.
 const FIRST_META_MS = 1200;
+// YEAR holds an extra second so the 6 → 7 flicker (Die.tsx) has room to land.
+const YEAR_MS = PHASE_MS + 1000;
 
 // flip to true to bring back the soft ground shadow under the dice (off for now)
 const SHOW_CONTACT_SHADOW: boolean = false;
@@ -389,7 +391,7 @@ export default function Dice3D() {
         if (document.hidden || !budget.visible) return advance(500);
         step = (step + 1) % SEQ.length;
         setPhase(SEQ[step]);
-        advance(PHASE_MS);
+        advance(SEQ[step] === "year" ? YEAR_MS : PHASE_MS);
       }, delay);
     };
     advance(FIRST_META_MS);
