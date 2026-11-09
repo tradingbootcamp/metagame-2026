@@ -364,8 +364,10 @@ export function DieBody({
           <meshStandardMaterial
             map={textures[i]}
             // pip faces (top/bottom) get a glossier finish so the white pips catch
-            // specular highlights and read brighter; letter faces stay a touch matte
-            roughness={i >= 4 ? 0.35 : 0.7}
+            // specular highlights and read brighter; letter faces stay a touch matte.
+            // Not glossier than this: the rightmost die's top sweeps across the key
+            // light on its way back to META and a tighter highlight flashes.
+            roughness={i >= 4 ? 0.55 : 0.7}
             metalness={0}
             // letter tiles carry a keyed alpha: the black regions drop out so the
             // die body shows through instead of a flatter, deader pure black
