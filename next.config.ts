@@ -152,6 +152,12 @@ const nextConfig: NextConfig = {
       destination: boothLinks[stripeMode],
       permanent: false,
     },
+    // Metagame 2027 ultra early bird tickets (Stripe payment link).
+    {
+      source: "/2027",
+      destination: "https://buy.stripe.com/fZubJ0gUTgnJfRh9Vgfw40i",
+      permanent: false,
+    },
   ],
   // Let LAN devices (phones) load /_next dev assets; without this the Network URL serves HTML but never hydrates.
   allowedDevOrigins: ["10.*.*.*", "192.168.*.*", "157.230.177.203"],
