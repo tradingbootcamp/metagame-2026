@@ -5,7 +5,7 @@ import {
 } from "next/constants";
 import { buildErd } from "./scripts/build-erd.mjs";
 import { validateEnv } from "./src/env";
-import { boothLinks, stripeMode } from "./src/lib/tickets";
+import { EGG_TIER_2027, boothLinks, stripeMode } from "./src/lib/tickets";
 import {
   CON_PARTIFUL_PATH,
   CON_PARTIFUL_URL,
@@ -168,7 +168,7 @@ const nextConfig: NextConfig = {
     // Metagame 2027 ultra early bird tickets (Stripe payment link).
     {
       source: "/2027",
-      destination: "https://buy.stripe.com/fZubJ0gUTgnJfRh9Vgfw40i",
+      destination: EGG_TIER_2027.links[stripeMode],
       permanent: false,
     },
   ],

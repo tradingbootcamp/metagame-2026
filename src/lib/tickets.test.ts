@@ -88,7 +88,10 @@ describe("tierLabelForStripeCheckout", () => {
 describe("isEggTier2027", () => {
   it("matches the 2027 Payment Link or a 2027 product", () => {
     expect(
-      isEggTier2027({ paymentLinkUrl: EGG_TIER_2027.link, productName: "Egg" }),
+      isEggTier2027({
+        paymentLinkUrl: EGG_TIER_2027.links.live,
+        productName: "Egg",
+      }),
     ).toBe(true);
     expect(
       isEggTier2027({
@@ -99,7 +102,7 @@ describe("isEggTier2027", () => {
     expect(
       tierLabelForStripeCheckout({
         metadata: null,
-        paymentLinkUrl: EGG_TIER_2027.link,
+        paymentLinkUrl: EGG_TIER_2027.links.live,
         productName: "Metagame 2027",
       }),
     ).toBe("2027 Egg Tier");
