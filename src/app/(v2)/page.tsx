@@ -709,7 +709,7 @@ export default async function Home() {
       <section id="tickets" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
           <SectionHeading eyebrow="Ready to play?" title="Tickets" />
-          <EarlierBirdNote className="mt-3.5 mb-7 max-w-[600px] text-base" />
+          <EarlierBirdNote className="mt-3.5 mb-7 max-w-[600px] text-[length:min(1rem,5vw_-_3.5px)]" />
           <div className="flex max-w-[700px] flex-col items-start gap-6">
             <EggTierTicket />
           </div>

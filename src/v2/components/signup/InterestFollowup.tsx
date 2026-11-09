@@ -114,8 +114,8 @@ export default function InterestFollowup({
           type="text"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Anything else we should know?"
-          aria-label="Anything else we should know?"
+          placeholder="Anything else?"
+          aria-label="Anything else you want us to know"
           className={field}
         />
 

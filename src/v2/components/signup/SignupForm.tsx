@@ -73,7 +73,7 @@ export default function SignupForm({
           className={cn(
             "text-center",
             // Compact: scales down so the line fits a phone-width hero card.
-            compact ? "text-[length:min(0.875rem,3.3vw)]" : "text-base",
+            compact ? "text-[length:min(0.875rem,3.9vw_-_2.5px)]" : "text-base",
             light ? "text-ink/80" : "text-cream/90",
           )}
         >

@@ -25,7 +25,8 @@ export default function SiteHero() {
         <p className="mt-3 font-grotesk text-[clamp(28px,5vw,44px)] leading-[1.05] font-bold tracking-[-0.01em] text-navy">
           Metagame 2027 is coming!
         </p>
-        <EarlierBirdNote className="mt-4 text-sm md:mt-5 md:text-base" />
+        {/* Shrinks below ~390px so each line of the note fits the card. */}
+        <EarlierBirdNote className="mt-4 text-[length:min(0.875rem,4.25vw_-_2.5px)] md:mt-5 md:text-base" />
         <Button
           asChild
           variant="raised"
