@@ -21,7 +21,7 @@ export default function SiteHero() {
           Metagame 2026 is over!
         </p>
         <p className="mt-3 font-grotesk text-[clamp(28px,5vw,44px)] leading-[1.05] font-bold tracking-[-0.01em] text-navy">
-          Metagame 2027 is coming
+          Metagame 2027 Egg Tier Tickets Available
         </p>
         <p className="mt-4 font-space-mono text-sm tracking-[0.04em] text-navy uppercase md:mt-5 md:text-base">
           {EARLIER_BIRD_NOTE}
