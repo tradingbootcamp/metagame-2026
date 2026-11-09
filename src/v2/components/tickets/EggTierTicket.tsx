@@ -3,8 +3,16 @@ import { HEADING } from "../styles";
 
 export const EGG_TIER_HREF = "https://buy.stripe.com/fZubJ0gUTgnJfRh9Vgfw40i";
 
-export const EARLIER_BIRD_NOTE =
-  "Limited time: earlier-than-early-bird tickets available until 11/15";
+// Mixed-case so the bold phrase reads; "until 11/15" is the brand red.
+export function EarlierBirdNote({ className = "" }: { className?: string }) {
+  return (
+    <p className={`font-space-mono tracking-[0.02em] text-navy ${className}`}>
+      Limited time: earlier-than-early-bird{" "}
+      <strong className="font-bold">Egg Tier tickets available</strong>{" "}
+      <span className="font-bold text-meeple">until 11/15</span>
+    </p>
+  );
+}
 
 // Single ticket tile for Metagame 2027: mono uppercase label over a big
 // grotesk price, on the raised Button variant, linking straight to the

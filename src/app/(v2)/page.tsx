@@ -32,7 +32,7 @@ import {
   SECTION_ANCHOR,
 } from "@/v2/components/styles";
 import EggTierTicket, {
-  EARLIER_BIRD_NOTE,
+  EarlierBirdNote,
 } from "@/v2/components/tickets/EggTierTicket";
 import { Button } from "@/v2/components/ui/button";
 import { PartifulLogo } from "@/v2/components/tickets/PartifulInvite";
@@ -709,7 +709,7 @@ export default async function Home() {
       <section id="tickets" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
           <SectionHeading eyebrow="Ready to play?" title="Tickets" />
-          <p className={`${PROSE} mb-7 max-w-[600px]`}>{EARLIER_BIRD_NOTE}</p>
+          <EarlierBirdNote className="mt-3.5 mb-7 max-w-[600px] text-base" />
           <div className="flex max-w-[700px] flex-col items-start gap-6">
             <EggTierTicket />
           </div>
