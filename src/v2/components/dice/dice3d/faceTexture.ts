@@ -89,13 +89,15 @@ export function letterTexture(
   return tex;
 }
 
-// A pip face for the given die value. Flat ink fill (no baked gradient, body color)
-// so the panel reads as the same material as the cube — only the white pips stand out.
-export function pipTexture(
+// Paints a pip face for the given die value onto `canvas`. Flat ink fill (no
+// baked gradient, body color) so the panel reads as the same material as the
+// cube — only the white pips stand out.
+export function drawPips(
+  canvas: HTMLCanvasElement,
   value: number,
   fill: string = COLORS.ink,
-): THREE.CanvasTexture {
-  const [canvas, ctx] = makeCanvas();
+) {
+  const ctx = canvas.getContext("2d")!;
   ctx.fillStyle = fill;
   ctx.fillRect(0, 0, TEX, TEX);
 
@@ -115,6 +117,14 @@ export function pipTexture(
     ctx.fillStyle = COLORS.white;
     ctx.fill();
   }
+}
 
+// A pip face for the given die value.
+export function pipTexture(
+  value: number,
+  fill: string = COLORS.ink,
+): THREE.CanvasTexture {
+  const [canvas] = makeCanvas();
+  drawPips(canvas, value, fill);
   return toTexture(canvas);
 }

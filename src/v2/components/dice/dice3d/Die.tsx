@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
-import { COLORS, letterTexture, pipTexture } from "./faceTexture";
+import { COLORS, drawPips, letterTexture, pipTexture } from "./faceTexture";
 import type { IntroDriver } from "./introDriver";
 import type { RenderBudget } from "./renderBudget";
 
@@ -69,7 +69,8 @@ const STAGGER = 0.04; // tiny per-die delay — the row turns near-unison, not a
 // Once 2026 has settled facing the camera, the 6 flickers into a 7 (a centre
 // pip lights up) like a tired neon tube: a beat of stillness, then a few quick
 // on/off stutters that end lit. Offsets in ms from the die settling; the value
-// each step shows. Reverts when the die turns away.
+// each step shows. Stays a 7 through the turn away and reverts once the next
+// pose has landed (top hidden), so the swap is never on screen.
 const FLICKER_BEAT_MS = 700;
 const FLICKER_STEPS: { at: number; top: number }[] = [
   { at: 0, top: 7 },
@@ -174,32 +175,43 @@ export default function Die({
     return [blue, blueBack, orange, orangeLeft, top, bottom];
   }, [data, budget]);
 
-  // The 6 → 7 flicker: only the die whose top is a 6, only once YEAR has
-  // settled. Each step wakes the budget for a frame since nothing else moves.
-  const sevenTexture = useMemo(
-    () => (data.top === 6 ? pipTexture(7) : null),
-    [data.top],
-  );
-  useEffect(() => () => sevenTexture?.dispose(), [sevenTexture]);
-  const [flickerTop, setFlickerTop] = useState<number | null>(null);
+  // The 6 → 7 flicker repaints the top face's canvas in place (same texture
+  // object, so no material swap) and wakes the budget for a frame each step.
+  const lit = useRef(false);
+  // Refs so the frame loop and timers can touch the live texture + phase
+  // without the compiler lint reading it as a render-time mutation.
+  const topTex = useRef<THREE.CanvasTexture | null>(null);
+  const phaseRef = useRef(phase);
   useEffect(() => {
-    if (phase !== "year" || !sevenTexture) return;
+    topTex.current = textures[4] as THREE.CanvasTexture;
+  }, [textures]);
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+  const paintTop = useCallback(
+    (value: number) => {
+      const top = topTex.current;
+      if (!top) return;
+      drawPips(top.image as HTMLCanvasElement, value);
+      top.needsUpdate = true;
+      lit.current = value === 7;
+      budget?.wake(0);
+    },
+    [budget],
+  );
+  useEffect(() => {
+    if (phase !== "year" || data.top !== 6) return;
     const settleMs = (TURN_S + index * STAGGER) * 1000;
     const ids = FLICKER_STEPS.map(({ at, top }) =>
-      setTimeout(
-        () => {
-          setFlickerTop(top);
-          budget?.wake(0);
-        },
-        settleMs + FLICKER_BEAT_MS + at,
-      ),
+      setTimeout(() => paintTop(top), settleMs + FLICKER_BEAT_MS + at),
     );
-    return () => {
-      ids.forEach(clearTimeout);
-      setFlickerTop(null);
-      budget?.wake(0);
-    };
-  }, [phase, index, sevenTexture, budget]);
+    return () => ids.forEach(clearTimeout);
+  }, [phase, index, data.top, paintTop]);
+  // The revert waits for the turn away to land (useFrame), so the phase-change
+  // cleanup here must not touch the face.
+  const unlitIfTurnedAway = useCallback(() => {
+    if (lit.current && phaseRef.current !== "year") paintTop(6);
+  }, [paintTop]);
 
   useEffect(() => () => textures.forEach((t) => t.dispose()), [textures]);
 
@@ -224,12 +236,8 @@ export default function Die({
     [staticTextures],
   );
 
-  const baseTextures =
-    phase === "static" && staticTextures ? staticTextures : textures;
   const faceTextures =
-    flickerTop === 7 && sevenTexture
-      ? [...baseTextures.slice(0, 4), sevenTexture, baseTextures[5]]
-      : baseTextures;
+    phase === "static" && staticTextures ? staticTextures : textures;
 
   // Start pose (imperative so re-renders don't snap it back): mid-air off-screen
   // when rolling in, otherwise the resting pose for the starting phase — so a
@@ -294,7 +302,10 @@ export default function Die({
       return;
     }
 
-    if (prog.current >= 1) return settle();
+    if (prog.current >= 1) {
+      unlitIfTurnedAway();
+      return settle();
+    }
     if (wait.current > 0) {
       wait.current -= dt;
       return;
