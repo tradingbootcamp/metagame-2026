@@ -1,7 +1,8 @@
 import { Button } from "@/v2/components/ui/button";
+import { EGG_TIER_2027 } from "@/lib/tickets";
 import { HEADING } from "../styles";
 
-export const EGG_TIER_HREF = "https://buy.stripe.com/fZubJ0gUTgnJfRh9Vgfw40i";
+export const EGG_TIER_HREF = EGG_TIER_2027.link;
 
 // Mixed-case so the bold phrase reads; "until 11/15" is the brand red.
 export function EarlierBirdNote({ className = "" }: { className?: string }) {

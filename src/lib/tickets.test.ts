@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  EGG_TIER_2027,
   dayPasses,
+  isEggTier2027,
   supporterTier,
   ticketTiers,
   tierLabelForStripeCheckout,
@@ -80,5 +82,35 @@ describe("tierLabelForStripeCheckout", () => {
         productName: undefined,
       }),
     ).toBeUndefined();
+  });
+});
+
+describe("isEggTier2027", () => {
+  it("matches the 2027 Payment Link or a 2027 product", () => {
+    expect(
+      isEggTier2027({ paymentLinkUrl: EGG_TIER_2027.link, productName: "Egg" }),
+    ).toBe(true);
+    expect(
+      isEggTier2027({
+        paymentLinkUrl: undefined,
+        productName: "Metagame 2027 - Egg Tier",
+      }),
+    ).toBe(true);
+    expect(
+      tierLabelForStripeCheckout({
+        metadata: null,
+        paymentLinkUrl: EGG_TIER_2027.link,
+        productName: "Metagame 2027",
+      }),
+    ).toBe("2027 Egg Tier");
+  });
+
+  it("leaves 2026 checkouts alone", () => {
+    expect(
+      isEggTier2027({
+        paymentLinkUrl: ticketTiers[0].links.live,
+        productName: "Metagame 2026",
+      }),
+    ).toBe(false);
   });
 });
