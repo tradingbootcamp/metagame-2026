@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/v2/components/ui/button";
+import { EARLIER_BIRD_NOTE } from "@/v2/components/tickets/EggTierTicket";
 import Dice from "./dice/Dice";
 import HeroBackdrop from "./HeroBackdrop";
 
@@ -23,13 +24,16 @@ export default function SiteHero() {
           <br />
           <span className="whitespace-nowrap">Lighthaven, Berkeley, CA</span>
         </p>
+        <p className="mt-4 font-space-mono text-sm tracking-[0.04em] text-navy uppercase md:mt-5 md:text-base">
+          {EARLIER_BIRD_NOTE}
+        </p>
         <Button
           asChild
           variant="raised"
           size="lg"
-          className="mt-4 h-auto px-6 py-2.5 text-lg md:mt-5 md:px-7 md:py-3 md:text-xl"
+          className="mt-3 h-auto px-6 py-2.5 text-lg md:px-7 md:py-3 md:text-xl"
         >
-          <Link href="/#tickets">Get Tickets</Link>
+          <Link href="/#tickets">Join us in 2027</Link>
         </Button>
         <p className="mt-3 font-grotesk text-base text-navy italic md:mt-4 md:text-xl">
           I never met a game I didn&apos;t like
