@@ -31,7 +31,9 @@ import {
   SECTION,
   SECTION_ANCHOR,
 } from "@/v2/components/styles";
-import TicketsPanel from "@/v2/components/tickets/TicketsPanel";
+import EggTierTicket, {
+  EarlierBirdNote,
+} from "@/v2/components/tickets/EggTierTicket";
 import { Button } from "@/v2/components/ui/button";
 import { PartifulLogo } from "@/v2/components/tickets/PartifulInvite";
 import { CAROUSEL } from "@/v2/data/carousel";
@@ -56,7 +58,6 @@ import {
 import HatImage from "@/v2/hat-trick/HatImage";
 import { HATS } from "@/v2/hat-trick/hats";
 import { SOCIAL_LINKS } from "@/v2/lib/urls";
-import { EARLY_BIRD_DEADLINE, isEarlyBirdActive } from "@/lib/early-bird";
 import { env } from "@/env";
 import { activeFactions, NO_LEVELS } from "@/lib/megagame-levels";
 import { loadMegagameLevelsFor } from "@/lib/megagame-store";
@@ -333,7 +334,6 @@ export default async function Home() {
   const board = schedule && (await homeBoard(schedule.locations));
   // The sessions each speaker hosts, for the backs of their cards.
   const speaking = raw && schedule && hostedSessions(raw, schedule);
-  const earlyBird = isEarlyBirdActive();
   return (
     <>
       {/* Section ids are deep-link anchors (/#faq); the nav links to pages. */}
@@ -709,18 +709,9 @@ export default async function Home() {
       <section id="tickets" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
           <SectionHeading eyebrow="Ready to play?" title="Tickets" />
-          {earlyBird && (
-            <p className={`${PROSE} mb-7 max-w-[600px]`}>
-              Early-bird pricing ends {EARLY_BIRD_DEADLINE}.
-            </p>
-          )}
-          {/* The panel renders bare toggle + tiles; the column/gap is ours. */}
+          <EarlierBirdNote className="mt-3.5 mb-7 max-w-[600px] text-base" />
           <div className="flex max-w-[700px] flex-col items-start gap-6">
-            <TicketsPanel
-              showHeading={false}
-              align="start"
-              earlyBird={earlyBird}
-            />
+            <EggTierTicket />
           </div>
         </div>
       </section>
