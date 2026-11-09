@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
-import { COLORS, letterTexture, pipTexture } from "./faceTexture";
+import { COLORS, letterTexture, pipTexture, repaintPips } from "./faceTexture";
 import type { IntroDriver } from "./introDriver";
 import type { RenderBudget } from "./renderBudget";
 
@@ -65,6 +65,19 @@ export const QUAT: Record<Phase, THREE.Quaternion> = {
 
 const TURN_S = 1.0; // seconds for a die to complete its turn
 const STAGGER = 0.04; // tiny per-die delay — the row turns near-unison, not a wave
+
+// Once 2026 has landed facing the camera, the 6 flickers into a 7 (the centre
+// pip lights) like a tired neon tube: a beat of stillness, then quick on/off
+// stutters that end lit. Offsets in ms from the turn landing. It stays a 7
+// through the turn away and reverts as the next pose lands, top hidden.
+const FLICKER_BEAT_MS = 700;
+const FLICKER_STEPS: { at: number; lit: boolean }[] = [
+  { at: 0, lit: true },
+  { at: 60, lit: false },
+  { at: 130, lit: true },
+  { at: 170, lit: false },
+  { at: 320, lit: true },
+];
 
 const SIZE = 1; // die edge length in world units
 const RADIUS = SIZE * 0.06; // bevel radius of the rounded body
@@ -161,6 +174,34 @@ export default function Die({
     return [blue, blueBack, orange, orangeLeft, top, bottom];
   }, [data, budget]);
 
+  // The flicker: timers armed on the frame the YEAR turn lands (so a turn
+  // paused off-screen can't fire it early); cleared on any phase change.
+  const flickers = data.top === 6;
+  const lit = useRef(false);
+  const flickerTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const paintTop = useCallback(
+    (on: boolean) => {
+      repaintPips(textures[4] as THREE.CanvasTexture, on ? 7 : data.top);
+      lit.current = on;
+      budget?.wake(0);
+    },
+    [textures, data.top, budget],
+  );
+  const clearFlicker = useCallback(() => {
+    flickerTimers.current.forEach(clearTimeout);
+    flickerTimers.current = [];
+  }, []);
+  useEffect(() => clearFlicker, [phase, clearFlicker]);
+  // On landing: in YEAR, arm the flicker; anywhere else, put the 6 back.
+  const landed = useCallback(() => {
+    if (!flickers) return;
+    if (phase === "year") {
+      flickerTimers.current = FLICKER_STEPS.map(({ at, lit }) =>
+        setTimeout(() => paintTop(lit), FLICKER_BEAT_MS + at),
+      );
+    } else if (lit.current) paintTop(false);
+  }, [flickers, phase, paintTop]);
+
   useEffect(() => () => textures.forEach((t) => t.dispose()), [textures]);
 
   // STATIC-only face set: the front/right show the overridden letters (back/left
@@ -202,6 +243,7 @@ export default function Die({
     } else {
       mover.current.position.set(x, 0, 0);
       group.current.quaternion.copy(QUAT[phase]);
+      landed(); // a pinned ?phase=year start still flickers
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -260,7 +302,10 @@ export default function Die({
     const u = prog.current;
     const e = u * u * u * (u * (6 * u - 15) + 10);
     g.quaternion.slerpQuaternions(fromQ.current, target, e);
-    if (prog.current >= 1) settle();
+    if (prog.current >= 1) {
+      landed();
+      settle();
+    }
   });
 
   return (
@@ -319,8 +364,10 @@ export function DieBody({
           <meshStandardMaterial
             map={textures[i]}
             // pip faces (top/bottom) get a glossier finish so the white pips catch
-            // specular highlights and read brighter; letter faces stay a touch matte
-            roughness={i >= 4 ? 0.35 : 0.7}
+            // specular highlights and read brighter; letter faces stay a touch matte.
+            // Not glossier than this: the rightmost die's top sweeps across the key
+            // light on its way back to META and a tighter highlight flashes.
+            roughness={i >= 4 ? 0.55 : 0.7}
             metalness={0}
             // letter tiles carry a keyed alpha: the black regions drop out so the
             // die body shows through instead of a flatter, deader pure black
