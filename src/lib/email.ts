@@ -253,9 +253,7 @@ export function renderEggTier2027Email(
 
         <p>Hi ${purchaserName ? escapeHtml(purchaserName) : "there"},</p>
 
-        <p>Thank you for getting in early.</p>
-
-        <p>We'll let you know when our 2027 plans start to hatch.</p>
+        <p>You've got a ticket to Metagame 2027! Thanks for getting in earlier than the early birds; we'll let you know when next year's plans start to hatch.</p>
 
         <div style="background-color: #f5f5f5; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <p style="margin-top: 0;"><strong>Name:</strong> ${purchaserName ? escapeHtml(purchaserName) : "—"}</p>
@@ -279,9 +277,7 @@ export function renderEggTier2027Email(
   const text = `
 Hi ${purchaserName || "there"},
 
-Thank you for getting in early.
-
-We'll let you know when our 2027 plans start to hatch.
+You've got a ticket to Metagame 2027! Thanks for getting in earlier than the early birds; we'll let you know when next year's plans start to hatch.
 
 - Name: ${purchaserName || "—"}
 - Email: ${to}

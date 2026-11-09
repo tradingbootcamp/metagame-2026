@@ -105,7 +105,7 @@ describe("isEggTier2027", () => {
         paymentLinkUrl: EGG_TIER_2027.links.live,
         productName: "Metagame 2027",
       }),
-    ).toBe("2027 Egg Tier");
+    ).toBe("Metagame 2027 - Egg Tier");
   });
 
   it("leaves 2026 checkouts alone", () => {

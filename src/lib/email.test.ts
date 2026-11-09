@@ -74,7 +74,7 @@ describe("renderTicketConfirmationEmail", () => {
 describe("renderEggTier2027Email", () => {
   const { subject, html, text } = renderEggTier2027Email({
     to: "a@example.com",
-    tierLabel: "2027 Egg Tier",
+    tierLabel: "Metagame 2027 - Egg Tier",
     purchaserName: MARKUP,
     usdPaid: 150,
     receiptUrl: "https://stripe.example/r?a=1&b=2",
@@ -83,11 +83,11 @@ describe("renderEggTier2027Email", () => {
   it("says what was bought and that 2027 is hatching", () => {
     expect(subject).toBe("Metagame 2027");
     for (const body of [html, text]) {
-      expect(body).toContain("2027 plans start to hatch");
+      expect(body).toContain("plans start to hatch");
       expect(body).not.toContain("2026 ticket");
       expect(body).not.toContain("Lighthaven");
       expect(body).not.toContain("Ticket code");
-      expect(body).toContain("2027 Egg Tier");
+      expect(body).toContain("Metagame 2027 - Egg Tier");
       expect(body).toContain("$150.00");
     }
     expect(html).toContain(`Hi ${ESCAPED},`);
