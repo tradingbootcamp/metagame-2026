@@ -228,6 +228,26 @@ export function dayPassForPaymentLinkUrl(
 
 export const DAY_PASS_TIER = "day-pass";
 
+// Metagame 2027 earlier-than-early-bird, sold through a dashboard Payment Link
+// while this site is still the 2026 one. Its buyers get a holding email, not
+// the 2026 confirmation and logistics.
+export const EGG_TIER_2027 = {
+  label: "2027 Egg Tier",
+  link: "https://buy.stripe.com/fZubJ0gUTgnJfRh9Vgfw40i",
+};
+
+export function isEggTier2027({
+  paymentLinkUrl,
+  productName,
+}: {
+  paymentLinkUrl: string | null | undefined;
+  productName: string | undefined;
+}): boolean {
+  return (
+    paymentLinkUrl === EGG_TIER_2027.link || /2027/.test(productName ?? "")
+  );
+}
+
 /**
  * Tier label + admitted day from the metadata /api/checkout/stripe puts on a
  * Checkout Session. Undefined for sessions it didn't create (old Payment Links).
@@ -254,6 +274,7 @@ export function tierLabelForPaymentLinkUrl(
   url: string | null | undefined,
 ): string | undefined {
   if (!url) return undefined;
+  if (url === EGG_TIER_2027.link) return EGG_TIER_2027.label;
   for (const tier of ticketTiers) {
     if (Object.values(tier.links).includes(url)) return tier.label;
   }
