@@ -40,7 +40,7 @@ const SEQ: Phase[] = ["meta", "game", "year"];
 const PHASE_MS = 2700; // hold each phase ~3.2s — deliberate but not sluggish
 // The very first META hold is shorter: the roll-in already shows META through
 // its oriented rest tableau (and the align into it), so a full hold reads as a
-// pause. Only the first meta→game is shortened; every later phase uses PHASE_MS.
+// pause. Only the first meta→game is shortened; later holds use PHASE_MS (YEAR_MS for year).
 const FIRST_META_MS = 1200;
 // YEAR lingers a second longer so the flickered-in 7 (Die.tsx) gets a beat on screen.
 const YEAR_MS = PHASE_MS + 1000;
@@ -381,7 +381,7 @@ export default function Dice3D() {
       new URLSearchParams(window.location.search).has("phase");
     if (phase !== "meta" || pinned || !introOver) return;
     // Recursive timeout (not a fixed interval) so the first hold can differ: the
-    // opening meta→game fires after FIRST_META_MS, every step after at PHASE_MS.
+    // opening meta→game fires after FIRST_META_MS, later steps hold per phase.
     let step = 0;
     let id: ReturnType<typeof setTimeout>;
     const advance = (delay: number) => {
