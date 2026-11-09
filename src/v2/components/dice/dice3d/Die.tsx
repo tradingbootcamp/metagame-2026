@@ -302,10 +302,7 @@ export default function Die({
       return;
     }
 
-    if (prog.current >= 1) {
-      unlitIfTurnedAway();
-      return settle();
-    }
+    if (prog.current >= 1) return settle();
     if (wait.current > 0) {
       wait.current -= dt;
       return;
@@ -315,7 +312,11 @@ export default function Die({
     const u = prog.current;
     const e = u * u * u * (u * (6 * u - 15) + 10);
     g.quaternion.slerpQuaternions(fromQ.current, target, e);
-    if (prog.current >= 1) settle();
+    if (prog.current >= 1) {
+      // The landing frame is the last one drawn, so the revert goes here.
+      unlitIfTurnedAway();
+      settle();
+    }
   });
 
   return (
