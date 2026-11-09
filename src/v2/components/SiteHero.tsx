@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { Button } from "@/v2/components/ui/button";
+import SignupForm from "@/v2/components/signup/SignupForm";
 import { EarlierBirdNote } from "@/v2/components/tickets/EggTierTicket";
 import Dice from "./dice/Dice";
 import HeroBackdrop from "./HeroBackdrop";
 
-// The above-the-fold banner: exactly one viewport tall, so the photo ends
-// where the next section starts. The library photo (washed) sits behind the
-// rolling-dice METAGAME wordmark, then the tagline, date and tickets CTA on
-// a cream card so they read against the photo. Content hangs from the top
+// The above-the-fold banner: one viewport tall (more if the card needs it),
+// and the photo ends where the next section starts. The library photo
+// (washed) sits behind the rolling-dice METAGAME wordmark, then the tagline,
+// date, tickets CTA and mailing-list signup on a cream card so they read
+// against the photo. Content hangs from the top
 // (pt-[12vh]) rather than centring, so HeroBackdrop can place its wash on the
 // dice with a fixed formula. `isolate` keeps the backdrop's -z-10 inside this
 // section's stacking context: behind the dice, above the cream.
@@ -32,6 +34,12 @@ export default function SiteHero() {
         >
           <Link href="/#tickets">Join us in 2027</Link>
         </Button>
+        <div className="mt-4 w-full border-t border-navy/15 pt-3 md:mt-5 md:pt-4">
+          <p className="mb-2 font-grotesk text-sm text-navy md:text-base">
+            Not ready yet? Get updates by email.
+          </p>
+          <SignupForm light compact />
+        </div>
         <p className="mt-3 font-grotesk text-base text-navy italic md:mt-4 md:text-xl">
           I never met a game I didn&apos;t like
         </p>
