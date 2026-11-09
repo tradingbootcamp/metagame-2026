@@ -92,7 +92,12 @@ export default function InterestFollowup({
           {INTEREST_OPTIONS.map((opt) => (
             <label
               key={opt.value}
-              className={`flex cursor-pointer items-center gap-2 text-base ${label}`}
+              className={cn(
+                "flex cursor-pointer items-center gap-2 text-base",
+                label,
+                // Too long for half a narrow card, and it's the odd one out.
+                opt.value === EMAIL_LIST_VALUE && "col-span-2",
+              )}
             >
               <input
                 type="checkbox"
@@ -109,8 +114,8 @@ export default function InterestFollowup({
           type="text"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Anything else you want us to know"
-          aria-label="Anything else you want us to know"
+          placeholder="Anything else we should know?"
+          aria-label="Anything else we should know?"
           className={field}
         />
 
