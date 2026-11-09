@@ -228,15 +228,22 @@ This is not a puzzle.
 
 export function renderEggTier2027Email(
   {
+    to,
     purchaserName,
+    tierLabel,
+    usdPaid,
+    usdFull,
     receiptUrl,
+    discountCode,
     mailingListOptOutUrl,
     test = false,
   }: TicketConfirmationEmail,
   assetBase: string = SITE,
 ) {
+  const discounted = usdFull != null && usdFull > (usdPaid ?? 0);
+  const paid = `$${(usdPaid ?? 0).toFixed(2)}`;
+  const full = `$${(usdFull ?? 0).toFixed(2)}`;
   const subject = `${test ? "TEST: " : ""}Metagame 2027`;
-  const hi = `Hi ${purchaserName ? escapeHtml(purchaserName) : "there"},`;
 
   const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -244,13 +251,18 @@ export function renderEggTier2027Email(
           <img src="${assetBase}/images/dice_logo.png" alt="METAGAME" width="360" style="max-width: 100%; height: auto;" />
         </div>
 
-        <p>${hi}</p>
+        <p>Hi ${purchaserName ? escapeHtml(purchaserName) : "there"},</p>
 
-        <p>Thank you for getting in early.</p>
+        <p>You've got a ticket to Metagame 2027! Thanks for getting in earlier than the early birds; we'll let you know when next year's plans start to hatch.</p>
 
-        <p>We'll let you know when our 2027 plans start to hatch.</p>
+        <div style="background-color: #f5f5f5; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin-top: 0;"><strong>Name:</strong> ${purchaserName ? escapeHtml(purchaserName) : "—"}</p>
+          <p><strong>Email:</strong> ${escapeHtml(to)}</p>
+          <p><strong>Ticket:</strong> ${escapeHtml(tierLabel)}</p>
+          <p><strong>Amount Paid:</strong> ${discounted ? `<span style="text-decoration: line-through; color: #999;">${full}</span> ` : ""}${paid}${discountCode && discounted ? ` (<strong>${escapeHtml(discountCode)}</strong>)` : ""}</p>
+          ${receiptUrl ? `<p style="margin-bottom: 0;"><a href="${escapeHtml(receiptUrl)}">View your receipt</a></p>` : ""}
+        </div>
 
-        ${receiptUrl ? `<p style="font-size: 13px; color: #888;"><a href="${escapeHtml(receiptUrl)}" style="color: #888;">Your receipt</a></p>` : ""}
         ${mailingListOptOutUrl ? `<p style="font-size: 12px; color: #aaa;">You're on the Metagame mailing list. <a href="${escapeHtml(mailingListOptOutUrl)}" style="color: #aaa;">Opt out</a>.</p>` : ""}
 
         <p style="font-size: 12px; color: #aaa; font-style: italic;">This is not a puzzle.</p>
@@ -265,10 +277,13 @@ export function renderEggTier2027Email(
   const text = `
 Hi ${purchaserName || "there"},
 
-Thank you for getting in early.
+You've got a ticket to Metagame 2027! Thanks for getting in earlier than the early birds; we'll let you know when next year's plans start to hatch.
 
-We'll let you know when our 2027 plans start to hatch.
-${receiptUrl ? `\nYour receipt: ${receiptUrl}\n` : ""}${
+- Name: ${purchaserName || "—"}
+- Email: ${to}
+- Ticket: ${tierLabel}
+- Amount paid: ${paid}${discounted ? ` (was ${full}` + (discountCode ? `, code ${discountCode})` : ")") : ""}
+${receiptUrl ? `- Receipt: ${receiptUrl}\n` : ""}${
     mailingListOptOutUrl
       ? `\nYou're on the Metagame mailing list. Opt out: ${mailingListOptOutUrl}\n`
       : ""

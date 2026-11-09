@@ -232,8 +232,14 @@ export const DAY_PASS_TIER = "day-pass";
 // while this site is still the 2026 one. Its buyers get a holding email, not
 // the 2026 confirmation and logistics.
 export const EGG_TIER_2027 = {
-  label: "2027 Egg Tier",
-  link: "https://buy.stripe.com/fZubJ0gUTgnJfRh9Vgfw40i",
+  label: "Metagame 2027 - Egg Tier",
+  links: {
+    test: "https://buy.stripe.com/test_28E8wO6gf6N96gH9Vgfw40n",
+    live: "https://buy.stripe.com/fZubJ0gUTgnJfRh9Vgfw40i",
+  } satisfies Record<StripeMode, string>,
+  get link() {
+    return this.links[stripeMode];
+  },
 };
 
 export function isEggTier2027({
@@ -244,7 +250,8 @@ export function isEggTier2027({
   productName: string | undefined;
 }): boolean {
   return (
-    paymentLinkUrl === EGG_TIER_2027.link || /2027/.test(productName ?? "")
+    Object.values(EGG_TIER_2027.links).includes(paymentLinkUrl ?? "") ||
+    /2027/.test(productName ?? "")
   );
 }
 
@@ -274,7 +281,8 @@ export function tierLabelForPaymentLinkUrl(
   url: string | null | undefined,
 ): string | undefined {
   if (!url) return undefined;
-  if (url === EGG_TIER_2027.link) return EGG_TIER_2027.label;
+  if (Object.values(EGG_TIER_2027.links).includes(url))
+    return EGG_TIER_2027.label;
   for (const tier of ticketTiers) {
     if (Object.values(tier.links).includes(url)) return tier.label;
   }
