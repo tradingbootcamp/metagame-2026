@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
@@ -65,6 +65,19 @@ export const QUAT: Record<Phase, THREE.Quaternion> = {
 
 const TURN_S = 1.0; // seconds for a die to complete its turn
 const STAGGER = 0.04; // tiny per-die delay — the row turns near-unison, not a wave
+
+// Once 2026 has settled facing the camera, the 6 flickers into a 7 (a centre
+// pip lights up) like a tired neon tube: a beat of stillness, then a few quick
+// on/off stutters that end lit. Offsets in ms from the die settling; the value
+// each step shows. Reverts when the die turns away.
+const FLICKER_BEAT_MS = 700;
+const FLICKER_STEPS: { at: number; top: number }[] = [
+  { at: 0, top: 7 },
+  { at: 60, top: 6 },
+  { at: 130, top: 7 },
+  { at: 170, top: 6 },
+  { at: 320, top: 7 },
+];
 
 const SIZE = 1; // die edge length in world units
 const RADIUS = SIZE * 0.06; // bevel radius of the rounded body
@@ -161,6 +174,33 @@ export default function Die({
     return [blue, blueBack, orange, orangeLeft, top, bottom];
   }, [data, budget]);
 
+  // The 6 → 7 flicker: only the die whose top is a 6, only once YEAR has
+  // settled. Each step wakes the budget for a frame since nothing else moves.
+  const sevenTexture = useMemo(
+    () => (data.top === 6 ? pipTexture(7) : null),
+    [data.top],
+  );
+  useEffect(() => () => sevenTexture?.dispose(), [sevenTexture]);
+  const [flickerTop, setFlickerTop] = useState<number | null>(null);
+  useEffect(() => {
+    if (phase !== "year" || !sevenTexture) return;
+    const settleMs = (TURN_S + index * STAGGER) * 1000;
+    const ids = FLICKER_STEPS.map(({ at, top }) =>
+      setTimeout(
+        () => {
+          setFlickerTop(top);
+          budget?.wake(0);
+        },
+        settleMs + FLICKER_BEAT_MS + at,
+      ),
+    );
+    return () => {
+      ids.forEach(clearTimeout);
+      setFlickerTop(null);
+      budget?.wake(0);
+    };
+  }, [phase, index, sevenTexture, budget]);
+
   useEffect(() => () => textures.forEach((t) => t.dispose()), [textures]);
 
   // STATIC-only face set: the front/right show the overridden letters (back/left
@@ -184,8 +224,12 @@ export default function Die({
     [staticTextures],
   );
 
-  const faceTextures =
+  const baseTextures =
     phase === "static" && staticTextures ? staticTextures : textures;
+  const faceTextures =
+    flickerTop === 7 && sevenTexture
+      ? [...baseTextures.slice(0, 4), sevenTexture, baseTextures[5]]
+      : baseTextures;
 
   // Start pose (imperative so re-renders don't snap it back): mid-air off-screen
   // when rolling in, otherwise the resting pose for the starting phase — so a
