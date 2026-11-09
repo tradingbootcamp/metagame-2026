@@ -152,6 +152,19 @@ const nextConfig: NextConfig = {
       destination: boothLinks[stripeMode],
       permanent: false,
     },
+    // Post-con feedback forms (Airtable).
+    {
+      source: "/feedback",
+      destination:
+        "https://airtable.com/appROpPV6XUP4CSqX/pagf4zOsMYDcm8HX5/form",
+      permanent: false,
+    },
+    {
+      source: "/session-feedback",
+      destination:
+        "https://airtable.com/appROpPV6XUP4CSqX/pag8WRNjjwVgXHWMv/form",
+      permanent: false,
+    },
     // Metagame 2027 ultra early bird tickets (Stripe payment link).
     {
       source: "/2027",
