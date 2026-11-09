@@ -7,8 +7,12 @@ export const EGG_TIER_HREF = "https://buy.stripe.com/fZubJ0gUTgnJfRh9Vgfw40i";
 export function EarlierBirdNote({ className = "" }: { className?: string }) {
   return (
     <p className={`font-space-mono tracking-[0.02em] text-navy ${className}`}>
-      Limited time: earlier-than-early-bird{" "}
-      <strong className="font-bold">Egg Tier tickets available</strong>{" "}
+      Limited time: earlier-than-early-bird
+      <br />
+      <strong className="font-grotesk text-[1.6em] leading-[1.15] font-bold tracking-[-0.01em]">
+        Egg Tier tickets available
+      </strong>
+      <br />
       <span className="font-bold text-meeple">until 11/15</span>
     </p>
   );
