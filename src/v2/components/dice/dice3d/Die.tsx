@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
-import { COLORS, drawPips, letterTexture, pipTexture } from "./faceTexture";
+import { COLORS, letterTexture, pipTexture, repaintPips } from "./faceTexture";
 import type { IntroDriver } from "./introDriver";
 import type { RenderBudget } from "./renderBudget";
 
@@ -66,18 +66,17 @@ export const QUAT: Record<Phase, THREE.Quaternion> = {
 const TURN_S = 1.0; // seconds for a die to complete its turn
 const STAGGER = 0.04; // tiny per-die delay — the row turns near-unison, not a wave
 
-// Once 2026 has settled facing the camera, the 6 flickers into a 7 (a centre
-// pip lights up) like a tired neon tube: a beat of stillness, then a few quick
-// on/off stutters that end lit. Offsets in ms from the die settling; the value
-// each step shows. Stays a 7 through the turn away and reverts once the next
-// pose has landed (top hidden), so the swap is never on screen.
+// Once 2026 has landed facing the camera, the 6 flickers into a 7 (the centre
+// pip lights) like a tired neon tube: a beat of stillness, then quick on/off
+// stutters that end lit. Offsets in ms from the turn landing. It stays a 7
+// through the turn away and reverts as the next pose lands, top hidden.
 const FLICKER_BEAT_MS = 700;
-const FLICKER_STEPS: { at: number; top: number }[] = [
-  { at: 0, top: 7 },
-  { at: 60, top: 6 },
-  { at: 130, top: 7 },
-  { at: 170, top: 6 },
-  { at: 320, top: 7 },
+const FLICKER_STEPS: { at: number; lit: boolean }[] = [
+  { at: 0, lit: true },
+  { at: 60, lit: false },
+  { at: 130, lit: true },
+  { at: 170, lit: false },
+  { at: 320, lit: true },
 ];
 
 const SIZE = 1; // die edge length in world units
@@ -175,43 +174,33 @@ export default function Die({
     return [blue, blueBack, orange, orangeLeft, top, bottom];
   }, [data, budget]);
 
-  // The 6 → 7 flicker repaints the top face's canvas in place (same texture
-  // object, so no material swap) and wakes the budget for a frame each step.
+  // The flicker: timers armed on the frame the YEAR turn lands (so a turn
+  // paused off-screen can't fire it early); cleared on any phase change.
+  const flickers = data.top === 6;
   const lit = useRef(false);
-  // Refs so the frame loop and timers can touch the live texture + phase
-  // without the compiler lint reading it as a render-time mutation.
-  const topTex = useRef<THREE.CanvasTexture | null>(null);
-  const phaseRef = useRef(phase);
-  useEffect(() => {
-    topTex.current = textures[4] as THREE.CanvasTexture;
-  }, [textures]);
-  useEffect(() => {
-    phaseRef.current = phase;
-  }, [phase]);
+  const flickerTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const paintTop = useCallback(
-    (value: number) => {
-      const top = topTex.current;
-      if (!top) return;
-      drawPips(top.image as HTMLCanvasElement, value);
-      top.needsUpdate = true;
-      lit.current = value === 7;
+    (on: boolean) => {
+      repaintPips(textures[4] as THREE.CanvasTexture, on ? 7 : data.top);
+      lit.current = on;
       budget?.wake(0);
     },
-    [budget],
+    [textures, data.top, budget],
   );
-  useEffect(() => {
-    if (phase !== "year" || data.top !== 6) return;
-    const settleMs = (TURN_S + index * STAGGER) * 1000;
-    const ids = FLICKER_STEPS.map(({ at, top }) =>
-      setTimeout(() => paintTop(top), settleMs + FLICKER_BEAT_MS + at),
-    );
-    return () => ids.forEach(clearTimeout);
-  }, [phase, index, data.top, paintTop]);
-  // The revert waits for the turn away to land (useFrame), so the phase-change
-  // cleanup here must not touch the face.
-  const unlitIfTurnedAway = useCallback(() => {
-    if (lit.current && phaseRef.current !== "year") paintTop(6);
-  }, [paintTop]);
+  const clearFlicker = useCallback(() => {
+    flickerTimers.current.forEach(clearTimeout);
+    flickerTimers.current = [];
+  }, []);
+  useEffect(() => clearFlicker, [phase, clearFlicker]);
+  // On landing: in YEAR, arm the flicker; anywhere else, put the 6 back.
+  const landed = useCallback(() => {
+    if (!flickers) return;
+    if (phase === "year") {
+      flickerTimers.current = FLICKER_STEPS.map(({ at, lit }) =>
+        setTimeout(() => paintTop(lit), FLICKER_BEAT_MS + at),
+      );
+    } else if (lit.current) paintTop(false);
+  }, [flickers, phase, paintTop]);
 
   useEffect(() => () => textures.forEach((t) => t.dispose()), [textures]);
 
@@ -254,6 +243,7 @@ export default function Die({
     } else {
       mover.current.position.set(x, 0, 0);
       group.current.quaternion.copy(QUAT[phase]);
+      landed(); // a pinned ?phase=year start still flickers
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -313,8 +303,7 @@ export default function Die({
     const e = u * u * u * (u * (6 * u - 15) + 10);
     g.quaternion.slerpQuaternions(fromQ.current, target, e);
     if (prog.current >= 1) {
-      // The landing frame is the last one drawn, so the revert goes here.
-      unlitIfTurnedAway();
+      landed();
       settle();
     }
   });
