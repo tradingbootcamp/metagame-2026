@@ -37,7 +37,6 @@ export const financialAid: FormDef = {
   path: FINANCIAL_AID_FORM_URL,
   tableId: airtableConfig.volunteersTableId,
   name: "Financial aid application",
-  eyebrow: "Application · Metagame 2026",
   title: "Apply for financial aid",
   pitch:
     "Metagame has a scholarship fund with a limited number of free and reduced-price tickets, for anyone for whom the full price would be a hardship. Tell us the highest price that would work for you and a little about your situation, and we'll email you once we've reviewed it.",
