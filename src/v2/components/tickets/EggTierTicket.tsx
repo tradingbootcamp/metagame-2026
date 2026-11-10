@@ -20,8 +20,8 @@ export function EarlierBirdNote({ className = "" }: { className?: string }) {
 }
 
 // Single ticket tile for Metagame 2027: mono uppercase label over a big
-// grotesk price, on the raised Button variant, linking straight to the
-// Stripe payment link.
+// grotesk minimum price, on the raised Button variant, linking straight to
+// the Stripe payment link where the buyer picks the amount.
 export default function EggTierTicket() {
   return (
     <Button
@@ -37,7 +37,9 @@ export default function EggTierTicket() {
           <span className="font-space-mono text-[13px] tracking-[0.18em] text-cream/85 uppercase">
             Egg Tier
           </span>
-          <span className={`${HEADING} text-[30px] text-tan`}>- $150</span>
+          <span className={`${HEADING} text-[30px] text-tan`}>
+            - ${EGG_TIER_2027.minUsd}+
+          </span>
         </span>
       </a>
     </Button>
