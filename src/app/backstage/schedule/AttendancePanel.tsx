@@ -6,6 +6,7 @@ import { StarIcon, XIcon } from "lucide-react";
 import AccountAdder from "./AccountAdder";
 import { addRsvpFor, removeRsvpFor, type FormState } from "./actions";
 import PlanButtons from "@/v2/components/schedule/PlanButtons";
+import { attendeeActionsOpen } from "@/lib/attendee-actions";
 import type {
   Attendance,
   Attendee,
@@ -91,7 +92,7 @@ export default function AttendancePanel({
         </p>
       </div>
 
-      {viewer ? (
+      {!attendeeActionsOpen(!readOnly) ? null : viewer ? (
         <PlanButtons
           sessionId={session.id}
           status={viewer.rsvps[session.id] ?? null}

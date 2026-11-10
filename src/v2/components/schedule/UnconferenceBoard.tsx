@@ -98,7 +98,9 @@ function PostHint({ className }: { className: string }) {
   const board = useNoteBoard();
   return (
     <span className={className}>
-      {board.readOnly ? (
+      {board.closed ? (
+        "The board is closed now that Metagame 2026 is over."
+      ) : board.readOnly ? (
         <>
           <Link href="/schedule" className={HINT_LINK}>
             Open the full schedule
