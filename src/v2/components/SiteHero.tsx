@@ -7,8 +7,8 @@ import HeroBackdrop from "./HeroBackdrop";
 
 // The above-the-fold banner: one viewport tall (more if the card needs it),
 // and the photo ends where the next section starts. The library photo
-// (washed) sits behind the rolling-dice METAGAME wordmark, then the tagline,
-// date, tickets CTA and mailing-list signup on a cream card so they read
+// (washed) sits behind the rolling-dice METAGAME wordmark, then the headline,
+// tickets CTA and mailing-list signup on a cream card so they read
 // against the photo. Content hangs from the top
 // (pt-[12vh]) rather than centring, so HeroBackdrop can place its wash on the
 // dice with a fixed formula. `isolate` keeps the backdrop's -z-10 inside this
@@ -41,9 +41,6 @@ export default function SiteHero() {
           </p>
           <SignupForm light compact />
         </div>
-        <p className="mt-3 font-grotesk text-base text-navy italic md:mt-4 md:text-xl">
-          I never met a game I didn&apos;t like
-        </p>
       </div>
     </section>
   );
