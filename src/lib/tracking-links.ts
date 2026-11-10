@@ -70,7 +70,6 @@ export const SITE_PAGES = [
   { path: "/", label: "Homepage" },
   { path: "/#tickets", label: "Tickets" },
   { path: "/#speakers", label: "Speakers" },
-  { path: "/#get-involved", label: "Get involved" },
   { path: "/#faq", label: "FAQ" },
   { path: "/sponsor", label: "Sponsor" },
   { path: "/childcare", label: "Childcare" },
