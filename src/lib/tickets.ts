@@ -230,15 +230,25 @@ export const DAY_PASS_TIER = "day-pass";
 
 // Metagame 2027 earlier-than-early-bird, sold through a dashboard Payment Link
 // while this site is still the 2026 one. Its buyers get a holding email, not
-// the 2026 confirmation and logistics.
+// the 2026 confirmation and logistics. Pay what you want from $150; Stripe
+// won't take promo codes on a customer-chosen price.
 export const EGG_TIER_2027 = {
   label: "Metagame 2027 - Egg Tier",
+  minUsd: 150,
   links: {
+    test: "https://buy.stripe.com/test_14AfZgbAzdbxgVl9Vgfw40o",
+    live: "LIVE_PWYW_LINK_TBD",
+  } satisfies Record<StripeMode, string>,
+  // Fixed-$150 links sold until 2026-11-10, kept so their purchases still match.
+  retiredLinks: {
     test: "https://buy.stripe.com/test_28E8wO6gf6N96gH9Vgfw40n",
     live: "https://buy.stripe.com/fZubJ0gUTgnJfRh9Vgfw40i",
   } satisfies Record<StripeMode, string>,
   get link() {
     return this.links[stripeMode];
+  },
+  get allLinks(): string[] {
+    return [...Object.values(this.links), ...Object.values(this.retiredLinks)];
   },
 };
 
@@ -250,7 +260,7 @@ export function isEggTier2027({
   productName: string | undefined;
 }): boolean {
   return (
-    Object.values(EGG_TIER_2027.links).includes(paymentLinkUrl ?? "") ||
+    EGG_TIER_2027.allLinks.includes(paymentLinkUrl ?? "") ||
     /2027/.test(productName ?? "")
   );
 }
@@ -281,8 +291,7 @@ export function tierLabelForPaymentLinkUrl(
   url: string | null | undefined,
 ): string | undefined {
   if (!url) return undefined;
-  if (Object.values(EGG_TIER_2027.links).includes(url))
-    return EGG_TIER_2027.label;
+  if (EGG_TIER_2027.allLinks.includes(url)) return EGG_TIER_2027.label;
   for (const tier of ticketTiers) {
     if (Object.values(tier.links).includes(url)) return tier.label;
   }

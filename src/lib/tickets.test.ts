@@ -108,6 +108,22 @@ describe("isEggTier2027", () => {
     ).toBe("Metagame 2027 - Egg Tier");
   });
 
+  it("still matches the retired fixed-price links", () => {
+    expect(
+      isEggTier2027({
+        paymentLinkUrl: EGG_TIER_2027.retiredLinks.live,
+        productName: "Egg",
+      }),
+    ).toBe(true);
+    expect(
+      tierLabelForStripeCheckout({
+        metadata: null,
+        paymentLinkUrl: EGG_TIER_2027.retiredLinks.test,
+        productName: "Egg",
+      }),
+    ).toBe("Metagame 2027 - Egg Tier");
+  });
+
   it("leaves 2026 checkouts alone", () => {
     expect(
       isEggTier2027({
