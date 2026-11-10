@@ -48,6 +48,7 @@ import {
   LIGHTHAVEN_URL,
   MEGAGAME_PROPOSAL_FORM_URL,
   RFP_FORM_URL,
+  SPONSOR_FORM_URL,
 } from "@/v2/lib/links";
 import HatImage from "@/v2/hat-trick/HatImage";
 import { HATS } from "@/v2/hat-trick/hats";
@@ -650,7 +651,7 @@ export default async function Home() {
               Interested in making Metagame 2027 happen?
             </h3>
             <p className="mt-3">
-              <Link href="/sponsor" className={BODY_LINK}>
+              <Link href={SPONSOR_FORM_URL} className={BODY_LINK}>
                 Sponsor form
               </Link>
             </p>

@@ -10,10 +10,10 @@ export const sponsor: FormDef = {
   path: SPONSOR_FORM_URL,
   tableId: airtableConfig.signupsTableId,
   name: "Sponsor interest",
-  eyebrow: "Interest form · Metagame 2026",
+  eyebrow: "Interest form · Metagame 2027",
   title: "Sponsor Metagame",
   pitch:
-    "Tell us who you are and what you have in mind, and someone from the team will reach out to talk it through. Every package is flexible; what each tier includes is on the [sponsor page](/sponsor).",
+    "Tell us who you are and what you have in mind, and someone from the team will reach out to talk it through.",
   aside: "This should only take about a minute.",
   steps: [
     {
@@ -49,21 +49,6 @@ export const sponsor: FormDef = {
           row: "email",
         },
         {
-          key: "tier",
-          field: "fldvRIark8ZyTFpNf",
-          type: "choice",
-          label: "Sponsorship tier",
-          help: "Not sure yet? Pick Other, or leave it and we'll talk it through.",
-          options: opts(
-            "Headline",
-            "Platinum",
-            "Gold",
-            "Silver",
-            "Patron",
-            "Other",
-          ),
-        },
-        {
           key: "notes",
           field: "fldBaSmooUULI2bbe",
           type: "longtext",
@@ -94,9 +79,6 @@ export const sponsor: FormDef = {
   done: {
     title: "We'll be in touch.",
     body: "Thanks for backing Metagame. Someone from the team will reach out soon.",
-    links: [
-      { label: "See the sponsor tiers", href: "/sponsor" },
-      { label: "Back to the homepage", href: "/" },
-    ],
+    links: [{ label: "Back to the homepage", href: "/" }],
   },
 };

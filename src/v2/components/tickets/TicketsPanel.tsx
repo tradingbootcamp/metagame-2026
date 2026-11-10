@@ -94,10 +94,9 @@ export default function TicketsPanel({
   );
   const standard = getTicket("standard");
   // Each tile that opens a modal (rather than linking straight to Stripe)
-  // deep-links from /#<id>, e.g. /#supporter from /sponsor or /#family-pack
-  // from an email; the tile's id gives the browser its scroll target. Closing
-  // drops the hash so a repeat click on the same link changes the URL again
-  // and reopens it.
+  // deep-links from /#<id>, e.g. /#family-pack from an email; the tile's id
+  // gives the browser its scroll target. Closing drops the hash so a repeat
+  // click on the same link changes the URL again and reopens it.
   const [openModal, setOpenModal] = useState<HashModal | null>(null);
   const router = useRouter();
   const pathname = usePathname();

@@ -228,11 +228,11 @@ describe("cleanAnswers", () => {
     expect(
       cleanAnswers(FORMS.sponsor, {
         name: "Ada",
-        tier: "Gold",
+        company: "Acme",
         extra: "nope",
         email: { not: "a string" },
       }),
-    ).toEqual({ name: "Ada", tier: "Gold" });
+    ).toEqual({ name: "Ada", company: "Acme" });
   });
 
   it("keeps what's written in an option's text box", () => {
