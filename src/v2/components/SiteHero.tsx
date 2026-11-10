@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { Button } from "@/v2/components/ui/button";
+import SignupForm from "@/v2/components/signup/SignupForm";
 import { EarlierBirdNote } from "@/v2/components/tickets/EggTierTicket";
 import Dice from "./dice/Dice";
 import HeroBackdrop from "./HeroBackdrop";
 
-// The above-the-fold banner: exactly one viewport tall, so the photo ends
-// where the next section starts. The library photo (washed) sits behind the
-// rolling-dice METAGAME wordmark, then the tagline, date and tickets CTA on
-// a cream card so they read against the photo. Content hangs from the top
+// The above-the-fold banner: one viewport tall (more if the card needs it),
+// and the photo ends where the next section starts. The library photo
+// (washed) sits behind the rolling-dice METAGAME wordmark, then the headline,
+// tickets CTA and mailing-list signup on a cream card so they read
+// against the photo. Content hangs from the top
 // (pt-[12vh]) rather than centring, so HeroBackdrop can place its wash on the
 // dice with a fixed formula. `isolate` keeps the backdrop's -z-10 inside this
 // section's stacking context: behind the dice, above the cream.
@@ -23,7 +25,8 @@ export default function SiteHero() {
         <p className="mt-3 font-grotesk text-[clamp(28px,5vw,44px)] leading-[1.05] font-bold tracking-[-0.01em] text-navy">
           Metagame 2027 is coming!
         </p>
-        <EarlierBirdNote className="mt-4 text-sm md:mt-5 md:text-base" />
+        {/* Shrinks below ~390px so each line of the note fits the card. */}
+        <EarlierBirdNote className="mt-4 text-[length:min(0.875rem,4.25vw_-_2.5px)] md:mt-5 md:text-base" />
         <Button
           asChild
           variant="raised"
@@ -32,9 +35,12 @@ export default function SiteHero() {
         >
           <Link href="/#tickets">Join us in 2027</Link>
         </Button>
-        <p className="mt-3 font-grotesk text-base text-navy italic md:mt-4 md:text-xl">
-          I never met a game I didn&apos;t like
-        </p>
+        <div className="mt-4 w-full border-t border-navy/15 pt-3 md:mt-5 md:pt-4">
+          <p className="mb-2 font-grotesk text-sm text-navy md:text-base">
+            Stay updated
+          </p>
+          <SignupForm light compact />
+        </div>
       </div>
     </section>
   );

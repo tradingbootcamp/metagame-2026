@@ -4,11 +4,14 @@ import { HEADING } from "../styles";
 
 export const EGG_TIER_HREF = EGG_TIER_2027.link;
 
-// Mixed-case so the bold phrase reads; "until 11/15" is the brand red.
+// Mixed-case so the bold phrase reads; "until 11/15" is the brand red. The
+// first line is the longest, so it runs smaller on phones to stay on one line.
 export function EarlierBirdNote({ className = "" }: { className?: string }) {
   return (
     <p className={`font-space-mono tracking-[0.02em] text-navy ${className}`}>
-      Limited time: earlier-than-early-bird
+      <span className="text-[0.8em] md:text-[1em]">
+        Limited time: earlier-than-early-bird
+      </span>
       <br />
       <strong className="font-grotesk text-[1.6em] leading-[1.15] font-bold tracking-[-0.01em]">
         Egg Tier tickets available
