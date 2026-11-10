@@ -237,7 +237,7 @@ export const EGG_TIER_2027 = {
   minUsd: 150,
   links: {
     test: "https://buy.stripe.com/test_14AfZgbAzdbxgVl9Vgfw40o",
-    live: "LIVE_PWYW_LINK_TBD",
+    live: "https://buy.stripe.com/7sYbJ07kj7Rd5cD7N8fw40j",
   } satisfies Record<StripeMode, string>,
   // Fixed-$150 links sold until 2026-11-10, kept so their purchases still match.
   retiredLinks: {
