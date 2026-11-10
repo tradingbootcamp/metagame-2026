@@ -151,7 +151,7 @@ export type FormDef = {
   tableId: string;
   /** What the team calls it, for the backup email if Airtable fails. */
   name: string;
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   pitch: string;
   /** One line under the pitch, e.g. how long it takes. */

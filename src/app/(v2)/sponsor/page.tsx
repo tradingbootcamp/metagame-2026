@@ -335,7 +335,7 @@ function TierCard({ tier }: { tier: (typeof TIERS)[number] }) {
 export default function SponsorPage() {
   return (
     <ContentPage
-      title="Sponsor Metagame 2026"
+      title="Sponsor Metagame"
       intro={
         <>
           Metagame exists in large part thanks to support from our sponsors. All

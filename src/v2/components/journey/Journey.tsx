@@ -282,7 +282,7 @@ export default function Journey({
       className="mx-auto w-full max-w-[880px] scroll-mt-6 px-4 pt-24 pb-20 sm:px-8 md:pt-28"
     >
       <header>
-        <p className={EYEBROW}>{def.eyebrow}</p>
+        {def.eyebrow && <p className={EYEBROW}>{def.eyebrow}</p>}
         <h1
           className={`${DISPLAY} mt-2 text-[clamp(42px,6.5vw,76px)] leading-[0.9] text-balance text-navy`}
         >
