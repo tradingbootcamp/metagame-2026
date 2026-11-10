@@ -1,7 +1,9 @@
-import Link from "next/link";
 import { Button } from "@/v2/components/ui/button";
 import SignupForm from "@/v2/components/signup/SignupForm";
-import { EarlierBirdNote } from "@/v2/components/tickets/EggTierTicket";
+import {
+  EarlierBirdNote,
+  EGG_TIER_HREF,
+} from "@/v2/components/tickets/EggTierTicket";
 import Dice from "./dice/Dice";
 import HeroBackdrop from "./HeroBackdrop";
 
@@ -33,7 +35,9 @@ export default function SiteHero() {
           size="lg"
           className="mt-3 h-auto px-6 py-2.5 text-lg md:px-7 md:py-3 md:text-xl"
         >
-          <Link href="/#tickets">Join us in 2027</Link>
+          <a href={EGG_TIER_HREF} target="_blank" rel="noopener noreferrer">
+            Join us in 2027
+          </a>
         </Button>
         <div className="mt-4 w-full border-t border-navy/15 pt-3 md:mt-5 md:pt-4">
           <p className="mb-2 font-grotesk text-sm text-navy md:text-base">
