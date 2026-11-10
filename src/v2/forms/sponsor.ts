@@ -10,7 +10,7 @@ export const sponsor: FormDef = {
   path: SPONSOR_FORM_URL,
   tableId: airtableConfig.signupsTableId,
   name: "Sponsor interest",
-  eyebrow: "Interest form · Metagame 2026",
+  eyebrow: "Interest form · Metagame 2027",
   title: "Sponsor Metagame",
   pitch:
     "Tell us who you are and what you have in mind, and someone from the team will reach out to talk it through. Every package is flexible; what each tier includes is on the [sponsor page](/sponsor).",

@@ -14,10 +14,10 @@ export const joinTeam: FormDef = {
   path: JOIN_TEAM_FORM_URL,
   tableId: airtableConfig.signupsTableId,
   name: "Get involved",
-  eyebrow: "Interest form · Metagame 2026",
+  eyebrow: "Interest form · Metagame 2027",
   title: "Get involved with Metagame",
   pitch:
-    "Tell us how you'd like to help with Metagame 2026, whether that's volunteering, speaking, organizing or sponsoring, and we'll follow up with the next step.",
+    "Tell us how you'd like to help with Metagame 2027, whether that's volunteering, speaking, organizing or sponsoring, and we'll follow up with the next step.",
   aside: "This should only take about a minute.",
   steps: [
     {
