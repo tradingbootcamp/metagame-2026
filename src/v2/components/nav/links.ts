@@ -39,7 +39,6 @@ export const NAV_LINKS: readonly NavLink[] = [
     icon: CalendarDays,
   },
   { id: "last-year", label: "Last Year", href: "/last-year", icon: History },
-  { id: "sponsor", label: "Sponsor", href: "/sponsor", icon: Award },
   { id: "childcare", label: "Childcare", href: "/childcare", icon: RubberDuck },
   { id: "team", label: "Team", href: "/team", icon: Users },
 ] as const;

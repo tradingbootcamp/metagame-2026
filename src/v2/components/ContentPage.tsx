@@ -1,6 +1,6 @@
 import { EYEBROW, HEADING } from "./styles";
 
-// Shell for the non-home pages (/sponsor, /team, …): clears the fixed
+// Shell for the non-home pages (/team, /credits, …): clears the fixed
 // corner nav, sets the measure, and gives every page the same title block.
 export default function ContentPage({
   above,
