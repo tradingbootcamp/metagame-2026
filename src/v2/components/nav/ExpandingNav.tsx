@@ -49,8 +49,8 @@ const withDelay = (parts: string[], delayMs: number) =>
 
 // Which nav entry the current route belongs to: null for pages not in the
 // nav (/credits, /thanks, …), which get the Home link but no "current" mark.
-// On "/" the hash sections (tickets, get-involved) take over from Home as
-// scroll-spy reaches them.
+// On "/" the hash sections (tickets) take over from Home as scroll-spy
+// reaches them.
 function useActiveLink(
   links: readonly NavLink[],
   section: string | null,

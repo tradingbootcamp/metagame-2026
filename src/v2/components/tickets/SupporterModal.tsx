@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { FaBitcoin } from "react-icons/fa";
 import { readUtm, withCodes, withUtm } from "@/lib/utm";
+import { SPONSOR_FORM_URL } from "@/v2/lib/links";
 import { stripeCheckoutHref, supporterTier } from "@/v2/lib/tickets";
 import {
   subscribeCurrency,
@@ -192,10 +193,10 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
               Help make Metagame 2026 even better! Pay-what-you-want,
               &ge;&#8383;{floor.btc}. There may be benefits/perks for
               Supporters, but we haven&rsquo;t decided if/what those might be
-              yet. If you&rsquo;re interested in a more formal sponsorship,
-              check out our{" "}
-              <Link href="/sponsor" className={LINK}>
-                sponsorship packages
+              yet. If you&rsquo;re interested in a more formal sponsorship, fill
+              out our{" "}
+              <Link href={SPONSOR_FORM_URL} className={LINK}>
+                sponsor interest form
               </Link>
               .
             </p>
@@ -264,9 +265,9 @@ export default function SupporterModal({ onClose }: { onClose: () => void }) {
               page.
             </p>
             <p className="text-sm text-cream/75">
-              Interested in a formal sponsorship? Check out our{" "}
-              <Link href="/sponsor" className={LINK}>
-                sponsorship packages
+              Interested in a formal sponsorship? Fill out our{" "}
+              <Link href={SPONSOR_FORM_URL} className={LINK}>
+                sponsor interest form
               </Link>
               .
             </p>

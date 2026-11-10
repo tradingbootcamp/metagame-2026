@@ -21,9 +21,6 @@ export const HOUSING_URL =
   "https://www.havenbookings.space/events/metagame-2026";
 export const HOUSING_PATH = "/housing";
 
-// Manifund fiscal-sponsorship page for tax-deductible donations.
-export const MANIFUND_URL = "https://manifund.org/projects/metagame-2026";
-
 export const LIGHTHAVEN_URL = "https://lighthaven.space/";
 
 // Google search for hotels near the venue, linked from the FAQ.

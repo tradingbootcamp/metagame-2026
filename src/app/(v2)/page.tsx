@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import AnagramEmail from "@/v2/components/AnagramEmail";
-import VolunteerFormLink from "@/v2/components/VolunteerFormLink";
 import Carousel from "@/v2/components/Carousel";
 import ContactLink from "@/v2/components/contact/ContactLink";
 import CrypticsLightbox from "@/v2/components/CrypticsLightbox";
@@ -27,7 +26,6 @@ import PublicSchedule from "@/v2/components/schedule/PublicSchedule";
 import {
   DISPLAY,
   EYEBROW,
-  HEADING,
   SECTION,
   SECTION_ANCHOR,
 } from "@/v2/components/styles";
@@ -35,7 +33,6 @@ import EggTierTicket, {
   EarlierBirdNote,
 } from "@/v2/components/tickets/EggTierTicket";
 import { Button } from "@/v2/components/ui/button";
-import { PartifulLogo } from "@/v2/components/tickets/PartifulInvite";
 import { CAROUSEL } from "@/v2/data/carousel";
 import {
   GOLD_SPONSORS,
@@ -50,10 +47,8 @@ import {
   PODCAST_EPISODE_URL,
   LIGHTHAVEN_URL,
   MEGAGAME_PROPOSAL_FORM_URL,
-  NIGHT_MARKET_FORM_URL,
-  NIGHT_PARTIFUL_URL,
   RFP_FORM_URL,
-  VOLUNTEER_FORM_PATH,
+  SPONSOR_FORM_URL,
 } from "@/v2/lib/links";
 import HatImage from "@/v2/hat-trick/HatImage";
 import { HATS } from "@/v2/hat-trick/hats";
@@ -381,16 +376,7 @@ export default async function Home() {
       {/* schedule */}
       <section id="schedule" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
-          <SectionHeading eyebrow="What’s on?" title="Schedule" />
-          <p className={`${PROSE} max-w-[600px]`}>
-            <Link
-              href="/schedule"
-              className="font-semibold text-navy underline"
-            >
-              Open the full schedule
-            </Link>{" "}
-            to RSVP and bookmark.
-          </p>
+          <SectionHeading title="Schedule" />
         </div>
         {schedule && (
           <div className="mt-10 px-4 sm:px-8">
@@ -402,103 +388,6 @@ export default async function Home() {
             />
           </div>
         )}
-      </section>
-
-      <DiceDivider />
-
-      {/* get involved */}
-      <section id="get-involved" className={`${SECTION} md:py-14`}>
-        <div className={CONTAINER}>
-          <SectionHeading eyebrow="Want to do more?" title="Get Involved" />
-          <p className={`${PROSE} max-w-[600px]`}>
-            Metagame is made by the people who show up. Here&apos;s how to be
-            one of them.
-          </p>
-          <div className="mt-10 grid gap-6 min-[900px]:grid-cols-3">
-            {[
-              {
-                title: "Run something",
-                body: (
-                  <>
-                    We want your games, puzzles, competitions, indie TTRPGs,
-                    immersive theater performances, tournaments, design jams,
-                    LARPs, trivia, crosswords, homemade meeples, chess variants,
-                    turtle doves, social deception experiments not yet ready for
-                    prime time, or things that defy all of these categories
-                  </>
-                ),
-                cta: "Propose a session",
-                href: RFP_FORM_URL,
-                external: true,
-              },
-              {
-                title: "Volunteer",
-                body: (
-                  <>
-                    Help out before or during the con by joining one of the
-                    volunteer teams:
-                    <ul className="mt-2 list-disc pl-5 font-medium">
-                      <li className="text-[#d16d8b]">Registration desk</li>
-                      <li className="text-[#d98a54]">Room check</li>
-                      <li className="text-[#c9a227]">Physical labor</li>
-                      <li className="text-[#6faa6f]">Set design</li>
-                      <li className="text-[#5ba8a0]">Marketing</li>
-                      <li className="text-[#7a8fd4]">Speaker coordination</li>
-                      <li className="text-[#a582c9]">Megagame design</li>
-                      <li className="text-[#c76a6a]">&hellip; and more!</li>
-                    </ul>
-                  </>
-                ),
-                cta: "Apply to volunteer",
-                href: VOLUNTEER_FORM_PATH,
-                external: true,
-              },
-              {
-                title: "Sponsor Metagame",
-                body: (
-                  <>
-                    Put your name on the weekend. Sponsor benefits include:
-                    <ul className="mt-2 list-disc pl-5">
-                      <li>Logo placement on the site, swag, and marketing</li>
-                      <li>A booth at the night market / career fair</li>
-                      <li>Tickets for your team</li>
-                      <li>Main-room talk and office-hours slots</li>
-                      <li>A custom-built branded event</li>
-                      <li>
-                        &hellip; and at the headline tier, let&apos;s dream big
-                      </li>
-                    </ul>
-                  </>
-                ),
-                cta: "Sponsor tiers",
-                href: "/sponsor",
-                external: false,
-              },
-            ].map(({ title, body, cta, href, external }) => (
-              <div
-                key={title}
-                className="flex flex-col rounded-2xl border border-navy/[0.16] bg-white p-7 shadow-[0_8px_24px_rgba(23,48,89,0.08)]"
-              >
-                <h3 className={`${HEADING} text-2xl text-navy`}>{title}</h3>
-                {/* div, not p: the volunteer body nests a <ul>. */}
-                <div className="mt-3 flex-1 text-[15px] text-ink/70">
-                  {body}
-                </div>
-                <Button asChild variant="default" className="mt-6 w-fit">
-                  {href === VOLUNTEER_FORM_PATH ? (
-                    <VolunteerFormLink>{cta}</VolunteerFormLink>
-                  ) : external ? (
-                    <a href={href} target="_blank" rel="noopener noreferrer">
-                      {cta}
-                    </a>
-                  ) : (
-                    <Link href={href}>{cta}</Link>
-                  )}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
       </section>
 
       <SpaceInvadersDivider />
@@ -603,11 +492,6 @@ export default async function Home() {
                 of bed and into a game at any moment. Rooms can be booked
                 directly with Lighthaven.
               </p>
-              <Button asChild variant="navy" className="clear-both mt-5">
-                <a href={HOUSING_URL} target="_blank" rel="noopener noreferrer">
-                  Book your room
-                </a>
-              </Button>
             </div>
             <a
               href={LIGHTHAVEN_URL}
@@ -643,32 +527,6 @@ export default async function Home() {
                 Explore booths offering things to play, experience, and savor.
                 This is open to the public on Friday evening (7:00–10:00pm).
               </p>
-              <p className={PROSE}>
-                It&rsquo;s free &mdash; RSVP and invite your friends on
-                Partiful. Have a game, product, or creation to share? Apply for
-                a booth.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild variant="navy">
-                  <a
-                    href={NIGHT_MARKET_FORM_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Apply for a booth
-                  </a>
-                </Button>
-                <Button asChild variant="default" className="pl-3">
-                  <a
-                    href={NIGHT_PARTIFUL_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <PartifulLogo />
-                    RSVP
-                  </a>
-                </Button>
-              </div>
             </div>
             <figure className="w-full max-w-[560px]">
               <Image
@@ -790,11 +648,13 @@ export default async function Home() {
           </div>
           <div className="mt-14 text-center">
             <h3 className="font-grotesk text-xl font-semibold text-navy">
-              Interested in helping make Metagame 2026 happen?
+              Interested in making Metagame 2027 happen?
             </h3>
-            <Button asChild variant="navy" size="lg" className="mt-5 text-lg">
-              <Link href="/sponsor">Sponsor Metagame</Link>
-            </Button>
+            <p className="mt-3">
+              <Link href={SPONSOR_FORM_URL} className={BODY_LINK}>
+                Sponsor form
+              </Link>
+            </p>
           </div>
         </div>
       </section>

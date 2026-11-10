@@ -13,6 +13,7 @@ import {
   HOUSING_URL,
   NIGHT_PARTIFUL_PATH,
   NIGHT_PARTIFUL_URL,
+  SPONSOR_FORM_URL,
 } from "./src/v2/lib/links";
 
 // Missing required env vars warn locally and fail the build on Vercel.
@@ -99,6 +100,8 @@ const nextConfig: NextConfig = {
     },
     // Key dates used to be its own page, then a home-page section; now gone.
     { source: "/key-dates", destination: "/", permanent: true },
+    // The sponsor page is gone until there's 2027 info; the form is the way in.
+    { source: "/sponsor", destination: SPONSOR_FORM_URL, permanent: false },
     // /buy/<code> hands its code to the tickets section, which stores it for Standard checkout.
     { source: "/buy", destination: "/#tickets", permanent: false },
     {
