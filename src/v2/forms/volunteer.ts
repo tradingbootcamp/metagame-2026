@@ -25,7 +25,6 @@ export const volunteer: FormDef = {
   path: VOLUNTEER_APPLY_PATH,
   tableId: airtableConfig.volunteersTableId,
   name: "Volunteer application",
-  eyebrow: "Application · Metagame 2026",
   title: "Volunteer at Metagame",
   pitch:
     "Join the team and help make Metagame happen. We need volunteers both in the lead-up to the conference and during the weekend itself, and volunteers get a discounted or free ticket depending on how much they can take on.",

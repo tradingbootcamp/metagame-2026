@@ -16,7 +16,6 @@ export const megagame: FormDef = {
   path: MEGAGAME_PROPOSAL_FORM_URL,
   tableId: airtableConfig.megagameSubmissionsTableId,
   name: "Megagame puzzle or game",
-  eyebrow: "Submission · Metagame 2026",
   title: "Build part of the Megagame",
   pitch:
     "The Megagame runs all weekend: a puzzle hunt, a gauntlet of games and a story, threaded through the rest of Metagame and built from puzzles and games people send in. Tell us about yours here. You don't need to be coming to Metagame to contribute, and pieces that touch alliances, maps, alchemy, space travel, gems or stars are especially welcome. Submissions were due October 10, but the form is still open.",
