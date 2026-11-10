@@ -14,6 +14,7 @@ import { parseAccountTab } from "./tabs";
 import { getDb, schema } from "@/db";
 import { accountSessions } from "@/lib/account-sessions";
 import { can, teamAccess } from "@/lib/access";
+import { attendeeActionsOpen } from "@/lib/attendee-actions";
 import { currentSession, hasPassword } from "@/lib/auth";
 import { prefillDiscord } from "@/lib/discord-handle";
 import { firstSigninNeeded } from "@/lib/first-signin";
@@ -160,6 +161,7 @@ export default async function AccountPage({
           sessions: (
             <SessionsPanel
               linkable
+              closed={!attendeeActionsOpen(admin !== null)}
               sessions={accountSessions(
                 user.id,
                 schedule.sessions,

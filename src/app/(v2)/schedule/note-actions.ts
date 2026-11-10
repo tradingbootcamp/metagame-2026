@@ -1,6 +1,7 @@
 "use server";
 
 import { can } from "@/lib/access";
+import { ATTENDEE_ACTIONS_CLOSED } from "@/lib/attendee-actions";
 import { currentSession } from "@/lib/auth";
 import {
   noticeHeadline,
@@ -39,7 +40,7 @@ import {
   updateSessionPoster,
   updateNote,
 } from "@/lib/unconference-store";
-import { boardRooms, loadRawSchedule } from "./data";
+import { attendeeActionsAllowed, boardRooms, loadRawSchedule } from "./data";
 
 // No revalidatePath: /schedule reloads the whole schedule, which is far too
 // much work behind a drag. The board updates in place from these results.
@@ -73,6 +74,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * ban applies from the next action onwards.
  */
 async function poster(): Promise<string | NoteState> {
+  if (!(await attendeeActionsAllowed())) {
+    return { error: ATTENDEE_ACTIONS_CLOSED };
+  }
   const session = await can("unconference.post");
   if (!session) {
     return { error: (await currentSession()) ? NEEDS_TICKET : SIGN_IN };

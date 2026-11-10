@@ -72,26 +72,38 @@ function List({
   );
 }
 
-const plan = (s: AccountSessionRow, linkable: boolean) => (
+const plan = (s: AccountSessionRow, linkable: boolean, closed: boolean) => (
   <Row key={s.id} s={s} linkable={linkable}>
-    <PlanButtons
-      sessionId={s.id}
-      status={s.rsvp}
-      bookmarked={s.bookmarked}
-      full={s.full}
-      commitment={s.commitment}
-      open={s.open}
-      conflicts={s.conflicts}
-    />
+    {!closed ? (
+      <PlanButtons
+        sessionId={s.id}
+        status={s.rsvp}
+        bookmarked={s.bookmarked}
+        full={s.full}
+        commitment={s.commitment}
+        open={s.open}
+        conflicts={s.conflicts}
+      />
+    ) : (
+      s.rsvp && (
+        <span className="text-xs text-ink/50">
+          {s.rsvp === "going" ? "Going" : "Waitlisted"}
+          {s.bookmarked && " · Bookmarked"}
+        </span>
+      )
+    )}
   </Row>
 );
 
 export default function SessionsPanel({
   sessions,
   linkable,
+  closed = false,
 }: {
   sessions: AccountSessions;
   linkable: boolean;
+  /** Attendee actions are off for this viewer: the lists are read-only. */
+  closed?: boolean;
 }) {
   return (
     <div className="flex max-w-[960px] flex-col gap-12">
@@ -115,17 +127,26 @@ export default function SessionsPanel({
       />
       <List
         title="Your RSVPs"
-        empty="You haven't RSVP'd to anything yet."
+        empty={
+          closed
+            ? "You didn't RSVP to anything."
+            : "You haven't RSVP'd to anything yet."
+        }
         rows={sessions.plans}
-        render={(s) => plan(s, linkable)}
+        render={(s) => plan(s, linkable, closed)}
       />
       {sessions.bookmarks.length > 0 && (
         <List
           title="Bookmarked"
           empty=""
           rows={sessions.bookmarks}
-          render={(s) => plan(s, linkable)}
+          render={(s) => plan(s, linkable, closed)}
         />
+      )}
+      {closed && (
+        <p className="text-sm text-ink/60">
+          Metagame 2026 is over, so RSVPs and bookmarks are closed.
+        </p>
       )}
     </div>
   );
