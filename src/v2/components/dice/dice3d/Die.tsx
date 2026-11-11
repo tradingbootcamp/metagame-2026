@@ -68,8 +68,8 @@ const STAGGER = 0.04; // tiny per-die delay — the row turns near-unison, not a
 
 // Once 2026 has landed facing the camera, the 6 flickers into a 7 (the centre
 // pip lights) like a tired neon tube: a beat of stillness, then quick on/off
-// stutters that end lit. Offsets in ms from the turn landing. It stays a 7
-// through the turn away and reverts as the next pose lands, top hidden.
+// stutters that never catch — it ends dark, a 6 again. Offsets in ms from the
+// turn landing.
 const FLICKER_BEAT_MS = 700;
 const FLICKER_STEPS: { at: number; lit: boolean }[] = [
   { at: 0, lit: true },
@@ -77,6 +77,7 @@ const FLICKER_STEPS: { at: number; lit: boolean }[] = [
   { at: 130, lit: true },
   { at: 170, lit: false },
   { at: 320, lit: true },
+  { at: 560, lit: false },
 ];
 
 const SIZE = 1; // die edge length in world units
@@ -192,7 +193,8 @@ export default function Die({
     flickerTimers.current = [];
   }, []);
   useEffect(() => clearFlicker, [phase, clearFlicker]);
-  // On landing: in YEAR, arm the flicker; anywhere else, put the 6 back.
+  // On landing: in YEAR, arm the flicker; anywhere else, put the 6 back (a
+  // turn away mid-flicker can leave it lit).
   const landed = useCallback(() => {
     if (!flickers) return;
     if (phase === "year") {

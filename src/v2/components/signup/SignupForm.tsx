@@ -9,7 +9,7 @@ import { FIELD_LIGHT } from "../styles";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-// `compact` is the hero's version: email only, always a single row.
+// `compact` is the hero's version: name on its own row, then email and button.
 export default function SignupForm({
   light = false,
   compact = false,
@@ -92,26 +92,24 @@ export default function SignupForm({
       <div
         className={cn(
           "flex",
-          compact ? "gap-2" : "flex-col gap-3 @lg:flex-row",
+          compact ? "flex-wrap gap-2" : "flex-col gap-3 @lg:flex-row",
         )}
       >
-        {!compact && (
-          <Input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Name"
-            aria-label="Name"
-            autoComplete="name"
-            className={field}
-          />
-        )}
+        <Input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Name"
+          aria-label="Name"
+          autoComplete="name"
+          className={cn(field, compact && "flex-none")}
+        />
         <Input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder={compact ? "you@example.com" : "you@example.com*"}
+          placeholder="you@example.com*"
           aria-label="Email address"
           autoComplete="email"
           className={field}
