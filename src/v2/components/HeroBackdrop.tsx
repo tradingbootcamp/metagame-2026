@@ -31,10 +31,10 @@ export default function HeroBackdrop() {
     <div
       aria-hidden
       // w-screen centred on the hero: it sits inside main's gutter.
-      // --wash-y is the dice's centre: the hero's 12vh top padding plus half
+      // --wash-y is the dice's centre: the hero's top padding (SiteHero) plus half
       // the dice stage height (Dice.tsx). h-full: the hero is 88svh at least,
       // and the photo follows it when the card needs more.
-      className="absolute top-0 left-1/2 -z-10 h-full w-screen -translate-x-1/2 overflow-hidden [--wash-y:calc(12vh+clamp(160px,20vh,220px)/2)] md:[--wash-y:calc(7vh+clamp(330px,38vh,440px)/2)]"
+      className="absolute top-0 left-1/2 -z-10 h-full w-screen -translate-x-1/2 overflow-hidden [--wash-y:calc(6vh+clamp(160px,20vh,220px)/2)] md:[--wash-y:calc(7vh+clamp(330px,38vh,440px)/2)]"
       style={{
         ["--bd-w" as string]: `calc(min(max(100vw, 100svh * ${MONITOR_ASPECT}), 100vw * ${MAX_SIDE_CROP}) * ${ZOOM})`,
         ["--bd-h" as string]: `calc(var(--bd-w) / ${IMAGE_ASPECT})`,

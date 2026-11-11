@@ -42,7 +42,7 @@ const PHASE_MS = 2700; // hold each phase ~3.2s — deliberate but not sluggish
 // its oriented rest tableau (and the align into it), so a full hold reads as a
 // pause. Only the first meta→game is shortened; later holds use PHASE_MS (YEAR_MS for year).
 const FIRST_META_MS = 1200;
-// YEAR lingers a second longer so the flickered-in 7 (Die.tsx) gets a beat on screen.
+// YEAR lingers a second longer so the 7 flicker (Die.tsx) plays out and the 6 settles.
 const YEAR_MS = PHASE_MS + 1000;
 
 // flip to true to bring back the soft ground shadow under the dice (off for now)

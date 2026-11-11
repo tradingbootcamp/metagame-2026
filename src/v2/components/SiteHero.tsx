@@ -12,12 +12,12 @@ import HeroBackdrop from "./HeroBackdrop";
 // (washed) sits behind the rolling-dice METAGAME wordmark, then the headline,
 // tickets CTA and mailing-list signup on a cream card so they read
 // against the photo. Content hangs from the top
-// (pt-[12vh]) rather than centring, so HeroBackdrop can place its wash on the
+// (pt-[6vh]) rather than centring, so HeroBackdrop can place its wash on the
 // dice with a fixed formula. `isolate` keeps the backdrop's -z-10 inside this
 // section's stacking context: behind the dice, above the cream.
 export default function SiteHero() {
   return (
-    <section className="relative isolate flex min-h-[88svh] flex-col items-center px-8 pt-[12vh] pb-8 text-center md:pt-[7vh]">
+    <section className="relative isolate flex min-h-[88svh] flex-col items-center px-8 pt-[6vh] pb-8 text-center md:pt-[7vh]">
       <HeroBackdrop />
       <Dice />
       <div className="mt-4 flex w-[85vw] max-w-[52ch] flex-col items-center rounded-lg border border-navy/10 bg-cream/70 px-5 py-4 shadow-[0_8px_24px_rgba(23,48,89,0.12)] md:mt-10 md:w-auto md:px-7 md:py-5">
