@@ -9,7 +9,8 @@ import { FIELD_LIGHT } from "../styles";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-// `compact` is the hero's version: name on its own row, then email and button.
+// `compact` is the hero's version: name on its own row above email and
+// button on phones, all one row from md up.
 export default function SignupForm({
   light = false,
   compact = false,
@@ -102,7 +103,7 @@ export default function SignupForm({
           placeholder="Name"
           aria-label="Name"
           autoComplete="name"
-          className={cn(field, compact && "flex-none")}
+          className={cn(field, compact && "flex-none md:flex-1")}
         />
         <Input
           type="email"
@@ -112,7 +113,7 @@ export default function SignupForm({
           placeholder="you@example.com*"
           aria-label="Email address"
           autoComplete="email"
-          className={field}
+          className={cn(field, compact && "md:flex-[1.5]")}
         />
         <Button
           type="submit"
