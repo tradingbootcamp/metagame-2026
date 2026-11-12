@@ -292,9 +292,11 @@ export default function Journey({
 
       {index === 0 && (
         <div className="mt-6">
-          <p className="max-w-[38em] text-lg leading-relaxed whitespace-pre-line text-ink/80 sm:text-xl">
-            <Rich text={def.pitch} />
-          </p>
+          {def.pitch && (
+            <p className="max-w-[38em] text-lg leading-relaxed whitespace-pre-line text-ink/80 sm:text-xl">
+              <Rich text={def.pitch} />
+            </p>
+          )}
           {def.aside && (
             <p className="mt-3 text-[15.5px] font-semibold text-navy">
               {def.aside}
@@ -370,7 +372,7 @@ export default function Journey({
               id="journey-heading"
               ref={heading}
               tabIndex={-1}
-              className={HEADING}
+              className={step.hideTitle ? "sr-only" : HEADING}
             >
               {step.title}
             </h2>
@@ -530,11 +532,13 @@ export default function Journey({
                 .filter((q) => !isEmpty(answers[q.key]));
               return (
                 <div key={s.key} className="mt-6 border-t-2 border-navy pt-3">
-                  <h4
-                    className={`${DISPLAY} text-[24px] leading-none text-navy`}
-                  >
-                    {s.title}
-                  </h4>
+                  {!s.hideTitle && (
+                    <h4
+                      className={`${DISPLAY} text-[24px] leading-none text-navy`}
+                    >
+                      {s.title}
+                    </h4>
+                  )}
                   {said.length ? (
                     <dl className="mt-3 grid gap-x-6 gap-y-2.5 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
                       {said.map((q) => (

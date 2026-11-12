@@ -9,15 +9,13 @@ export const joinTeam: FormDef = {
   slug: "join-team",
   path: INTEREST_FORM_URL,
   tableId: airtableConfig.signupsTableId,
-  name: "Get involved",
-  title: "Get involved with Metagame",
-  pitch:
-    "Tell us how you'd like to help with Metagame 2027, whether that's volunteering, speaking, organizing or sponsoring, and we'll reach out as it gets closer.",
-  aside: "This should only take about a minute.",
+  name: "Stay in the loop",
+  title: "Stay in the loop",
   steps: [
     {
       key: "details",
       title: "A few details",
+      hideTitle: true,
       items: [
         {
           key: "name",

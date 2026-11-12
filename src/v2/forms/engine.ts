@@ -132,6 +132,8 @@ export type Item = Question | Note;
 export type Step = {
   key: string;
   title: string;
+  /** Keep the title for screen readers only, e.g. a one-step form that needs no heading. */
+  hideTitle?: boolean;
   intro?: string;
   items: Item[];
   show?: (a: Answers) => boolean;
@@ -153,7 +155,7 @@ export type FormDef = {
   name: string;
   eyebrow?: string;
   title: string;
-  pitch: string;
+  pitch?: string;
   /** One line under the pitch, e.g. how long it takes. */
   aside?: string;
   /** Small facts under the pitch: when it's due, what it costs. */
