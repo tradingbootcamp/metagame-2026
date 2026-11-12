@@ -9,6 +9,7 @@ export const joinTeam: FormDef = {
   slug: "join-team",
   path: INTEREST_FORM_URL,
   tableId: airtableConfig.signupsTableId,
+  compact: true,
   name: "Stay in the loop",
   title: "Stay in the loop",
   steps: [
@@ -42,7 +43,6 @@ export const joinTeam: FormDef = {
           field: "fldmLx6E4fpMxaVHw",
           type: "choices",
           label: "I'm interested in",
-          help: "Select any of these that apply.",
           options: [
             {
               value: "volunteering",
@@ -81,9 +81,9 @@ export const joinTeam: FormDef = {
         {
           key: "notes",
           field: "fldBaSmooUULI2bbe",
-          type: "longtext",
+          type: "text",
           label: "Anything else?",
-          help: "Questions, ideas, or anything we should know.",
+          max: 5000,
         },
       ],
     },

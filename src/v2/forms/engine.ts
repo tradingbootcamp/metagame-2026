@@ -165,6 +165,8 @@ export type FormDef = {
   /** A warning under the pitch, with a red mark: a deadline that's passed. */
   warning?: string;
   steps: Step[];
+  /** Tighter spacing, with paired questions side by side even on phones: a short form that should fit one screen. */
+  compact?: boolean;
   done: {
     title: string;
     body: string;

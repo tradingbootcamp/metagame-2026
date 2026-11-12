@@ -362,7 +362,8 @@ export default function Journey({
       <div
         key={view}
         className={cn(
-          "mt-9 animate-in duration-300 fade-in",
+          def.compact ? "mt-5" : "mt-9",
+          "animate-in duration-300 fade-in",
           back ? "slide-in-from-left-4" : "slide-in-from-right-4",
         )}
       >
@@ -381,7 +382,12 @@ export default function Journey({
                 <Rich text={step.intro} />
               </p>
             )}
-            <div className="mt-8 flex flex-col gap-9">
+            <div
+              className={cn(
+                "flex flex-col",
+                def.compact ? "gap-5" : "mt-8 gap-9",
+              )}
+            >
               {step.view === "schedule" && (
                 <ScheduleBoard answers={answers} update={update} />
               )}
@@ -413,7 +419,12 @@ export default function Journey({
                 return isQuestion(row[0]) && row[0].row ? (
                   <div
                     key={row[0].key}
-                    className="grid gap-x-6 gap-y-9 sm:grid-cols-2"
+                    className={cn(
+                      "grid",
+                      def.compact
+                        ? "grid-cols-2 gap-x-3 gap-y-5"
+                        : "gap-x-6 gap-y-9 sm:grid-cols-2",
+                    )}
                   >
                     {fields}
                   </div>
@@ -439,6 +450,7 @@ export default function Journey({
               </p>
             )}
             <Footer
+              compact={def.compact}
               onBack={index ? backward : undefined}
               disabled={sending}
               next={
@@ -599,14 +611,21 @@ function Footer({
   next,
   hint,
   disabled,
+  compact,
 }: {
+  compact?: boolean;
   onBack?: () => void;
   next: React.ReactNode;
   hint?: string;
   disabled?: boolean;
 }) {
   return (
-    <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t-2 border-navy pt-5">
+    <div
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-4 border-t-2 border-navy pt-5",
+        compact ? "mt-6" : "mt-12",
+      )}
+    >
       {onBack ? (
         <button
           type="button"
