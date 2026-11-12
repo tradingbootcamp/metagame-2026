@@ -203,16 +203,11 @@ const FAQS: {
     question: "May I bring or demonstrate my own game?",
     answer: (
       <>
-        Please do! Fill out our proposal form{" "}
-        <a
-          href={RFP_FORM_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={BODY_LINK}
-        >
+        Please do! Let us know{" "}
+        <a href={RFP_FORM_URL} className={BODY_LINK}>
           here
         </a>{" "}
-        to run a game, event, or session.
+        if you&apos;d like to run a game, event, or session.
       </>
     ),
   },

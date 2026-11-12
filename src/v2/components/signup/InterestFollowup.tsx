@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import { FaArrowRight } from "react-icons/fa";
-import {
-  EMAIL_LIST_VALUE,
-  INTEREST_OPTIONS,
-  type InterestValue,
-} from "@/lib/interests";
+import { INTEREST_OPTIONS, type InterestValue } from "@/lib/interests";
 import Link from "next/link";
 import { SPONSOR_FORM_URL } from "@/v2/lib/links";
 import { Button } from "@/v2/components/ui/button";
@@ -33,13 +29,10 @@ export default function InterestFollowup({
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState<Status>("idle");
 
-  // "Just the email list" and the specific interests are mutually exclusive.
   function toggle(value: InterestValue) {
-    setSelected((prev) => {
-      if (prev.includes(value)) return prev.filter((v) => v !== value);
-      if (value === EMAIL_LIST_VALUE) return [EMAIL_LIST_VALUE];
-      return [...prev.filter((v) => v !== EMAIL_LIST_VALUE), value];
-    });
+    setSelected((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+    );
   }
 
   const empty = selected.length === 0 && notes.trim() === "";
@@ -96,8 +89,6 @@ export default function InterestFollowup({
               className={cn(
                 "flex cursor-pointer items-center gap-2 text-base",
                 label,
-                // Too long for half a narrow card, and it's the odd one out.
-                opt.value === EMAIL_LIST_VALUE && "col-span-2",
               )}
             >
               <input

@@ -34,8 +34,7 @@ describe("join team", () => {
   it("offers every interest the email signup knows, and always joins the list", () => {
     const q = allQuestions(def).find((x) => x.key === "interests")!;
     const values = q.type === "choices" ? q.options.map((o) => o.value) : [];
-    for (const o of INTEREST_OPTIONS)
-      if (o.value !== EMAIL_LIST_VALUE) expect(values).toContain(o.value);
+    for (const o of INTEREST_OPTIONS) expect(values).toContain(o.value);
     expect(values).not.toContain(EMAIL_LIST_VALUE);
     const who = { name: "Ada", email: "ada@example.com" };
     expect(

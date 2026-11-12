@@ -14,7 +14,10 @@ import {
   INTEREST_FORM_URL,
   NIGHT_PARTIFUL_PATH,
   NIGHT_PARTIFUL_URL,
+  RFP_FORM_URL,
   SPONSOR_FORM_URL,
+  VOLUNTEER_APPLY_PATH,
+  VOLUNTEER_FORM_PATH,
 } from "./src/v2/lib/links";
 
 // Missing required env vars warn locally and fail the build on Vercel.
@@ -104,6 +107,15 @@ const nextConfig: NextConfig = {
     // The sponsor page is gone until there's 2027 info; the form is the way in.
     { source: "/sponsor", destination: SPONSOR_FORM_URL, permanent: false },
     { source: "/team/join", destination: INTEREST_FORM_URL, permanent: true },
+    // Session proposals and volunteer applications are closed until 2027 plans
+    // firm up; the interest form takes those for now. Drop these to reopen.
+    ...[RFP_FORM_URL, VOLUNTEER_APPLY_PATH, VOLUNTEER_FORM_PATH].map(
+      (source) => ({
+        source,
+        destination: INTEREST_FORM_URL,
+        permanent: false,
+      }),
+    ),
     // /buy/<code> hands its code to the tickets section, which stores it for Standard checkout.
     { source: "/buy", destination: "/#tickets", permanent: false },
     {
