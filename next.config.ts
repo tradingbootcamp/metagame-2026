@@ -11,6 +11,7 @@ import {
   CON_PARTIFUL_URL,
   HOUSING_PATH,
   HOUSING_URL,
+  INTEREST_FORM_URL,
   NIGHT_PARTIFUL_PATH,
   NIGHT_PARTIFUL_URL,
   SPONSOR_FORM_URL,
@@ -102,6 +103,7 @@ const nextConfig: NextConfig = {
     { source: "/key-dates", destination: "/", permanent: true },
     // The sponsor page is gone until there's 2027 info; the form is the way in.
     { source: "/sponsor", destination: SPONSOR_FORM_URL, permanent: false },
+    { source: "/team/join", destination: INTEREST_FORM_URL, permanent: true },
     // /buy/<code> hands its code to the tickets section, which stores it for Standard checkout.
     { source: "/buy", destination: "/#tickets", permanent: false },
     {

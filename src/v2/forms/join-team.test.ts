@@ -43,4 +43,15 @@ describe("join team", () => {
       }).fldmLx6E4fpMxaVHw,
     ).toEqual(["volunteering", "email list"]);
   });
+
+  it("points only sponsors at a next step on the thank-you", () => {
+    const links = (a: Answers) =>
+      def.done.links.filter((l) => !l.show || l.show(a)).map((l) => l.label);
+    expect(links({ interests: ["sponsoring"] })).toContain(
+      "Tell us about sponsoring",
+    );
+    expect(links({ interests: ["volunteering", "speaking"] })).toEqual([
+      "Back to the homepage",
+    ]);
+  });
 });

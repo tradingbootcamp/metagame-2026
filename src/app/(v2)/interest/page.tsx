@@ -7,6 +7,6 @@ export const metadata: Metadata = {
     "Volunteer, speak, organize or sponsor: tell us how you'd like to help make Metagame 2027.",
 };
 
-export default function JoinTeamPage() {
+export default function InterestPage() {
   return <AccountJourney slug="join-team" />;
 }

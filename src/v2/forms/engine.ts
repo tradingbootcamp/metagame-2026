@@ -166,7 +166,7 @@ export type FormDef = {
   done: {
     title: string;
     body: string;
-    links: { label: string; href: string }[];
+    links: { label: string; href: string; show?: (a: Answers) => boolean }[];
   };
   /** Airtable field ids for the visitor's stored UTMs, when the table keeps them. */
   utmFields?: Partial<

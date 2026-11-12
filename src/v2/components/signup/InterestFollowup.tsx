@@ -7,7 +7,8 @@ import {
   INTEREST_OPTIONS,
   type InterestValue,
 } from "@/lib/interests";
-import { RFP_FORM_URL } from "@/v2/lib/links";
+import Link from "next/link";
+import { SPONSOR_FORM_URL } from "@/v2/lib/links";
 import { Button } from "@/v2/components/ui/button";
 import { Input } from "@/v2/components/ui/input";
 import { cn } from "@/v2/lib/utils";
@@ -66,13 +67,13 @@ export default function InterestFollowup({
         <p className={`text-center text-sm ${muted}`}>
           Additional details submitted ✓
         </p>
-        {/* Submitted "Speaking" → push them to the session-proposal (RFP) form. */}
-        {selected.includes("speaking") && (
+        {/* Only sponsors get a next step; the other interests are just tags until 2027 nears. */}
+        {selected.includes("sponsoring") && (
           <Button asChild className="text-center whitespace-normal">
-            <a href={RFP_FORM_URL} target="_blank" rel="noopener noreferrer">
-              Interested in speaking? Fill out the Session Proposal form!
+            <Link href={SPONSOR_FORM_URL}>
+              Interested in sponsoring? Tell us more!
               <FaArrowRight size={16} aria-hidden className="shrink-0" />
-            </a>
+            </Link>
           </Button>
         )}
       </div>

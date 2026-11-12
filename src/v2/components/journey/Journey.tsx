@@ -496,26 +496,28 @@ export default function Journey({
               {def.done.body}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              {def.done.links.map(({ label, href }, i) => (
-                <Button
-                  key={href}
-                  asChild
-                  variant={i ? "ghost" : "default"}
-                  className={
-                    i
-                      ? "border-2 border-navy text-navy hover:border-navy hover:bg-navy/5"
-                      : ""
-                  }
-                >
-                  {href.startsWith("/") ? (
-                    <Link href={href}>{label}</Link>
-                  ) : (
-                    <a href={href} target="_blank" rel="noopener noreferrer">
-                      {label}
-                    </a>
-                  )}
-                </Button>
-              ))}
+              {def.done.links
+                .filter((l) => !l.show || l.show(answers))
+                .map(({ label, href }, i) => (
+                  <Button
+                    key={href}
+                    asChild
+                    variant={i ? "ghost" : "default"}
+                    className={
+                      i
+                        ? "border-2 border-navy text-navy hover:border-navy hover:bg-navy/5"
+                        : ""
+                    }
+                  >
+                    {href.startsWith("/") ? (
+                      <Link href={href}>{label}</Link>
+                    ) : (
+                      <a href={href} target="_blank" rel="noopener noreferrer">
+                        {label}
+                      </a>
+                    )}
+                  </Button>
+                ))}
             </div>
             <h3
               className={`${DISPLAY} mt-14 text-[30px] leading-none text-navy`}
