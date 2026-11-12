@@ -1,6 +1,7 @@
 import { airtableConfig } from "@/lib/airtable-config";
+import { EMAIL_LIST_VALUE } from "@/lib/interests";
 import { INTEREST_FORM_URL, SPONSOR_FORM_URL } from "@/v2/lib/links";
-import type { FormDef } from "./engine";
+import type { Answers, FormDef } from "./engine";
 import { picked } from "./engine";
 
 // The interest form linked from /team, on the Interest Intake table the Airtable
@@ -52,11 +53,6 @@ export const joinTeam: FormDef = {
             { value: "speaking", label: "Speaking", glyph: "talks" },
             { value: "organizing", label: "Organizing", glyph: "workshops" },
             { value: "sponsoring", label: "Sponsoring", glyph: "megagame" },
-            {
-              value: "email list",
-              label: "The email list",
-              glyph: "crosswords",
-            },
           ],
         },
         {
@@ -88,6 +84,14 @@ export const joinTeam: FormDef = {
       ],
     },
   ],
+  // Like the homepage signup, every submission joins the mailing list.
+  beforeWrite: (a: Answers) => ({
+    ...a,
+    interests: [
+      EMAIL_LIST_VALUE,
+      ...(Array.isArray(a.interests) ? a.interests : []),
+    ],
+  }),
   done: {
     title: "Thanks, we'll be in touch.",
     body: "We'll reach out as Metagame 2027 gets closer.",

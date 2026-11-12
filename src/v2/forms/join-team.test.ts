@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { INTEREST_OPTIONS } from "@/lib/interests";
+import { EMAIL_LIST_VALUE, INTEREST_OPTIONS } from "@/lib/interests";
 import {
   airtableFields,
   allQuestions,
@@ -31,17 +31,18 @@ describe("join team", () => {
     );
   });
 
-  it("offers every interest the email signup knows, by the same name", () => {
+  it("offers every interest the email signup knows, and always joins the list", () => {
     const q = allQuestions(def).find((x) => x.key === "interests")!;
     const values = q.type === "choices" ? q.options.map((o) => o.value) : [];
-    for (const o of INTEREST_OPTIONS) expect(values).toContain(o.value);
+    for (const o of INTEREST_OPTIONS)
+      if (o.value !== EMAIL_LIST_VALUE) expect(values).toContain(o.value);
+    expect(values).not.toContain(EMAIL_LIST_VALUE);
+    const who = { name: "Ada", email: "ada@example.com" };
     expect(
-      airtableFields(def, {
-        name: "Ada",
-        email: "ada@example.com",
-        interests: ["volunteering", "email list"],
-      }).fldmLx6E4fpMxaVHw,
-    ).toEqual(["volunteering", "email list"]);
+      airtableFields(def, { ...who, interests: ["volunteering"] })
+        .fldmLx6E4fpMxaVHw,
+    ).toEqual(["email list", "volunteering"]);
+    expect(airtableFields(def, who).fldmLx6E4fpMxaVHw).toEqual(["email list"]);
   });
 
   it("points only sponsors at a next step on the thank-you", () => {
