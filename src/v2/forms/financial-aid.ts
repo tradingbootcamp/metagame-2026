@@ -1,5 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import { FINANCIAL_AID_FORM_URL, VOLUNTEER_APPLY_PATH } from "@/v2/lib/links";
+import { FINANCIAL_AID_FORM_URL } from "@/v2/lib/links";
 import type { Answers, FormDef } from "./engine";
 import { isEmpty, picked } from "./engine";
 import {
@@ -214,9 +214,6 @@ export const financialAid: FormDef = {
   done: {
     title: "Your application is in.",
     body: "Applications are processed in the order they arrive. We'll email you once we've reviewed yours.",
-    links: [
-      { label: "Apply to volunteer too", href: VOLUNTEER_APPLY_PATH },
-      { label: "Back to the homepage", href: "/" },
-    ],
+    links: [{ label: "Back to the homepage", href: "/" }],
   },
 };

@@ -2,7 +2,7 @@
 
 // The site's forms, each a journey page of its own (src/v2/forms): propose a
 // session (/propose is also the printed short link), build part of the
-// Megagame, volunteer, register children, join the team, sponsor, apply for
+// Megagame, volunteer, register children, register interest, sponsor, apply for
 // financial aid, and run a Night Market booth.
 export const RFP_FORM_URL = "/propose";
 export const MEGAGAME_PROPOSAL_FORM_URL = "/megagame/build";
@@ -12,7 +12,7 @@ export const VOLUNTEER_APPLY_PATH = "/volunteer/apply";
 export const VOLUNTEER_FORM_PATH = "/volunteer-form";
 // Required for every attending child (childcare or not).
 export const CHILD_REGISTRATION_FORM_URL = "/childcare/register";
-export const JOIN_TEAM_FORM_URL = "/team/join";
+export const INTEREST_FORM_URL = "/interest";
 export const SPONSOR_FORM_URL = "/sponsor/interest";
 export const FINANCIAL_AID_FORM_URL = "/financial-aid";
 

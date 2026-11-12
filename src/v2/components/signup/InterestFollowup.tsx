@@ -2,12 +2,9 @@
 
 import { useState } from "react";
 import { FaArrowRight } from "react-icons/fa";
-import {
-  EMAIL_LIST_VALUE,
-  INTEREST_OPTIONS,
-  type InterestValue,
-} from "@/lib/interests";
-import { RFP_FORM_URL } from "@/v2/lib/links";
+import { INTEREST_OPTIONS, type InterestValue } from "@/lib/interests";
+import Link from "next/link";
+import { SPONSOR_FORM_URL } from "@/v2/lib/links";
 import { Button } from "@/v2/components/ui/button";
 import { Input } from "@/v2/components/ui/input";
 import { cn } from "@/v2/lib/utils";
@@ -32,13 +29,10 @@ export default function InterestFollowup({
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState<Status>("idle");
 
-  // "Just the email list" and the specific interests are mutually exclusive.
   function toggle(value: InterestValue) {
-    setSelected((prev) => {
-      if (prev.includes(value)) return prev.filter((v) => v !== value);
-      if (value === EMAIL_LIST_VALUE) return [EMAIL_LIST_VALUE];
-      return [...prev.filter((v) => v !== EMAIL_LIST_VALUE), value];
-    });
+    setSelected((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+    );
   }
 
   const empty = selected.length === 0 && notes.trim() === "";
@@ -66,13 +60,13 @@ export default function InterestFollowup({
         <p className={`text-center text-sm ${muted}`}>
           Additional details submitted ✓
         </p>
-        {/* Submitted "Speaking" → push them to the session-proposal (RFP) form. */}
-        {selected.includes("speaking") && (
+        {/* Only sponsors get a next step; the other interests are just tags until 2027 nears. */}
+        {selected.includes("sponsoring") && (
           <Button asChild className="text-center whitespace-normal">
-            <a href={RFP_FORM_URL} target="_blank" rel="noopener noreferrer">
-              Interested in speaking? Fill out the Session Proposal form!
+            <Link href={SPONSOR_FORM_URL}>
+              Interested in sponsoring? Tell us more!
               <FaArrowRight size={16} aria-hidden className="shrink-0" />
-            </a>
+            </Link>
           </Button>
         )}
       </div>
@@ -95,8 +89,6 @@ export default function InterestFollowup({
               className={cn(
                 "flex cursor-pointer items-center gap-2 text-base",
                 label,
-                // Too long for half a narrow card, and it's the odd one out.
-                opt.value === EMAIL_LIST_VALUE && "col-span-2",
               )}
             >
               <input

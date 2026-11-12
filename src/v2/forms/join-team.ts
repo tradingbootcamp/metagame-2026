@@ -1,27 +1,23 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import {
-  JOIN_TEAM_FORM_URL,
-  RFP_FORM_URL,
-  VOLUNTEER_APPLY_PATH,
-} from "@/v2/lib/links";
-import type { FormDef } from "./engine";
+import { EMAIL_LIST_VALUE } from "@/lib/interests";
+import { INTEREST_FORM_URL, SPONSOR_FORM_URL } from "@/v2/lib/links";
+import type { Answers, FormDef } from "./engine";
 import { picked } from "./engine";
 
-// The interest form from /team, on the Interest Intake table the Airtable
+// The interest form linked from /team, on the Interest Intake table the Airtable
 // form wrote to, like the email signups.
 export const joinTeam: FormDef = {
   slug: "join-team",
-  path: JOIN_TEAM_FORM_URL,
+  path: INTEREST_FORM_URL,
   tableId: airtableConfig.signupsTableId,
-  name: "Get involved",
-  title: "Get involved with Metagame",
-  pitch:
-    "Tell us how you'd like to help with Metagame 2027, whether that's volunteering, speaking, organizing or sponsoring, and we'll follow up with the next step.",
-  aside: "This should only take about a minute.",
+  compact: true,
+  name: "Stay in the loop",
+  title: "Stay in the loop",
   steps: [
     {
       key: "details",
       title: "A few details",
+      hideTitle: true,
       items: [
         {
           key: "name",
@@ -48,7 +44,6 @@ export const joinTeam: FormDef = {
           field: "fldmLx6E4fpMxaVHw",
           type: "choices",
           label: "I'm interested in",
-          help: "Select any of these that apply.",
           options: [
             {
               value: "volunteering",
@@ -58,11 +53,6 @@ export const joinTeam: FormDef = {
             { value: "speaking", label: "Speaking", glyph: "talks" },
             { value: "organizing", label: "Organizing", glyph: "workshops" },
             { value: "sponsoring", label: "Sponsoring", glyph: "megagame" },
-            {
-              value: "email list",
-              label: "The email list",
-              glyph: "crosswords",
-            },
           ],
         },
         {
@@ -87,19 +77,30 @@ export const joinTeam: FormDef = {
         {
           key: "notes",
           field: "fldBaSmooUULI2bbe",
-          type: "longtext",
+          type: "text",
           label: "Anything else?",
-          help: "Questions, ideas, or anything we should know.",
+          max: 5000,
         },
       ],
     },
   ],
+  // Like the homepage signup, every submission joins the mailing list.
+  beforeWrite: (a: Answers) => ({
+    ...a,
+    interests: [
+      EMAIL_LIST_VALUE,
+      ...(Array.isArray(a.interests) ? a.interests : []),
+    ],
+  }),
   done: {
     title: "Thanks, we'll be in touch.",
-    body: "We'll follow up with the next step. Can't wait? Jump straight in:",
+    body: "We'll reach out as Metagame 2027 gets closer.",
     links: [
-      { label: "Apply to volunteer", href: VOLUNTEER_APPLY_PATH },
-      { label: "Propose a session", href: RFP_FORM_URL },
+      {
+        label: "Tell us about sponsoring",
+        href: SPONSOR_FORM_URL,
+        show: (a) => picked(a.interests, "sponsoring"),
+      },
       { label: "Back to the homepage", href: "/" },
     ],
   },

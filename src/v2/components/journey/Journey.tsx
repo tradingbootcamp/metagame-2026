@@ -292,9 +292,11 @@ export default function Journey({
 
       {index === 0 && (
         <div className="mt-6">
-          <p className="max-w-[38em] text-lg leading-relaxed whitespace-pre-line text-ink/80 sm:text-xl">
-            <Rich text={def.pitch} />
-          </p>
+          {def.pitch && (
+            <p className="max-w-[38em] text-lg leading-relaxed whitespace-pre-line text-ink/80 sm:text-xl">
+              <Rich text={def.pitch} />
+            </p>
+          )}
           {def.aside && (
             <p className="mt-3 text-[15.5px] font-semibold text-navy">
               {def.aside}
@@ -360,7 +362,8 @@ export default function Journey({
       <div
         key={view}
         className={cn(
-          "mt-9 animate-in duration-300 fade-in",
+          def.compact ? "mt-5" : "mt-9",
+          "animate-in duration-300 fade-in",
           back ? "slide-in-from-left-4" : "slide-in-from-right-4",
         )}
       >
@@ -370,7 +373,7 @@ export default function Journey({
               id="journey-heading"
               ref={heading}
               tabIndex={-1}
-              className={HEADING}
+              className={step.hideTitle ? "sr-only" : HEADING}
             >
               {step.title}
             </h2>
@@ -379,7 +382,12 @@ export default function Journey({
                 <Rich text={step.intro} />
               </p>
             )}
-            <div className="mt-8 flex flex-col gap-9">
+            <div
+              className={cn(
+                "flex flex-col",
+                def.compact ? "gap-5" : "mt-8 gap-9",
+              )}
+            >
               {step.view === "schedule" && (
                 <ScheduleBoard answers={answers} update={update} />
               )}
@@ -411,7 +419,12 @@ export default function Journey({
                 return isQuestion(row[0]) && row[0].row ? (
                   <div
                     key={row[0].key}
-                    className="grid gap-x-6 gap-y-9 sm:grid-cols-2"
+                    className={cn(
+                      "grid",
+                      def.compact
+                        ? "grid-cols-2 gap-x-3 gap-y-5"
+                        : "gap-x-6 gap-y-9 sm:grid-cols-2",
+                    )}
                   >
                     {fields}
                   </div>
@@ -437,6 +450,7 @@ export default function Journey({
               </p>
             )}
             <Footer
+              compact={def.compact}
               onBack={index ? backward : undefined}
               disabled={sending}
               next={
@@ -496,26 +510,28 @@ export default function Journey({
               {def.done.body}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              {def.done.links.map(({ label, href }, i) => (
-                <Button
-                  key={href}
-                  asChild
-                  variant={i ? "ghost" : "default"}
-                  className={
-                    i
-                      ? "border-2 border-navy text-navy hover:border-navy hover:bg-navy/5"
-                      : ""
-                  }
-                >
-                  {href.startsWith("/") ? (
-                    <Link href={href}>{label}</Link>
-                  ) : (
-                    <a href={href} target="_blank" rel="noopener noreferrer">
-                      {label}
-                    </a>
-                  )}
-                </Button>
-              ))}
+              {def.done.links
+                .filter((l) => !l.show || l.show(answers))
+                .map(({ label, href }, i) => (
+                  <Button
+                    key={href}
+                    asChild
+                    variant={i ? "ghost" : "default"}
+                    className={
+                      i
+                        ? "border-2 border-navy text-navy hover:border-navy hover:bg-navy/5"
+                        : ""
+                    }
+                  >
+                    {href.startsWith("/") ? (
+                      <Link href={href}>{label}</Link>
+                    ) : (
+                      <a href={href} target="_blank" rel="noopener noreferrer">
+                        {label}
+                      </a>
+                    )}
+                  </Button>
+                ))}
             </div>
             <h3
               className={`${DISPLAY} mt-14 text-[30px] leading-none text-navy`}
@@ -528,11 +544,13 @@ export default function Journey({
                 .filter((q) => !isEmpty(answers[q.key]));
               return (
                 <div key={s.key} className="mt-6 border-t-2 border-navy pt-3">
-                  <h4
-                    className={`${DISPLAY} text-[24px] leading-none text-navy`}
-                  >
-                    {s.title}
-                  </h4>
+                  {!s.hideTitle && (
+                    <h4
+                      className={`${DISPLAY} text-[24px] leading-none text-navy`}
+                    >
+                      {s.title}
+                    </h4>
+                  )}
                   {said.length ? (
                     <dl className="mt-3 grid gap-x-6 gap-y-2.5 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
                       {said.map((q) => (
@@ -593,14 +611,21 @@ function Footer({
   next,
   hint,
   disabled,
+  compact,
 }: {
+  compact?: boolean;
   onBack?: () => void;
   next: React.ReactNode;
   hint?: string;
   disabled?: boolean;
 }) {
   return (
-    <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t-2 border-navy pt-5">
+    <div
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-4 border-t-2 border-navy pt-5",
+        compact ? "mt-6" : "mt-12",
+      )}
+    >
       {onBack ? (
         <button
           type="button"

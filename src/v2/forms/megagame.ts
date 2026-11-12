@@ -1,5 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import { MEGAGAME_PROPOSAL_FORM_URL, RFP_FORM_URL } from "@/v2/lib/links";
+import { MEGAGAME_PROPOSAL_FORM_URL } from "@/v2/lib/links";
 import type { Answers, FormDef } from "./engine";
 import { opts } from "./shared";
 
@@ -317,7 +317,6 @@ export const megagame: FormDef = {
     body: "The Megagame team will look it over and be in touch about where it fits.",
     links: [
       { label: "Read about the Megagame", href: "/#megagame" },
-      { label: "Propose a session too", href: RFP_FORM_URL },
       { label: "Back to the homepage", href: "/" },
     ],
   },

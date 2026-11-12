@@ -132,6 +132,8 @@ export type Item = Question | Note;
 export type Step = {
   key: string;
   title: string;
+  /** Keep the title for screen readers only, e.g. a one-step form that needs no heading. */
+  hideTitle?: boolean;
   intro?: string;
   items: Item[];
   show?: (a: Answers) => boolean;
@@ -153,7 +155,7 @@ export type FormDef = {
   name: string;
   eyebrow?: string;
   title: string;
-  pitch: string;
+  pitch?: string;
   /** One line under the pitch, e.g. how long it takes. */
   aside?: string;
   /** Small facts under the pitch: when it's due, what it costs. */
@@ -163,10 +165,12 @@ export type FormDef = {
   /** A warning under the pitch, with a red mark: a deadline that's passed. */
   warning?: string;
   steps: Step[];
+  /** Tighter spacing, with paired questions side by side even on phones: a short form that should fit one screen. */
+  compact?: boolean;
   done: {
     title: string;
     body: string;
-    links: { label: string; href: string }[];
+    links: { label: string; href: string; show?: (a: Answers) => boolean }[];
   };
   /** Airtable field ids for the visitor's stored UTMs, when the table keeps them. */
   utmFields?: Partial<
