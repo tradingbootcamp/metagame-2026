@@ -4,6 +4,10 @@ import crypto from "node:crypto";
 // the `opennode` npm package but it dragged in a lot for two endpoints; a thin
 // wrapper is clearer and easier to keep typed against the v1 REST shapes we use.
 
+// The one switch for creating new Bitcoin charges. Off since the 2026 tickets
+// came down; the status and webhook routes stay up for charges already made.
+export const BTC_CHECKOUT_OPEN: boolean = false;
+
 type OpenNodeEnv = "live" | "dev";
 
 function getEnv(): OpenNodeEnv {

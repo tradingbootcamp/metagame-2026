@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { createCharge } = vi.hoisted(() => ({ createCharge: vi.fn() }));
 vi.mock("@/lib/opennode", () => ({
+  BTC_CHECKOUT_OPEN: true,
   createCharge,
   getHostedCheckoutUrl: () => "https://checkout.opennode.com/charge_1",
 }));
