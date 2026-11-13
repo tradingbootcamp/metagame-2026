@@ -5,7 +5,11 @@ import { getDayPass, getTicket, supporterTier } from "@/lib/tickets";
 import { countCodeRedemptions, lookupDiscountCode } from "@/lib/discount-codes";
 import { isEarlyBirdActive } from "@/lib/early-bird";
 import { isDayPassOnSale } from "@/lib/event-clock";
-import { createCharge, getHostedCheckoutUrl } from "@/lib/opennode";
+import {
+  BTC_CHECKOUT_OPEN,
+  createCharge,
+  getHostedCheckoutUrl,
+} from "@/lib/opennode";
 import { throttled } from "@/lib/throttle";
 import { pickUtm, type Utm } from "@/lib/utm";
 
@@ -22,6 +26,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FIELD_LEN = 200;
 
 export async function POST(request: Request) {
+  if (!BTC_CHECKOUT_OPEN) {
+    return NextResponse.json(
+      { error: "Bitcoin checkout is closed." },
+      { status: 410 },
+    );
+  }
+
   let body: Utm & {
     ticketId?: string;
     name?: string;
