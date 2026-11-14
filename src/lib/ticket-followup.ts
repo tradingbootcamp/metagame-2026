@@ -1,5 +1,6 @@
 import { CORE, FROM, escapeHtml, getResend } from "@/lib/email";
 import { reportError } from "@/lib/error-report";
+import { eventHasStarted } from "@/lib/event-clock";
 import { retryRateLimited } from "@/lib/resend-retry";
 import { emailSubject, readEmail } from "@/lib/sent-emails";
 
@@ -57,9 +58,10 @@ export function renderOneWeekOutEmail(
 }
 
 /**
- * After a paid ticket: the buyer joins the ticket-holders segment and gets
- * the one-week-out logistics email. The two steps run independently and
- * soft-fail through reportError, so they can never break the ticket itself.
+ * After a paid ticket: the buyer joins the ticket-holders segment and, until
+ * the event starts, gets the one-week-out logistics email. The two steps run
+ * independently and soft-fail through reportError, so they can never break the
+ * ticket itself.
  */
 export async function followUpTicketPurchase({
   to,
@@ -95,19 +97,21 @@ export async function followUpTicketPurchase({
     errors.push(err instanceof Error ? err.message : String(err));
   }
 
-  try {
-    const source = await readEmail("one-week-out");
-    if (source == null) throw new Error("one-week-out email not found");
-    const { subject, html } = renderOneWeekOutEmail(source, firstName);
-    const { error } = await retryRateLimited(() =>
-      resend.emails.send(
-        { from: FROM, to, replyTo: [CORE], subject, html },
-        { idempotencyKey: `one-week-out/${paymentId}` },
-      ),
-    );
-    if (error) throw new Error(`Resend send failed: ${error.message}`);
-  } catch (err) {
-    errors.push(err instanceof Error ? err.message : String(err));
+  if (!eventHasStarted()) {
+    try {
+      const source = await readEmail("one-week-out");
+      if (source == null) throw new Error("one-week-out email not found");
+      const { subject, html } = renderOneWeekOutEmail(source, firstName);
+      const { error } = await retryRateLimited(() =>
+        resend.emails.send(
+          { from: FROM, to, replyTo: [CORE], subject, html },
+          { idempotencyKey: `one-week-out/${paymentId}` },
+        ),
+      );
+      if (error) throw new Error(`Resend send failed: ${error.message}`);
+    } catch (err) {
+      errors.push(err instanceof Error ? err.message : String(err));
+    }
   }
 
   if (!errors.length) return;

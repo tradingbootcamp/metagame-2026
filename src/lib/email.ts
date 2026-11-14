@@ -34,6 +34,7 @@ export const CORE = "core@metagame.games";
 // Email clients load images over the network, so assets must point at the
 // deployed site regardless of which environment sent the email.
 const SITE = "https://metagame.games";
+const CLAIM_URL = `${SITE}/account?tab=tickets`;
 
 export type TicketConfirmationEmail = {
   to: string;
@@ -122,6 +123,18 @@ export function renderTicketConfirmationEmail(
     ? `Your pack includes ${groupTickets.length} separate weekend admissions. We've also emailed each attendee their own code. For attendee changes or refund requests, reply to this email.\n${groupTickets.map((t) => `${t.name} (${t.email}): ${formatTicketCode(t.code)}`).join("\n")}`
     : "";
 
+  const claim = groupTickets
+    ? {
+        admission: "A claimed ticket is each attendee's admission",
+        link: "Each attendee claims theirs",
+        how: "on their own Metagame account: signing in with the email listed for them has it ready to claim, or they can enter their code on any other account.",
+      }
+    : {
+        admission: "A claimed ticket is your admission",
+        link: "Claim your ticket",
+        how: "on your Metagame account: signing in with this email has it ready to claim, or you can enter the code below on any other account.",
+      };
+
   // The shipped .ics is the full three-day event, so day passes get only the
   // Google link (scoped to their day).
   const dates = eventDay
@@ -150,6 +163,8 @@ export function renderTicketConfirmationEmail(
         <p>Hi ${purchaserName ? escapeHtml(purchaserName) : "there"},</p>
 
         <p>Your Metagame 2026 ticket is confirmed. We're excited to see you there!</p>
+
+        <p><strong>${claim.admission}</strong>, so please claim before arriving. <a href="${CLAIM_URL}">${claim.link}</a> ${claim.how}</p>
 
         <p>Please join <a href="${SOCIAL_LINKS.DISCORD}">our Discord server</a>, where much future relevant communication will take place.</p>
 
@@ -191,6 +206,8 @@ Ready to play.
 Hi ${purchaserName || "there"},
 
 Your Metagame 2026 ticket is confirmed. We're excited to see you there!
+
+${claim.admission}, so please claim before arriving. ${claim.link} (${CLAIM_URL}) ${claim.how}
 
 Please join our Discord server, where much future relevant communication will take place: ${SOCIAL_LINKS.DISCORD}
 

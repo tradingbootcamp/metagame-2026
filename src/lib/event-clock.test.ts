@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDayPassOnSale } from "./event-clock";
+import { eventHasStarted, isDayPassOnSale } from "./event-clock";
 import { dayPasses } from "./tickets";
 
 const openAt = (iso: string) =>
@@ -36,5 +36,13 @@ describe("isDayPassOnSale", () => {
   ])("turns over at Pacific midnight (%s)", (before, after, was, now) => {
     expect(openAt(before)).toEqual(was);
     expect(openAt(after)).toEqual(now);
+  });
+});
+
+describe("eventHasStarted", () => {
+  it("flips at 2pm Pacific on Friday", () => {
+    expect(eventHasStarted(new Date("2026-11-06T21:59:59Z"))).toBe(false);
+    expect(eventHasStarted(new Date("2026-11-06T22:00:00Z"))).toBe(true);
+    expect(eventHasStarted(new Date("2026-11-09T20:00:00Z"))).toBe(true);
   });
 });
