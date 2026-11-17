@@ -1,29 +1,49 @@
 import "server-only";
+import { env } from "@/env";
 import { COMMITTEE_NAMES } from "./rfp-labels";
 
-// The committee's account emails, kept off the client: rfp-labels.ts ships in
-// browser bundles and only carries the names.
+/**
+ * Committee name → lowercased account email, from the COMMITTEE_EMAILS JSON.
+ * Never throws: public pages import this module. Never logs the value, since
+ * it holds the addresses (JSON.parse's message would quote it).
+ */
+export function parseCommitteeEmails(
+  raw: string | undefined,
+): Record<string, string> {
+  if (!raw?.trim()) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = null;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    console.error(
+      "[rfp-committee] COMMITTEE_EMAILS isn't a JSON object; ignoring it",
+    );
+    return {};
+  }
+  const emails = Object.fromEntries(
+    Object.entries(parsed).flatMap(([name, email]) =>
+      typeof email === "string" && email.includes("@")
+        ? [[name, email.trim().toLowerCase()]]
+        : [],
+    ),
+  );
+  const missing = COMMITTEE_NAMES.filter((n) => !Object.hasOwn(emails, n));
+  if (missing.length > 0) {
+    console.error(
+      `[rfp-committee] COMMITTEE_EMAILS has no email for ${missing.join(", ")}`,
+    );
+  }
+  return emails;
+}
 
 /** Each committee name as the Grader and Shepherd selects spell it → account email. */
-export const COMMITTEE_EMAILS: Record<string, string> = {
-  "John Bromels": "jbromels@gmail.com",
-  "Brian Smiley": "brian@metagame.games",
-  "Ben Karcher": "ben@metagame.games",
-  "Brendan Hurst": "brendan@metagame.games",
-  "Tommy Honton": "tommy@tommyhonton.com",
-  "Sparr Risher": "sparr0@gmail.com",
-  "Michael Sheely": "michael.sheely2@gmail.com",
-  "Ricki Heicklen": "ricki@metagame.games",
-  Jisk: "ja.kopczynski@gmail.com",
-  "Scott Gillies": "scottdgillies@gmail.com",
-  "Julian Wise": "julian.w.wise@gmail.com",
-};
+export const COMMITTEE_EMAILS = parseCommitteeEmails(env.COMMITTEE_EMAILS);
 
-for (const name of COMMITTEE_NAMES) {
-  if (!Object.hasOwn(COMMITTEE_EMAILS, name)) {
-    throw new Error(`COMMITTEE_NAMES lists ${name}, which has no email here`);
-  }
-}
+export const committeeConfigured = () =>
+  Object.keys(COMMITTEE_EMAILS).length > 0;
 
 /** The committee option name for an account email, if it has one. */
 export function committeeName(email: string): string | null {
