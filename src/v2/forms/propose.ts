@@ -12,7 +12,6 @@ export const propose: FormDef = {
   path: RFP_FORM_URL,
   tableId: airtableConfig.rfpSubmissionsTableId,
   name: "Session proposal",
-  eyebrow: "Request for proposals · Metagame 2026",
   title: "Propose a session",
   pitch: `Run something at Metagame!\nPitch a talk, a game, a workshop, or something stranger to run at Metagame this November 6–8. The speaker committee reads every proposal and gets back to you. Building a puzzle or game for the all-weekend Megagame instead? That has [its own form](${MEGAGAME_PROPOSAL_FORM_URL}). For a sense of what fits, see [last year's program](/last-year).`,
   aside: "This form should only take about 10 minutes.",

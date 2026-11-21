@@ -16,6 +16,7 @@ import {
   type PublicLocation,
   type PublicSession,
 } from "@/lib/schedule";
+import { ATTENDEE_ACTIONS_OPEN } from "@/lib/attendee-actions";
 import { SESSION_PARAM, sessionPageSlug } from "@/lib/session-link";
 import type { BoardData } from "@/lib/unconference";
 import { readViewCookie, writeViewCookie } from "@/lib/schedule-view";
@@ -246,7 +247,9 @@ export default function PublicSchedule({
         <EmptyPanel>
           {mine?.length
             ? `None of your sessions are on ${day.name}.`
-            : "Sessions you RSVP to, bookmark or host will show up here."}
+            : ATTENDEE_ACTIONS_OPEN
+              ? "Sessions you RSVP to, bookmark or host will show up here."
+              : "Sessions you RSVP'd to, bookmarked or hosted show up here."}
         </EmptyPanel>
       ) : view === "grid" && columns.length > 0 ? (
         <GridDay

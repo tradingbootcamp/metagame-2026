@@ -3,7 +3,6 @@ import {
   Award,
   CalendarDays,
   CircleUserRound,
-  HeartHandshake,
   History,
   LogIn,
   Mail,
@@ -40,13 +39,6 @@ export const NAV_LINKS: readonly NavLink[] = [
     icon: CalendarDays,
   },
   { id: "last-year", label: "Last Year", href: "/last-year", icon: History },
-  {
-    id: "get-involved",
-    label: "Get Involved",
-    href: "/#get-involved",
-    icon: HeartHandshake,
-  },
-  { id: "sponsor", label: "Sponsor", href: "/sponsor", icon: Award },
   { id: "childcare", label: "Childcare", href: "/childcare", icon: RubberDuck },
   { id: "team", label: "Team", href: "/team", icon: Users },
 ] as const;
@@ -75,13 +67,11 @@ export const ACCOUNT_LINK: NavLink = {
 
 // The one-pager's sections, in page order, keyed by their `id`. On "/" the
 // die's top face follows scroll-spy through these; the ones that are also nav
-// links (tickets, get-involved) share the link's icon and light the
-// link up.
+// links (tickets) share the link's icon and light the link up.
 export const HOME_SECTIONS: readonly { id: string; icon: NavIcon }[] = [
   { id: "about", icon: Puzzle },
   { id: "speakers", icon: UserRound },
   { id: "schedule", icon: CalendarDays },
-  { id: "get-involved", icon: HeartHandshake },
   { id: "venue", icon: MapPin },
   { id: "highlights", icon: PartyPopperRight },
   { id: "tickets", icon: Ticket },

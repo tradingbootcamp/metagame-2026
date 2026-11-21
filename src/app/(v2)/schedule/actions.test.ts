@@ -4,6 +4,9 @@ const h = vi.hoisted(() => ({
   session: { user: { id: "u1", role: "admin", banned: false } } as unknown,
   setBookmark: vi.fn(),
   getDb: vi.fn(),
+  allowed: vi.fn(async (): Promise<boolean> => true),
+  rsvp: vi.fn(),
+  cancelRsvp: vi.fn(),
 }));
 vi.mock("@/db", () => ({
   getDb: h.getDb,
@@ -11,22 +14,26 @@ vi.mock("@/db", () => ({
 }));
 vi.mock("@/lib/auth", () => ({ currentSession: async () => h.session }));
 vi.mock("@/lib/schedule-store", () => ({
-  cancelRsvp: vi.fn(),
+  cancelRsvp: h.cancelRsvp,
   constraintMessage: (err: { constraint?: string }) =>
     err.constraint ? { error: "A message for people." } : null,
   loadSessionRsvps: vi.fn(),
-  rsvp: vi.fn(),
+  rsvp: h.rsvp,
   setBookmark: h.setBookmark,
 }));
-vi.mock("./data", () => ({ rsvpTicket: vi.fn() }));
+vi.mock("./data", () => ({
+  attendeeActionsAllowed: h.allowed,
+  rsvpTicket: vi.fn(),
+}));
 
-import { bookmark } from "./actions";
+import { bookmark, rsvpTo, unRsvp } from "./actions";
 
 const ID = "6f1c2a0e-3d4b-4c5d-8e9f-0a1b2c3d4e5f";
 
 beforeEach(() => {
   vi.clearAllMocks();
   h.session = { user: { id: "u1", role: "admin", banned: false } };
+  h.allowed.mockResolvedValue(true);
 });
 
 it("logs a database failure and doesn't relay it", async () => {
@@ -66,4 +73,16 @@ it("answers a malformed id without reaching the database", async () => {
 
 it("still works when nothing goes wrong", async () => {
   expect(await bookmark(ID, true)).toEqual({ bookmarked: true });
+});
+
+it("refuses every attendee action while they're closed", async () => {
+  h.allowed.mockResolvedValue(false);
+  const closed = { error: expect.stringContaining("closed") };
+  expect(await rsvpTo(ID)).toEqual(closed);
+  expect(await unRsvp(ID)).toEqual(closed);
+  expect(await bookmark(ID, true)).toEqual(closed);
+  expect(h.getDb).not.toHaveBeenCalled();
+  expect(h.rsvp).not.toHaveBeenCalled();
+  expect(h.cancelRsvp).not.toHaveBeenCalled();
+  expect(h.setBookmark).not.toHaveBeenCalled();
 });

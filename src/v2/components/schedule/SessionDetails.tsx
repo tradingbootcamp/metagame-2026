@@ -9,6 +9,7 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import { toolAccess } from "@/lib/admin-auth";
+import { attendeeActionsOpen } from "@/lib/attendee-actions";
 import { editSessionAccess } from "@/lib/session-ownership";
 import { currentSession } from "@/lib/auth";
 import { airtableRfpLink, gradeLink } from "@/lib/rfp-links";
@@ -320,6 +321,7 @@ export default async function SessionDetails({ slug }: { slug: string }) {
           open={session.rsvpsOpen}
           inviteOnly={session.inviteOnly}
           invited={invited}
+          closed={!attendeeActionsOpen(!!admin)}
           conflicts={
             viewerId && plans && raw
               ? planConflicts(

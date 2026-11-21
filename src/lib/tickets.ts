@@ -228,19 +228,26 @@ export function dayPassForPaymentLinkUrl(
 
 export const DAY_PASS_TIER = "day-pass";
 
-/** The event on sale: new tickets file under it and check-in only sees its tickets. */
+/** The upcoming event: new tickets file under it and check-in only sees its tickets. */
 export const EVENT_YEAR = 2027;
 
-// Metagame 2027 earlier-than-early-bird, sold through a dashboard Payment Link.
-// Its buyers get a holding email, not the 2026 confirmation and logistics.
+// Metagame 2027 earlier-than-early-bird, sold through dashboard Payment Links
+// until 2026-11-15 while this site was still the 2026 one. Its buyers got a
+// holding email, not the 2026 confirmation and logistics. The links stay here
+// so those purchases still match.
 export const EGG_TIER_2027 = {
   label: "Metagame 2027 - Egg Tier",
   links: {
+    test: "https://buy.stripe.com/test_14AfZgbAzdbxgVl9Vgfw40o",
+    live: "https://buy.stripe.com/7sYbJ07kj7Rd5cD7N8fw40j",
+  } satisfies Record<StripeMode, string>,
+  // Fixed-$150 links sold until 2026-11-10.
+  retiredLinks: {
     test: "https://buy.stripe.com/test_28E8wO6gf6N96gH9Vgfw40n",
     live: "https://buy.stripe.com/fZubJ0gUTgnJfRh9Vgfw40i",
   } satisfies Record<StripeMode, string>,
-  get link() {
-    return this.links[stripeMode];
+  get allLinks(): string[] {
+    return [...Object.values(this.links), ...Object.values(this.retiredLinks)];
   },
 };
 
@@ -289,8 +296,7 @@ export function tierLabelForPaymentLinkUrl(
   url: string | null | undefined,
 ): string | undefined {
   if (!url) return undefined;
-  if (Object.values(EGG_TIER_2027.links).includes(url))
-    return EGG_TIER_2027.label;
+  if (EGG_TIER_2027.allLinks.includes(url)) return EGG_TIER_2027.label;
   for (const tier of ticketTiers) {
     if (Object.values(tier.links).includes(url)) return tier.label;
   }

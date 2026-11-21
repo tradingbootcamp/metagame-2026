@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { teamAccess, type TeamAccess } from "@/lib/access";
+import { attendeeActionsOpen } from "@/lib/attendee-actions";
 import { currentSession, type Session } from "@/lib/auth";
 import { ticketStep } from "@/lib/first-signin";
 import {
@@ -62,6 +63,13 @@ export const loadBoard = cache(async (): Promise<BoardData | null> => {
   const [session, access] = await Promise.all([currentSession(), teamAccess()]);
   return boardFor(rooms, session, access);
 });
+
+/** Whether this request may RSVP, bookmark, pin a note up or react. */
+export async function attendeeActionsAllowed(): Promise<boolean> {
+  return attendeeActionsOpen(
+    !!(await teamAccess())?.permissions.has("schedule.manage"),
+  );
+}
 
 /** The public sessions the signed-in viewer is in; null when signed out. */
 export const loadMySessionIds = cache(async (): Promise<string[] | null> => {

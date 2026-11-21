@@ -111,4 +111,14 @@ describe("ticketYear", () => {
       }),
     ).toBe("Metagame 2027 - Egg Tier");
   });
+
+  it("files the retired fixed-price Egg Tier links under 2027", () => {
+    const label = tierLabelForStripeCheckout({
+      metadata: null,
+      paymentLinkUrl: EGG_TIER_2027.retiredLinks.test,
+      productName: "Egg",
+    });
+    expect(label).toBe("Metagame 2027 - Egg Tier");
+    expect(ticketYear(label)).toBe(2027);
+  });
 });

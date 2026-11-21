@@ -7,12 +7,21 @@ import { buildErd } from "./scripts/build-erd.mjs";
 import { validateEnv } from "./src/env";
 import { EGG_TIER_2027, boothLinks, stripeMode } from "./src/lib/tickets";
 import {
+  CHILD_REGISTRATION_FORM_URL,
   CON_PARTIFUL_PATH,
   CON_PARTIFUL_URL,
+  FINANCIAL_AID_FORM_URL,
   HOUSING_PATH,
   HOUSING_URL,
+  INTEREST_FORM_URL,
+  MEGAGAME_PROPOSAL_FORM_URL,
+  NIGHT_MARKET_FORM_URL,
   NIGHT_PARTIFUL_PATH,
   NIGHT_PARTIFUL_URL,
+  RFP_FORM_URL,
+  SPONSOR_FORM_URL,
+  VOLUNTEER_APPLY_PATH,
+  VOLUNTEER_FORM_PATH,
 } from "./src/v2/lib/links";
 
 // Missing required env vars warn locally and fail the build on Vercel.
@@ -99,6 +108,24 @@ const nextConfig: NextConfig = {
     },
     // Key dates used to be its own page, then a home-page section; now gone.
     { source: "/key-dates", destination: "/", permanent: true },
+    // The sponsor page is gone until there's 2027 info; the form is the way in.
+    { source: "/sponsor", destination: SPONSOR_FORM_URL, permanent: false },
+    { source: "/team/join", destination: INTEREST_FORM_URL, permanent: true },
+    // The 2026 forms are closed until 2027 plans firm up; the interest form
+    // takes those for now. Drop a path here to reopen its form.
+    ...[
+      RFP_FORM_URL,
+      MEGAGAME_PROPOSAL_FORM_URL,
+      VOLUNTEER_APPLY_PATH,
+      VOLUNTEER_FORM_PATH,
+      CHILD_REGISTRATION_FORM_URL,
+      FINANCIAL_AID_FORM_URL,
+      NIGHT_MARKET_FORM_URL,
+    ].map((source) => ({
+      source,
+      destination: INTEREST_FORM_URL,
+      permanent: false,
+    })),
     // /buy/<code> hands its code to the tickets section, which stores it for Standard checkout.
     { source: "/buy", destination: "/#tickets", permanent: false },
     {

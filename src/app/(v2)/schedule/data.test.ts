@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { teamAccess } from "@/lib/access";
+import { ATTENDEE_ACTIONS_OPEN } from "@/lib/attendee-actions";
 import { currentSession } from "@/lib/auth";
 import { listNotesIn } from "@/lib/unconference-store";
-import { loadPageSnapshot, loadScheduleSnapshot } from "./data";
+import {
+  attendeeActionsAllowed,
+  loadPageSnapshot,
+  loadScheduleSnapshot,
+} from "./data";
 
 vi.mock("@/lib/access", () => ({ teamAccess: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ currentSession: vi.fn() }));
@@ -83,5 +88,14 @@ describe("loadScheduleSnapshot", () => {
       isTeam: false,
     });
     expect(listNotesIn).toHaveBeenCalledWith(["open"], null);
+  });
+});
+
+describe("attendeeActionsAllowed", () => {
+  it("follows the switch for attendees and always lets the schedule team in", async () => {
+    signedIn(["unconference.post"]);
+    expect(await attendeeActionsAllowed()).toBe(ATTENDEE_ACTIONS_OPEN);
+    signedIn(["schedule.manage"]);
+    expect(await attendeeActionsAllowed()).toBe(true);
   });
 });

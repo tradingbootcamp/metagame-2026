@@ -1,5 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import { FINANCIAL_AID_FORM_URL, VOLUNTEER_APPLY_PATH } from "@/v2/lib/links";
+import { FINANCIAL_AID_FORM_URL } from "@/v2/lib/links";
 import type { Answers, FormDef } from "./engine";
 import { isEmpty, picked } from "./engine";
 import {
@@ -37,7 +37,6 @@ export const financialAid: FormDef = {
   path: FINANCIAL_AID_FORM_URL,
   tableId: airtableConfig.volunteersTableId,
   name: "Financial aid application",
-  eyebrow: "Application · Metagame 2026",
   title: "Apply for financial aid",
   pitch:
     "Metagame has a scholarship fund with a limited number of free and reduced-price tickets, for anyone for whom the full price would be a hardship. Tell us the highest price that would work for you and a little about your situation, and we'll email you once we've reviewed it.",
@@ -215,9 +214,6 @@ export const financialAid: FormDef = {
   done: {
     title: "Your application is in.",
     body: "Applications are processed in the order they arrive. We'll email you once we've reviewed yours.",
-    links: [
-      { label: "Apply to volunteer too", href: VOLUNTEER_APPLY_PATH },
-      { label: "Back to the homepage", href: "/" },
-    ],
+    links: [{ label: "Back to the homepage", href: "/" }],
   },
 };

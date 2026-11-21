@@ -4,7 +4,7 @@ import PersonCard from "@/v2/components/PersonCard";
 import { HEADING } from "@/v2/components/styles";
 import { Button } from "@/v2/components/ui/button";
 import { ADVISORS, TEAM } from "@/v2/data/team";
-import { JOIN_TEAM_FORM_URL } from "@/v2/lib/links";
+import { INTEREST_FORM_URL } from "@/v2/lib/links";
 
 export const metadata: Metadata = {
   title: "Team — Metagame 2026",
@@ -48,7 +48,7 @@ export default function TeamPage() {
         Want to join the team? Let us know here:
       </p>
       <Button asChild variant="navy" size="lg" className="mt-6 text-lg">
-        <a href={JOIN_TEAM_FORM_URL}>Get involved</a>
+        <a href={INTEREST_FORM_URL}>Get involved</a>
       </Button>
     </ContentPage>
   );

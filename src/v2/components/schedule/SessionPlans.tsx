@@ -22,6 +22,7 @@ export default function SessionPlans({
   open,
   inviteOnly = false,
   invited = true,
+  closed = false,
   conflicts,
   rsvps: initial,
   ticket,
@@ -36,6 +37,8 @@ export default function SessionPlans({
   inviteOnly?: boolean;
   /** On the guest list, or the session isn't invite-only. */
   invited?: boolean;
+  /** Attendee actions are off for this viewer: their plan is read-only. */
+  closed?: boolean;
   conflicts: PlanConflict[];
   rsvps: SessionRsvps;
   ticket?: RsvpTicket;
@@ -61,7 +64,7 @@ export default function SessionPlans({
 
   return (
     <>
-      {inviteOnly && (
+      {!closed && inviteOnly && (
         <p className="text-sm text-[#1b1530]/70">
           {!plan
             ? "This one is invite-only. If you were invited, sign in with the email your invite went to."
@@ -70,13 +73,15 @@ export default function SessionPlans({
               : "This one is invite-only, and your account’s email isn’t on the guest list. If you were invited, sign in with the email your invite went to, or ask whoever invited you to add this email."}
         </p>
       )}
-      {commitment && (
+      {!closed && commitment && (
         <p className="text-sm text-[#1b1530]/70">
           Spots are limited and the host is counting on you, so only RSVP if
           you&rsquo;ll be there.
         </p>
       )}
-      {plan ? (
+      {closed ? (
+        <ClosedPlan plan={plan} />
+      ) : plan ? (
         <PlanButtons
           sessionId={sessionId}
           status={plan.status}
@@ -110,6 +115,33 @@ export default function SessionPlans({
         signIn
       )}
       <Attendees rsvps={rsvps} />
+    </>
+  );
+}
+
+/** What the viewer had planned, with nothing left to click. */
+function ClosedPlan({
+  plan,
+}: {
+  plan: { status: RsvpStatus | null; bookmarked: boolean } | null;
+}) {
+  return (
+    <>
+      {plan?.status && (
+        <p className="text-sm font-semibold text-navy">
+          {plan.status === "going"
+            ? "You RSVP’d to this one."
+            : "You were on the waitlist for this one."}
+        </p>
+      )}
+      {plan?.bookmarked && (
+        <p className="text-sm font-semibold text-navy">
+          You bookmarked this one.
+        </p>
+      )}
+      <p className="text-sm text-[#1b1530]/60">
+        Metagame 2026 is over, so RSVPs and bookmarks are closed.
+      </p>
     </>
   );
 }
