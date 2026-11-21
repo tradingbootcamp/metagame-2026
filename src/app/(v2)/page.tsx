@@ -554,7 +554,7 @@ export default async function Home() {
       {/* sponsors */}
       <section id="sponsors" className={`${SECTION} md:py-14`}>
         <div className={CONTAINER}>
-          <SectionHeading eyebrow="With gratitude" title="Our sponsors" />
+          <SectionHeading eyebrow="With gratitude" title="2026 Sponsors" />
           <div className="mt-10 flex flex-col items-center gap-10">
             {[
               {
