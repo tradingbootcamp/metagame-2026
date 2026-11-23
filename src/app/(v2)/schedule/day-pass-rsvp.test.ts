@@ -23,9 +23,12 @@ vi.mock("@/lib/schedule-store", () => ({
   setBookmark: vi.fn(),
 }));
 vi.mock("@/lib/ticket-store", () => ({
-  ticketsForUser: async () => h.tickets,
+  thisYearTicketsForUser: async () => h.tickets,
 }));
-vi.mock("./data", () => ({ rsvpTicket: h.rsvpTicket }));
+vi.mock("./data", () => ({
+  attendeeActionsAllowed: async () => true,
+  rsvpTicket: h.rsvpTicket,
+}));
 
 import { rsvpTo } from "./actions";
 

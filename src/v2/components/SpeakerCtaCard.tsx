@@ -90,7 +90,7 @@ export default function SpeakerCtaCard({ href }: { href: string }) {
           <h3 className={`${HEADING} text-xs text-navy sm:text-lg`}>You?</h3>
           <p className="mt-1 font-space-mono text-[9px] text-ink/60 uppercase transition-colors group-hover:text-navy sm:text-xs sm:tracking-[0.08em]">
             <span className="underline underline-offset-2">
-              Submit a proposal<span className="hidden sm:inline"> &rarr;</span>
+              Let us know<span className="hidden sm:inline"> &rarr;</span>
             </span>
           </p>
         </div>

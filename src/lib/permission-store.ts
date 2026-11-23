@@ -4,6 +4,7 @@ import {
   isPermission,
   PERMISSIONS,
   type AccessInput,
+  type OverrideEffect,
   type Permission,
 } from "./permissions";
 import { hasClaimedTicket } from "./ticket-store";
@@ -202,7 +203,7 @@ export async function userAccess(
   admin: boolean,
 ): Promise<AccessInput & { roleIds: string[] }> {
   const db = getDb();
-  const [held, grants, auto] = await Promise.all([
+  const [held, overrides, auto] = await Promise.all([
     db
       .select({
         id: roles.id,
@@ -214,10 +215,7 @@ export async function userAccess(
       .leftJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
       .where(eq(userRoles.userId, userId))
       .orderBy(asc(roles.name)),
-    db
-      .select({ permission: userPermissionGrants.permission })
-      .from(userPermissionGrants)
-      .where(eq(userPermissionGrants.userId, userId)),
+    userOverrides(userId),
     builtinRoles(userId),
   ]);
   const byRole = new Map<string, { name: string; permissions: string[] }>();
@@ -232,8 +230,24 @@ export async function userAccess(
     admin,
     roles: [...byRole.values(), ...auto],
     roleIds: [...byRole.keys()],
-    grants: grants.map((g) => g.permission),
+    ...overrides,
   };
+}
+
+/** One account's per-user allows and denies. */
+export async function userOverrides(
+  userId: string,
+): Promise<Pick<AccessInput, "grants" | "denies">> {
+  const rows = await getDb()
+    .select({
+      permission: userPermissionGrants.permission,
+      effect: userPermissionGrants.effect,
+    })
+    .from(userPermissionGrants)
+    .where(eq(userPermissionGrants.userId, userId));
+  const pick = (effect: OverrideEffect) =>
+    rows.filter((r) => r.effect === effect).map((r) => r.permission);
+  return { grants: pick("allow"), denies: pick("deny") };
 }
 
 /**
@@ -307,17 +321,21 @@ export async function setUserRole(
   }
 }
 
-export async function setUserGrant(
+/** `null` drops the override, leaving the roles to decide. */
+export async function setUserOverride(
   userId: string,
   permission: Permission,
-  granted: boolean,
+  effect: OverrideEffect | null,
 ): Promise<void> {
   const db = getDb();
-  if (granted) {
+  if (effect) {
     await db
       .insert(userPermissionGrants)
-      .values({ userId, permission })
-      .onConflictDoNothing();
+      .values({ userId, permission, effect })
+      .onConflictDoUpdate({
+        target: [userPermissionGrants.userId, userPermissionGrants.permission],
+        set: { effect },
+      });
   } else {
     await db
       .delete(userPermissionGrants)

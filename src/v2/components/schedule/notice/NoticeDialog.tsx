@@ -27,8 +27,8 @@ import {
 } from "./useNoticeEditor";
 
 // A notice blown up: the poster taped to the wall with its sticky note
-// beside it, the author and the reactions underneath. The author edits both
-// faces in place; it saves itself, the way the old post-it did.
+// beside it, the author and the reactions underneath. The author (or the
+// team) edits both faces in place; it saves itself, the way the old post-it did.
 
 export type Draft = { sticky: NoticeDoc; poster: NoticeDoc; color: NoteColor };
 

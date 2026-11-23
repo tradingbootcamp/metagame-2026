@@ -14,9 +14,18 @@ import {
   hasPassword,
 } from "@/lib/auth";
 import { deleteImage, uploadImage } from "@/lib/blob";
-import { isMegagameClass, starterLevels } from "@/lib/megagame-levels";
-import { loadMegagameLevels, setMegagameLevels } from "@/lib/megagame-store";
 import { reportError } from "@/lib/error-report";
+import {
+  MEGAGAME_CLASSES,
+  isMegagameClass,
+  starterLevels,
+} from "@/lib/megagame-levels";
+import {
+  hasVolunteerLevelEvent,
+  loadMegagameLevels,
+  recordPickerJoin,
+  setMegagameLevels,
+} from "@/lib/megagame-store";
 import { invalidateSchedule, releaseUpcomingSeats } from "@/lib/schedule-store";
 import { isSpeakerAccount } from "@/v2/data/speakers";
 import {
@@ -27,6 +36,7 @@ import {
   ticketLabel,
   unclaimTicket,
 } from "@/lib/ticket-store";
+import { EVENT_YEAR } from "@/lib/tickets";
 
 export type FormState = { error?: string; saved?: boolean };
 
@@ -239,6 +249,7 @@ const CLAIM_ERRORS = {
   taken: "Someone else has already claimed that ticket.",
   unpaid: "That ticket's payment hasn't settled yet. Try again later.",
   void: "That ticket's payment didn't go through, so it can't be claimed.",
+  checkedIn: "This ticket was already checked in at the desk; ask there.",
   limited: "Too many codes that didn't work. Try again in an hour.",
 };
 
@@ -295,11 +306,22 @@ async function releaseSeatsWithoutTicket(user: {
 /** Gives up the signed-in user's spot on a ticket; they keep it under a new code. */
 export async function unclaimMine(paymentId: string): Promise<UnclaimState> {
   const session = await requireSession();
-  const ticket = await unclaimTicket(session.user.id, paymentId);
-  if (!ticket) return { error: "That ticket isn't claimed by you." };
-  await releaseSeatsWithoutTicket(session.user);
+  const result = await unclaimTicket(session.user.id, paymentId);
+  if (!result.ok && result.reason === "notYours") {
+    return { error: "That ticket isn't claimed by you." };
+  }
+  // Only this year's tickets seat anyone, so only giving one up can cost seats.
+  if (result.ok && result.ticket.year === EVENT_YEAR) {
+    await releaseSeatsWithoutTicket(session.user);
+  }
   revalidatePath("/account");
-  return { released: ticketLabel(ticket.tier) };
+  if (!result.ok) {
+    return {
+      error:
+        "You're checked in, so this ticket can't be passed on now. Ask the check-in desk if that's wrong.",
+    };
+  }
+  return { released: ticketLabel(result.ticket.tier) };
 }
 
 export type ClassState = { error?: string };
@@ -313,10 +335,23 @@ export async function chooseMegagameClass(
   formData: FormData,
 ): Promise<ClassState> {
   const session = await requireSession();
+  if (await hasVolunteerLevelEvent(session.user.id)) {
+    return {
+      error:
+        "Your class is locked now that a volunteer has recorded a level for you.",
+    };
+  }
   const chosen = formData.get("class");
   if (!isMegagameClass(chosen)) return { error: "Pick a class." };
   const current = await loadMegagameLevels(session.user.id);
   if (current[chosen] > 0) return {};
+  // The picker only ever sets level 1, so a higher level is progress it must
+  // not reset, whatever the event log says.
+  if (MEGAGAME_CLASSES.some((c) => current[c] > 1)) {
+    return { error: "Your class is locked now that you have levelled up." };
+  }
+  // The audit row goes first so a failed column write never leaves a level with no event.
+  await recordPickerJoin(session.user.id, chosen);
   await setMegagameLevels(session.user.id, starterLevels(chosen));
   revalidatePath("/account");
   revalidatePath(`/u/${session.user.id}`);

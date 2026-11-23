@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { teamAccess, type TeamAccess } from "@/lib/access";
+import { attendeeActionsOpen } from "@/lib/attendee-actions";
 import { currentSession, type Session } from "@/lib/auth";
 import { ticketStep } from "@/lib/first-signin";
 import {
@@ -21,17 +22,17 @@ import {
 import { emailKey } from "@/lib/ticket-holder";
 import {
   hasClaimedTicket,
+  thisYearTicketsForUser,
   ticketLabel,
-  ticketsForUser,
 } from "@/lib/ticket-store";
 import { boardNote, type BoardData } from "@/lib/unconference";
 import { listNotesIn } from "@/lib/unconference-store";
 
 export const loadRawSchedule = cache(loadSchedule);
 
-/** Which rooms this access may see; whoever edits the schedule sees them all. */
+/** Which rooms this access may see; whoever reads the whole schedule sees them all. */
 const viewerOf = (access: TeamAccess | null): ScheduleViewer => {
-  if (access?.permissions.has("schedule.manage")) return "team";
+  if (access?.permissions.has("schedule.view")) return "team";
   if (access?.permissions.has("schedule.volunteer_rooms")) return "volunteer";
   return "public";
 };
@@ -63,6 +64,13 @@ export const loadBoard = cache(async (): Promise<BoardData | null> => {
   return boardFor(rooms, session, access);
 });
 
+/** Whether this request may RSVP, bookmark, pin a note up or react. */
+export async function attendeeActionsAllowed(): Promise<boolean> {
+  return attendeeActionsOpen(
+    !!(await teamAccess())?.permissions.has("schedule.manage"),
+  );
+}
+
 /** The public sessions the signed-in viewer is in; null when signed out. */
 export const loadMySessionIds = cache(async (): Promise<string[] | null> => {
   const account = await currentSession();
@@ -87,7 +95,7 @@ export async function rsvpTicket(): Promise<RsvpTicket | undefined> {
     return { has: true, claimable: [] };
   }
   const email = emailKey(raw);
-  const rows = await ticketsForUser(id, email);
+  const rows = await thisYearTicketsForUser(id, email);
   const step = ticketStep(
     rows.map((t) => ({ ...t, tier: ticketLabel(t.tier) })),
     id,

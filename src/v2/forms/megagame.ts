@@ -1,5 +1,5 @@
 import { airtableConfig } from "@/lib/airtable-config";
-import { MEGAGAME_PROPOSAL_FORM_URL, RFP_FORM_URL } from "@/v2/lib/links";
+import { MEGAGAME_PROPOSAL_FORM_URL } from "@/v2/lib/links";
 import type { Answers, FormDef } from "./engine";
 import { opts } from "./shared";
 
@@ -16,7 +16,6 @@ export const megagame: FormDef = {
   path: MEGAGAME_PROPOSAL_FORM_URL,
   tableId: airtableConfig.megagameSubmissionsTableId,
   name: "Megagame puzzle or game",
-  eyebrow: "Submission · Metagame 2026",
   title: "Build part of the Megagame",
   pitch:
     "The Megagame runs all weekend: a puzzle hunt, a gauntlet of games and a story, threaded through the rest of Metagame and built from puzzles and games people send in. Tell us about yours here. You don't need to be coming to Metagame to contribute, and pieces that touch alliances, maps, alchemy, space travel, gems or stars are especially welcome. Submissions were due October 10, but the form is still open.",
@@ -318,7 +317,6 @@ export const megagame: FormDef = {
     body: "The Megagame team will look it over and be in touch about where it fits.",
     links: [
       { label: "Read about the Megagame", href: "/#megagame" },
-      { label: "Propose a session too", href: RFP_FORM_URL },
       { label: "Back to the homepage", href: "/" },
     ],
   },

@@ -1,6 +1,7 @@
 "use server";
 
 import { can } from "@/lib/access";
+import { ATTENDEE_ACTIONS_CLOSED } from "@/lib/attendee-actions";
 import { currentSession } from "@/lib/auth";
 import {
   noticeHeadline,
@@ -39,7 +40,7 @@ import {
   updateSessionPoster,
   updateNote,
 } from "@/lib/unconference-store";
-import { boardRooms, loadRawSchedule } from "./data";
+import { attendeeActionsAllowed, boardRooms, loadRawSchedule } from "./data";
 
 // No revalidatePath: /schedule reloads the whole schedule, which is far too
 // much work behind a drag. The board updates in place from these results.
@@ -73,9 +74,25 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * ban applies from the next action onwards.
  */
 async function poster(): Promise<string | NoteState> {
+  if (!(await attendeeActionsAllowed())) {
+    return { error: ATTENDEE_ACTIONS_CLOSED };
+  }
   const session = await can("unconference.post");
   if (!session) {
     return { error: (await currentSession()) ? NEEDS_TICKET : SIGN_IN };
+  }
+  return session.user.id;
+}
+
+/**
+ * The account that may rewrite or move an existing note it has standing on:
+ * a ticket holder (the author), or the schedule team without one.
+ */
+async function editor(): Promise<string | NoteState> {
+  const session = await currentSession();
+  if (!session) return { error: SIGN_IN };
+  if (!(await can("unconference.post")) && !(await can("schedule.manage"))) {
+    return { error: NEEDS_TICKET };
   }
   return session.user.id;
 }
@@ -269,12 +286,12 @@ export async function saveSessionPoster(
   });
 }
 
-/** Rewrite a notice's sticky note, poster and paper. The author only. */
+/** Rewrite a notice's sticky note, poster and paper. The author or the team. */
 export async function saveNote(
   noteId: string,
   input: { sticky: unknown; poster: unknown; color?: unknown },
 ): Promise<NoteState> {
-  const who = await poster();
+  const who = await editor();
   if (typeof who !== "string") return who;
   const faces = parseFaces(input.sticky, input.poster);
   if (!isFaces(faces)) return faces;
@@ -298,7 +315,7 @@ export async function repinNote(
   x: number,
   y: number,
 ): Promise<NoteState> {
-  const who = await poster();
+  const who = await editor();
   if (typeof who !== "string") return who;
   if (!Number.isFinite(x) || !Number.isFinite(y)) {
     return { error: "That spot is off the board." };

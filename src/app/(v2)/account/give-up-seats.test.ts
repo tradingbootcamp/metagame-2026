@@ -37,7 +37,10 @@ import { unclaimMine } from "./actions";
 beforeEach(() => {
   h.user = { id: "me", email: "me@example.com", role: "user" };
   h.unclaim.mockReset();
-  h.unclaim.mockResolvedValue({ tier: "standard" });
+  h.unclaim.mockResolvedValue({
+    ok: true,
+    ticket: { tier: "standard", year: 2027 },
+  });
   h.hasClaimed.mockReset();
   h.hasClaimed.mockResolvedValue(false);
   h.release.mockReset();
@@ -67,6 +70,23 @@ describe("giving up a ticket", () => {
     expect(h.release).not.toHaveBeenCalled();
   });
 
+  it("keeps this year's seats when giving up last year's ticket", async () => {
+    h.unclaim.mockResolvedValue({
+      ok: true,
+      ticket: { tier: "standard", year: 2026 },
+    });
+    await expect(unclaimMine("pi_1")).resolves.toEqual({
+      released: "Standard",
+    });
+    expect(h.release).not.toHaveBeenCalled();
+  });
+
+  it("keeps seats when a checked-in ticket can't be given up", async () => {
+    h.unclaim.mockResolvedValue({ ok: false, reason: "checkedIn" });
+    await unclaimMine("pi_1");
+    expect(h.release).not.toHaveBeenCalled();
+  });
+
   it("keeps an admin's seats, since admins RSVP without a ticket", async () => {
     h.user = { ...h.user, role: "admin" };
     await unclaimMine("pi_1");
@@ -74,7 +94,7 @@ describe("giving up a ticket", () => {
   });
 
   it("touches nothing when the ticket wasn't theirs to give up", async () => {
-    h.unclaim.mockResolvedValue(null);
+    h.unclaim.mockResolvedValue({ ok: false, reason: "notYours" });
     await expect(unclaimMine("pi_1")).resolves.toEqual({
       error: "That ticket isn't claimed by you.",
     });

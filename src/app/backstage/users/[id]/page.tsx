@@ -19,6 +19,7 @@ import { ticketAccounts } from "@/lib/admin-store";
 import { listRoles, userAccess } from "@/lib/permission-store";
 import { explainPermissions, isPermission } from "@/lib/permissions";
 import { loadSchedule, loadViewerPlans } from "@/lib/schedule-store";
+import { formatBadgeCode } from "@/lib/badge-code";
 import { formatTicketCode } from "@/lib/ticket-code-format";
 import { ticketLabel, ticketsForUser } from "@/lib/ticket-store";
 import { SESSION_ROLES, TEAM_AUDIENCE, userSessions } from "@/lib/user-profile";
@@ -105,6 +106,7 @@ export default async function AdminUserProfilePage(
       })),
     auto: held.roles.filter((r) => r.auto).map((r) => `${r.name} (${r.auto})`),
     grants: held.grants.filter(isPermission),
+    denies: held.denies.filter(isPermission),
     explanation: explainPermissions(held),
   };
   const { accounts, byEmail } = await ticketAccounts(tickets);
@@ -223,6 +225,12 @@ export default async function AdminUserProfilePage(
                     {t.test && <TestTag />}
                     <span className="font-mono text-xs text-ink/60">
                       {formatTicketCode(t.ticketCode)}
+                    </span>
+                    <span className="font-mono text-xs text-ink/60">
+                      Badge{" "}
+                      {t.badgeCode === null
+                        ? "—"
+                        : `#${formatBadgeCode(t.badgeCode)}`}
                     </span>
                     {ticketRoles(t, user.id, user.email).map((r) => (
                       <span key={r} className={`${TAG} bg-sky text-navy`}>

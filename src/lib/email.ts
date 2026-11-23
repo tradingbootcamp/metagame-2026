@@ -27,6 +27,7 @@ export const escapeHtml = (s: string) =>
     .replace(/'/g, "&#39;");
 
 export const FROM = "Metagame 2026 <tickets@metagame.games>";
+const FROM_2027 = "Metagame <tickets@metagame.games>";
 const NO_REPLY = "Metagame 2026 <no-reply@metagame.games>";
 const TEAM = "team@metagame.games";
 export const CORE = "core@metagame.games";
@@ -59,6 +60,8 @@ export type TicketConfirmationEmail = {
   test?: boolean;
   groupTickets?: { name: string; email: string; code: string }[];
   idempotencyKey?: string;
+  /** A 2027 Egg Tier purchase: the holding note instead of the 2026 confirmation. */
+  egg2027?: boolean;
 };
 
 const VENUE = "Lighthaven%2C+2740+Telegraph+Avenue%2C+Berkeley%2C+CA";
@@ -223,6 +226,76 @@ This is not a puzzle.
   return { subject, html, text };
 }
 
+export function renderEggTier2027Email(
+  {
+    to,
+    purchaserName,
+    tierLabel,
+    usdPaid,
+    usdFull,
+    receiptUrl,
+    discountCode,
+    mailingListOptOutUrl,
+    test = false,
+  }: TicketConfirmationEmail,
+  assetBase: string = SITE,
+) {
+  const discounted = usdFull != null && usdFull > (usdPaid ?? 0);
+  const paid = `$${(usdPaid ?? 0).toFixed(2)}`;
+  const full = `$${(usdFull ?? 0).toFixed(2)}`;
+  const subject = `${test ? "TEST: " : ""}Metagame 2027`;
+
+  const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="text-align: center; margin: 24px 0;">
+          <img src="${assetBase}/images/dice_logo.png" alt="METAGAME" width="360" style="max-width: 100%; height: auto;" />
+        </div>
+
+        <p>Hi ${purchaserName ? escapeHtml(purchaserName) : "there"},</p>
+
+        <p>You've got a ticket to Metagame 2027! Thanks for getting in earlier than the early birds; we'll let you know when next year's plans start to hatch.</p>
+
+        <div style="background-color: #f5f5f5; border: 1px solid #ddd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin-top: 0;"><strong>Name:</strong> ${purchaserName ? escapeHtml(purchaserName) : "—"}</p>
+          <p><strong>Email:</strong> ${escapeHtml(to)}</p>
+          <p><strong>Ticket:</strong> ${escapeHtml(tierLabel)}</p>
+          <p><strong>Amount Paid:</strong> ${discounted ? `<span style="text-decoration: line-through; color: #999;">${full}</span> ` : ""}${paid}${discountCode && discounted ? ` (<strong>${escapeHtml(discountCode)}</strong>)` : ""}</p>
+          ${receiptUrl ? `<p style="margin-bottom: 0;"><a href="${escapeHtml(receiptUrl)}">View your receipt</a></p>` : ""}
+        </div>
+
+        ${mailingListOptOutUrl ? `<p style="font-size: 12px; color: #aaa;">You're on the Metagame mailing list. <a href="${escapeHtml(mailingListOptOutUrl)}" style="color: #aaa;">Opt out</a>.</p>` : ""}
+
+        <p style="font-size: 12px; color: #aaa; font-style: italic;">This is not a puzzle.</p>
+
+        <div style="text-align: center; margin: 32px 0 16px;">
+          <img src="${assetBase}/images/arbor-tree.png" alt="Arbor" width="56" style="height: auto;" />
+          <p style="font-size: 12px; color: #888; margin: 8px 0 0; font-style: italic;">&copy; 2026 Arbor</p>
+        </div>
+      </div>
+    `;
+
+  const text = `
+Hi ${purchaserName || "there"},
+
+You've got a ticket to Metagame 2027! Thanks for getting in earlier than the early birds; we'll let you know when next year's plans start to hatch.
+
+- Name: ${purchaserName || "—"}
+- Email: ${to}
+- Ticket: ${tierLabel}
+- Amount paid: ${paid}${discounted ? ` (was ${full}` + (discountCode ? `, code ${discountCode})` : ")") : ""}
+${receiptUrl ? `- Receipt: ${receiptUrl}\n` : ""}${
+    mailingListOptOutUrl
+      ? `\nYou're on the Metagame mailing list. Opt out: ${mailingListOptOutUrl}\n`
+      : ""
+  }
+This is not a puzzle.
+
+© 2026 Arbor
+    `.trim();
+
+  return { subject, html, text };
+}
+
 // Resend's answer to a replayed key whose body differs (the opt-out line, a
 // reissued code): the buyer already has it. A racing send isn't this: it may
 // still fail, so it throws and the webhook retries.
@@ -239,11 +312,13 @@ export async function sendTicketConfirmationEmail(
     return { sent: false as const, reason: "resend-not-configured" };
   }
 
-  const { subject, html, text } = renderTicketConfirmationEmail(data);
+  const { subject, html, text } = data.egg2027
+    ? renderEggTier2027Email(data)
+    : renderTicketConfirmationEmail(data);
   const { error } = await retryRateLimited(() =>
     resend.emails.send(
       {
-        from: FROM,
+        from: data.egg2027 ? FROM_2027 : FROM,
         to: data.to,
         bcc: [CORE],
         replyTo: [TEAM],

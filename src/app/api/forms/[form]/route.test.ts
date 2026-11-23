@@ -24,7 +24,7 @@ const post = (form: string, body: unknown) =>
   );
 
 const sponsor = {
-  answers: { name: "Ada", email: "ada@example.com", tier: "Gold" },
+  answers: { name: "Ada", email: "ada@example.com", company: "Acme" },
 };
 
 beforeEach(() => vi.resetAllMocks());
@@ -41,7 +41,7 @@ describe("POST /api/forms/[form]", () => {
     expect(createRow).toHaveBeenCalledWith("tbluUIxg0YnlMO1jQ", {
       fld42qY2zzbMKiZAC: "Ada",
       fld0okgOArTQTNUir: "ada@example.com",
-      fldvRIark8ZyTFpNf: "Gold",
+      fldb4I32HWFaiFWWd: "Acme",
       fldmLx6E4fpMxaVHw: ["sponsoring"],
     });
     expect(backUp).not.toHaveBeenCalled();
@@ -62,8 +62,8 @@ describe("POST /api/forms/[form]", () => {
         replyTo: "ada@example.com",
         answers: [
           { label: "Your name", value: "Ada" },
+          { label: "Company or organization", value: "Acme" },
           { label: "Email", value: "ada@example.com" },
-          { label: "Sponsorship tier", value: "Gold" },
         ],
       }),
     );

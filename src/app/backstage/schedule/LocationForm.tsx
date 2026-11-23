@@ -159,9 +159,12 @@ function ThumbnailPicker({
 
 export default function LocationForm({
   location,
+  readOnly = false,
   onClose,
 }: {
   location: ScheduleLocation | null;
+  /** Every field disabled, nothing to save: for schedule.view without manage. */
+  readOnly?: boolean;
   onClose: () => void;
 }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
@@ -205,10 +208,12 @@ export default function LocationForm({
           <XIcon className="size-[18px]" />
         </button>
         <DialogTitle className="font-bebas text-2xl tracking-wide text-navy">
-          {location ? "Edit room" : "New room"}
+          {readOnly ? "Room" : location ? "Edit room" : "New room"}
         </DialogTitle>
         <DialogDescription className="mt-1 mb-5 text-sm text-ink/60">
-          Rooms are the grid’s columns; drag them in the rooms list to reorder.
+          {readOnly
+            ? "Rooms are the grid’s columns."
+            : "Rooms are the grid’s columns; drag them in the rooms list to reorder."}
         </DialogDescription>
 
         <form
@@ -217,6 +222,7 @@ export default function LocationForm({
           // returns, which would wipe the edits on a failed save.
           onSubmit={(e) => {
             e.preventDefault();
+            if (readOnly) return;
             const fd = new FormData(e.currentTarget);
             if (thumbnail.file) fd.set("thumbnailFile", thumbnail.file);
             if (thumbnail.large) fd.set("imageFile", thumbnail.large);
@@ -224,118 +230,124 @@ export default function LocationForm({
           }}
           className="grid gap-4"
         >
-          {location && <input type="hidden" name="id" value={location.id} />}
+          {/* `contents` keeps the grid; disabling the fieldset disables every
+              field and the image picker's buttons at once. */}
+          <fieldset disabled={readOnly} className="contents">
+            {location && <input type="hidden" name="id" value={location.id} />}
 
-          <Field label="Name" name="name" state={state}>
+            <Field label="Name" name="name" state={state}>
+              <input
+                name="name"
+                required
+                defaultValue={location?.name ?? ""}
+                className={fieldClass}
+                autoFocus
+              />
+            </Field>
+
+            <Field label="Where on campus" name="campusLocation" state={state}>
+              <input
+                name="campusLocation"
+                defaultValue={location?.campusLocation ?? ""}
+                placeholder="e.g. Upstairs, main building"
+                className={fieldClass}
+              />
+            </Field>
+
+            <Field label="Description" name="description" state={state}>
+              <textarea
+                name="description"
+                rows={3}
+                defaultValue={location?.description ?? ""}
+                className={fieldClass}
+              />
+            </Field>
+
+            <Field label="Capacity" name="capacity" state={state}>
+              <input
+                name="capacity"
+                inputMode="numeric"
+                defaultValue={location?.capacity ?? ""}
+                className={fieldClass}
+              />
+            </Field>
+
+            <ThumbnailPicker
+              value={thumbnail}
+              onChange={setThumbnail}
+              error={state.field === "thumbnail" ? (state.error ?? null) : null}
+            />
             <input
-              name="name"
-              required
-              defaultValue={location?.name ?? ""}
-              className={fieldClass}
-              autoFocus
+              type="hidden"
+              name="thumbnailUrl"
+              value={thumbnail.file ? "" : (thumbnail.url ?? "")}
             />
-          </Field>
 
-          <Field label="Where on campus" name="campusLocation" state={state}>
-            <input
-              name="campusLocation"
-              defaultValue={location?.campusLocation ?? ""}
-              placeholder="e.g. Upstairs, main building"
-              className={fieldClass}
-            />
-          </Field>
+            <Field label="Who sees this room" name="visibility" state={state}>
+              <select
+                name="visibility"
+                defaultValue={location?.visibility ?? "public"}
+                className={selectClass}
+                style={selectStyle}
+              >
+                {LOCATION_VISIBILITIES.map((v) => (
+                  <option key={v} value={v}>
+                    {VISIBILITY_LABEL[v]}
+                  </option>
+                ))}
+              </select>
+            </Field>
 
-          <Field label="Description" name="description" state={state}>
-            <textarea
-              name="description"
-              rows={3}
-              defaultValue={location?.description ?? ""}
-              className={fieldClass}
-            />
-          </Field>
-
-          <Field label="Capacity" name="capacity" state={state}>
-            <input
-              name="capacity"
-              inputMode="numeric"
-              defaultValue={location?.capacity ?? ""}
-              className={fieldClass}
-            />
-          </Field>
-
-          <ThumbnailPicker
-            value={thumbnail}
-            onChange={setThumbnail}
-            error={state.field === "thumbnail" ? (state.error ?? null) : null}
-          />
-          <input
-            type="hidden"
-            name="thumbnailUrl"
-            value={thumbnail.file ? "" : (thumbnail.url ?? "")}
-          />
-
-          <Field label="Who sees this room" name="visibility" state={state}>
-            <select
-              name="visibility"
-              defaultValue={location?.visibility ?? "public"}
-              className={selectClass}
-              style={selectStyle}
-            >
-              {LOCATION_VISIBILITIES.map((v) => (
-                <option key={v} value={v}>
-                  {VISIBILITY_LABEL[v]}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          {/* A save replaces the whole row, so these are submitted even when
+            {/* A save replaces the whole row, so these are submitted even when
               untouched or the board would come down. Pacific dates. */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field
-              label="Unconference board, first day"
-              name="boardStartsAt"
-              state={state}
-            >
-              <input
-                type="date"
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field
+                label="Unconference board, first day"
                 name="boardStartsAt"
-                defaultValue={
-                  location?.boardStartsAt
-                    ? pacificDayKey(location.boardStartsAt)
-                    : ""
-                }
-                className={fieldClass}
-              />
-            </Field>
-            <Field label="Last day" name="boardEndsAt" state={state}>
-              <input
-                type="date"
-                name="boardEndsAt"
-                defaultValue={
-                  location?.boardEndsAt
-                    ? // Stored as the start of the day after.
-                      pacificDayKey(
-                        new Date(
-                          Date.parse(location.boardEndsAt) - 1,
-                        ).toISOString(),
-                      )
-                    : ""
-                }
-                className={fieldClass}
-              />
-            </Field>
-          </div>
-          <p className="-mt-2 text-xs text-ink/55">
-            On those days the board takes over this room’s whole column.
-            Sessions can still go here; the grid shows them only through a
-            session poster on the board. Leave both empty for a room that never
-            hosts the board, or the last day empty to keep it up to the end.
-          </p>
+                state={state}
+              >
+                <input
+                  type="date"
+                  name="boardStartsAt"
+                  defaultValue={
+                    location?.boardStartsAt
+                      ? pacificDayKey(location.boardStartsAt)
+                      : ""
+                  }
+                  className={fieldClass}
+                />
+              </Field>
+              <Field label="Last day" name="boardEndsAt" state={state}>
+                <input
+                  type="date"
+                  name="boardEndsAt"
+                  defaultValue={
+                    location?.boardEndsAt
+                      ? // Stored as the start of the day after.
+                        pacificDayKey(
+                          new Date(
+                            Date.parse(location.boardEndsAt) - 1,
+                          ).toISOString(),
+                        )
+                      : ""
+                  }
+                  className={fieldClass}
+                />
+              </Field>
+            </div>
+            <p className="-mt-2 text-xs text-ink/55">
+              On those days the board takes over this room’s whole column.
+              Sessions can still go here; the grid shows them only through a
+              session poster on the board. Leave both empty for a room that
+              never hosts the board, or the last day empty to keep it up to the
+              end.
+            </p>
+          </fieldset>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               {location &&
+                !readOnly &&
                 (confirmDelete ? (
                   <>
                     <button
@@ -380,15 +392,17 @@ export default function LocationForm({
                 onClick={requestClose}
                 className={smallButtonClass}
               >
-                Cancel
+                {readOnly ? "Close" : "Cancel"}
               </button>
-              <button
-                type="submit"
-                disabled={pending}
-                className={cn(buttonClass, "w-auto")}
-              >
-                {pending ? "Saving…" : location ? "Save" : "Create"}
-              </button>
+              {!readOnly && (
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className={cn(buttonClass, "w-auto")}
+                >
+                  {pending ? "Saving…" : location ? "Save" : "Create"}
+                </button>
+              )}
             </div>
           </div>
         </form>

@@ -228,6 +228,48 @@ export function dayPassForPaymentLinkUrl(
 
 export const DAY_PASS_TIER = "day-pass";
 
+/** The upcoming event: new tickets file under it and check-in only sees its tickets. */
+export const EVENT_YEAR = 2027;
+
+// Metagame 2027 earlier-than-early-bird, sold through dashboard Payment Links
+// until 2026-11-15 while this site was still the 2026 one. Its buyers got a
+// holding email, not the 2026 confirmation and logistics. The links stay here
+// so those purchases still match.
+export const EGG_TIER_2027 = {
+  label: "Metagame 2027 - Egg Tier",
+  links: {
+    test: "https://buy.stripe.com/test_14AfZgbAzdbxgVl9Vgfw40o",
+    live: "https://buy.stripe.com/7sYbJ07kj7Rd5cD7N8fw40j",
+  } satisfies Record<StripeMode, string>,
+  // Fixed-$150 links sold until 2026-11-10.
+  retiredLinks: {
+    test: "https://buy.stripe.com/test_28E8wO6gf6N96gH9Vgfw40n",
+    live: "https://buy.stripe.com/fZubJ0gUTgnJfRh9Vgfw40i",
+  } satisfies Record<StripeMode, string>,
+  get allLinks(): string[] {
+    return [...Object.values(this.links), ...Object.values(this.retiredLinks)];
+  },
+};
+
+/**
+ * The Metagame a tier admits to. Metagame 2026 is over, so only its known
+ * tiers (by label or id) file under 2026; anything else sells for EVENT_YEAR.
+ */
+export function ticketYear(tier: string | null | undefined): number {
+  if (!tier) return EVENT_YEAR;
+  if (/2026/.test(tier)) return 2026;
+  const tiers2026 = new Set<string>([
+    ...ticketTiers.flatMap((t) => [t.id, t.label]),
+    supporterTier.id,
+    supporterTier.label,
+    ...dayPasses.flatMap((d) => [d.id, d.label]),
+    DAY_PASS_TIER,
+    "Guest of Honor",
+    "Family & Friends Pack — Standard",
+  ]);
+  return tiers2026.has(tier) ? 2026 : EVENT_YEAR;
+}
+
 /**
  * Tier label + admitted day from the metadata /api/checkout/stripe puts on a
  * Checkout Session. Undefined for sessions it didn't create (old Payment Links).
@@ -254,6 +296,7 @@ export function tierLabelForPaymentLinkUrl(
   url: string | null | undefined,
 ): string | undefined {
   if (!url) return undefined;
+  if (EGG_TIER_2027.allLinks.includes(url)) return EGG_TIER_2027.label;
   for (const tier of ticketTiers) {
     if (Object.values(tier.links).includes(url)) return tier.label;
   }

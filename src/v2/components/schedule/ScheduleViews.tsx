@@ -29,6 +29,7 @@ import {
 } from "./SessionBits";
 import { SessionLink } from "./SessionModalHost";
 import SessionPreview, { PREVIEW_ATTR } from "./SessionPreview";
+import StickyHeadScroll from "./StickyHeadScroll";
 
 // The day grid, the day list and the toggles the schedule is built from,
 // shared by /schedule and the profile pages' session views.
@@ -331,7 +332,7 @@ export function GridDay<S extends ViewSession>({
   return (
     <div
       ref={gridRef}
-      className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--board-w:232px] [--col-w:104px] [--time-w:36px] sm:[--board-w:300px] sm:[--col-w:120px] sm:[--time-w:40px]"
+      className="border-[1.5px] border-[#1b1530]/15 bg-background [--board-w:232px] [--col-w:104px] [--time-w:36px] sm:[--board-w:300px] sm:[--col-w:120px] sm:[--time-w:40px]"
     >
       <SessionPreview
         container={gridRef}
@@ -339,42 +340,46 @@ export function GridDay<S extends ViewSession>({
         columns={columns}
         href={href}
       />
-      <div className="min-w-fit">
-        <div
-          className="sticky top-0 z-30 grid bg-[#4096ff] text-white"
-          style={{ gridTemplateColumns: gridCols }}
-        >
-          <div className="sticky left-0 z-40 border-r border-b border-[#1b1530]/15 bg-[#4096ff]" />
-          {columns.map((col) => (
-            <div
-              key={col.id}
-              className="border-r border-b border-[#1b1530]/15 px-2 py-2 last:border-r-0"
-            >
-              {col.thumbnailUrl && (
-                // eslint-disable-next-line @next/next/no-img-element -- already thumbnail-sized
-                <img
-                  src={col.thumbnailUrl}
-                  alt=""
-                  className="mb-1.5 h-14 w-full rounded-sm object-cover"
-                />
-              )}
-              <div className="text-sm leading-tight font-bold">{col.name}</div>
-              {col.campusLocation && (
-                <div className="text-[11px] leading-tight text-white/75">
-                  {col.campusLocation}
+      <StickyHeadScroll
+        head={
+          <div
+            className="grid min-w-fit bg-[#4096ff] text-white"
+            style={{ gridTemplateColumns: gridCols }}
+          >
+            <div className="sticky left-0 z-40 border-r border-b border-[#1b1530]/15 bg-[#4096ff]" />
+            {columns.map((col) => (
+              <div
+                key={col.id}
+                className="border-r border-b border-[#1b1530]/15 px-2 py-2 last:border-r-0"
+              >
+                {col.thumbnailUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- already thumbnail-sized
+                  <img
+                    src={col.thumbnailUrl}
+                    alt=""
+                    className="mb-1.5 h-14 w-full rounded-sm object-cover"
+                  />
+                )}
+                <div className="text-sm leading-tight font-bold">
+                  {col.name}
                 </div>
-              )}
-              {col.capacity && (
-                <div className="text-[11px] leading-tight text-white/75">
-                  Max {col.capacity}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
+                {col.campusLocation && (
+                  <div className="text-[11px] leading-tight text-white/75">
+                    {col.campusLocation}
+                  </div>
+                )}
+                {col.capacity && (
+                  <div className="text-[11px] leading-tight text-white/75">
+                    Max {col.capacity}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        }
+      >
         <div
-          className="relative grid"
+          className="relative grid min-w-fit"
           style={{
             gridTemplateColumns: gridCols,
             // Definite rows only when a board spans them: it makes the span
@@ -445,7 +450,7 @@ export function GridDay<S extends ViewSession>({
             );
           })}
         </div>
-      </div>
+      </StickyHeadScroll>
     </div>
   );
 }

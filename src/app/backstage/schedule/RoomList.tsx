@@ -9,11 +9,14 @@ import { VISIBILITY_LABEL, type ScheduleLocation } from "@/lib/schedule";
 /** The rooms table; drag a row by its grip to change the grid's column order. */
 export default function RoomList({
   locations,
+  canEdit,
   canReorder,
   onEdit,
   onError,
 }: {
   locations: ScheduleLocation[];
+  /** Labels the row button; the form itself opens read-only without it. */
+  canEdit: boolean;
   canReorder: boolean;
   onEdit: (location: ScheduleLocation) => void;
   onError: (message: string | null) => void;
@@ -123,7 +126,7 @@ export default function RoomList({
                   onClick={() => onEdit(l)}
                   className={smallButtonClass}
                 >
-                  Edit
+                  {canEdit ? "Edit" : "View"}
                 </button>
               </td>
             </tr>

@@ -21,8 +21,13 @@ describe("describeSchema", () => {
       "bookmarks",
       "budget_ignored_lines",
       "budget_import_runs",
+      "hat_schedule",
+      "hat_steals",
+      "level_events",
       "locations",
       "profiles",
+      "quest_progress",
+      "quests",
       "role_permissions",
       "roles",
       "rsvps",
@@ -31,6 +36,7 @@ describe("describeSchema", () => {
       "session_grades",
       "session_hosts",
       "sessions",
+      "sign_drafts",
       "tickets",
       "unconference_note_reactions",
       "unconference_notes",
@@ -63,12 +69,25 @@ describe("describeSchema", () => {
       "account",
       "apikey",
       "bookmarks",
+      "hat_schedule",
+      "hat_steals",
+      "hat_steals",
+      "level_events",
+      "level_events",
+      "level_events",
       "profiles",
+      "quest_progress",
+      "quest_progress",
+      "quest_progress",
       "rsvps",
       "session",
       "session_grades",
       "session_hosts",
       "sessions",
+      "sign_drafts",
+      "sign_drafts",
+      "tickets",
+      "tickets",
       "tickets",
       "tickets",
       "unconference_note_reactions",
@@ -176,6 +195,8 @@ describe("describeSchema", () => {
       "Schedule",
       "Grading",
       "Budget",
+      "Megagame",
+      "Signs",
     ]);
     expect(info.groups.flatMap((g) => g.tables.map((t) => t.name))).toEqual([
       "user",
@@ -201,6 +222,92 @@ describe("describeSchema", () => {
       "xero_connections",
       "budget_import_runs",
       "budget_ignored_lines",
+      "quests",
+      "quest_progress",
+      "level_events",
+      "hat_steals",
+      "hat_schedule",
+      "sign_drafts",
     ]);
+  });
+
+  it("records hat thefts against the thief and the volunteer", () => {
+    expect(table("hat_steals").columns.map((c) => c.name)).toEqual([
+      "id",
+      "hat_id",
+      "user_id",
+      "stolen_at",
+      "recorded_by",
+      "created_at",
+    ]);
+    expect(column("hat_steals", "id").primary).toBe(true);
+    expect(column("hat_steals", "hat_id").nullable).toBe(false);
+    expect(column("hat_steals", "user_id").nullable).toBe(false);
+    expect(column("hat_steals", "stolen_at").nullable).toBe(false);
+    expect(column("hat_steals", "created_at").nullable).toBe(false);
+    expect(column("hat_steals", "recorded_by").nullable).toBe(true);
+    expect(column("hat_steals", "user_id").references).toEqual({
+      table: "user",
+      column: "id",
+      onDelete: "cascade",
+    });
+    expect(column("hat_steals", "recorded_by").references).toEqual({
+      table: "user",
+      column: "id",
+      onDelete: "set null",
+    });
+    expect(table("hat_steals").indexes).toEqual([
+      {
+        name: "hat_steals_hat_stolen_at_idx",
+        columns: ["hat_id", "stolen_at"],
+        unique: false,
+      },
+    ]);
+  });
+
+  it("keeps megagame history when a quest or account goes away", () => {
+    expect(column("quest_progress", "quest_id").references?.onDelete).toBe(
+      "restrict",
+    );
+    expect(column("quest_progress", "user_id").references?.onDelete).toBe(
+      "cascade",
+    );
+    expect(column("quest_progress", "confirmed_by").references?.onDelete).toBe(
+      "set null",
+    );
+    expect(column("quest_progress", "undone_by").references?.onDelete).toBe(
+      "set null",
+    );
+    expect(column("quest_progress", "undone_at").nullable).toBe(true);
+    expect(column("quest_progress", "undo_reason").type).toBe("text");
+    expect(table("quest_progress").columns.map((c) => c.name)).not.toContain(
+      "confirmation_id",
+    );
+    expect(column("level_events", "user_id").references?.onDelete).toBe(
+      "set null",
+    );
+    expect(column("quests", "body_images").type).toBe("text[]");
+    expect(column("quests", "min_players").nullable).toBe(false);
+    expect(column("quests", "stamps_any").nullable).toBe(false);
+    expect(column("quests", "evidence_image").nullable).toBe(true);
+    expect(table("quests").columns.map((c) => c.name)).not.toContain("kind");
+    expect(
+      table("quest_progress").indexes.find(
+        (i) => i.name === "quest_progress_user_quest_unique",
+      ),
+    ).toEqual({
+      name: "quest_progress_user_quest_unique",
+      columns: ["user_id", "quest_id"],
+      unique: true,
+    });
+    expect(
+      table("level_events").indexes.find(
+        (i) => i.name === "level_events_live_unique",
+      ),
+    ).toEqual({
+      name: "level_events_live_unique",
+      columns: ["user_id", "class", "level"],
+      unique: true,
+    });
   });
 });

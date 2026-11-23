@@ -19,6 +19,7 @@ import { after } from "next/server";
 import { getDb, schema } from "@/db";
 import { env } from "@/env";
 import { can } from "./access";
+import { likeContains } from "./like";
 import { currentSession, getAuth } from "./auth";
 import { sendWaitlistPromotionEmails } from "./email";
 import { reportError } from "./error-report";
@@ -60,7 +61,7 @@ export const accountName = sql<string>`coalesce(nullif(trim(${user.name}), ''), 
 
 // The same rule without the email, for names other attendees see. Code
 // sign-in can leave the account name blank.
-const publicName = sql<string>`coalesce(nullif(trim(${user.name}), ''), 'Someone')`;
+export const publicName = sql<string>`coalesce(nullif(trim(${user.name}), ''), 'Someone')`;
 
 const accountColumns = {
   userId: user.id,
@@ -496,12 +497,18 @@ export async function roomClash(
 /** Accounts whose name or email contains the query. */
 export async function searchAccounts(
   query: string,
+  { banned = true }: { banned?: boolean } = {},
 ): Promise<ScheduleAccount[]> {
-  const q = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
+  const q = likeContains(query);
   return getDb()
     .select(accountColumns)
     .from(user)
-    .where(or(ilike(user.name, q), ilike(user.email, q)))
+    .where(
+      and(
+        or(ilike(user.name, q), ilike(user.email, q)),
+        banned ? undefined : eq(user.banned, false),
+      ),
+    )
     .orderBy(asc(accountName))
     .limit(8);
 }
@@ -865,7 +872,7 @@ export async function loadSessionRsvps(
   const [showNames, rows] = await Promise.all([
     canSeeRsvpNames(sessionId),
     getDb()
-      .select({ status: rsvps.status, name: publicName })
+      .select({ status: rsvps.status, userId: rsvps.userId, name: publicName })
       .from(rsvps)
       .innerJoin(user, eq(user.id, rsvps.userId))
       .where(eq(rsvps.sessionId, sessionId))
