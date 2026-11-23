@@ -369,9 +369,10 @@ async function claimMatching(
         isNull(tickets.ownerUserId),
         isNull(tickets.checkedInAt),
         eq(tickets.status, "paid"),
-        // One admission per person, checked in the same statement so two
-        // claims at once can't both win.
-        sql`not exists (select 1 from "tickets" mine where mine."owner_user_id" = ${userId} and mine."status" = 'paid')`,
+        // One admission per person per year, checked in the same statement so
+        // two claims at once can't both win. "tickets"."year" is spelled out:
+        // a bare column here would resolve to the subquery's own row.
+        sql`not exists (select 1 from "tickets" mine where mine."owner_user_id" = ${userId} and mine."status" = 'paid' and mine."year" = "tickets"."year")`,
       ),
     )
     .returning();
@@ -387,7 +388,13 @@ async function claimMatching(
   const [held] = await db
     .select({ id: tickets.paymentId })
     .from(tickets)
-    .where(and(eq(tickets.ownerUserId, userId), eq(tickets.status, "paid")))
+    .where(
+      and(
+        eq(tickets.ownerUserId, userId),
+        eq(tickets.status, "paid"),
+        eq(tickets.year, existing.year),
+      ),
+    )
     .limit(1);
   if (held) return { ok: false, reason: "already" };
   if (existing.ownerUserId) return { ok: false, reason: "taken" };

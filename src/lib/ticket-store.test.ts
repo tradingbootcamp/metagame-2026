@@ -136,12 +136,17 @@ async function seed(
   {
     owner = null,
     status = "paid",
-  }: { owner?: string | null; status?: "paid" | "pending" | "failed" } = {},
+    year = 2027,
+  }: {
+    owner?: string | null;
+    status?: "paid" | "pending" | "failed";
+    year?: number;
+  } = {},
 ) {
   await client.query(
-    `insert into tickets (payment_id, ticket_code, source, status, owner_user_id, claimed_at)
-     values ($1, $2, 'stripe', $3, $4::text, case when $4::text is null then null else now() end)`,
-    [paymentId, ticketCode(paymentId), status, owner],
+    `insert into tickets (payment_id, ticket_code, source, status, owner_user_id, claimed_at, year)
+     values ($1, $2, 'stripe', $3, $4::text, case when $4::text is null then null else now() end, $5)`,
+    [paymentId, ticketCode(paymentId), status, owner, year],
   );
 }
 
@@ -221,6 +226,20 @@ describe("claimTicketFor", () => {
       reason: "limited",
     });
     expect((await claimTicketFor("desk", "pi_1", "ada")).ok).toBe(true);
+  });
+});
+
+describe("one claimed ticket per year", () => {
+  it("lets a past year's ticket holder claim this year's", async () => {
+    await seed("pi_2026", { owner: "ada", year: 2026 });
+    await seed("pi_a");
+    await seed("pi_b");
+    expect((await claimTicket("ada", ticketCode("pi_a"))).ok).toBe(true);
+    expect(await claimTicket("ada", ticketCode("pi_b"))).toEqual({
+      ok: false,
+      reason: "already",
+    });
+    expect((await fetchRow("pi_2026")).owner_user_id).toBe("ada");
   });
 });
 
