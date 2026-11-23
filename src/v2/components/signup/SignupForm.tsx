@@ -9,12 +9,24 @@ import { FIELD_LIGHT } from "../styles";
 
 type Status = "idle" | "submitting" | "success" | "error";
 
-export default function SignupForm({ light = false }: { light?: boolean }) {
+// `compact` is the hero's version: name on its own row above email and
+// button on phones, all one row from md up.
+export default function SignupForm({
+  light = false,
+  compact = false,
+}: {
+  light?: boolean;
+  compact?: boolean;
+}) {
   // <Input> is dark by default; the `light` cream-section variant overrides it.
   // min-w-0 lets the fields shrink in the row; the row itself is a container
   // query (see the form) so it stacks in a narrow modal and only goes side-by-
   // side when its own width allows — not based on the viewport.
-  const field = cn(light && FIELD_LIGHT, "min-w-0 @lg:w-auto @lg:flex-1");
+  const field = cn(
+    light && FIELD_LIGHT,
+    "min-w-0",
+    compact ? "h-11 flex-1 px-3" : "@lg:w-auto @lg:flex-1",
+  );
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   // Remembered after success so the interest follow-up can patch the same row.
@@ -59,7 +71,12 @@ export default function SignupForm({ light = false }: { light?: boolean }) {
     return (
       <div className="flex w-full flex-col items-center gap-4">
         <p
-          className={`text-center text-base ${light ? "text-ink/80" : "text-cream/90"}`}
+          className={cn(
+            "text-center",
+            // Compact: scales down so the line fits a phone-width hero card.
+            compact ? "text-[length:min(0.875rem,3.9vw_-_2.5px)]" : "text-base",
+            light ? "text-ink/80" : "text-cream/90",
+          )}
         >
           Thanks — you&apos;re on the list. We&apos;ll be in touch.
         </p>
@@ -73,7 +90,12 @@ export default function SignupForm({ light = false }: { light?: boolean }) {
       onSubmit={handleSubmit}
       className="@container flex w-full flex-col gap-3"
     >
-      <div className="flex flex-col gap-3 @lg:flex-row">
+      <div
+        className={cn(
+          "flex",
+          compact ? "flex-wrap gap-2" : "flex-col gap-3 @lg:flex-row",
+        )}
+      >
         <Input
           type="text"
           value={name}
@@ -81,7 +103,7 @@ export default function SignupForm({ light = false }: { light?: boolean }) {
           placeholder="Name"
           aria-label="Name"
           autoComplete="name"
-          className={field}
+          className={cn(field, compact && "flex-none md:flex-1")}
         />
         <Input
           type="email"
@@ -91,12 +113,12 @@ export default function SignupForm({ light = false }: { light?: boolean }) {
           placeholder="you@example.com*"
           aria-label="Email address"
           autoComplete="email"
-          className={field}
+          className={cn(field, compact && "md:flex-[1.5]")}
         />
         <Button
           type="submit"
           disabled={status === "submitting"}
-          className="h-12 px-7 text-base"
+          className={compact ? "h-11 px-4 text-sm" : "h-12 px-7 text-base"}
         >
           {status === "submitting" ? "…" : "Notify me"}
         </Button>

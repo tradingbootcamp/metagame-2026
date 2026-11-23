@@ -9,6 +9,7 @@ const row = (over: Partial<TicketRow> = {}): TicketRow => ({
   status: "paid",
   test: false,
   tier: "Standard",
+  year: 2026,
   amountCents: 32500,
   couponCode: null,
   purchaserEmail: "ada@example.com",
@@ -19,6 +20,10 @@ const row = (over: Partial<TicketRow> = {}): TicketRow => ({
   holderUserId: null,
   referralCode: null,
   referredByPaymentId: null,
+  badgeCode: null,
+  claimedBy: null,
+  checkedInAt: null,
+  checkedInBy: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   ...over,
@@ -39,7 +44,16 @@ describe("ticketView", () => {
       transferred: false,
       referralCode: null,
       referredBy: null,
+      badgeCode: null,
+      checkedIn: false,
     });
+  });
+
+  it("shows the padded badge number to the owner only", () => {
+    const r = row({ badgeCode: 42, ownerUserId: "u2" });
+    expect(ticketView(r, "u2", "bob@example.com").badgeCode).toBe("0042");
+    expect(ticketView(r, ...ada).badgeCode).toBeNull();
+    expect(ticketView(row({ badgeCode: 42 }), ...ada).badgeCode).toBeNull();
   });
 
   it("shows the referral code to the holder and the owner, nobody else", () => {

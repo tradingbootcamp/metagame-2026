@@ -136,6 +136,14 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                 >
                   {b.text}
                 </span>
+                {t.mine && (
+                  <span className="text-sm text-ink/70">
+                    Badge{" "}
+                    <span className="font-mono text-ink">
+                      {t.badgeCode ? `#${t.badgeCode}` : "—"}
+                    </span>
+                  </span>
+                )}
                 {shareable(t) && !holdsOne && (
                   <Button
                     size="sm"
@@ -157,21 +165,28 @@ export default function TicketsPanel({ tickets }: { tickets: TicketView[] }) {
                     <ShareCode code={t.code!} />
                   </span>
                 )}
-                {t.mine && t.status === "paid" && confirmingId !== t.id && (
-                  <span className="ml-auto flex items-center gap-3">
-                    <span className="text-sm text-ink/60">
-                      Unclaim this ticket to pass it on to someone else.
+                {t.mine &&
+                  t.status === "paid" &&
+                  confirmingId !== t.id &&
+                  (t.checkedIn ? (
+                    <span className="ml-auto text-sm text-ink/60">
+                      Checked in, so this ticket can&apos;t be passed on now.
                     </span>
-                    <button
-                      type="button"
-                      disabled={unclaiming}
-                      onClick={() => setConfirmingId(t.id)}
-                      className="rounded border border-line px-3 py-1 text-sm font-semibold text-navy hover:border-navy disabled:opacity-60"
-                    >
-                      Unclaim
-                    </button>
-                  </span>
-                )}
+                  ) : (
+                    <span className="ml-auto flex items-center gap-3">
+                      <span className="text-sm text-ink/60">
+                        Unclaim this ticket to pass it on to someone else.
+                      </span>
+                      <button
+                        type="button"
+                        disabled={unclaiming}
+                        onClick={() => setConfirmingId(t.id)}
+                        className="rounded border border-line px-3 py-1 text-sm font-semibold text-navy hover:border-navy disabled:opacity-60"
+                      >
+                        Unclaim
+                      </button>
+                    </span>
+                  ))}
                 {t.mine && confirmingId === t.id && (
                   <span className="flex basis-full flex-wrap items-center gap-3 pt-1">
                     <span className="text-sm text-ink/70">

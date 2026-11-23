@@ -29,6 +29,7 @@ vi.mock("@/lib/permission-store", () => ({
     admin: false,
     roles: [],
     grants: auth.keys[userId],
+    denies: [],
     roleIds: [],
   }),
 }));

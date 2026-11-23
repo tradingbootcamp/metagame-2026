@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { teamAccess, type TeamAccess } from "@/lib/access";
+import { attendeeActionsOpen } from "@/lib/attendee-actions";
 import { currentSession, type Session } from "@/lib/auth";
 import { ticketStep } from "@/lib/first-signin";
 import {
@@ -30,9 +31,9 @@ import { reportErrorOnce } from "@/lib/error-report";
 
 export const loadRawSchedule = cache(loadSchedule);
 
-/** Which rooms this access may see; whoever edits the schedule sees them all. */
+/** Which rooms this access may see; whoever reads the whole schedule sees them all. */
 const viewerOf = (access: TeamAccess | null): ScheduleViewer => {
-  if (access?.permissions.has("schedule.manage")) return "team";
+  if (access?.permissions.has("schedule.view")) return "team";
   if (access?.permissions.has("schedule.volunteer_rooms")) return "volunteer";
   return "public";
 };
@@ -63,6 +64,13 @@ const readBoard = cache(async (): Promise<BoardData | null> => {
   const [session, access] = await Promise.all([currentSession(), teamAccess()]);
   return boardFor(rooms, session, access);
 });
+
+/** Whether this request may RSVP, bookmark, pin a note up or react. */
+export async function attendeeActionsAllowed(): Promise<boolean> {
+  return attendeeActionsOpen(
+    !!(await teamAccess())?.permissions.has("schedule.manage"),
+  );
+}
 
 /** The public sessions the signed-in viewer is in; null when signed out. */
 const readMySessionIds = cache(async (): Promise<string[] | null> => {

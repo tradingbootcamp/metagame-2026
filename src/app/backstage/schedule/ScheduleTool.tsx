@@ -110,6 +110,7 @@ export default function ScheduleTool({
   locations,
   attendance,
   viewer,
+  canEdit,
   canSeed,
   canReorder,
   initialEdit,
@@ -118,6 +119,8 @@ export default function ScheduleTool({
   locations: ScheduleLocation[];
   attendance: Attendance;
   viewer: (ViewerPlans & { userId: string }) | null;
+  /** Holds schedule.manage; without it everything opens read-only. */
+  canEdit: boolean;
   canSeed: boolean;
   /** Holds schedule.rooms: shows the drag handles in the rooms list. */
   canReorder: boolean;
@@ -297,20 +300,24 @@ export default function ScheduleTool({
               </button>
             </>
           )}
-          <button
-            type="button"
-            onClick={() => openLocation(null)}
-            className={smallButtonClass}
-          >
-            New room
-          </button>
-          <button
-            type="button"
-            onClick={() => openSession(null)}
-            className={cn(buttonClass, "w-auto py-1.5 text-sm")}
-          >
-            New session
-          </button>
+          {canEdit && (
+            <>
+              <button
+                type="button"
+                onClick={() => openLocation(null)}
+                className={smallButtonClass}
+              >
+                New room
+              </button>
+              <button
+                type="button"
+                onClick={() => openSession(null)}
+                className={cn(buttonClass, "w-auto py-1.5 text-sm")}
+              >
+                New session
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -351,10 +358,10 @@ export default function ScheduleTool({
           dayKey={dayKey}
           onDayChange={setDayKey}
           onOpen={openSession}
-          onCreate={createAt}
-          onGrab={grab}
-          onDrop={drop}
-          onEditLocation={openLocation}
+          onCreate={canEdit ? createAt : undefined}
+          onGrab={canEdit ? grab : undefined}
+          onDrop={canEdit ? drop : undefined}
+          onEditLocation={canEdit ? openLocation : undefined}
           confirmClash
         />
       </div>
@@ -367,12 +374,14 @@ export default function ScheduleTool({
                 key={s.id}
                 className={`flex items-stretch ${carrying?.id === s.id ? "bg-navy/[0.06]" : ""}`}
               >
-                <GrabHandle
-                  session={s}
-                  carrying={carrying?.id === s.id}
-                  onGrab={grab}
-                  className="ml-2 w-6 shrink-0"
-                />
+                {canEdit && (
+                  <GrabHandle
+                    session={s}
+                    carrying={carrying?.id === s.id}
+                    onGrab={grab}
+                    className="ml-2 w-6 shrink-0"
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => openSession(s)}
@@ -437,7 +446,7 @@ export default function ScheduleTool({
                       onClick={() => openSession(s)}
                       className={smallButtonClass}
                     >
-                      Edit
+                      {canEdit ? "Edit" : "View"}
                     </button>
                   </td>
                 </tr>
@@ -457,6 +466,7 @@ export default function ScheduleTool({
       <CollapsedSection title="All rooms" count={locations.length}>
         <RoomList
           locations={locations}
+          canEdit={canEdit}
           canReorder={canReorder}
           onEdit={openLocation}
           onError={setError}
@@ -528,6 +538,7 @@ export default function ScheduleTool({
               ? planConflicts(openNow, sessions, viewer.userId, viewer.rsvps)
               : []
           }
+          readOnly={!canEdit}
           onClose={close}
         />
       )}
@@ -535,6 +546,7 @@ export default function ScheduleTool({
         <LocationForm
           key={editing.location?.id ?? "new"}
           location={editing.location}
+          readOnly={!canEdit}
           onClose={close}
         />
       )}

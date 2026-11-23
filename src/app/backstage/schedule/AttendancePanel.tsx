@@ -6,6 +6,7 @@ import { StarIcon, XIcon } from "lucide-react";
 import AccountAdder from "./AccountAdder";
 import { addRsvpFor, removeRsvpFor, type FormState } from "./actions";
 import PlanButtons from "@/v2/components/schedule/PlanButtons";
+import { attendeeActionsOpen } from "@/lib/attendee-actions";
 import type {
   Attendance,
   Attendee,
@@ -22,11 +23,14 @@ export default function AttendancePanel({
   attendance = NONE,
   viewer,
   conflicts,
+  readOnly = false,
 }: {
   session: ScheduleSession;
   attendance?: Attendance[string];
   viewer: (ViewerPlans & { userId: string }) | null;
   conflicts: PlanConflict[];
+  /** Counts and the viewer's own RSVP only: no list, no adding or removing. */
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -38,7 +42,10 @@ export default function AttendancePanel({
   const waiting = attendance.attendees.filter((a) => a.status === "waitlist");
   const cap = session.maxCapacity;
 
+  // Names arrive blanked for viewers without schedule.rsvps.
+  const named = going.concat(waiting).some((a) => a.name);
   const list = (title: string, people: Attendee[]) =>
+    named &&
     people.length > 0 && (
       <div>
         <p className="mb-1 text-xs font-medium tracking-wide text-ink/50 uppercase">
@@ -53,16 +60,18 @@ export default function AttendancePanel({
                   <span className="ml-2 text-xs text-ink/50">{a.email}</span>
                 )}
               </span>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => run(() => removeRsvpFor(session.id, a.userId))}
-                aria-label={`Remove ${a.name}`}
-                title="Remove"
-                className="rounded p-1 text-ink/40 hover:text-meeple"
-              >
-                <XIcon className="size-4" />
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => run(() => removeRsvpFor(session.id, a.userId))}
+                  aria-label={`Remove ${a.name}`}
+                  title="Remove"
+                  className="rounded p-1 text-ink/40 hover:text-meeple"
+                >
+                  <XIcon className="size-4" />
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -83,7 +92,7 @@ export default function AttendancePanel({
         </p>
       </div>
 
-      {viewer ? (
+      {!attendeeActionsOpen(!readOnly) ? null : viewer ? (
         <PlanButtons
           sessionId={session.id}
           status={viewer.rsvps[session.id] ?? null}
@@ -103,11 +112,13 @@ export default function AttendancePanel({
       {list("Going", going)}
       {list("Waitlist", waiting)}
 
-      <AccountAdder
-        label="Add RSVP"
-        exclude={attendance.attendees.map((a) => a.userId)}
-        onPick={(a) => run(() => addRsvpFor(session.id, a.userId))}
-      />
+      {!readOnly && (
+        <AccountAdder
+          label="Add RSVP"
+          exclude={attendance.attendees.map((a) => a.userId)}
+          onPick={(a) => run(() => addRsvpFor(session.id, a.userId))}
+        />
+      )}
       {error && <p className="text-xs text-meeple">{error}</p>}
     </section>
   );

@@ -19,6 +19,7 @@ import {
   dayPassForPaymentLinkUrl,
   tierForCheckoutMetadata,
   tierLabelForStripeCheckout,
+  ticketYear,
 } from "@/lib/tickets";
 import { mailingListOptOutUrl } from "@/lib/purchase-buyer";
 import { pickUtm } from "@/lib/utm";
@@ -152,6 +153,7 @@ export async function POST(request: Request) {
         label: name ? `Comp – ${name}` : (coupon?.name ?? undefined),
         purpose: promo.metadata?.purpose || undefined,
         notes: promo.metadata?.notes || undefined,
+        issuedBy: promo.metadata?.issued_by || undefined,
       });
     } catch (err) {
       // 500 → Stripe retries; recordDiscountCode upserts, so a retry can't duplicate.
@@ -239,6 +241,7 @@ export async function POST(request: Request) {
       full.line_items?.data[0]?.price?.product,
     );
     const paymentLinkUrl = expanded<Stripe.PaymentLink>(full.payment_link)?.url;
+    const productName = product && "name" in product ? product.name : undefined;
     // Sessions from /api/checkout/stripe carry the tier in metadata; purchases
     // through an old Payment Link are matched by its URL instead.
     const tier = tierForCheckoutMetadata(full.metadata);
@@ -247,8 +250,10 @@ export async function POST(request: Request) {
     const ticketType = tierLabelForStripeCheckout({
       metadata: full.metadata,
       paymentLinkUrl,
-      productName: product && "name" in product ? product.name : undefined,
+      productName,
     });
+    // Metagame 2026 is over: anything but its known tiers is a 2027 sale.
+    const egg2027 = ticketYear(ticketType) === 2027;
 
     // The customer-facing promo code (e.g. "EARLYBIRD") — the coupon is the
     // discount definition behind it; this is the string the buyer actually used.
@@ -361,7 +366,8 @@ export async function POST(request: Request) {
           to: email,
           purchaserName:
             preferredName ?? full.customer_details?.name ?? undefined,
-          tierLabel: ticketType ?? "Metagame 2026 ticket",
+          tierLabel: ticketType ?? `Metagame ${ticketYear(ticketType)} ticket`,
+          egg2027,
           eventDay: tier
             ? tier.day
             : dayPassForPaymentLinkUrl(paymentLinkUrl)?.date,
@@ -391,7 +397,8 @@ export async function POST(request: Request) {
         });
       }
 
-      if (!stuckOnMirror)
+      // The follow-up is 2026 logistics; 2027 buyers hear from us later.
+      if (!stuckOnMirror && !egg2027)
         await followUpTicketPurchase({
           to: email,
           name: preferredName ?? full.customer_details?.name ?? undefined,

@@ -168,12 +168,14 @@ describe("recordTicket", () => {
     await account("ada");
     const original = (await recordTicket(purchase("Paid"))).ticketCode!;
     await claimTicket("ada", original);
-    const reissued = await unclaimTicket("ada", "pi_1");
-    expect(reissued!.ticketCode).not.toBe(original);
+    const unclaimed = await unclaimTicket("ada", "pi_1");
+    if (!unclaimed.ok) throw new Error(unclaimed.reason);
+    const reissued = unclaimed.ticket;
+    expect(reissued.ticketCode).not.toBe(original);
 
     const stored = await recordTicket(purchase("Paid"));
-    expect(stored.ticketCode).toBe(reissued!.ticketCode);
-    expect((await row()).ticketCode).toBe(reissued!.ticketCode);
+    expect(stored.ticketCode).toBe(reissued.ticketCode);
+    expect((await row()).ticketCode).toBe(reissued.ticketCode);
   });
 
   it("a replay leaves the owner alone", async () => {
@@ -279,13 +281,15 @@ describe("ticket ownership", () => {
   it("unclaiming kills the old code and makes the attendee the holder", async () => {
     const { ticketCode: code } = await recordTicket(purchase("Paid"));
     await claimTicket("ada", code!);
-    const ticket = await unclaimTicket("ada", "pi_1");
+    const unclaimed = await unclaimTicket("ada", "pi_1");
+    if (!unclaimed.ok) throw new Error(unclaimed.reason);
+    const { ticket } = unclaimed;
     expect(ticket).toMatchObject({ ownerUserId: null, holderUserId: "ada" });
     expect(await claimTicket("bea", code!)).toEqual({
       ok: false,
       reason: "unknown",
     });
-    expect(await claimTicket("bea", ticket!.ticketCode)).toMatchObject({
+    expect(await claimTicket("bea", ticket.ticketCode)).toMatchObject({
       ok: true,
     });
   });
@@ -293,7 +297,10 @@ describe("ticket ownership", () => {
   it("only the attendee can unclaim", async () => {
     const { ticketCode: code } = await recordTicket(purchase("Paid"));
     await claimTicket("ada", code!);
-    expect(await unclaimTicket("bea", "pi_1")).toBeNull();
+    expect(await unclaimTicket("bea", "pi_1")).toEqual({
+      ok: false,
+      reason: "notYours",
+    });
     expect((await row()).ownerUserId).toBe("ada");
   });
 

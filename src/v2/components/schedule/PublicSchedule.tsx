@@ -16,6 +16,7 @@ import {
   type PublicLocation,
   type PublicSession,
 } from "@/lib/schedule";
+import { ATTENDEE_ACTIONS_OPEN } from "@/lib/attendee-actions";
 import { SESSION_PARAM, sessionPageSlug } from "@/lib/session-link";
 import type { BoardData } from "@/lib/unconference";
 import { readViewCookie, writeViewCookie } from "@/lib/schedule-view";
@@ -119,12 +120,16 @@ export default function PublicSchedule({
   // Landing with ?session= open (coming back from sign-in) shows that day
   // too. Read off the location: useSearchParams would need a Suspense
   // boundary, and the home page would lose its prerendered schedule. Once
-  // only: on the home page a refresh hands over a new `days`.
+  // only: on the home page a refresh hands over a new `days`. The cached home
+  // page also picks "today" here, after mount, for the same reason.
   const landed = useRef(false);
   useEffect(() => {
     if (landed.current) return;
     const slug = new URLSearchParams(window.location.search).get(SESSION_PARAM);
-    const key = sessionDayKey(days, slug);
+    const onHome = pathname !== "/schedule" && !sessionPageSlug(pathname);
+    const key =
+      sessionDayKey(days, slug) ??
+      (onHome ? currentDayKey(days, new Date()) : null);
     if (!key) {
       landed.current = true;
       return;
@@ -135,7 +140,7 @@ export default function PublicSchedule({
       setDayKey(key);
     }, 0);
     return () => clearTimeout(t);
-  }, [days]);
+  }, [days, pathname]);
 
   const open = (s: PublicSession) => {
     openSession(s.slug);
@@ -242,7 +247,9 @@ export default function PublicSchedule({
         <EmptyPanel>
           {mine?.length
             ? `None of your sessions are on ${day.name}.`
-            : "Sessions you RSVP to, bookmark or host will show up here."}
+            : ATTENDEE_ACTIONS_OPEN
+              ? "Sessions you RSVP to, bookmark or host will show up here."
+              : "Sessions you RSVP'd to, bookmarked or hosted show up here."}
         </EmptyPanel>
       ) : view === "grid" && columns.length > 0 ? (
         <GridDay

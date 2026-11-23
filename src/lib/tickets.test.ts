@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  EGG_TIER_2027,
   dayPasses,
   supporterTier,
+  ticketYear,
   ticketTiers,
   tierLabelForStripeCheckout,
 } from "./tickets";
@@ -80,5 +82,43 @@ describe("tierLabelForStripeCheckout", () => {
         productName: undefined,
       }),
     ).toBeUndefined();
+  });
+});
+
+describe("ticketYear", () => {
+  it("files the known 2026 tiers under 2026", () => {
+    for (const tier of [
+      "Standard",
+      "standard",
+      "Supporter",
+      "Saturday Day Pass",
+      "Guest of Honor",
+      "Family & Friends Pack — Standard",
+      "Metagame 2026",
+    ])
+      expect(ticketYear(tier)).toBe(2026);
+  });
+
+  it("files everything else, including the Egg Tier, under 2027", () => {
+    expect(ticketYear(EGG_TIER_2027.label)).toBe(2027);
+    expect(ticketYear("Metagame 2027 - Early Bird")).toBe(2027);
+    expect(ticketYear(undefined)).toBe(2027);
+    expect(
+      tierLabelForStripeCheckout({
+        metadata: null,
+        paymentLinkUrl: EGG_TIER_2027.links.live,
+        productName: "Metagame 2027",
+      }),
+    ).toBe("Metagame 2027 - Egg Tier");
+  });
+
+  it("files the retired fixed-price Egg Tier links under 2027", () => {
+    const label = tierLabelForStripeCheckout({
+      metadata: null,
+      paymentLinkUrl: EGG_TIER_2027.retiredLinks.test,
+      productName: "Egg",
+    });
+    expect(label).toBe("Metagame 2027 - Egg Tier");
+    expect(ticketYear(label)).toBe(2027);
   });
 });

@@ -8,6 +8,7 @@ const { createCharge, lookupDiscountCode, countCodeRedemptions } = vi.hoisted(
   }),
 );
 vi.mock("@/lib/opennode", () => ({
+  BTC_CHECKOUT_OPEN: true,
   createCharge,
   getHostedCheckoutUrl: () => "https://checkout.opennode.com/charge",
 }));

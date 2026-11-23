@@ -32,6 +32,7 @@ vi.mock("@/lib/airtable-forms", () => ({
   attachFile: vi.fn(),
 }));
 vi.mock("@/lib/opennode", () => ({
+  BTC_CHECKOUT_OPEN: true,
   createCharge: vi.fn(async () => ({ id: "charge" })),
   getHostedCheckoutUrl: vi.fn(() => "https://pay.test/charge"),
 }));
