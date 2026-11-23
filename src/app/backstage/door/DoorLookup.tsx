@@ -7,7 +7,7 @@ import type { DoorResult, DoorTicket } from "@/lib/door-lookup";
 import { sharesAName, type TicketState } from "@/lib/ticket-holder";
 
 const NOT_VALID: Record<Exclude<TicketState, "paid">, string> = {
-  voided: "This ticket was voided or refunded.",
+  voided: "This ticket was voided.",
   pending: "The payment hasn't settled yet.",
   failed: "The payment failed.",
   underpaid: "The payment came up short.",

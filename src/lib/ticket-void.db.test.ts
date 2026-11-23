@@ -37,14 +37,9 @@ import {
   recordTicket,
   unclaimTicket,
 } from "./ticket-store";
-import {
-  STRIPE_REFUND,
-  unvoidTicket,
-  voidRefundedCharge,
-  voidTicket,
-} from "./ticket-void";
+import { unvoidTicket, voidTicket } from "./ticket-void";
 
-const { tickets, ticketRefunds, user } = schema;
+const { tickets, user } = schema;
 
 let client: PGlite;
 let db: PgliteDatabase<typeof schema>;
@@ -61,17 +56,6 @@ const ticket = (paymentId: string, ticketCode: string, over = {}) =>
     purchaserEmail: "buyer@example.com",
     ...over,
   });
-
-const fullRefund = (payment_intent: string | null) => ({
-  id: "ch_1",
-  refunded: true,
-  payment_intent,
-});
-
-const partialRefund = (payment_intent: string) => ({
-  ...fullRefund(payment_intent),
-  refunded: false,
-});
 
 const purchase: PurchaseRecord = {
   id: "pi_1",
@@ -101,7 +85,6 @@ afterAll(() => client.close());
 
 beforeEach(async () => {
   await db.delete(tickets);
-  await db.delete(ticketRefunds);
   await db.delete(schema.verification);
 });
 
@@ -212,185 +195,5 @@ describe("a voided ticket", () => {
     await voidTicket("pi_2", "Libi");
     expect(await lookupReferrer("REFERRAL")).toBeNull();
     expect((await referralCounts(["pi_1"])).get("pi_1")).toBeUndefined();
-  });
-});
-
-describe("refunds", () => {
-  it("a full refund voids the ticket, attributed to Stripe", async () => {
-    await ticket("pi_1", "AAAAAA");
-    expect(await voidRefundedCharge(fullRefund("pi_1"), "evt_1")).toBe(1);
-    expect(await row("pi_1")).toMatchObject({
-      voided: true,
-      voidedBy: STRIPE_REFUND,
-      refundEventId: "evt_1",
-      status: "paid",
-    });
-    expect((await row("pi_1")).voidedAt).toBeInstanceOf(Date);
-  });
-
-  it("a full refund voids a whole pack and nothing else", async () => {
-    for (const n of [1, 2, 3]) await ticket(`pi_1:ticket:${n}`, `AAAAA${n}`);
-    await ticket("pi_12", "BBBBBB");
-    await ticket("pi_12:ticket:1", "CCCCCC");
-    // `_` would match this in a LIKE.
-    await ticket("piX1:ticket:1", "DDDDDD");
-
-    expect(await voidRefundedCharge(fullRefund("pi_1"), "evt_1")).toBe(3);
-    for (const n of [1, 2, 3])
-      expect((await row(`pi_1:ticket:${n}`)).voided).toBe(true);
-    for (const id of ["pi_12", "pi_12:ticket:1", "piX1:ticket:1"])
-      expect((await row(id)).voided).toBe(false);
-  });
-
-  it("a partial refund voids nothing, then or later", async () => {
-    await ticket("pi_1", "AAAAAA");
-    await voidRefundedCharge(partialRefund("pi_1"), "evt_1");
-    expect((await row("pi_1")).voided).toBe(false);
-
-    await voidRefundedCharge(partialRefund("pi_2"), "evt_2");
-    await recordTicket({ ...purchase, id: "pi_2" });
-    expect((await row("pi_2")).voided).toBe(false);
-  });
-
-  it("partial refunds that add up to the whole charge void it", async () => {
-    await ticket("pi_1", "AAAAAA");
-    await voidRefundedCharge(partialRefund("pi_1"), "evt_1");
-    await voidRefundedCharge(fullRefund("pi_1"), "evt_2");
-    expect((await row("pi_1")).voided).toBe(true);
-  });
-
-  it("a redelivery changes nothing", async () => {
-    await ticket("pi_1", "AAAAAA");
-    await voidRefundedCharge(fullRefund("pi_1"), "evt_1");
-    const first = await row("pi_1");
-    expect(await voidRefundedCharge(fullRefund("pi_1"), "evt_1")).toBe(0);
-    expect((await row("pi_1")).voidedAt).toEqual(first.voidedAt);
-  });
-
-  it("keeps a staff void's who and when", async () => {
-    await ticket("pi_1", "AAAAAA");
-    await voidTicket("pi_1", "Libi");
-    const voided = await row("pi_1");
-    await voidRefundedCharge(fullRefund("pi_1"), "evt_1");
-    expect(await row("pi_1")).toMatchObject({
-      voidedBy: "Libi",
-      voidedAt: voided.voidedAt,
-    });
-  });
-
-  it("a redelivery can't overrule staff undoing the void", async () => {
-    await ticket("pi_1", "AAAAAA");
-    await voidRefundedCharge(fullRefund("pi_1"), "evt_1");
-    await unvoidTicket("pi_1", "Libi");
-    expect(await voidRefundedCharge(fullRefund("pi_1"), "evt_1")).toBe(0);
-    expect((await row("pi_1")).voided).toBe(false);
-  });
-
-  it("nor can a redelivery overrule undoing a staff void it found", async () => {
-    await ticket("pi_1", "AAAAAA");
-    await voidTicket("pi_1", "Libi");
-    await voidRefundedCharge(fullRefund("pi_1"), "evt_1");
-    await unvoidTicket("pi_1", "Libi");
-    await voidRefundedCharge(fullRefund("pi_1"), "evt_1");
-    expect((await row("pi_1")).voided).toBe(false);
-  });
-
-  it("a refund right after a mistaken void was undone still voids", async () => {
-    await ticket("pi_1", "AAAAAA");
-    await voidTicket("pi_1", "Libi");
-    // Later than the event's whole-second timestamp could say.
-    await unvoidTicket("pi_1", "Libi");
-    expect(await voidRefundedCharge(fullRefund("pi_1"), "evt_1")).toBe(1);
-    expect((await row("pi_1")).voided).toBe(true);
-  });
-
-  it("a new refund voids what staff restored after an earlier one", async () => {
-    await ticket("pi_1", "AAAAAA");
-    await voidRefundedCharge(fullRefund("pi_1"), "evt_1");
-    await unvoidTicket("pi_1", "Libi");
-    expect(await voidRefundedCharge(fullRefund("pi_1"), "evt_2")).toBe(1);
-    expect((await row("pi_1")).refundEventId).toBe("evt_2");
-
-    await unvoidTicket("pi_1", "Libi");
-    expect(await voidRefundedCharge(fullRefund("pi_1"), "evt_1")).toBe(0);
-    expect((await row("pi_1")).voided).toBe(false);
-  });
-
-  it("a retry finishes a delivery that failed before applying", async () => {
-    await ticket("pi_1", "AAAAAA");
-    await db
-      .insert(ticketRefunds)
-      .values({ stripeEventId: "evt_1", paymentId: "pi_1" });
-    expect(await voidRefundedCharge(fullRefund("pi_1"), "evt_1")).toBe(1);
-    expect((await row("pi_1")).voided).toBe(true);
-  });
-
-  it("a retry after a partial failure leaves an undone ticket alone", async () => {
-    await ticket("pi_1", "AAAAAA", { refundEventId: "evt_1" });
-    await db
-      .insert(ticketRefunds)
-      .values({ stripeEventId: "evt_1", paymentId: "pi_1" });
-    expect(await voidRefundedCharge(fullRefund("pi_1"), "evt_1")).toBe(0);
-    expect((await row("pi_1")).voided).toBe(false);
-  });
-
-  it("ignores charges with no payment, and stores nothing for them", async () => {
-    await ticket("pi_1", "AAAAAA");
-    expect(await voidRefundedCharge(fullRefund(null), "evt_1")).toBe(0);
-    expect((await row("pi_1")).voided).toBe(false);
-    expect(await db.select().from(ticketRefunds)).toEqual([]);
-  });
-});
-
-describe("a refund that arrives before its ticket", () => {
-  beforeEach(() => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-  });
-
-  it("voids the ticket when it's stored, and it can't be claimed", async () => {
-    expect(await voidRefundedCharge(fullRefund("pi_1"), "evt_1")).toBe(0);
-    await recordTicket(purchase);
-    const stored = await row("pi_1");
-    expect(stored).toMatchObject({
-      voided: true,
-      voidedBy: STRIPE_REFUND,
-      refundEventId: "evt_1",
-    });
-    expect(await claimTicket("ada", stored.ticketCode)).toEqual({
-      ok: false,
-      reason: "voided",
-    });
-  });
-
-  it("voids pack admissions stored after it, as well as before", async () => {
-    const admission = (n: number) => ({ ...purchase, id: `pi_1:ticket:${n}` });
-    await recordTicket(admission(1));
-    await voidRefundedCharge(fullRefund("pi_1"), "evt_1");
-    await recordTicket(admission(2));
-    await recordTicket(admission(3));
-    for (const n of [1, 2, 3])
-      expect((await row(`pi_1:ticket:${n}`)).voided).toBe(true);
-  });
-
-  it("doesn't touch another payment's ticket", async () => {
-    await voidRefundedCharge(fullRefund("pi_1"), "evt_1");
-    await recordTicket({ ...purchase, id: "pi_12" });
-    await recordTicket({ ...purchase, id: "pi_12:ticket:1" });
-    expect((await row("pi_12")).voided).toBe(false);
-    expect((await row("pi_12:ticket:1")).voided).toBe(false);
-  });
-
-  it("a fulfillment retry can't overrule staff undoing the void", async () => {
-    await voidRefundedCharge(fullRefund("pi_1"), "evt_1");
-    await recordTicket(purchase);
-    await unvoidTicket("pi_1", "Libi");
-    await recordTicket(purchase);
-    expect((await row("pi_1")).voided).toBe(false);
-
-    await ticket("pi_2", "BBBBBB");
-    await voidRefundedCharge(fullRefund("pi_2"), "evt_2");
-    await unvoidTicket("pi_2", "Libi");
-    await recordTicket({ ...purchase, id: "pi_2" });
-    expect((await row("pi_2")).voided).toBe(false);
   });
 });

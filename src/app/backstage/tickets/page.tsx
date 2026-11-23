@@ -95,7 +95,6 @@ export default async function AdminTicketsPage(
         voidedBy: t.voidedBy,
         unvoidedAt: t.unvoidedAt,
         unvoidedBy: t.unvoidedBy,
-        refunded: t.refundEventId !== null,
         test: t.test,
         code: formatTicketCode(t.ticketCode),
         source: t.source,

@@ -25,7 +25,6 @@ const row = (over: Partial<TicketRow> = {}): TicketRow => ({
   voidedBy: null,
   unvoidedAt: null,
   unvoidedBy: null,
-  refundEventId: null,
   badgeCode: null,
   claimedBy: null,
   checkedInAt: null,

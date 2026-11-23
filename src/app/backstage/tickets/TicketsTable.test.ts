@@ -18,25 +18,25 @@ const panel = (t: Partial<AdminTicket["t"]>) =>
         voidedBy: "Libi",
         unvoidedAt: null,
         unvoidedBy: null,
-        refunded: true,
         ...t,
       } as AdminTicket["t"],
     }),
   );
 
-it("warns before undoing a staff void on a refunded ticket", () => {
+it("says who voided a ticket and offers the undo", () => {
   const html = panel({});
-  expect(html).toContain("fully refunded");
-  expect(html).toContain("valid anyway");
+  expect(html).toContain("Voided");
+  expect(html).toContain("Libi");
   expect(html).toContain("Undo void");
 });
 
-it("still says refunded after the void is undone", () => {
-  const html = panel({ status: "paid" });
-  expect(html).toContain("fully refunded");
-  expect(html).not.toContain("valid anyway");
-});
-
-it("says nothing of refunds otherwise", () => {
-  expect(panel({ refunded: false })).not.toContain("refunded");
+it("keeps the record of an undone void", () => {
+  const html = panel({
+    status: "paid",
+    unvoidedAt: new Date("2026-11-02"),
+    unvoidedBy: "Sam",
+  });
+  expect(html).toContain("Was voided");
+  expect(html).toContain("Sam");
+  expect(html).toContain("Void ticket");
 });

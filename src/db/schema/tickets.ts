@@ -69,9 +69,6 @@ export const tickets = pgTable(
     voidedBy: text(),
     unvoidedAt: timestamp({ withTimezone: true }),
     unvoidedBy: text(),
-    // The refund event that last applied to this ticket. Staff undoing a void
-    // survives retries because the same refund never applies to a ticket twice.
-    refundEventId: text(),
     badgeCode: integer().unique(),
     checkedInAt: timestamp({ withTimezone: true }),
     checkedInBy: text().references(() => user.id, { onDelete: "set null" }),
@@ -85,17 +82,4 @@ export const tickets = pgTable(
     // The QR stickers encode four digits.
     check("tickets_badge_code_range", sql`${t.badgeCode} between 0 and 9999`),
   ],
-);
-
-// Full refunds, kept apart from tickets because one can arrive before its
-// tickets are stored. payment_id is the bare payment, without `:ticket:<n>`.
-export const ticketRefunds = pgTable(
-  "ticket_refunds",
-  {
-    stripeEventId: text().primaryKey(),
-    paymentId: text().notNull(),
-    appliedAt: timestamp({ withTimezone: true }),
-    ...timestamps,
-  },
-  (t) => [index("ticket_refunds_payment_id_idx").on(t.paymentId)],
 );

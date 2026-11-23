@@ -39,7 +39,6 @@ export type AdminTicket = {
     voidedBy: string | null;
     unvoidedAt: Date | null;
     unvoidedBy: string | null;
-    refunded: boolean;
     test: boolean;
     code: string;
     source: string;
@@ -593,12 +592,6 @@ export function VoidPanel({
 
   return (
     <div className="space-y-2 text-sm">
-      {t.refunded && (
-        <p className="font-semibold">
-          The payment was fully refunded.
-          {voided && " Undoing this void makes the ticket valid anyway."}
-        </p>
-      )}
       {t.voidedAt && (
         <p>
           {voided ? "Voided" : "Was voided"} {shortDate.format(t.voidedAt)} by{" "}

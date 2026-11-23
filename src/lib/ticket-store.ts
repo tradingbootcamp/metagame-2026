@@ -27,7 +27,6 @@ import {
   withFreshTicketCode,
 } from "@/lib/ticket-code";
 import { emailKey } from "@/lib/ticket-holder";
-import { applyEarlierRefund } from "@/lib/ticket-void";
 import {
   EVENT_YEAR,
   getDayPass,
@@ -186,7 +185,6 @@ export async function recordTicket(
     if (!isUniqueViolation(e)) throw e;
     rows = await upsert();
   }
-  await applyEarlierRefund(row.paymentId);
   const [stored] = rows;
   return {
     ...purchase,

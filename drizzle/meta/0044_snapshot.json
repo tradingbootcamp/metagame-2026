@@ -1,5 +1,5 @@
 {
-  "id": "4cafc1e6-9da9-4e0b-8629-f38bd6bbd058",
+  "id": "e1c05b1a-a2ca-43e5-b031-08be6f889053",
   "prevId": "94d5a38c-e6f7-4947-93a6-853d435e316e",
   "version": "7",
   "dialect": "postgresql",
@@ -709,67 +709,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.ticket_refunds": {
-      "name": "ticket_refunds",
-      "schema": "",
-      "columns": {
-        "stripe_event_id": {
-          "name": "stripe_event_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "payment_id": {
-          "name": "payment_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "applied_at": {
-          "name": "applied_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "ticket_refunds_payment_id_idx": {
-          "name": "ticket_refunds_payment_id_idx",
-          "columns": [
-            {
-              "expression": "payment_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.tickets": {
       "name": "tickets",
       "schema": "",
@@ -913,12 +852,6 @@
         },
         "unvoided_by": {
           "name": "unvoided_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "refund_event_id": {
-          "name": "refund_event_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
