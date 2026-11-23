@@ -65,12 +65,6 @@ export type RfpIntake = {
 export const HOST_ALIASES: Record<string, { to: string[]; mustExist?: true }> =
   {
     "ricki@trading.camp": { to: ["ricki@metagame.games"], mustExist: true },
-    "casey@slaydiumgames.com": {
-      to: ["casey@slaydiumgames.com", "caseyjonescaseyjones@gmail.com"],
-    },
-    "caseyjonescaseyjones@gmail.com": {
-      to: ["casey@slaydiumgames.com", "caseyjonescaseyjones@gmail.com"],
-    },
   };
 
 const text = (v: unknown) =>

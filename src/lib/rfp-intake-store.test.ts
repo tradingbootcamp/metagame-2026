@@ -147,17 +147,5 @@ describe("intakeRfp", () => {
     expect(result.warnings).toContain(
       "No account for ricki@metagame.games; no host linked.",
     );
-
-    store.findAccount.mockImplementation(async (email: string) =>
-      email === "caseyjonescaseyjones@gmail.com" ? { userId: "casey" } : null,
-    );
-    await intakeRfp(REC, {
-      ...fields,
-      "Email (host)": "casey@slaydiumgames.com",
-    });
-    expect(store.ensureAccount).toHaveBeenCalledWith(
-      "Alex Doe",
-      "caseyjonescaseyjones@gmail.com",
-    );
   });
 });
