@@ -6,7 +6,7 @@ import {
   normalizeTicketCode,
 } from "@/lib/ticket-code-format";
 import { ticketState, type TicketState } from "@/lib/ticket-holder";
-import { visible } from "@/lib/ticket-store";
+import { thisYear } from "@/lib/ticket-store";
 
 const { tickets, user } = schema;
 
@@ -102,7 +102,7 @@ export async function doorLookup(query: string): Promise<DoorResult> {
     .leftJoin(holder, eq(holder.id, tickets.holderUserId))
     .where(
       and(
-        visible,
+        thisYear,
         or(
           code.length === TICKET_CODE_LENGTH
             ? eq(tickets.ticketCode, code)

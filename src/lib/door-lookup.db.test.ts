@@ -32,7 +32,7 @@ import {
   doorLookup,
   type DoorResult,
 } from "./door-lookup";
-import { dayPasses } from "./tickets";
+import { dayPasses, EVENT_YEAR } from "./tickets";
 import { FAMILY_PACK } from "./family-pack";
 
 const { tickets, user } = schema;
@@ -151,6 +151,13 @@ describe("searching", () => {
       expect(found(await doorLookup(q))).toEqual([]);
     for (const q of ["owen@example.com", "owen owner", "A2C4EF"])
       expect(found(await doorLookup(q))[0].holder).toBe("Owen Owner");
+  });
+
+  it("only finds this year's tickets", async () => {
+    await ticket("pi_old", "A2C4EF", { year: EVENT_YEAR - 1 });
+    await ticket("pi_new", "B3D5FG", { year: EVENT_YEAR });
+    expect(found(await doorLookup("A2C4EF"))).toEqual([]);
+    expect(found(await doorLookup("buyer@example.com"))).toHaveLength(1);
   });
 
   it("a passed-on ticket is found by its holder, not its buyer", async () => {

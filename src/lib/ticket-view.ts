@@ -1,4 +1,5 @@
 import { formatReferralCode } from "@/lib/referral";
+import { formatBadgeCode } from "@/lib/badge-code";
 import { formatTicketCode } from "@/lib/ticket-code-format";
 import { ticketState, type TicketState } from "@/lib/ticket-holder";
 import {
@@ -24,6 +25,9 @@ export type TicketView = {
   referralCode: string | null;
   /** Who the ticket was bought on a referral from, by name or email. */
   referredBy: string | null;
+  /** Four-digit badge number, shown to the owner once the ticket has one. */
+  badgeCode: string | null;
+  checkedIn: boolean;
 };
 
 export function ticketView(
@@ -49,5 +53,8 @@ export function ticketView(
         ? formatReferralCode(t.referralCode)
         : null,
     referredBy,
+    badgeCode:
+      mine && t.badgeCode !== null ? formatBadgeCode(t.badgeCode) : null,
+    checkedIn: mine && t.checkedInAt !== null,
   };
 }

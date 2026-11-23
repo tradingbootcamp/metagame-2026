@@ -236,8 +236,85 @@
     {
       "idx": 33,
       "version": "7",
-      "when": 1793851452749,
-      "tag": "0033_misty_leader",
+      "when": 1793933753055,
+      "tag": "0033_ticket_badge_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793938453891,
+      "tag": "0034_megagame_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793953085629,
+      "tag": "0035_sign_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793982108534,
+      "tag": "0036_gorgeous_tombstone",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793985097766,
+      "tag": "0037_quest_cards",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793991645729,
+      "tag": "0038_quest_author",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794008452316,
+      "tag": "0039_hat_steals",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794032992726,
+      "tag": "0040_hat_schedule",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794100670682,
+      "tag": "0041_user_permission_denies",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794258261562,
+      "tag": "0042_ticket_year",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794258269082,
+      "tag": "0043_ticket_year_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1795473257218,
+      "tag": "0044_aspiring_the_fury",
       "breakpoints": true
     }
   ]

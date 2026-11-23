@@ -4,10 +4,12 @@ import {
   desc,
   eq,
   inArray,
+  isNotNull,
   isNull,
   lte,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { env } from "@/env";
@@ -18,10 +20,21 @@ import {
 } from "@/lib/airtable";
 import { cleanDiscordHandle } from "@/lib/discord-handle";
 import { sendAdminErrorEmail } from "@/lib/email";
-import { ticketCode, withFreshTicketCode } from "@/lib/ticket-code";
+import { isBadgeCode } from "@/lib/badge-code";
+import {
+  isUniqueViolation,
+  ticketCode,
+  withFreshTicketCode,
+} from "@/lib/ticket-code";
 import { emailKey } from "@/lib/ticket-holder";
 import { applyEarlierRefund } from "@/lib/ticket-void";
-import { getDayPass, getTicket, supporterTier } from "@/lib/tickets";
+import {
+  EVENT_YEAR,
+  getDayPass,
+  getTicket,
+  supporterTier,
+  ticketYear,
+} from "@/lib/tickets";
 
 export { normalizeTicketCode } from "@/lib/ticket-code-format";
 export { emailKey, holdsTicket } from "@/lib/ticket-holder";
@@ -43,6 +56,8 @@ export const admitting = and(
   eq(tickets.status, "paid"),
   eq(tickets.voided, false),
 );
+/** Visible and for this year's event: what the desk and check-in work from. */
+export const thisYear = and(visible, eq(tickets.year, EVENT_YEAR));
 
 /** holdsTicket as a WHERE clause. */
 const heldBy = (userId: string, email: string) =>
@@ -77,6 +92,7 @@ export function ticketFromPurchase(purchase: PurchaseRecord): Ticket {
     status: STATUS[purchase.status],
     test: purchase.test,
     tier: purchase.ticketType ?? null,
+    year: ticketYear(purchase.ticketType),
     amountCents:
       purchase.amount != null ? Math.round(purchase.amount * 100) : null,
     couponCode: purchase.couponCode?.trim().toUpperCase() || null,
@@ -114,6 +130,7 @@ export async function recordTicket(
     status,
     test,
     tier,
+    year,
     amountCents,
     couponCode,
     purchaserEmail,
@@ -126,6 +143,7 @@ export async function recordTicket(
       status,
       test,
       tier,
+      year,
       amountCents,
       couponCode,
       purchaserEmail,
@@ -215,6 +233,25 @@ export async function claimedCounts(
   return new Map(rows.map((r) => [r.userId!, r.n]));
 }
 
+/** The badge number on each account's claimed paid ticket; absent means none yet. */
+export async function badgeCodesFor(
+  userIds: string[],
+): Promise<Map<string, number>> {
+  if (userIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({ userId: tickets.ownerUserId, badge: tickets.badgeCode })
+    .from(tickets)
+    .where(
+      and(
+        visible,
+        inArray(tickets.ownerUserId, userIds),
+        eq(tickets.status, "paid"),
+        isNotNull(tickets.badgeCode),
+      ),
+    );
+  return new Map(rows.map((r) => [r.userId!, r.badge!]));
+}
+
 /** Whether the user has claimed a paid ticket as their own. */
 export async function hasClaimedTicket(userId: string): Promise<boolean> {
   const [row] = await getDb()
@@ -237,6 +274,7 @@ export type ClaimResult =
         | "unpaid"
         | "void"
         | "voided"
+        | "checkedIn"
         | "limited";
     };
 
@@ -295,20 +333,32 @@ export async function claimOwnTicket(
   return attemptClaim(userId, ticket.ticketCode);
 }
 
+const attemptClaim = (userId: string, code: string) =>
+  claimMatching(userId, eq(tickets.ticketCode, code));
+
+/** No failure throttle: the volunteer picks the ticket rather than guessing a code. */
+export const claimTicketFor = (
+  byUserId: string,
+  paymentId: string,
+  forUserId: string,
+) => claimMatching(forUserId, eq(tickets.paymentId, paymentId), byUserId);
+
 // One conditional UPDATE, so two people entering the same code can't both win.
-async function attemptClaim(
+async function claimMatching(
   userId: string,
-  code: string,
+  match: SQL,
+  claimedBy: string | null = null,
 ): Promise<ClaimResult> {
   const db = getDb();
   const [ticket] = await db
     .update(tickets)
-    .set({ ownerUserId: userId, claimedAt: new Date() })
+    .set({ ownerUserId: userId, claimedAt: new Date(), claimedBy })
     .where(
       and(
         visible,
-        eq(tickets.ticketCode, code),
+        match,
         isNull(tickets.ownerUserId),
+        isNull(tickets.checkedInAt),
         admitting,
         // One admission per person, checked in the same statement so two
         // claims at once can't both win.
@@ -321,7 +371,7 @@ async function attemptClaim(
   const [existing] = await db
     .select()
     .from(tickets)
-    .where(and(visible, eq(tickets.ticketCode, code)))
+    .where(and(visible, match))
     .limit(1);
   if (!existing) return { ok: false, reason: "unknown" };
   if (existing.voided) return { ok: false, reason: "voided" };
@@ -333,29 +383,36 @@ async function attemptClaim(
     .limit(1);
   if (held) return { ok: false, reason: "already" };
   if (existing.ownerUserId) return { ok: false, reason: "taken" };
+  if (existing.checkedInAt) return { ok: false, reason: "checkedIn" };
   return {
     ok: false,
     reason: existing.status === "pending" ? "unpaid" : "void",
   };
 }
 
+export type UnclaimResult =
+  | { ok: true; ticket: TicketRow }
+  | { ok: false; reason: "notYours" | "checkedIn" };
+
 /**
  * The attendee gives up their spot but keeps the ticket: it becomes theirs to
- * hold, unclaimed, under a fresh code, so the old one stops working. Null when
- * they aren't attending on it.
+ * hold, unclaimed, under a fresh code, so the old one stops working.
  */
 export async function unclaimTicket(
   userId: string,
   paymentId: string,
-): Promise<TicketRow | null> {
+): Promise<UnclaimResult> {
+  const db = getDb();
   const ticket = await withFreshTicketCode(async (code) => {
-    const [row] = await getDb()
+    const [row] = await db
       .update(tickets)
       .set({
         ownerUserId: null,
         claimedAt: null,
+        claimedBy: null,
         holderUserId: userId,
         ticketCode: code,
+        badgeCode: null,
       })
       .where(
         and(
@@ -363,12 +420,30 @@ export async function unclaimTicket(
           eq(tickets.paymentId, paymentId),
           eq(tickets.ownerUserId, userId),
           admitting,
+          // Checked in means the badge is on someone; the spot can't be passed on.
+          isNull(tickets.checkedInAt),
         ),
       )
       .returning();
     return row ?? null;
   });
-  if (!ticket) return null;
+  if (!ticket) {
+    const [existing] = await db
+      .select({ checkedInAt: tickets.checkedInAt })
+      .from(tickets)
+      .where(
+        and(
+          visible,
+          eq(tickets.paymentId, paymentId),
+          eq(tickets.ownerUserId, userId),
+        ),
+      )
+      .limit(1);
+    return {
+      ok: false,
+      reason: existing?.checkedInAt ? "checkedIn" : "notYours",
+    };
+  }
   try {
     await updatePurchaseTicketCode(ticket.paymentId, ticket.ticketCode);
   } catch (e) {
@@ -379,5 +454,87 @@ export async function unclaimTicket(
       console.error("[tickets] admin alert failed:", adminErr),
     );
   }
-  return ticket;
+  return { ok: true, ticket };
+}
+
+export type CheckInResult =
+  | { ok: true; ticket: TicketRow }
+  | { ok: false; reason: "unknown" | "unclaimed" | "unpaid" | "voided" }
+  | { ok: false; reason: "already"; ticket: TicketRow };
+
+/** Marks a claimed, paid ticket checked in at the desk. */
+export async function checkInTicket(
+  byUserId: string,
+  paymentId: string,
+): Promise<CheckInResult> {
+  const db = getDb();
+  const [ticket] = await db
+    .update(tickets)
+    .set({ checkedInAt: new Date(), checkedInBy: byUserId })
+    .where(
+      and(
+        visible,
+        eq(tickets.paymentId, paymentId),
+        isNotNull(tickets.ownerUserId),
+        admitting,
+        isNull(tickets.checkedInAt),
+      ),
+    )
+    .returning();
+  if (ticket) return { ok: true, ticket };
+
+  const [existing] = await db
+    .select()
+    .from(tickets)
+    .where(and(visible, eq(tickets.paymentId, paymentId)))
+    .limit(1);
+  if (!existing) return { ok: false, reason: "unknown" };
+  if (existing.checkedInAt)
+    return { ok: false, reason: "already", ticket: existing };
+  if (existing.status !== "paid") return { ok: false, reason: "unpaid" };
+  if (existing.voided) return { ok: false, reason: "voided" };
+  return { ok: false, reason: "unclaimed" };
+}
+
+/** Reverses a check-in; null when the ticket isn't checked in. */
+export async function undoCheckIn(
+  paymentId: string,
+): Promise<TicketRow | null> {
+  const [ticket] = await getDb()
+    .update(tickets)
+    .set({ checkedInAt: null, checkedInBy: null })
+    .where(
+      and(
+        visible,
+        eq(tickets.paymentId, paymentId),
+        isNotNull(tickets.checkedInAt),
+      ),
+    )
+    .returning();
+  return ticket ?? null;
+}
+
+export type BadgeCodeResult =
+  | { ok: true; ticket: TicketRow }
+  | { ok: false; reason: "unknown" | "invalid" | "taken" };
+
+/** Sets the badge number typed in from the sticker; null takes it off. */
+export async function assignBadgeCode(
+  paymentId: string,
+  code: number | null,
+): Promise<BadgeCodeResult> {
+  if (code !== null && !isBadgeCode(code)) {
+    return { ok: false, reason: "invalid" };
+  }
+  try {
+    const [ticket] = await getDb()
+      .update(tickets)
+      .set({ badgeCode: code })
+      .where(and(visible, eq(tickets.paymentId, paymentId)))
+      .returning();
+    return ticket ? { ok: true, ticket } : { ok: false, reason: "unknown" };
+  } catch (e) {
+    if (code === null || !isUniqueViolation(e)) throw e;
+    return { ok: false, reason: "taken" };
+  }
 }

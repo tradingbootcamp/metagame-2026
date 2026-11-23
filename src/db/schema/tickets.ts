@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   index,
   integer,
   pgEnum,
@@ -8,6 +9,7 @@ import {
   timestamp,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { timestamps, user } from "./auth";
 
 export const ticketSource = pgEnum("ticket_source", [
@@ -40,6 +42,8 @@ export const tickets = pgTable(
     status: ticketStatus().notNull(),
     test: boolean().notNull().default(false),
     tier: text(),
+    // Which Metagame the ticket admits to.
+    year: integer().notNull().default(2027),
     amountCents: integer(),
     couponCode: text(),
     purchaserEmail: text(),
@@ -47,6 +51,7 @@ export const tickets = pgTable(
     purchaserDiscord: text(),
     ownerUserId: text().references(() => user.id, { onDelete: "set null" }),
     claimedAt: timestamp({ withTimezone: true }),
+    claimedBy: text().references(() => user.id, { onDelete: "set null" }),
     holderUserId: text().references(() => user.id, { onDelete: "set null" }),
     // Minted when the holder first looks for it on /account; a friend's
     // /invite link carries it.
@@ -67,6 +72,9 @@ export const tickets = pgTable(
     // The refund event that last applied to this ticket. Staff undoing a void
     // survives retries because the same refund never applies to a ticket twice.
     refundEventId: text(),
+    badgeCode: integer().unique(),
+    checkedInAt: timestamp({ withTimezone: true }),
+    checkedInBy: text().references(() => user.id, { onDelete: "set null" }),
     ...timestamps,
   },
   (t) => [
@@ -74,6 +82,8 @@ export const tickets = pgTable(
     index("tickets_owner_user_id_idx").on(t.ownerUserId),
     index("tickets_holder_user_id_idx").on(t.holderUserId),
     index("tickets_referred_by_payment_id_idx").on(t.referredByPaymentId),
+    // The QR stickers encode four digits.
+    check("tickets_badge_code_range", sql`${t.badgeCode} between 0 and 9999`),
   ],
 );
 

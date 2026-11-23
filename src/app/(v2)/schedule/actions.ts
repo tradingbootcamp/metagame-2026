@@ -2,6 +2,7 @@
 
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
+import { ATTENDEE_ACTIONS_CLOSED } from "@/lib/attendee-actions";
 import { currentSession } from "@/lib/auth";
 import {
   onGuestList,
@@ -16,7 +17,7 @@ import {
   rsvp,
   setBookmark,
 } from "@/lib/schedule-store";
-import { rsvpTicket } from "./data";
+import { attendeeActionsAllowed, rsvpTicket } from "./data";
 
 // No revalidatePath: it would re-render the whole current route behind every
 // click. The caller updates in place from this result.
@@ -35,6 +36,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The signed-in user, if they may act on this session. */
 async function attendee(sessionId: string): Promise<string | PlanResult> {
+  if (!(await attendeeActionsAllowed())) {
+    return { error: ATTENDEE_ACTIONS_CLOSED };
+  }
   const session = await currentSession();
   const u = session?.user;
   if (!u) return { error: "Sign in first." };

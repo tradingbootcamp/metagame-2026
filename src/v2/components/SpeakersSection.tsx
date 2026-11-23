@@ -25,7 +25,7 @@ export default function SpeakersSection({
   return (
     <section id="speakers" className={`${SECTION} md:py-14`}>
       <div className="mx-auto max-w-[1180px] px-8">
-        <SectionHeading eyebrow="Who will be there?" title="Speakers" />
+        <SectionHeading eyebrow="Who was there?" title="2026 Speakers" />
         {note}
         {/* Wrapping flex, not a grid, so a short last row centers. */}
         <div className="mt-10 flex flex-wrap justify-center gap-2 sm:gap-5">
@@ -43,7 +43,7 @@ export default function SpeakersSection({
           </div>
         </div>
         <p className="mt-8 text-center text-base text-ink/70">
-          And many more coming soon&hellip;
+          And many more&hellip;
         </p>
       </div>
     </section>

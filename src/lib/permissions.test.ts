@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  describeSource,
   effectivePermissions,
   expand,
   explainPermissions,
   hasTeamPermission,
+  overrideConflict,
   permissionGroups,
   PERMISSION_KEYS,
   PERMISSIONS,
+  withImpliers,
   type AccessInput,
 } from "./permissions";
 
@@ -14,6 +17,7 @@ const input = (over: Partial<AccessInput>): AccessInput => ({
   admin: false,
   roles: [],
   grants: [],
+  denies: [],
   ...over,
 });
 
@@ -75,6 +79,15 @@ describe("unconference.post", () => {
   it("implies nothing, so it can't drag a team permission along", () => {
     expect([...expand(["unconference.post"])]).toEqual(["unconference.post"]);
   });
+
+  it("keeps session notes off the backstage index", () => {
+    expect(PERMISSIONS["schedule.session_notes"].audience).toBe("attendee");
+    expect(
+      hasTeamPermission(
+        expand(["schedule.session_notes", "schedule.volunteer_rooms"]),
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("expand", () => {
@@ -84,6 +97,7 @@ describe("expand", () => {
       "schedule.view",
       "schedule.preview",
       "schedule.volunteer_rooms",
+      "schedule.session_notes",
     ]);
     expect(expand([]).size).toBe(0);
   });
@@ -103,6 +117,7 @@ describe("effectivePermissions", () => {
       "promo.view",
       "schedule.manage",
       "schedule.preview",
+      "schedule.session_notes",
       "schedule.view",
       "schedule.volunteer_rooms",
       "tickets.view",
@@ -114,6 +129,7 @@ describe("effectivePermissions", () => {
     expect([...got].sort()).toEqual([
       "schedule.manage",
       "schedule.preview",
+      "schedule.session_notes",
       "schedule.view",
       "schedule.volunteer_rooms",
     ]);
@@ -129,6 +145,93 @@ describe("effectivePermissions", () => {
       input({ roles: [{ name: "Old", permissions: ["tickets.manage"] }] }),
     );
     expect(got.size).toBe(0);
+  });
+});
+
+describe("denies", () => {
+  it("collects a key and everything that implies it, transitively", () => {
+    expect([...withImpliers(["schedule.view"])].sort()).toEqual([
+      "schedule.manage",
+      "schedule.rooms",
+      "schedule.view",
+    ]);
+    expect([...withImpliers(["gone.away"])]).toEqual([]);
+  });
+
+  it("strips the denied key and its impliers but leaves what they imply", () => {
+    const got = effectivePermissions(
+      input({
+        roles: [{ name: "Ops", permissions: ["schedule.rooms"] }],
+        denies: ["schedule.view"],
+      }),
+    );
+    expect([...got].sort()).toEqual([
+      "schedule.preview",
+      "schedule.session_notes",
+      "schedule.volunteer_rooms",
+    ]);
+  });
+
+  it("beats a personal grant", () => {
+    const got = effectivePermissions(
+      input({ grants: ["promo.manage"], denies: ["promo.view"] }),
+    );
+    expect(got.size).toBe(0);
+  });
+
+  it("doesn't apply to admins", () => {
+    const got = effectivePermissions(
+      input({ admin: true, denies: ["users.view"] }),
+    );
+    expect(got.size).toBe(PERMISSION_KEYS.length);
+  });
+});
+
+describe("overrideConflict", () => {
+  it("refuses a deny under a personal grant that includes it", () => {
+    const got = overrideConflict(
+      input({ grants: ["promo.manage"] }),
+      "promo.view",
+      "deny",
+    );
+    expect(got).toMatch(/Manage promo codes is granted/);
+    expect(
+      overrideConflict(
+        input({ grants: ["promo.view"] }),
+        "promo.manage",
+        "deny",
+      ),
+    ).toBeNull();
+  });
+
+  it("refuses a grant whose expansion is personally denied", () => {
+    expect(
+      overrideConflict(
+        input({ denies: ["promo.view"] }),
+        "promo.manage",
+        "allow",
+      ),
+    ).toMatch(/which is denied/);
+    expect(
+      overrideConflict(
+        input({ denies: ["promo.manage"] }),
+        "promo.view",
+        "allow",
+      ),
+    ).toBeNull();
+  });
+
+  it("lets a permission's own row flip between allow and deny", () => {
+    expect(
+      overrideConflict(input({ grants: ["promo.view"] }), "promo.view", "deny"),
+    ).toBeNull();
+    expect(
+      overrideConflict(
+        input({ denies: ["promo.view"] }),
+        "promo.view",
+        "allow",
+      ),
+    ).toBeNull();
   });
 });
 
@@ -152,6 +255,30 @@ describe("explainPermissions", () => {
       ],
     });
     expect(got["users.view"]).toEqual({ effective: false, sources: [] });
+  });
+
+  it("puts a deny ahead of the roles that would grant it", () => {
+    const got = explainPermissions(
+      input({
+        roles: [{ name: "Ops", permissions: ["schedule.manage"] }],
+        denies: ["schedule.view"],
+      }),
+    );
+    expect(got["schedule.view"]).toEqual({
+      effective: false,
+      sources: [{ kind: "denied" }],
+    });
+    expect(got["schedule.manage"]).toEqual({
+      effective: false,
+      sources: [
+        { kind: "denied_via", by: "schedule.view" },
+        { kind: "role", role: "Ops" },
+      ],
+    });
+    expect(got["schedule.preview"]).toEqual({ effective: true, sources: [] });
+    expect(describeSource(got["schedule.manage"].sources[0])).toBe(
+      "Denied (includes Schedule: View schedule data)",
+    );
   });
 
   it("shows the admin bypass ahead of everything", () => {
@@ -183,5 +310,22 @@ describe("door check-in", () => {
     expect(expand(["tickets.edit"]).has("tickets.void")).toBe(false);
     expect(expand(["tickets.void"]).has("tickets.view")).toBe(true);
     expect(expand(["tickets.void"]).has("checkin.view")).toBe(false);
+  });
+});
+
+describe("megagame", () => {
+  it("has manage imply verify, and not the other way round", () => {
+    expect(expand(["megagame.manage"]).has("megagame.verify")).toBe(true);
+    expect(expand(["megagame.verify"]).has("megagame.manage")).toBe(false);
+  });
+
+  it("opens backstage for a volunteer holding only verify", () => {
+    expect(hasTeamPermission(expand(["megagame.verify"]))).toBe(true);
+  });
+
+  it("is one group with the two keys in order", () => {
+    expect(
+      permissionGroups().find((g) => g.group === "Megagame")?.keys,
+    ).toEqual(["megagame.verify", "megagame.manage"]);
   });
 });

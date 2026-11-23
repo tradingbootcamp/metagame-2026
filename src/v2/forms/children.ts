@@ -130,7 +130,6 @@ export const children: FormDef = {
   path: CHILD_REGISTRATION_FORM_URL,
   tableId: airtableConfig.childrenTableId,
   name: "Child registration",
-  eyebrow: "Childcare · Metagame 2026",
   title: "Register your children",
   pitch:
     "Every child under 18 who's coming to Metagame needs to be registered here, whether or not they'll use childcare. Children under 13 come free, and childcare is free for ages 5–12. If yours is outside that range and you'd like childcare, say so and we'll do our best.",

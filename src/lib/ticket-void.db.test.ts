@@ -195,7 +195,10 @@ describe("a voided ticket", () => {
 
   it("can't be unclaimed for a fresh code", async () => {
     await ticket("pi_1", "AAAAAA", { ownerUserId: "ada", voided: true });
-    expect(await unclaimTicket("ada", "pi_1")).toBeNull();
+    expect(await unclaimTicket("ada", "pi_1")).toEqual({
+      ok: false,
+      reason: "notYours",
+    });
     expect((await row("pi_1")).ticketCode).toBe("AAAAAA");
   });
 

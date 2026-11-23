@@ -1,6 +1,6 @@
 import { env } from "@/env";
 import { airtableConfig } from "@/lib/airtable-config";
-import { VOLUNTEER_FORM_PATH } from "@/v2/lib/links";
+import { SPONSOR_FORM_URL, VOLUNTEER_FORM_PATH } from "@/v2/lib/links";
 
 // Short links: /go/{slug} → Destination with the row's UTMs appended. Rows live
 // in the Airtable "Tracking Links" table and are created from /backstage/links.
@@ -70,9 +70,8 @@ export const SITE_PAGES = [
   { path: "/", label: "Homepage" },
   { path: "/#tickets", label: "Tickets" },
   { path: "/#speakers", label: "Speakers" },
-  { path: "/#get-involved", label: "Get involved" },
   { path: "/#faq", label: "FAQ" },
-  { path: "/sponsor", label: "Sponsor" },
+  { path: SPONSOR_FORM_URL, label: "Sponsor form" },
   { path: "/childcare", label: "Childcare" },
   { path: "/team", label: "Team" },
   { path: "/last-year", label: "Last year" },

@@ -196,6 +196,7 @@ export default function SessionForm({
   attendance,
   viewer,
   conflicts,
+  readOnly = false,
   onClose,
 }: {
   session: ScheduleSession | null;
@@ -204,6 +205,8 @@ export default function SessionForm({
   attendance?: Attendance[string];
   viewer: (ViewerPlans & { userId: string }) | null;
   conflicts: PlanConflict[];
+  /** Every field disabled, nothing to save: for schedule.view without manage. */
+  readOnly?: boolean;
   onClose: () => void;
 }) {
   const [day, setDay] = useState(
@@ -289,15 +292,20 @@ export default function SessionForm({
           <XIcon className="size-[18px]" />
         </button>
         <DialogTitle className="font-bebas mb-5 text-2xl tracking-wide text-navy">
-          {session ? "Edit session" : "New session"}
+          {readOnly ? "Session" : session ? "Edit session" : "New session"}
         </DialogTitle>
         <DialogDescription className="sr-only">
-          {session ? "Edit this session." : "Add a session to the schedule."}
+          {readOnly
+            ? "This session's details."
+            : session
+              ? "Edit this session."
+              : "Add a session to the schedule."}
         </DialogDescription>
 
         <div className="sticky -top-6 z-10 -mx-6 -mt-3 mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-white px-6 py-3 sm:-mx-8 sm:px-8">
           <div className="flex items-center gap-2">
             {session &&
+              !readOnly &&
               (confirmDelete ? (
                 <>
                   <button
@@ -341,16 +349,18 @@ export default function SessionForm({
               onClick={requestClose}
               className={smallButtonClass}
             >
-              Cancel
+              {readOnly ? "Close" : "Cancel"}
             </button>
-            <button
-              type="submit"
-              form={formId}
-              disabled={pending}
-              className={cn(buttonClass, "w-auto")}
-            >
-              {pending ? "Saving…" : session ? "Save" : "Create"}
-            </button>
+            {!readOnly && (
+              <button
+                type="submit"
+                form={formId}
+                disabled={pending}
+                className={cn(buttonClass, "w-auto")}
+              >
+                {pending ? "Saving…" : session ? "Save" : "Create"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -361,263 +371,273 @@ export default function SessionForm({
           // returns, which would wipe the form behind an overlap prompt.
           onSubmit={(e) => {
             e.preventDefault();
+            if (readOnly) return;
             submit(new FormData(e.currentTarget));
           }}
           className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2"
         >
-          {session && <input type="hidden" name="id" value={session.id} />}
+          {/* `contents` keeps the grid; disabling the fieldset disables every
+              field and picker button inside it at once. */}
+          <fieldset disabled={readOnly} className="contents">
+            {session && <input type="hidden" name="id" value={session.id} />}
 
-          <Field
-            label="Title"
-            name="title"
-            state={state}
-            className="sm:col-span-2"
-          >
-            <input
-              name="title"
-              required
-              defaultValue={session?.title ?? ""}
-              className={fieldClass}
-              autoFocus
-            />
-          </Field>
-
-          {session && (
-            <RfpPanel
-              sessionId={session.id}
-              recordId={session.airtableRfpRecordId}
-              shepherd={session.shepherd}
-            />
-          )}
-
-          <ShepherdPicker
-            initial={session?.shepherd ?? null}
-            error={state.field === "shepherd" ? state.error : null}
-          />
-
-          <Field label="Slug" name="slug" state={state}>
-            <input
-              name="slug"
-              defaultValue={session?.slug ?? ""}
-              placeholder="from the title if blank"
-              className={`${fieldClass} font-mono text-sm`}
-            />
-          </Field>
-
-          <Field label="Status" name="status" state={state}>
-            <select
-              name="status"
-              defaultValue={session?.status ?? "draft"}
-              className={selectClass}
-              style={selectStyle}
-            >
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {LABELS[s]}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <div className="grid grid-cols-2 gap-3 sm:col-span-2 sm:grid-cols-3">
             <Field
-              label="Day"
-              name="day"
+              label="Title"
+              name="title"
               state={state}
-              className="max-sm:col-span-2"
+              className="sm:col-span-2"
             >
+              <input
+                name="title"
+                required
+                defaultValue={session?.title ?? ""}
+                className={fieldClass}
+                autoFocus
+              />
+            </Field>
+
+            {session && !readOnly && (
+              <RfpPanel
+                sessionId={session.id}
+                recordId={session.airtableRfpRecordId}
+                shepherd={session.shepherd}
+              />
+            )}
+
+            <ShepherdPicker
+              initial={session?.shepherd ?? null}
+              error={state.field === "shepherd" ? state.error : null}
+            />
+
+            <Field label="Slug" name="slug" state={state}>
+              <input
+                name="slug"
+                defaultValue={session?.slug ?? ""}
+                placeholder="from the title if blank"
+                className={`${fieldClass} font-mono text-sm`}
+              />
+            </Field>
+
+            <Field label="Status" name="status" state={state}>
               <select
-                value={day}
-                onChange={(e) => pickDay(e.target.value)}
+                name="status"
+                defaultValue={session?.status ?? "draft"}
                 className={selectClass}
                 style={selectStyle}
               >
-                <option value="">Not scheduled</option>
-                {dayOptions.map((d) => (
-                  <option key={d.key} value={d.key}>
-                    {d.label}
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {LABELS[s]}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field label="Starts" name="startsAt" state={state}>
-              <input
-                ref={startRef}
-                type="time"
-                step={300}
-                value={day && start !== null ? minutesToHHMM(start) : ""}
-                disabled={!day}
-                onChange={(e) => pickStart(parseHHMM(e.target.value))}
-                className={fieldClass}
-              />
-            </Field>
-            <Field label="Ends" name="endsAt" state={state}>
-              <input
-                type="time"
-                step={300}
-                value={day && end !== null ? minutesToHHMM(end % MIDNIGHT) : ""}
-                disabled={!day}
-                // No session ends at the start of its own day, so 00:00 is midnight.
-                onChange={(e) => {
-                  const next = parseHHMM(e.target.value);
-                  setEnd(next === 0 ? MIDNIGHT : next);
-                  setShortened(false);
-                }}
-                className={fieldClass}
-              />
-              {shortened && (
-                <span
-                  role="status"
-                  className="mt-1 flex items-center gap-1 text-xs text-amber-700"
+
+            <div className="grid grid-cols-2 gap-3 sm:col-span-2 sm:grid-cols-3">
+              <Field
+                label="Day"
+                name="day"
+                state={state}
+                className="max-sm:col-span-2"
+              >
+                <select
+                  value={day}
+                  onChange={(e) => pickDay(e.target.value)}
+                  className={selectClass}
+                  style={selectStyle}
                 >
-                  <CircleAlertIcon aria-hidden className="size-3.5 shrink-0" />
-                  Shortened to end at midnight.
-                </span>
-              )}
-            </Field>
-            <input
-              type="hidden"
-              name="startsAt"
-              value={day && start !== null ? wallAt(day, start) : ""}
-            />
-            <input
-              type="hidden"
-              name="endsAt"
-              value={day && end !== null ? wallAt(day, end) : ""}
-            />
-          </div>
-
-          <Field label="Room" name="locationId" state={state}>
-            <select
-              name="locationId"
-              defaultValue={session?.locationId ?? defaults?.locationId ?? ""}
-              className={selectClass}
-              style={selectStyle}
-            >
-              <option value="">No room yet</option>
-              {locations.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                  {l.capacity ? ` · 👤 ${l.capacity}` : ""}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Category" name="category" state={state}>
-            <select
-              name="category"
-              defaultValue={session?.category ?? ""}
-              className={selectClass}
-              style={selectStyle}
-            >
-              <option value="">Unset</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {LABELS[c]}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Ages" name="ages" state={state}>
-            <select
-              name="ages"
-              defaultValue={session?.ages ?? ""}
-              className={selectClass}
-              style={selectStyle}
-            >
-              <option value="">Unset</option>
-              {AGES.map((a) => (
-                <option key={a} value={a}>
-                  {LABELS[a]}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Min capacity" name="minCapacity" state={state}>
+                  <option value="">Not scheduled</option>
+                  {dayOptions.map((d) => (
+                    <option key={d.key} value={d.key}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Starts" name="startsAt" state={state}>
+                <input
+                  ref={startRef}
+                  type="time"
+                  step={300}
+                  value={day && start !== null ? minutesToHHMM(start) : ""}
+                  disabled={!day}
+                  onChange={(e) => pickStart(parseHHMM(e.target.value))}
+                  className={fieldClass}
+                />
+              </Field>
+              <Field label="Ends" name="endsAt" state={state}>
+                <input
+                  type="time"
+                  step={300}
+                  value={
+                    day && end !== null ? minutesToHHMM(end % MIDNIGHT) : ""
+                  }
+                  disabled={!day}
+                  // No session ends at the start of its own day, so 00:00 is midnight.
+                  onChange={(e) => {
+                    const next = parseHHMM(e.target.value);
+                    setEnd(next === 0 ? MIDNIGHT : next);
+                    setShortened(false);
+                  }}
+                  className={fieldClass}
+                />
+                {shortened && (
+                  <span
+                    role="status"
+                    className="mt-1 flex items-center gap-1 text-xs text-amber-700"
+                  >
+                    <CircleAlertIcon
+                      aria-hidden
+                      className="size-3.5 shrink-0"
+                    />
+                    Shortened to end at midnight.
+                  </span>
+                )}
+              </Field>
               <input
-                name="minCapacity"
-                inputMode="numeric"
-                defaultValue={session?.minCapacity ?? ""}
-                className={fieldClass}
+                type="hidden"
+                name="startsAt"
+                value={day && start !== null ? wallAt(day, start) : ""}
               />
-            </Field>
-            <Field label="Max capacity" name="maxCapacity" state={state}>
               <input
-                name="maxCapacity"
-                inputMode="numeric"
-                defaultValue={session?.maxCapacity ?? ""}
-                placeholder="unlimited"
-                className={fieldClass}
+                type="hidden"
+                name="endsAt"
+                value={day && end !== null ? wallAt(day, end) : ""}
               />
-            </Field>
-          </div>
+            </div>
 
-          <div className="flex flex-col gap-2 text-sm sm:col-span-2">
-            <Checkbox
-              name="rsvpIsCommitment"
-              label="RSVP is a commitment"
-              hint="Attendees claim a limited spot people rely on, and confirm before they do."
-              defaultChecked={session?.rsvpIsCommitment ?? false}
-            />
-            <Checkbox
-              name="sponsored"
-              label="Sponsor session"
-              hint="Tagged “Sponsor” on the schedule."
-              defaultChecked={session?.sponsored ?? false}
-            />
-            {/* Sent even when unticked, so the form can close RSVPs; the
+            <Field label="Room" name="locationId" state={state}>
+              <select
+                name="locationId"
+                defaultValue={session?.locationId ?? defaults?.locationId ?? ""}
+                className={selectClass}
+                style={selectStyle}
+              >
+                <option value="">No room yet</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                    {l.capacity ? ` · 👤 ${l.capacity}` : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Category" name="category" state={state}>
+              <select
+                name="category"
+                defaultValue={session?.category ?? ""}
+                className={selectClass}
+                style={selectStyle}
+              >
+                <option value="">Unset</option>
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {LABELS[c]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Ages" name="ages" state={state}>
+              <select
+                name="ages"
+                defaultValue={session?.ages ?? ""}
+                className={selectClass}
+                style={selectStyle}
+              >
+                <option value="">Unset</option>
+                {AGES.map((a) => (
+                  <option key={a} value={a}>
+                    {LABELS[a]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Min capacity" name="minCapacity" state={state}>
+                <input
+                  name="minCapacity"
+                  inputMode="numeric"
+                  defaultValue={session?.minCapacity ?? ""}
+                  className={fieldClass}
+                />
+              </Field>
+              <Field label="Max capacity" name="maxCapacity" state={state}>
+                <input
+                  name="maxCapacity"
+                  inputMode="numeric"
+                  defaultValue={session?.maxCapacity ?? ""}
+                  placeholder="unlimited"
+                  className={fieldClass}
+                />
+              </Field>
+            </div>
+
+            <div className="flex flex-col gap-2 text-sm sm:col-span-2">
+              <Checkbox
+                name="rsvpIsCommitment"
+                label="RSVP is a commitment"
+                hint="Attendees claim a limited spot people rely on, and confirm before they do."
+                defaultChecked={session?.rsvpIsCommitment ?? false}
+              />
+              <Checkbox
+                name="sponsored"
+                label="Sponsor session"
+                hint="Tagged “Sponsor” on the schedule."
+                defaultChecked={session?.sponsored ?? false}
+              />
+              {/* Sent even when unticked, so the form can close RSVPs; the
                 checkbox's "on" comes later in the entries and wins. */}
-            <input type="hidden" name="rsvpsOpen" value="" />
-            <Checkbox
-              name="rsvpsOpen"
-              label="RSVPs open"
-              hint="Untick to grey out the RSVP button as “RSVPs not yet open” until you’re ready."
-              defaultChecked={session?.rsvpsOpen ?? true}
-            />
-            <GuestList
-              initial={session?.inviteEmails ?? null}
-              error={
-                state.field === "inviteEmails" ? (state.error ?? null) : null
-              }
-            />
-          </div>
+              <input type="hidden" name="rsvpsOpen" value="" />
+              <Checkbox
+                name="rsvpsOpen"
+                label="RSVPs open"
+                hint="Untick to grey out the RSVP button as “RSVPs not yet open” until you’re ready."
+                defaultChecked={session?.rsvpsOpen ?? true}
+              />
+              <GuestList
+                initial={session?.inviteEmails ?? null}
+                error={
+                  state.field === "inviteEmails" ? (state.error ?? null) : null
+                }
+              />
+            </div>
 
-          <HostPicker
-            initial={session?.hosts ?? []}
-            error={state.field === "hosts" ? state.error : null}
-          />
+            <HostPicker
+              initial={session?.hosts ?? []}
+              error={state.field === "hosts" ? state.error : null}
+            />
 
-          <Field
-            label="Description"
-            name="description"
-            state={state}
-            className="sm:col-span-2"
-          >
-            <textarea
+            <Field
+              label="Description"
               name="description"
-              rows={4}
-              defaultValue={session?.description ?? ""}
-              className={fieldClass}
-            />
-          </Field>
+              state={state}
+              className="sm:col-span-2"
+            >
+              <textarea
+                name="description"
+                rows={4}
+                defaultValue={session?.description ?? ""}
+                className={fieldClass}
+              />
+            </Field>
 
-          <Field
-            label="Needs (A/V, tables, materials…)"
-            name="needs"
-            state={state}
-            className="sm:col-span-2"
-          >
-            <textarea
+            <Field
+              label="Needs (A/V, tables, materials…)"
               name="needs"
-              rows={2}
-              defaultValue={session?.needs ?? ""}
-              className={fieldClass}
-            />
-          </Field>
+              state={state}
+              className="sm:col-span-2"
+            >
+              <textarea
+                name="needs"
+                rows={2}
+                defaultValue={session?.needs ?? ""}
+                className={fieldClass}
+              />
+            </Field>
+          </fieldset>
         </form>
         <ConfirmDialog
           open={Boolean(conflict)}
@@ -650,6 +670,7 @@ export default function SessionForm({
             attendance={attendance}
             viewer={viewer}
             conflicts={conflicts}
+            readOnly={readOnly}
           />
         )}
       </DialogContent>

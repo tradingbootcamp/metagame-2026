@@ -22,6 +22,7 @@ import {
   unpinNote,
   type NoteState,
 } from "@/app/(v2)/schedule/note-actions";
+import { attendeeActionsOpen } from "@/lib/attendee-actions";
 import {
   boardEditor,
   canDeleteNote,
@@ -51,6 +52,8 @@ export type NoteBoard = {
   isTeam: boolean;
   /** The static home page's copy: look, don't touch. */
   readOnly: boolean;
+  /** New notes and reactions are switched off for this viewer. */
+  closed: boolean;
   notesIn: (locationId: string, day: string) => BoardNote[];
   /** Adds or takes back the viewer's emoji; shown at once, then saved. */
   react: (noteId: string, emoji: string) => void;
@@ -344,9 +347,12 @@ export default function BoardNotes({
     })();
   }, [openNote, adopt]);
 
+  const closed = !attendeeActionsOpen(board.isTeam);
+  const canPost = board.canPost && !closed;
+
   // What to do instead of reacting, for a viewer who can't.
   const reactHint =
-    board.canPost || board.readOnly ? null : board.signedIn ? (
+    board.canPost || board.readOnly || closed ? null : board.signedIn ? (
       <Link
         href="/account?tab=tickets"
         className="underline underline-offset-2"
@@ -366,9 +372,10 @@ export default function BoardNotes({
     <Context.Provider
       value={{
         signedIn: board.signedIn,
-        canPost: board.canPost,
+        canPost,
         isTeam: board.isTeam,
         readOnly: !!board.readOnly,
+        closed,
         notesIn,
         react: (noteId, emoji) => void react(noteId, emoji),
         pinSession,
@@ -376,7 +383,9 @@ export default function BoardNotes({
         saveSessionPoster: savePoster,
         // canPost as well as authorship: every write re-checks the permission,
         // so an author who has lost it is offered no drag it can only refuse.
-        canMove: (note) => board.canPost && canMoveNote(editorOf(note)),
+        // The team holds no ticket and the action lets them through without.
+        canMove: (note) =>
+          (board.canPost || board.isTeam) && canMoveNote(editorOf(note)),
         open: (noteId) => setPending({ kind: "open", noteId }),
         // The paper cycles through the pad as that board fills up, so
         // neighbours tend to differ; the author can repaint it anyway.
@@ -416,12 +425,14 @@ export default function BoardNotes({
           note={openNote}
           draftColor={pending.kind === "new" ? pending.color : undefined}
           canEdit={
-            board.canPost && (pending.kind === "new" || canEditNote(editor))
+            pending.kind === "new"
+              ? canPost
+              : (board.canPost || board.isTeam) && canEditNote(editor)
           }
-          // Delete is not gated on canPost: a team member clearing the board
-          // holds no ticket, and the action allows them without one.
+          // Edit and delete aren't gated on canPost: a team member tidying the
+          // board holds no ticket, and the actions allow them without one.
           canDelete={!!openNote && canDeleteNote(editor)}
-          canReact={board.canPost}
+          canReact={canPost}
           reactHint={reactHint}
           onClose={() => setPending(null)}
           onSave={save}

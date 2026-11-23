@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { FaThLarge, FaListUl } from "react-icons/fa";
 import LastYearSessionModal from "./LastYearSessionModal";
+import StickyHeadScroll from "./StickyHeadScroll";
 import {
   buildSchedule,
   formatPacificTime,
@@ -88,47 +89,52 @@ function GridDay({
   return (
     /* Column + time widths are CSS vars so phones get narrower columns (more
        venues visible at once) than wider screens. */
-    <div className="overflow-x-auto border-[1.5px] border-[#1b1530]/15 bg-background [--col-w:104px] [--time-w:44px] sm:[--col-w:120px] sm:[--time-w:56px]">
-      <div className="min-w-fit">
-        {/* Location header row (sticky on vertical scroll) */}
+    <div className="border-[1.5px] border-[#1b1530]/15 bg-background [--col-w:104px] [--time-w:44px] sm:[--col-w:120px] sm:[--time-w:56px]">
+      <StickyHeadScroll
+        head={
+          <div
+            className="grid min-w-fit bg-[#4096ff] text-white"
+            style={{ gridTemplateColumns: gridCols }}
+          >
+            <div className="sticky left-0 z-40 border-r border-b border-[#1b1530]/15 bg-[#4096ff]" />
+            {locations.map((loc) => (
+              <div
+                key={loc.id}
+                className="border-r border-b border-[#1b1530]/15 px-2 py-2 last:border-r-0"
+              >
+                {loc.thumbnail_url && (
+                  <div className="relative mb-1.5 h-14 w-full overflow-hidden rounded-sm">
+                    <Image
+                      src={loc.thumbnail_url}
+                      alt=""
+                      fill
+                      sizes="150px"
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+                <div className="text-sm leading-tight font-bold">
+                  {loc.name}
+                </div>
+                {loc.campus_location && (
+                  <div className="text-[11px] leading-tight text-white/75">
+                    {loc.campus_location}
+                  </div>
+                )}
+                {loc.capacity && (
+                  <div className="text-[11px] leading-tight text-white/75">
+                    Max {loc.capacity}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        }
+      >
         <div
-          className="sticky top-0 z-30 grid bg-[#4096ff] text-white"
+          className="grid min-w-fit"
           style={{ gridTemplateColumns: gridCols }}
         >
-          <div className="sticky left-0 z-40 border-r border-b border-[#1b1530]/15 bg-[#4096ff]" />
-          {locations.map((loc) => (
-            <div
-              key={loc.id}
-              className="border-r border-b border-[#1b1530]/15 px-2 py-2 last:border-r-0"
-            >
-              {loc.thumbnail_url && (
-                <div className="relative mb-1.5 h-14 w-full overflow-hidden rounded-sm">
-                  <Image
-                    src={loc.thumbnail_url}
-                    alt=""
-                    fill
-                    sizes="150px"
-                    className="object-cover"
-                  />
-                </div>
-              )}
-              <div className="text-sm leading-tight font-bold">{loc.name}</div>
-              {loc.campus_location && (
-                <div className="text-[11px] leading-tight text-white/75">
-                  {loc.campus_location}
-                </div>
-              )}
-              {loc.capacity && (
-                <div className="text-[11px] leading-tight text-white/75">
-                  Max {loc.capacity}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Time-slot rows */}
-        <div className="grid" style={{ gridTemplateColumns: gridCols }}>
           {day.slots.map((slotStart) => (
             <div key={slotStart} className="contents">
               <div
@@ -161,7 +167,7 @@ function GridDay({
             </div>
           ))}
         </div>
-      </div>
+      </StickyHeadScroll>
     </div>
   );
 }

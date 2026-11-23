@@ -1,0 +1,2 @@
+ALTER TABLE "user_permission_grants" ADD COLUMN "effect" text DEFAULT 'allow' NOT NULL;--> statement-breakpoint
+ALTER TABLE "user_permission_grants" ADD CONSTRAINT "user_permission_grants_effect_known" CHECK ("user_permission_grants"."effect" in ('allow', 'deny'));
