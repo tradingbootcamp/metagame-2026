@@ -9,6 +9,7 @@ const ticket = (
   over: Partial<Parameters<typeof dayPassRefusal>[0][number]>,
 ) => ({
   status: "paid",
+  voided: false,
   tier: "Friday Day Pass",
   ownerUserId: ME,
   ...over,
@@ -72,6 +73,7 @@ describe("dayPassRefusal", () => {
     for (const other of [
       ticket({ ...saturday, ownerUserId: "user_friend" }),
       ticket({ ...saturday, status: "failed" }),
+      ticket({ ...saturday, voided: true }),
     ]) {
       expect(refuse([ticket({}), other])).toContain("Friday");
     }

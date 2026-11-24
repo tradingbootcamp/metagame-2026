@@ -52,6 +52,12 @@ export const visible =
     ? eq(tickets.test, false)
     : undefined;
 
+/** Paid and not voided: the only tickets that admit anyone. */
+export const admitting = and(
+  eq(tickets.status, "paid"),
+  eq(tickets.voided, false),
+);
+
 /** Visible and for this year's event: what the desk and check-in work from. */
 export const thisYear = and(visible, eq(tickets.year, EVENT_YEAR));
 
@@ -244,7 +250,13 @@ export async function claimedCounts(
   const rows = await getDb()
     .select({ userId: tickets.ownerUserId, n: count() })
     .from(tickets)
-    .where(and(visible, inArray(tickets.ownerUserId, userIds)))
+    .where(
+      and(
+        visible,
+        inArray(tickets.ownerUserId, userIds),
+        eq(tickets.voided, false),
+      ),
+    )
     .groupBy(tickets.ownerUserId);
   return new Map(rows.map((r) => [r.userId!, r.n]));
 }
@@ -261,7 +273,7 @@ export async function badgeCodesFor(
       and(
         visible,
         inArray(tickets.ownerUserId, userIds),
-        eq(tickets.status, "paid"),
+        admitting,
         isNotNull(tickets.badgeCode),
       ),
     );
@@ -281,7 +293,7 @@ export async function hasClaimedTicketFor(
         visible,
         eq(tickets.year, year),
         eq(tickets.ownerUserId, userId),
-        eq(tickets.status, "paid"),
+        admitting,
       ),
     )
     .limit(1);
@@ -303,6 +315,7 @@ export type ClaimResult =
         | "taken"
         | "unpaid"
         | "void"
+        | "voided"
         | "checkedIn"
         | "limited";
     };
@@ -388,11 +401,11 @@ async function claimMatching(
         match,
         isNull(tickets.ownerUserId),
         isNull(tickets.checkedInAt),
-        eq(tickets.status, "paid"),
+        admitting,
         // One admission per person per year, checked in the same statement so
         // two claims at once can't both win. "tickets"."year" is spelled out:
         // a bare column here would resolve to the subquery's own row.
-        sql`not exists (select 1 from "tickets" mine where mine."owner_user_id" = ${userId} and mine."status" = 'paid' and mine."year" = "tickets"."year")`,
+        sql`not exists (select 1 from "tickets" mine where mine."owner_user_id" = ${userId} and mine."status" = 'paid' and not mine."voided" and mine."year" = "tickets"."year")`,
       ),
     )
     .returning();
@@ -421,6 +434,7 @@ async function claimMatching(
     .where(and(visible, match))
     .limit(1);
   if (!existing) return { ok: false, reason: "unknown" };
+  if (existing.voided) return { ok: false, reason: "voided" };
   if (existing.ownerUserId === userId) return { ok: false, reason: "yours" };
   const [held] = await db
     .select({ id: tickets.paymentId })
@@ -428,7 +442,7 @@ async function claimMatching(
     .where(
       and(
         eq(tickets.ownerUserId, userId),
-        eq(tickets.status, "paid"),
+        admitting,
         eq(tickets.year, existing.year),
       ),
     )
@@ -444,7 +458,7 @@ async function claimMatching(
 
 export type UnclaimResult =
   | { ok: true; ticket: TicketRow }
-  | { ok: false; reason: "notYours" | "checkedIn" };
+  | { ok: false; reason: "notYours" | "checkedIn" | "voided" };
 
 /**
  * The attendee gives up their spot but keeps the ticket: it becomes theirs to
@@ -471,7 +485,7 @@ export async function unclaimTicket(
           visible,
           eq(tickets.paymentId, paymentId),
           eq(tickets.ownerUserId, userId),
-          eq(tickets.status, "paid"),
+          admitting,
           // Checked in means the badge is on someone; the spot can't be passed on.
           isNull(tickets.checkedInAt),
         ),
@@ -481,7 +495,7 @@ export async function unclaimTicket(
   });
   if (!ticket) {
     const [existing] = await db
-      .select({ checkedInAt: tickets.checkedInAt })
+      .select({ checkedInAt: tickets.checkedInAt, voided: tickets.voided })
       .from(tickets)
       .where(
         and(
@@ -491,6 +505,7 @@ export async function unclaimTicket(
         ),
       )
       .limit(1);
+    if (existing?.voided) return { ok: false, reason: "voided" };
     return {
       ok: false,
       reason: existing?.checkedInAt ? "checkedIn" : "notYours",
@@ -511,7 +526,7 @@ export async function unclaimTicket(
 
 export type CheckInResult =
   | { ok: true; ticket: TicketRow }
-  | { ok: false; reason: "unknown" | "unclaimed" | "unpaid" }
+  | { ok: false; reason: "unknown" | "unclaimed" | "unpaid" | "voided" }
   | { ok: false; reason: "already"; ticket: TicketRow };
 
 /** Marks a claimed, paid ticket checked in at the desk. */
@@ -528,7 +543,7 @@ export async function checkInTicket(
         visible,
         eq(tickets.paymentId, paymentId),
         isNotNull(tickets.ownerUserId),
-        eq(tickets.status, "paid"),
+        admitting,
         isNull(tickets.checkedInAt),
       ),
     )
@@ -544,6 +559,7 @@ export async function checkInTicket(
   if (existing.checkedInAt)
     return { ok: false, reason: "already", ticket: existing };
   if (existing.status !== "paid") return { ok: false, reason: "unpaid" };
+  if (existing.voided) return { ok: false, reason: "voided" };
   return { ok: false, reason: "unclaimed" };
 }
 

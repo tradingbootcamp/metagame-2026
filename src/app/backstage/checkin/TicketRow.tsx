@@ -16,6 +16,7 @@ import {
 
 const PILL: Record<CheckinState, { label: string; className: string }> = {
   unpaid: { label: "Unpaid", className: "bg-meeple/10 text-meeple" },
+  voided: { label: "Voided", className: "bg-meeple text-white" },
   unclaimed: { label: "Unclaimed", className: "bg-amber-100 text-amber-900" },
   claimed: { label: "Claimed", className: "bg-navy/10 text-navy" },
   checkedIn: { label: "Checked in", className: "bg-moss/15 text-moss" },

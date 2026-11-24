@@ -1,6 +1,7 @@
 import { formatReferralCode } from "@/lib/referral";
 import { formatBadgeCode } from "@/lib/badge-code";
 import { formatTicketCode } from "@/lib/ticket-code-format";
+import { ticketState, type TicketState } from "@/lib/ticket-holder";
 import {
   emailKey,
   holdsTicket,
@@ -11,7 +12,7 @@ import {
 export type TicketView = {
   id: string;
   tier: string;
-  status: TicketRow["status"];
+  status: TicketState;
   test: boolean;
   /** Claimed by the signed-in user. */
   mine: boolean;
@@ -41,7 +42,7 @@ export function ticketView(
   return {
     id: t.paymentId,
     tier: ticketLabel(t.tier),
-    status: t.status,
+    status: ticketState(t),
     test: t.test,
     mine,
     claimed,

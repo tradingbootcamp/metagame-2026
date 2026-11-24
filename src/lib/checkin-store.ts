@@ -23,7 +23,7 @@ import { formatBadgeCode } from "@/lib/badge-code";
 import { escapeLike, likeContains } from "@/lib/like";
 import { accountName, searchAccounts } from "@/lib/schedule-store";
 import { emailKey } from "@/lib/ticket-holder";
-import { thisYear, type TicketRow } from "@/lib/ticket-store";
+import { admitting, thisYear, type TicketRow } from "@/lib/ticket-store";
 
 const { tickets, user } = schema;
 
@@ -99,7 +99,7 @@ export async function listCheckinTickets(
   page: number,
 ): Promise<{ rows: TicketRow[]; total: number }> {
   const owner = alias(user, "owner");
-  const paid = and(thisYear, eq(tickets.status, "paid"));
+  const paid = and(thisYear, admitting);
   const db = getDb();
   const [[{ total }], hits] = await Promise.all([
     db.select({ total: count() }).from(tickets).where(paid),
@@ -164,7 +164,7 @@ export async function checkinCounts(): Promise<{
       checkedIn: count(tickets.checkedInAt),
     })
     .from(tickets)
-    .where(and(thisYear, eq(tickets.status, "paid")));
+    .where(and(thisYear, admitting));
   return { paid, checkedIn };
 }
 

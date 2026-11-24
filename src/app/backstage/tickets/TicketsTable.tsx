@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import {
   StatusTag,
   TestTag,
 } from "./parts";
+import { setTicketVoided } from "./actions";
 import { fieldClass, selectStyle, smallButtonClass } from "../ui";
 import {
   pageOf,
@@ -24,7 +25,7 @@ import {
   type TicketPerson,
   type TicketSort,
 } from "@/lib/admin-tickets";
-import type { TicketRow } from "@/lib/ticket-store";
+import type { TicketState } from "@/lib/ticket-holder";
 import { Dialog, DialogContent, DialogTitle } from "@/v2/components/ui/dialog";
 
 export type AdminTicket = {
@@ -33,7 +34,11 @@ export type AdminTicket = {
     createdAt: Date;
     claimedAt: Date | null;
     tier: string;
-    status: TicketRow["status"];
+    status: TicketState;
+    voidedAt: Date | null;
+    voidedBy: string | null;
+    unvoidedAt: Date | null;
+    unvoidedBy: string | null;
     test: boolean;
     code: string;
     source: string;
@@ -83,10 +88,12 @@ export default function TicketsTable({
   tickets,
   initial,
   canEdit,
+  canVoid,
 }: {
   tickets: AdminTicket[];
   initial: TableState;
   canEdit: boolean;
+  canVoid: boolean;
 }) {
   const [state, setState] = useState(initial);
   const [rows, setRows] = useState(tickets);
@@ -330,6 +337,7 @@ export default function TicketsTable({
             <TicketDetail
               ticket={open}
               canEdit={canEdit}
+              canVoid={canVoid}
               onReferrer={applyReferrer}
               onBadge={applyBadge}
             />
@@ -456,11 +464,13 @@ function Person({ person }: { person: TicketPerson | null }) {
 function TicketDetail({
   ticket: { t, people },
   canEdit,
+  canVoid,
   onReferrer,
   onBadge,
 }: {
   ticket: AdminTicket;
   canEdit: boolean;
+  canVoid: boolean;
   onReferrer: (id: string, referredBy: string | null) => void;
   onBadge: (id: string, badgeCode: string | null) => void;
 }) {
@@ -550,7 +560,88 @@ function TicketDetail({
           />
         </>
       )}
+      <VoidPanel ticket={t} canVoid={canVoid} />
     </>
+  );
+}
+
+/** Who voided the ticket and when, with the void and undo buttons. */
+export function VoidPanel({
+  ticket: t,
+  canVoid,
+}: {
+  ticket: AdminTicket["t"];
+  canVoid: boolean;
+}) {
+  const [busy, start] = useTransition();
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const voided = t.status === "voided";
+
+  const send = (next: boolean) =>
+    start(async () => {
+      setError(null);
+      try {
+        const result = await setTicketVoided(t.id, next);
+        if (result.error) setError(result.error);
+        else setConfirming(false);
+      } catch {
+        setError("That didn't save. Try again.");
+      }
+    });
+
+  return (
+    <div className="space-y-2 text-sm">
+      {t.voidedAt && (
+        <p>
+          {voided ? "Voided" : "Was voided"} {shortDate.format(t.voidedAt)} by{" "}
+          {t.voidedBy ?? "unknown"}.
+        </p>
+      )}
+      {t.unvoidedAt && (
+        <p className="text-cream/60">
+          {voided ? "An earlier void was undone" : "Undone"}{" "}
+          {shortDate.format(t.unvoidedAt)} by {t.unvoidedBy ?? "unknown"}.
+        </p>
+      )}
+      {canVoid &&
+        (confirming && !voided ? (
+          <>
+            <p>
+              Void this ticket? It can&apos;t be claimed or used to RSVP, and
+              shows as not valid at the door. This doesn&apos;t refund anyone.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => send(true)}
+                className={smallButtonClass}
+              >
+                {busy ? "Voiding…" : "Void ticket"}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setConfirming(false)}
+                className={smallButtonClass}
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => (voided ? send(false) : setConfirming(true))}
+            className={smallButtonClass}
+          >
+            {voided ? (busy ? "Undoing…" : "Undo void") : "Void ticket"}
+          </button>
+        ))}
+      {error && <p className="text-salmon">{error}</p>}
+    </div>
   );
 }
 

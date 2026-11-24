@@ -249,6 +249,7 @@ const CLAIM_ERRORS = {
   taken: "Someone else has already claimed that ticket.",
   unpaid: "That ticket's payment hasn't settled yet. Try again later.",
   void: "That ticket's payment didn't go through, so it can't be claimed.",
+  voided: "That ticket has been voided, so it can't be claimed.",
   checkedIn: "This ticket was already checked in at the desk; ask there.",
   limited: "Too many codes that didn't work. Try again in an hour.",
 };
@@ -309,6 +310,9 @@ export async function unclaimMine(paymentId: string): Promise<UnclaimState> {
   const result = await unclaimTicket(session.user.id, paymentId);
   if (!result.ok && result.reason === "notYours") {
     return { error: "That ticket isn't claimed by you." };
+  }
+  if (!result.ok && result.reason === "voided") {
+    return { error: "This ticket has been voided." };
   }
   // Only this year's tickets seat anyone, so only giving one up can cost seats.
   if (result.ok && result.ticket.year === EVENT_YEAR) {

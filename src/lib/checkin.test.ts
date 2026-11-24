@@ -39,7 +39,12 @@ describe("parseCheckinQuery", () => {
 });
 
 describe("checkinState", () => {
-  const t = { status: "paid", ownerUserId: null, checkedInAt: null };
+  const t = {
+    status: "paid",
+    voided: false,
+    ownerUserId: null,
+    checkedInAt: null,
+  };
   it("derives the four desk states", () => {
     expect(checkinState(t)).toBe("unclaimed");
     expect(checkinState({ ...t, ownerUserId: "u1" })).toBe("claimed");
@@ -49,6 +54,9 @@ describe("checkinState", () => {
     expect(checkinState({ ...t, status: "pending" })).toBe("unpaid");
     expect(checkinState({ ...t, status: "pending", ownerUserId: "u1" })).toBe(
       "unpaid",
+    );
+    expect(checkinState({ ...t, voided: true, ownerUserId: "u1" })).toBe(
+      "voided",
     );
   });
 });

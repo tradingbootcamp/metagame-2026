@@ -4,7 +4,7 @@ import { canRefer, REFERRAL_CODE_LENGTH } from "@/lib/referral";
 import { TICKET_CODE_LENGTH } from "@/lib/ticket-code-format";
 import { randomCode, withFreshTicketCode } from "@/lib/ticket-code";
 import { holdsTicket } from "@/lib/ticket-holder";
-import { visible, type TicketRow } from "@/lib/ticket-store";
+import { admitting, visible, type TicketRow } from "@/lib/ticket-store";
 
 const { tickets } = schema;
 
@@ -12,6 +12,7 @@ const { tickets } = schema;
 function refers(t: TicketRow, userId: string, email: string): boolean {
   return (
     t.status === "paid" &&
+    !t.voided &&
     canRefer(t.tier) &&
     (t.ownerUserId === userId || holdsTicket(t, userId, email))
   );
@@ -65,11 +66,7 @@ export async function referralCounts(
     .select({ referrer: tickets.referredByPaymentId, n: count() })
     .from(tickets)
     .where(
-      and(
-        visible,
-        inArray(tickets.referredByPaymentId, paymentIds),
-        eq(tickets.status, "paid"),
-      ),
+      and(visible, inArray(tickets.referredByPaymentId, paymentIds), admitting),
     )
     .groupBy(tickets.referredByPaymentId);
   return new Map(rows.map((r) => [r.referrer!, r.n]));
@@ -80,9 +77,7 @@ export async function lookupReferrer(code: string): Promise<string | null> {
   const [row] = await getDb()
     .select({ paymentId: tickets.paymentId })
     .from(tickets)
-    .where(
-      and(visible, eq(tickets.referralCode, code), eq(tickets.status, "paid")),
-    )
+    .where(and(visible, eq(tickets.referralCode, code), admitting))
     .limit(1);
   return row?.paymentId ?? null;
 }
@@ -120,7 +115,7 @@ export async function referralFacts(rows: TicketRow[]): Promise<{
   referrals: Map<string, number>;
 }> {
   const referred = rows.filter(
-    (t) => t.status === "paid" && t.referredByPaymentId !== null,
+    (t) => t.status === "paid" && !t.voided && t.referredByPaymentId !== null,
   );
   const referrerIds = [...new Set(referred.map((t) => t.referredByPaymentId!))];
   const [codes, referrals] = await Promise.all([
@@ -168,7 +163,7 @@ export async function findReferrerTicket(
       tier: tickets.tier,
     })
     .from(tickets)
-    .where(and(visible, by, eq(tickets.status, "paid")))
+    .where(and(visible, by, admitting))
     .limit(1);
   return row ?? null;
 }
