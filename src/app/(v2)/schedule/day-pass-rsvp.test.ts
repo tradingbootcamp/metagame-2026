@@ -87,6 +87,22 @@ describe("rsvpTo with a day pass", () => {
     await expect(rsvpTo(SESSION)).resolves.toMatchObject({ status: "going" });
   });
 
+  it("an unclaimed full ticket they hold doesn't widen a claimed Friday pass", async () => {
+    h.tickets = [
+      fridayPass,
+      {
+        ...fridayPass,
+        tier: "Standard",
+        ownerUserId: null,
+        holderUserId: "me",
+      },
+    ];
+    sessionRow(SATURDAY);
+    const result = await rsvpTo(SESSION);
+    expect(result.error).toContain("Friday, November 6, 2026");
+    expect(h.rsvp).not.toHaveBeenCalled();
+  });
+
   it("lets admins through, as the ticket check does", async () => {
     h.user = { ...h.user, role: "admin" };
     sessionRow(SATURDAY);

@@ -1,5 +1,4 @@
 import { formatPacificDay, toPacificWall } from "./schedule";
-import { holdsTicket } from "./ticket-holder";
 import { dayPasses, type DayPass } from "./tickets";
 
 /**
@@ -18,29 +17,19 @@ type CoverageTicket = {
   status: string;
   tier: string | null;
   ownerUserId: string | null;
-  holderUserId: string | null;
-  purchaserEmail: string | null;
 };
 
 /**
- * Why these tickets don't admit their owner on a session's Pacific day, or
- * null when they do. Unclaimed tickets the viewer holds count, whoever they
- * were bought for: an account can claim only one, so nothing here can tell a
- * friend's ticket from the viewer's own second one, and this errs on admitting.
+ * Why the user's claimed tickets don't admit them on a session's Pacific day,
+ * or null when they do. Unclaimed tickets they hold or bought don't count.
  */
 export function dayPassRefusal(
   tickets: CoverageTicket[],
   userId: string,
-  email: string,
   startsAt: string,
 ): string | null {
   const passes = tickets
-    .filter(
-      (t) =>
-        t.status === "paid" &&
-        (t.ownerUserId === userId ||
-          (t.ownerUserId === null && holdsTicket(t, userId, email))),
-    )
+    .filter((t) => t.status === "paid" && t.ownerUserId === userId)
     .map((t) => dayPassOf(t.tier));
   const dayOnly = passes.filter((p) => p !== undefined);
   if (dayOnly.length === 0 || dayOnly.length < passes.length) return null;

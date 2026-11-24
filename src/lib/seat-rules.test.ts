@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { capacityRefusal, dayPassOf, dayPassRefusal } from "./seat-rules";
 
 const ME = "user_me";
-const EMAIL = "me@example.com";
 const FRIDAY_NOON = "2026-11-06T20:00:00.000Z";
 const SATURDAY_NOON = "2026-11-07T20:00:00.000Z";
 
@@ -12,8 +11,6 @@ const ticket = (
   status: "paid",
   tier: "Friday Day Pass",
   ownerUserId: ME,
-  holderUserId: null,
-  purchaserEmail: EMAIL,
   ...over,
 });
 
@@ -37,7 +34,7 @@ describe("dayPassOf", () => {
 
 describe("dayPassRefusal", () => {
   const refuse = (tickets: ReturnType<typeof ticket>[], at = SATURDAY_NOON) =>
-    dayPassRefusal(tickets, ME, EMAIL, at);
+    dayPassRefusal(tickets, ME, at);
 
   it("lets a day pass RSVP on its own day", () => {
     expect(refuse([ticket({})], FRIDAY_NOON)).toBeNull();
@@ -63,27 +60,17 @@ describe("dayPassRefusal", () => {
     expect(refuse([ticket({}), ticket({ tier: "Standard" })])).toBeNull();
   });
 
-  it("counts a second pass the viewer holds but can't also claim", () => {
-    const second = ticket({ tier: "Saturday Day Pass", ownerUserId: null });
-    expect(refuse([ticket({}), second])).toBeNull();
-    expect(
-      refuse([
-        ticket({}),
-        { ...second, holderUserId: ME, purchaserEmail: null },
-      ]),
-    ).toBeNull();
+  it("doesn't count an unclaimed day pass or full ticket", () => {
+    for (const tier of ["Saturday Day Pass", "Standard"]) {
+      const held = ticket({ tier, ownerUserId: null });
+      expect(refuse([ticket({}), held])).toContain("Friday");
+    }
   });
 
-  it("lets an unclaimed non-day-pass ticket the viewer holds admit every day", () => {
-    const full = ticket({ tier: "Standard", ownerUserId: null });
-    expect(refuse([ticket({}), full])).toBeNull();
-  });
-
-  it("doesn't count a pass someone else now has", () => {
-    const saturday = { tier: "Saturday Day Pass", purchaserEmail: EMAIL };
+  it("doesn't count a ticket someone else claimed or that isn't paid", () => {
+    const saturday = { tier: "Saturday Day Pass" };
     for (const other of [
       ticket({ ...saturday, ownerUserId: "user_friend" }),
-      ticket({ ...saturday, ownerUserId: null, holderUserId: "user_friend" }),
       ticket({ ...saturday, status: "failed" }),
     ]) {
       expect(refuse([ticket({}), other])).toContain("Friday");

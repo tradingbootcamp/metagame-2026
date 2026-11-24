@@ -89,7 +89,7 @@ async function uncoveredDay(startsAt: Date | null): Promise<string | null> {
   const u = (await currentSession())?.user;
   if (!u || !startsAt || u.role === "admin") return null;
   const rows = await thisYearTicketsForUser(u.id, emailKey(u.email));
-  return dayPassRefusal(rows, u.id, u.email, startsAt.toISOString());
+  return dayPassRefusal(rows, u.id, startsAt.toISOString());
 }
 
 /** Going, or waitlisted when the session is full. */
