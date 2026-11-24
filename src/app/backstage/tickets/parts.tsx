@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { personLabel, type TicketPerson } from "@/lib/admin-tickets";
-import type { TicketRow } from "@/lib/ticket-store";
+import type { TicketState } from "@/lib/ticket-holder";
 
 export const TAG = "rounded px-1.5 py-0.5 text-xs font-semibold";
 
@@ -36,14 +36,15 @@ export function PersonLink({ person }: { person: TicketPerson | null }) {
   );
 }
 
-const STATUS_CLASS: Record<TicketRow["status"], string> = {
+const STATUS_CLASS: Record<TicketState, string> = {
   paid: "bg-moss/15 text-moss",
   pending: "bg-tan/30 text-ink",
   failed: "bg-meeple/10 text-meeple",
   underpaid: "bg-meeple/10 text-meeple",
+  voided: "bg-meeple text-white",
 };
 
-export function StatusTag({ status }: { status: TicketRow["status"] }) {
+export function StatusTag({ status }: { status: TicketState }) {
   return (
     <span className={`${TAG} capitalize ${STATUS_CLASS[status]}`}>
       {status}

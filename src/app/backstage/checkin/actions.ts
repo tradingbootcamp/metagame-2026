@@ -38,6 +38,7 @@ const CLAIM_ERRORS = {
   taken: "Someone else claimed this ticket in the meantime. Search again.",
   unpaid: "That ticket hasn't been paid for.",
   void: "That ticket's payment didn't go through.",
+  voided: "That ticket has been voided.",
   checkedIn: "That ticket is already checked in.",
   limited: "Too many attempts. Try again in an hour.",
 };
@@ -65,6 +66,7 @@ export async function arriveAction(
   if (!ticket) return { error: CLAIM_ERRORS.unknown };
   if (ticket.checkedInAt) return { error: CLAIM_ERRORS.checkedIn };
   if (ticket.status !== "paid") return { error: CLAIM_ERRORS.unpaid };
+  if (ticket.voided) return { error: CLAIM_ERRORS.voided };
   if (badge === null && ticket.badgeCode === null) {
     return { error: "Type the sticker number before checking in." };
   }
@@ -96,6 +98,7 @@ export async function arriveAction(
     return { done: "Checked in", badge: result.ticket.badgeCode ?? undefined };
   if (result.reason === "already") return { error: CLAIM_ERRORS.checkedIn };
   if (result.reason === "unpaid") return { error: CLAIM_ERRORS.unpaid };
+  if (result.reason === "voided") return { error: CLAIM_ERRORS.voided };
   if (result.reason === "unclaimed")
     return { error: "The claim didn't stick. Search again and retry." };
   return { error: CLAIM_ERRORS.unknown };

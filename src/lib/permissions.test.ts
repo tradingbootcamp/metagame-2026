@@ -300,6 +300,13 @@ describe("catalog order", () => {
   });
 });
 
+describe("ticket voiding", () => {
+  it("needs its own grant, on top of seeing tickets", () => {
+    expect(expand(["tickets.edit"]).has("tickets.void")).toBe(false);
+    expect(expand(["tickets.void"]).has("tickets.view")).toBe(true);
+  });
+});
+
 describe("megagame", () => {
   it("has manage imply verify, and not the other way round", () => {
     expect(expand(["megagame.manage"]).has("megagame.verify")).toBe(true);

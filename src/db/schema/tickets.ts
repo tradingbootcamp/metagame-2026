@@ -62,6 +62,13 @@ export const tickets = pgTable(
       (): AnyPgColumn => tickets.paymentId,
       { onDelete: "set null" },
     ),
+    // Beside status, not in it: status is what the payment did, and webhook
+    // retries rewrite it. Undoing a void keeps who voided it and when.
+    voided: boolean().notNull().default(false),
+    voidedAt: timestamp({ withTimezone: true }),
+    voidedBy: text(),
+    unvoidedAt: timestamp({ withTimezone: true }),
+    unvoidedBy: text(),
     badgeCode: integer().unique(),
     checkedInAt: timestamp({ withTimezone: true }),
     checkedInBy: text().references(() => user.id, { onDelete: "set null" }),

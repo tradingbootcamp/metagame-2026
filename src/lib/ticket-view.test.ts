@@ -20,6 +20,11 @@ const row = (over: Partial<TicketRow> = {}): TicketRow => ({
   holderUserId: null,
   referralCode: null,
   referredByPaymentId: null,
+  voided: false,
+  voidedAt: null,
+  voidedBy: null,
+  unvoidedAt: null,
+  unvoidedBy: null,
   badgeCode: null,
   claimedBy: null,
   checkedInAt: null,
@@ -32,6 +37,10 @@ const row = (over: Partial<TicketRow> = {}): TicketRow => ({
 const ada = ["u1", "ada@example.com"] as const;
 
 describe("ticketView", () => {
+  it("reads as voided whatever the payment did", () => {
+    expect(ticketView(row({ voided: true }), ...ada).status).toBe("voided");
+  });
+
   it("shows the buyer an unclaimed ticket's code", () => {
     expect(ticketView(row(), ...ada)).toEqual({
       id: "pi_1",

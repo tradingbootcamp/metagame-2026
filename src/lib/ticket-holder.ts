@@ -1,5 +1,18 @@
 // Client-safe half of ticket-store.ts, which holds the matching SQL (heldBy).
 
+/** What a ticket can do now: its payment status, unless it has been voided. */
+export type TicketState =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "underpaid"
+  | "voided";
+
+export const ticketState = (t: {
+  status: Exclude<TicketState, "voided">;
+  voided: boolean;
+}): TicketState => (t.voided ? "voided" : t.status);
+
 /** How purchaser emails are stored and matched. */
 export const emailKey = (email: string) => email.trim().toLowerCase();
 

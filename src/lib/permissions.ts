@@ -69,6 +69,15 @@ export const PERMISSIONS = {
       "Fix a ticket's badge code or which ticket referred it, after the fact.",
     implies: ["tickets.view"],
   },
+  // Off tickets.edit: this takes someone's admission away.
+  "tickets.void": {
+    audience: "team",
+    group: "Tickets",
+    level: "edit",
+    label: "Void tickets",
+    description: "Void a ticket and undo a void, on the tickets table.",
+    implies: ["tickets.view"],
+  },
   "checkin.manage": {
     audience: "team",
     group: "Check-in",

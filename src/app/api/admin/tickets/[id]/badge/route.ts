@@ -33,6 +33,7 @@ export async function PUT(request: Request, ctx: Ctx) {
   if (!ticket) return error("No such ticket.", 404);
   if (ticket.status !== "paid")
     return error("Only a paid ticket can carry a badge.", 400);
+  if (ticket.voided) return error("A voided ticket can't carry a badge.", 400);
   const result = await assignBadgeCode(id, code);
   if (!result.ok) {
     if (result.reason === "taken")

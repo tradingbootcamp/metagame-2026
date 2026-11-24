@@ -15,6 +15,7 @@ export function dayPassOf(tier: string | null): DayPass | undefined {
 
 type CoverageTicket = {
   status: string;
+  voided: boolean;
   tier: string | null;
   ownerUserId: string | null;
 };
@@ -29,7 +30,7 @@ export function dayPassRefusal(
   startsAt: string,
 ): string | null {
   const passes = tickets
-    .filter((t) => t.status === "paid" && t.ownerUserId === userId)
+    .filter((t) => t.status === "paid" && !t.voided && t.ownerUserId === userId)
     .map((t) => dayPassOf(t.tier));
   const dayOnly = passes.filter((p) => p !== undefined);
   if (dayOnly.length === 0 || dayOnly.length < passes.length) return null;

@@ -27,14 +27,21 @@ export function parseCheckinQuery(raw: string): CheckinQuery {
 
 export type CheckinAccount = { id: string; name: string; email: string };
 
-export type CheckinState = "unpaid" | "unclaimed" | "claimed" | "checkedIn";
+export type CheckinState =
+  | "unpaid"
+  | "voided"
+  | "unclaimed"
+  | "claimed"
+  | "checkedIn";
 
 export function checkinState(t: {
   status: string;
+  voided: boolean;
   ownerUserId: string | null;
   checkedInAt: Date | null;
 }): CheckinState {
   if (t.status !== "paid") return "unpaid";
+  if (t.voided) return "voided";
   if (t.checkedInAt !== null) return "checkedIn";
   return t.ownerUserId === null ? "unclaimed" : "claimed";
 }

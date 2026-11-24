@@ -47,6 +47,12 @@ still stuck on Airtable skips the follow-up and the alert. Purchases from before
 owned only once its code is claimed; a matching purchaser email shows the
 buyer their tickets but never grants ownership.
 
+A voided ticket (`tickets.voided`, beside `status`, which stays what the payment
+did) admits nobody: staff void and undo on `/backstage/tickets`
+(`tickets.void`), which unclaims it like an unclaim does and frees the owner's
+upcoming RSVPs; a Stripe refund doesn't void anything. Check `admitting` or
+`ticketState()`, not `status` alone.
+
 ## Accounts
 
 Better Auth, built lazily by `getAuth()` in `src/lib/auth.ts` over the Drizzle
