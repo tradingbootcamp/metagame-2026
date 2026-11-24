@@ -198,17 +198,25 @@ export async function markTicketFailed(paymentId: string): Promise<void> {
     .where(eq(schema.tickets.paymentId, paymentId));
 }
 
-/** Tickets the user owns, holds or bought. Newest first. */
-export async function ticketsForUser(
+/** Tickets the user owns, holds or bought, any year. Newest first. */
+export const ticketsForUser = (userId: string, email: string) =>
+  ticketsOf(userId, email, visible);
+
+/** ticketsForUser for this year's event only: what RSVPs go by. */
+export const thisYearTicketsForUser = (userId: string, email: string) =>
+  ticketsOf(userId, email, thisYear);
+
+async function ticketsOf(
   userId: string,
   email: string,
+  scope: SQL | undefined,
 ): Promise<TicketRow[]> {
   return getDb()
     .select()
     .from(tickets)
     .where(
       and(
-        visible,
+        scope,
         or(
           eq(tickets.ownerUserId, userId),
           eq(tickets.holderUserId, userId),
@@ -260,17 +268,29 @@ export async function badgeCodesFor(
   return new Map(rows.map((r) => [r.userId!, r.badge!]));
 }
 
-/** Whether the user has claimed a paid ticket as their own. */
-export async function hasClaimedTicket(userId: string): Promise<boolean> {
+/** Whether the user has claimed a paid ticket to that year's event. */
+export async function hasClaimedTicketFor(
+  userId: string,
+  year: number,
+): Promise<boolean> {
   const [row] = await getDb()
     .select({ id: tickets.paymentId })
     .from(tickets)
     .where(
-      and(visible, eq(tickets.ownerUserId, userId), eq(tickets.status, "paid")),
+      and(
+        visible,
+        eq(tickets.year, year),
+        eq(tickets.ownerUserId, userId),
+        eq(tickets.status, "paid"),
+      ),
     )
     .limit(1);
   return row !== undefined;
 }
+
+/** Whether the user has claimed a paid ticket to this year's event. */
+export const hasClaimedTicket = (userId: string) =>
+  hasClaimedTicketFor(userId, EVENT_YEAR);
 
 export type ClaimResult =
   | { ok: true; ticket: TicketRow }
@@ -359,7 +379,7 @@ async function claimMatching(
   claimedBy: string | null = null,
 ): Promise<ClaimResult> {
   const db = getDb();
-  const [ticket] = await db
+  const update = db
     .update(tickets)
     .set({ ownerUserId: userId, claimedAt: new Date(), claimedBy })
     .where(
@@ -376,6 +396,23 @@ async function claimMatching(
       ),
     )
     .returning();
+  // That holds only behind this lock: a statement reads one snapshot, so alone
+  // it can't see a claim of a different code still committing. The second claim
+  // waits here, then reads afresh, as READ COMMITTED does per statement. A batch
+  // is the only transaction Neon's HTTP driver has. PGlite has no batch, but
+  // with its one connection there is nothing to wait for.
+  const rows =
+    "batch" in db
+      ? (
+          await db.batch([
+            db.execute(
+              sql`select pg_advisory_xact_lock(hashtextextended(${`ticket-claim:${userId}`}, 0))`,
+            ),
+            update,
+          ])
+        )[1]
+      : await update;
+  const [ticket] = rows;
   if (ticket) return { ok: true, ticket };
 
   const [existing] = await db

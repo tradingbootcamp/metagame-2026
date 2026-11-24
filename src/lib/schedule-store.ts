@@ -6,11 +6,13 @@ import {
   gt,
   ilike,
   inArray,
+  isNull,
   like,
   lt,
   ne,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import { revalidateTag, unstable_cache } from "next/cache";
 import { getDb, schema } from "@/db";
@@ -23,6 +25,7 @@ import {
   clashDescription,
   fromPacificWall,
   movedTimes,
+  onGuestList,
   outsideHours,
   roomAllowsOverlap,
   summarizeRsvps,
@@ -36,6 +39,7 @@ import {
   type ScheduleSession,
   type SessionRsvps,
 } from "./schedule";
+import { capacityRefusal } from "./seat-rules";
 
 const {
   locations,
@@ -323,6 +327,9 @@ export async function setSessionHosts(
   invalidateSchedule();
 }
 
+/** A host's capacity cut refused for being below who's already going. */
+export class CapacityBelowGoingError extends Error {}
+
 /**
  * The columns a session's own host may change. Separate from upsertSession,
  * which replaces the whole row: this update names no placement or status
@@ -331,22 +338,56 @@ export async function setSessionHosts(
 export async function updateSessionAsHost(
   sessionId: string,
   fields: HostSessionFields,
+  { allowBelowGoing = false }: { allowBelowGoing?: boolean } = {},
 ): Promise<void> {
-  const [updated] = await getDb()
-    .update(sessions)
-    .set({
-      title: fields.title,
-      description: fields.description,
-      category: fields.category,
-      maxCapacity: fields.maxCapacity,
-      minCapacity: fields.minCapacity,
-      ages: fields.ages,
-      needs: fields.needs,
-      rsvpIsCommitment: fields.rsvpIsCommitment,
-    })
-    .where(eq(sessions.id, sessionId))
-    .returning({ id: sessions.id });
-  if (!updated) throw new Error("That session no longer exists.");
+  const db = getDb();
+  const save = (guard?: SQL) =>
+    db
+      .update(sessions)
+      .set({
+        title: fields.title,
+        description: fields.description,
+        category: fields.category,
+        maxCapacity: fields.maxCapacity,
+        minCapacity: fields.minCapacity,
+        ages: fields.ages,
+        needs: fields.needs,
+        rsvpIsCommitment: fields.rsvpIsCommitment,
+      })
+      .where(and(eq(sessions.id, sessionId), guard))
+      .returning({ id: sessions.id });
+  const next = fields.maxCapacity;
+  if (allowBelowGoing || next === null) {
+    const [updated] = await save();
+    if (!updated) throw new Error("That session no longer exists.");
+  } else {
+    const isGoing = and(
+      eq(rsvps.sessionId, sessionId),
+      eq(rsvps.status, "going"),
+    );
+    // The row lock the capacity trigger takes, held to commit by the batch's
+    // one transaction: no RSVP can take a seat between the count and the save.
+    // A batch can't branch, so the guard says capacityRefusal's rule in SQL. A
+    // null stored capacity makes its second half null, which refuses.
+    const [[stored], [going], [updated]] = await db.batch([
+      db
+        .select({ maxCapacity: sessions.maxCapacity })
+        .from(sessions)
+        .where(eq(sessions.id, sessionId))
+        .for("no key update"),
+      db.select({ n: count() }).from(rsvps).where(isGoing),
+      save(
+        sql`(${next} >= (select count(*) from ${rsvps} where ${isGoing}) or ${next} >= ${sessions.maxCapacity})`,
+      ),
+    ]);
+    if (!stored) throw new Error("That session no longer exists.");
+    if (!updated) {
+      throw new CapacityBelowGoingError(
+        capacityRefusal(next, stored.maxCapacity, going.n) ??
+          "That capacity is below who's going.",
+      );
+    }
+  }
   invalidateSchedule();
   // A raised capacity frees seats for the waitlist.
   await promoteWaitlist(sessionId);
@@ -578,6 +619,31 @@ export async function cancelRsvp(
   await promoteWaitlist(sessionId);
 }
 
+/**
+ * Gives up the account's RSVPs and waitlist spots on sessions yet to start,
+ * moving each waitlist up. A guest list is the team's say-so, ticket or not,
+ * so those stay.
+ */
+export async function releaseUpcomingSeats(
+  userId: string,
+  email: string,
+): Promise<void> {
+  const held = await getDb()
+    .select({ sessionId: rsvps.sessionId, guests: sessions.inviteEmails })
+    .from(rsvps)
+    .innerJoin(sessions, eq(sessions.id, rsvps.sessionId))
+    .where(
+      and(
+        eq(rsvps.userId, userId),
+        or(isNull(sessions.startsAt), gt(sessions.startsAt, new Date())),
+      ),
+    );
+  for (const { sessionId, guests } of held) {
+    if (guests !== null && onGuestList(guests, email)) continue;
+    await cancelRsvp(sessionId, userId);
+  }
+}
+
 /** Seats waitlisted people, earliest first, until the session is full. */
 async function promoteWaitlist(sessionId: string): Promise<void> {
   const db = getDb();
@@ -693,7 +759,7 @@ export async function loadSessionPlans(sessionId: string) {
 
 /**
  * One session's RSVPs for the public page. Names only for a viewer holding
- * schedule.rsvps (the Attendee role carries it by default, so a claimed
+ * schedule.rsvps (the 2027 Attendee role carries it by default, so a claimed
  * ticket is enough); everyone else gets counts.
  */
 /**

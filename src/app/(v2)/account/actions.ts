@@ -14,6 +14,7 @@ import {
   hasPassword,
 } from "@/lib/auth";
 import { deleteImage, uploadImage } from "@/lib/blob";
+import { reportError } from "@/lib/error-report";
 import {
   MEGAGAME_CLASSES,
   isMegagameClass,
@@ -25,15 +26,17 @@ import {
   recordPickerJoin,
   setMegagameLevels,
 } from "@/lib/megagame-store";
-import { invalidateSchedule } from "@/lib/schedule-store";
+import { invalidateSchedule, releaseUpcomingSeats } from "@/lib/schedule-store";
 import { isSpeakerAccount } from "@/v2/data/speakers";
 import {
   claimOwnTicket,
   claimTicket,
+  hasClaimedTicket,
   normalizeTicketCode,
   ticketLabel,
   unclaimTicket,
 } from "@/lib/ticket-store";
+import { EVENT_YEAR } from "@/lib/tickets";
 
 export type FormState = { error?: string; saved?: boolean };
 
@@ -278,12 +281,38 @@ export async function claimMine(paymentId: string): Promise<ClaimState> {
 
 export type UnclaimState = { error?: string; released?: string };
 
+// Admins can RSVP without a ticket, so giving one up costs them no seat. The
+// ticket is already gone by now, so a failure here is reported, not returned.
+async function releaseSeatsWithoutTicket(user: {
+  id: string;
+  email: string;
+  role?: string | null;
+}): Promise<void> {
+  try {
+    if (user.role === "admin" || (await hasClaimedTicket(user.id))) return;
+    await releaseUpcomingSeats(user.id, user.email);
+  } catch (error) {
+    console.error("[account] releasing seats failed", user.id, error);
+    await reportError({
+      source: "Unclaim ticket",
+      summary: "A ticket was given up but its RSVP seats may still be held",
+      details: { user: user.id },
+      error,
+      mention: false,
+    });
+  }
+}
+
 /** Gives up the signed-in user's spot on a ticket; they keep it under a new code. */
 export async function unclaimMine(paymentId: string): Promise<UnclaimState> {
   const session = await requireSession();
   const result = await unclaimTicket(session.user.id, paymentId);
   if (!result.ok && result.reason === "notYours") {
     return { error: "That ticket isn't claimed by you." };
+  }
+  // Only this year's tickets seat anyone, so only giving one up can cost seats.
+  if (result.ok && result.ticket.year === EVENT_YEAR) {
+    await releaseSeatsWithoutTicket(session.user);
   }
   revalidatePath("/account");
   if (!result.ok) {

@@ -52,7 +52,7 @@ describe("profiles.view", () => {
 
 describe("unconference.post", () => {
   // Attendee audience is load-bearing: team audience would open all of
-  // /backstage to every ticket holder, since the Attendee role carries this.
+  // /backstage to every ticket holder, since the 2027 Attendee role carries this.
   it("is attendee audience, so a ticket holder gets no backstage", () => {
     expect(PERMISSIONS["unconference.post"].audience).toBe("attendee");
     expect(hasTeamPermission(expand(["unconference.post"]))).toBe(false);
@@ -65,9 +65,9 @@ describe("unconference.post", () => {
           input({
             roles: [
               {
-                name: "Attendee",
+                name: "2027 Attendee",
                 permissions: ["schedule.rsvps", "unconference.post"],
-                auto: "has a ticket",
+                auto: "has a claimed 2027 ticket",
               },
             ],
           }),

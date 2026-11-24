@@ -23,7 +23,7 @@ export type AccessView = {
   /** The viewer holds users.edit and this isn't their own page. */
   editable: boolean;
   roles: { id: string; name: string; assigned: boolean }[];
-  /** Built-in roles this account holds automatically, e.g. "Attendee (has a ticket)". */
+  /** Built-in roles this account holds automatically, e.g. "2027 Attendee (has a claimed 2027 ticket)". */
   auto: string[];
   grants: Permission[];
   denies: Permission[];

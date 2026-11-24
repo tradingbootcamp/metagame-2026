@@ -22,7 +22,7 @@
 //                              three published sessions; level 1 Pirate
 //   team@metagame.games        "Team" role only; claimed comp ticket
 //   schedule@metagame.games    "Schedule team" role only; claimed comp ticket
-//   attendee@metagame.games    claimed ticket (so the built-in Attendee role),
+//   attendee@metagame.games    claimed ticket (so the built-in 2027 Attendee role),
 //                              RSVPs, bookmarks; level 5 Wizard, level 3 Alien
 //   newcomer@metagame.games    unclaimed purchase under their email
 //   banned@metagame.games      banned
@@ -1106,11 +1106,14 @@ counts.account = await upsert(
 );
 counts.profiles = await upsert("profiles", ["user_id"], everyone.map(profile));
 
-// Attendee is the built-in role src/lib/permission-store.ts expects by name;
+// 2027 Attendee is a built-in role src/lib/permission-store.ts expects by name;
 // Team holds everything short of admin.
 const roleRows = await Promise.all(
   [
-    { name: "Attendee", permissions: ["schedule.rsvps", "unconference.post"] },
+    {
+      name: "2027 Attendee",
+      permissions: ["schedule.rsvps", "unconference.post"],
+    },
     {
       name: "Team",
       permissions: [

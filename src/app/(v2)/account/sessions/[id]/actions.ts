@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { parseHostSessionFields } from "@/lib/schedule-input";
 import {
+  CapacityBelowGoingError,
   explainDbError,
   findAccount,
   sessionHostIds,
@@ -11,14 +12,40 @@ import {
 } from "@/lib/schedule-store";
 import { editSessionAccess } from "@/lib/session-ownership";
 
-export type SaveState = { savedAt?: number; error?: string; field?: string };
+export type SaveState = {
+  savedAt?: number;
+  error?: string;
+  field?: string;
+  /** What a refused save submitted, since React resets the form regardless. */
+  values?: Record<string, string>;
+};
 
 const DENIED = "You can't edit this session.";
+
+const HOST_FIELDS = [
+  "title",
+  "description",
+  "category",
+  "ages",
+  "needs",
+  "maxCapacity",
+  "minCapacity",
+  "rsvpIsCommitment",
+];
 
 function revalidate(sessionId: string) {
   revalidatePath(`/account/sessions/${sessionId}`);
   revalidatePath("/account");
   revalidatePath("/schedule");
+}
+
+function submittedValues(raw: Record<string, FormDataEntryValue>) {
+  return Object.fromEntries(
+    HOST_FIELDS.flatMap((name) => {
+      const value = raw[name];
+      return typeof value === "string" ? [[name, value]] : [];
+    }),
+  );
 }
 
 /** Saves the descriptive fields; placement and status aren't reachable here. */
@@ -27,14 +54,22 @@ export async function saveHostSession(
   _prev: SaveState,
   data: FormData,
 ): Promise<SaveState> {
-  if (!(await editSessionAccess(sessionId))) return { error: DENIED };
-  const fields = parseHostSessionFields(Object.fromEntries(data.entries()));
-  if (!fields.ok) return { error: fields.error, field: fields.field };
+  const editor = await editSessionAccess(sessionId);
+  if (!editor) return { error: DENIED };
+  const raw = Object.fromEntries(data.entries());
+  const values = submittedValues(raw);
+  const fields = parseHostSessionFields(raw);
+  if (!fields.ok) return { error: fields.error, field: fields.field, values };
   try {
-    await updateSessionAsHost(sessionId, fields.value);
+    await updateSessionAsHost(sessionId, fields.value, {
+      allowBelowGoing: editor.via === "team",
+    });
   } catch (err) {
+    if (err instanceof CapacityBelowGoingError) {
+      return { error: err.message, field: "maxCapacity", values };
+    }
     console.error("[host-edit] save failed:", err);
-    return explainDbError(err);
+    return { ...explainDbError(err), values };
   }
   revalidate(sessionId);
   return { savedAt: Date.now() };

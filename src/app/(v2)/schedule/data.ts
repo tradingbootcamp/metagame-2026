@@ -22,8 +22,8 @@ import {
 import { emailKey } from "@/lib/ticket-holder";
 import {
   hasClaimedTicket,
+  thisYearTicketsForUser,
   ticketLabel,
-  ticketsForUser,
 } from "@/lib/ticket-store";
 import { boardNote, type BoardData } from "@/lib/unconference";
 import { listNotesIn } from "@/lib/unconference-store";
@@ -116,7 +116,7 @@ export async function rsvpTicket(): Promise<RsvpTicket | undefined> {
     return { has: true, claimable: [] };
   }
   const email = emailKey(raw);
-  const rows = await ticketsForUser(id, email);
+  const rows = await thisYearTicketsForUser(id, email);
   const step = ticketStep(
     rows.map((t) => ({ ...t, tier: ticketLabel(t.tier) })),
     id,

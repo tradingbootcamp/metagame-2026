@@ -28,7 +28,11 @@ const {
   claimOwnTicket,
   claimTicket,
   claimTicketFor,
+  hasClaimedTicket,
+  hasClaimedTicketFor,
   normalizeTicketCode,
+  thisYearTicketsForUser,
+  ticketsForUser,
   ticketFromPurchase,
   unclaimTicket,
   undoCheckIn,
@@ -359,6 +363,38 @@ describe("unclaimTicket", () => {
       ok: false,
       reason: "notYours",
     });
+  });
+});
+
+describe("RSVP eligibility counts only this year's tickets", () => {
+  it("treats a claimed 2026 ticket as no ticket", async () => {
+    await seed("pi_old", { owner: "ada", year: 2026 });
+    expect(await hasClaimedTicket("ada")).toBe(false);
+    expect(await thisYearTicketsForUser("ada", "ada@example.com")).toEqual([]);
+  });
+
+  it("still counts a claimed 2027 ticket", async () => {
+    await seed("pi_new", { owner: "bob" });
+    expect(await hasClaimedTicket("bob")).toBe(true);
+  });
+
+  it("asks about the year it's given, for the 2026 Attendee role", async () => {
+    await seed("pi_old", { owner: "ada", year: 2026 });
+    await seed("pi_new", { owner: "bob" });
+    expect(await hasClaimedTicketFor("ada", 2026)).toBe(true);
+    expect(await hasClaimedTicketFor("bob", 2026)).toBe(false);
+  });
+
+  it("offers only this year's held tickets, while the account list keeps both", async () => {
+    await seed("pi_old", { year: 2026 });
+    await seed("pi_new");
+    await client.query(
+      "update tickets set holder_user_id = 'ada' where payment_id in ('pi_old', 'pi_new')",
+    );
+    const mine = await thisYearTicketsForUser("ada", "ada@example.com");
+    expect(mine.map((t) => t.paymentId)).toEqual(["pi_new"]);
+    const all = await ticketsForUser("ada", "ada@example.com");
+    expect(all.map((t) => t.paymentId).sort()).toEqual(["pi_new", "pi_old"]);
   });
 });
 

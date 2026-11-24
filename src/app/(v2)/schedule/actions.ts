@@ -17,6 +17,9 @@ import {
   rsvp,
   setBookmark,
 } from "@/lib/schedule-store";
+import { dayPassRefusal } from "@/lib/seat-rules";
+import { emailKey } from "@/lib/ticket-holder";
+import { thisYearTicketsForUser } from "@/lib/ticket-store";
 import { attendeeActionsAllowed, rsvpTicket } from "./data";
 
 // No revalidatePath: it would re-render the whole current route behind every
@@ -81,6 +84,14 @@ async function guestListed(guests: string[]): Promise<boolean> {
   return u.role === "admin" || onGuestList(guests, u.email);
 }
 
+/** Why the viewer's day pass doesn't cover this session; admins aren't asked. */
+async function uncoveredDay(startsAt: Date | null): Promise<string | null> {
+  const u = (await currentSession())?.user;
+  if (!u || !startsAt || u.role === "admin") return null;
+  const rows = await thisYearTicketsForUser(u.id, emailKey(u.email));
+  return dayPassRefusal(rows, u.id, startsAt.toISOString());
+}
+
 /** Going, or waitlisted when the session is full. */
 export async function rsvpTo(sessionId: string): Promise<PlanResult> {
   return act(sessionId, async (userId) => {
@@ -88,6 +99,7 @@ export async function rsvpTo(sessionId: string): Promise<PlanResult> {
       .select({
         open: schema.sessions.rsvpsOpen,
         guests: schema.sessions.inviteEmails,
+        startsAt: schema.sessions.startsAt,
       })
       .from(schema.sessions)
       .where(eq(schema.sessions.id, sessionId))
@@ -108,6 +120,9 @@ export async function rsvpTo(sessionId: string): Promise<PlanResult> {
         needsTicket: ticket.claimable,
       };
     }
+    const uncovered =
+      guests === null && (await uncoveredDay(row?.startsAt ?? null));
+    if (uncovered) return { error: uncovered };
     const status = await rsvp(sessionId, userId);
     return { status, rsvps: await loadSessionRsvps(sessionId) };
   });

@@ -8,7 +8,7 @@ export type PermissionLevel = "view" | "edit" | "delete";
 
 /**
  * `team`: a team tool, so holding it opens /backstage and the nav's admin link.
- * `attendee`: a site-facing gate ticket holders may get through the built-in
+ * `attendee`: a site-facing gate ticket holders may get through a built-in
  * Attendee role; on its own it opens nothing under /backstage.
  */
 export type PermissionAudience = "team" | "attendee";
@@ -358,7 +358,7 @@ export type AccessInput = {
   roles: readonly {
     name: string;
     permissions: readonly string[];
-    /** Set on a built-in role that attaches itself, e.g. "has a ticket". */
+    /** Set on a built-in role that attaches itself, e.g. "has a claimed 2027 ticket". */
     auto?: string;
   }[];
   /** Per-user grants on top of the roles. */
