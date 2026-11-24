@@ -23,12 +23,25 @@ vi.mock("@/db", async () => ({
   getDb: () => holder.db,
   schema: await vi.importActual("@/db/schema"),
 }));
-vi.mock("@/env", () => ({ env: { DATABASE_URL: "pglite" } }));
+vi.mock("@/env", () => ({ env: { DATABASE_URL: "postgres://pglite/test" } }));
 vi.mock("./airtable", () => ({
   updatePurchaseTicketCode: vi.fn().mockResolvedValue(true),
 }));
 vi.mock("./email", () => ({ sendAdminErrorEmail: vi.fn() }));
+vi.mock("./error-report", () => ({ reportError: vi.fn() }));
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+  unstable_cache: (f: unknown) => f,
+}));
+vi.mock("./access", () => ({ can: vi.fn() }));
+vi.mock("./auth", () => ({ currentSession: vi.fn(), getAuth: vi.fn() }));
+vi.mock("./admin-auth", () => ({
+  EXPIRED: "expired",
+  requireAccess: async () => ({ name: "Libi", userId: "staff" }),
+}));
 
+import { setTicketVoided } from "@/app/backstage/tickets/actions";
 import { lookupReferrer, referralCounts } from "./referral-store";
 import {
   badgeCodesFor,
@@ -44,7 +57,7 @@ import {
 import { EVENT_YEAR } from "./tickets";
 import { unvoidTicket, voidTicket } from "./ticket-void";
 
-const { tickets, user } = schema;
+const { rsvps, sessions, tickets, user } = schema;
 
 let client: PGlite;
 let db: PgliteDatabase<typeof schema>;
@@ -89,6 +102,8 @@ beforeAll(async () => {
 afterAll(() => client.close());
 
 beforeEach(async () => {
+  await db.delete(rsvps);
+  await db.delete(sessions);
   await db.delete(tickets);
   await db.delete(schema.verification);
 });
@@ -96,12 +111,16 @@ beforeEach(async () => {
 describe("void and undo", () => {
   it("records who and when, and undo keeps the record", async () => {
     await ticket("pi_1", "AAAAAA");
-    expect(await voidTicket("pi_1", "Libi")).toBe(true);
+    expect(await voidTicket("pi_1", "Libi")).toEqual({
+      year: EVENT_YEAR,
+      formerOwner: null,
+    });
     const voided = await row("pi_1");
     expect(voided).toMatchObject({
       voided: true,
       voidedBy: "Libi",
       status: "paid",
+      ticketCode: "AAAAAA",
     });
     expect(voided.voidedAt).toBeInstanceOf(Date);
 
@@ -116,15 +135,15 @@ describe("void and undo", () => {
     expect(undone.unvoidedAt).toBeInstanceOf(Date);
   });
 
-  it("repeating either is a no-op, and a missing ticket is false", async () => {
+  it("repeating either is a no-op, and a missing ticket is nothing", async () => {
     await ticket("pi_1", "AAAAAA");
     await voidTicket("pi_1", "Libi");
-    expect(await voidTicket("pi_1", "Someone else")).toBe(false);
+    expect(await voidTicket("pi_1", "Someone else")).toBeNull();
     expect((await row("pi_1")).voidedBy).toBe("Libi");
     await unvoidTicket("pi_1", "Yoav");
     expect(await unvoidTicket("pi_1", "Someone else")).toBe(false);
     expect((await row("pi_1")).unvoidedBy).toBe("Yoav");
-    expect(await voidTicket("pi_gone", "Libi")).toBe(false);
+    expect(await voidTicket("pi_gone", "Libi")).toBeNull();
   });
 
   it("a webhook retry can't revive a voided ticket", async () => {
@@ -143,6 +162,82 @@ describe("void and undo", () => {
   });
 });
 
+describe("voiding a claimed ticket", () => {
+  const claimed = () =>
+    ticket("pi_1", "AAAAAA", {
+      ownerUserId: "ada",
+      claimedAt: new Date(),
+      claimedBy: "bob",
+      badgeCode: 7,
+      checkedInAt: new Date(),
+      checkedInBy: "bob",
+    });
+
+  it("unclaims it: its owner holds it under a fresh code", async () => {
+    await claimed();
+    const result = await voidTicket("pi_1", "Libi");
+    expect(result).toMatchObject({
+      year: EVENT_YEAR,
+      formerOwner: { id: "ada", email: "ada@example.com" },
+    });
+    const after = await row("pi_1");
+    expect(after).toMatchObject({
+      voided: true,
+      ownerUserId: null,
+      claimedAt: null,
+      claimedBy: null,
+      holderUserId: "ada",
+      badgeCode: null,
+      checkedInAt: null,
+      checkedInBy: null,
+    });
+    expect(after.ticketCode).not.toBe("AAAAAA");
+    expect(await hasClaimedTicket("ada")).toBe(false);
+    expect(await unclaimTicket("ada", "pi_1")).toEqual({
+      ok: false,
+      reason: "voided",
+    });
+  });
+
+  it("un-voiding leaves it unclaimed, for its holder to claim again", async () => {
+    await claimed();
+    await voidTicket("pi_1", "Libi");
+    await unvoidTicket("pi_1", "Libi");
+    expect(await row("pi_1")).toMatchObject({
+      ownerUserId: null,
+      holderUserId: "ada",
+    });
+    expect(await hasClaimedTicket("ada")).toBe(false);
+    expect(await claimTicket("bob", "AAAAAA")).toEqual({
+      ok: false,
+      reason: "unknown",
+    });
+    expect((await claimOwnTicket("ada", "ada@example.com", "pi_1")).ok).toBe(
+      true,
+    );
+    expect(await hasClaimedTicket("ada")).toBe(true);
+  });
+
+  it("frees the former owner's upcoming seats", async () => {
+    await claimed();
+    const [session] = await db
+      .insert(sessions)
+      .values({
+        slug: "talk",
+        title: "Talk",
+        status: "published",
+        startsAt: new Date(Date.now() + 86_400_000),
+        endsAt: new Date(Date.now() + 90_000_000),
+      })
+      .returning();
+    await db
+      .insert(rsvps)
+      .values({ sessionId: session.id, userId: "ada", status: "going" });
+    expect(await setTicketVoided("pi_1", true)).toEqual({});
+    expect(await db.select().from(rsvps)).toEqual([]);
+  });
+});
+
 describe("a voided ticket", () => {
   it("can't be claimed, by code or by its holder", async () => {
     await ticket("pi_1", "AAAAAA", { voided: true });
@@ -157,46 +252,10 @@ describe("a voided ticket", () => {
     expect((await row("pi_1")).ownerUserId).toBeNull();
   });
 
-  it("stops holding its owner's admission, and undo restores it", async () => {
-    await ticket("pi_1", "AAAAAA", { ownerUserId: "ada" });
-    await ticket("pi_2", "BBBBBB");
-    expect(await hasClaimedTicket("ada")).toBe(true);
-
-    await voidTicket("pi_1", "Libi");
-    expect(await hasClaimedTicket("ada")).toBe(false);
-    expect(await claimTicket("ada", "AAAAAA")).toEqual({
-      ok: false,
-      reason: "voided",
-    });
-
-    await unvoidTicket("pi_1", "Libi");
-    expect(await hasClaimedTicket("ada")).toBe(true);
-    expect((await row("pi_1")).ownerUserId).toBe("ada");
-  });
-
-  it("frees its owner to claim a different ticket", async () => {
-    await ticket("pi_1", "AAAAAA", { ownerUserId: "ada", voided: true });
-    await ticket("pi_2", "BBBBBB");
-    const result = await claimTicket("ada", "BBBBBB");
-    expect(result.ok).toBe(true);
-  });
-
-  it("can't be unclaimed for a fresh code", async () => {
-    await ticket("pi_1", "AAAAAA", { ownerUserId: "ada", voided: true });
-    expect(await unclaimTicket("ada", "pi_1")).toEqual({
-      ok: false,
-      reason: "voided",
-    });
-    expect((await row("pi_1")).ticketCode).toBe("AAAAAA");
-  });
-
-  it("doesn't count for its year, and frees a claim in that year", async () => {
-    await ticket("pi_1", "AAAAAA", {
-      ownerUserId: "ada",
-      voided: true,
-      badgeCode: 7,
-    });
+  it("frees its former owner to claim another this year", async () => {
+    await ticket("pi_1", "AAAAAA", { ownerUserId: "ada", badgeCode: 7 });
     await ticket("pi_2", "BBBBBB", { year: EVENT_YEAR });
+    await voidTicket("pi_1", "Libi");
     expect(await hasClaimedTicketFor("ada", EVENT_YEAR)).toBe(false);
     expect((await claimedCounts(["ada"])).get("ada")).toBeUndefined();
     expect((await badgeCodesFor(["ada"])).get("ada")).toBeUndefined();
@@ -206,7 +265,7 @@ describe("a voided ticket", () => {
   });
 
   it("can't be checked in", async () => {
-    await ticket("pi_1", "AAAAAA", { ownerUserId: "ada", voided: true });
+    await ticket("pi_1", "AAAAAA", { voided: true });
     expect(await checkInTicket("bob", "pi_1")).toEqual({
       ok: false,
       reason: "voided",

@@ -608,8 +608,9 @@ export function VoidPanel({
         (confirming && !voided ? (
           <>
             <p>
-              Void this ticket? It can&apos;t be claimed or used to RSVP, and
-              shows as not valid at the door. This doesn&apos;t refund anyone.
+              Void this ticket? It can&apos;t be claimed or checked in. If
+              someone has claimed it, they lose it and their upcoming RSVPs.
+              This doesn&apos;t refund anyone.
             </p>
             <div className="flex flex-wrap gap-2">
               <button

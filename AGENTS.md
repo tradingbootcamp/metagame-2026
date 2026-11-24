@@ -49,7 +49,8 @@ buyer their tickets but never grants ownership.
 
 A voided ticket (`tickets.voided`, beside `status`, which stays what the payment
 did) admits nobody: staff void and undo on `/backstage/tickets`
-(`tickets.void`); a Stripe refund doesn't void anything. Check `admitting` or
+(`tickets.void`), which unclaims it like an unclaim does and frees the owner's
+upcoming RSVPs; a Stripe refund doesn't void anything. Check `admitting` or
 `ticketState()`, not `status` alone.
 
 ## Accounts

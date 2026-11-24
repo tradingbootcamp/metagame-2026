@@ -495,33 +495,41 @@ export async function unclaimTicket(
   });
   if (!ticket) {
     const [existing] = await db
-      .select({ checkedInAt: tickets.checkedInAt, voided: tickets.voided })
+      .select()
       .from(tickets)
-      .where(
-        and(
-          visible,
-          eq(tickets.paymentId, paymentId),
-          eq(tickets.ownerUserId, userId),
-        ),
-      )
+      .where(and(visible, eq(tickets.paymentId, paymentId)))
       .limit(1);
-    if (existing?.voided) return { ok: false, reason: "voided" };
+    // Voiding takes the claim away, leaving its owner as the holder.
+    if (existing?.voided && existing.holderUserId === userId)
+      return { ok: false, reason: "voided" };
     return {
       ok: false,
-      reason: existing?.checkedInAt ? "checkedIn" : "notYours",
+      reason:
+        existing?.ownerUserId === userId && existing.checkedInAt
+          ? "checkedIn"
+          : "notYours",
     };
   }
+  await mirrorTicketCode(ticket, "an unclaim");
+  return { ok: true, ticket };
+}
+
+/** Copies a reissued code to the Airtable purchase; a failure alerts, never throws. */
+export async function mirrorTicketCode(
+  ticket: Pick<TicketRow, "paymentId" | "ticketCode">,
+  after: string,
+): Promise<void> {
+  const { paymentId, ticketCode } = ticket;
   try {
-    await updatePurchaseTicketCode(ticket.paymentId, ticket.ticketCode);
+    await updatePurchaseTicketCode(paymentId, ticketCode);
   } catch (e) {
     console.error(`[tickets] Airtable code update failed: ${paymentId}`, e);
     await sendAdminErrorEmail(
-      `Airtable Ticket Code update failed after an unclaim (payment ${paymentId}); it should read ${ticket.ticketCode}: ${e instanceof Error ? e.message : String(e)}`,
+      `Airtable Ticket Code update failed after ${after} (payment ${paymentId}); it should read ${ticketCode}: ${e instanceof Error ? e.message : String(e)}`,
     ).catch((adminErr) =>
       console.error("[tickets] admin alert failed:", adminErr),
     );
   }
-  return { ok: true, ticket };
 }
 
 export type CheckInResult =

@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { EXPIRED, requireAccess } from "@/lib/admin-auth";
+import { releaseSeatsWithoutTicket } from "@/lib/seat-release";
+import { EVENT_YEAR } from "@/lib/tickets";
 import { unvoidTicket, voidTicket } from "@/lib/ticket-void";
+
+const SAVE_FAILED = "That didn't save. Try again.";
+const NOTHING_CHANGED =
+  "Nothing changed: someone else got there first, or it's gone.";
 
 /** Voids or un-voids. An error when nothing changed: a stale tab or unknown id. */
 export async function setTicketVoided(
@@ -14,13 +20,19 @@ export async function setTicketVoided(
   if (typeof id !== "string" || !id) return { error: "No such ticket." };
   let changed: boolean;
   try {
-    changed = await (voided ? voidTicket : unvoidTicket)(id, access.name);
+    if (voided) {
+      const result = await voidTicket(id, access.name);
+      changed = result !== null;
+      // Only this year's tickets seat anyone.
+      if (result?.formerOwner && result.year === EVENT_YEAR)
+        await releaseSeatsWithoutTicket(result.formerOwner, "Void ticket");
+    } else {
+      changed = await unvoidTicket(id, access.name);
+    }
   } catch (err) {
     console.error("[tickets] void failed", id, err);
-    return { error: "That didn't save. Try again." };
+    return { error: SAVE_FAILED };
   }
   revalidatePath("/backstage/tickets");
-  return changed
-    ? {}
-    : { error: "Nothing changed: someone else got there first, or it's gone." };
+  return changed ? {} : { error: NOTHING_CHANGED };
 }
