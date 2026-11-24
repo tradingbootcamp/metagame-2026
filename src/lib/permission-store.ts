@@ -7,7 +7,8 @@ import {
   type OverrideEffect,
   type Permission,
 } from "./permissions";
-import { hasClaimedTicket } from "./ticket-store";
+import { hasClaimedTicketFor } from "./ticket-store";
+import { EVENT_YEAR } from "./tickets";
 
 const {
   roles,
@@ -18,13 +19,14 @@ const {
   sessionHosts,
 } = schema;
 
-// Built-in roles attach themselves instead of being assigned: Attendee is
-// anyone with a claimed ticket, Session host anyone listed as a host on a
-// session. They're ordinary rows, so the roles grid sets what they carry, but
+// Built-in roles attach themselves instead of being assigned: "2027 Attendee"
+// is anyone with a claimed 2027 ticket (likewise 2026), Session host anyone
+// listed as a host on a session. They're ordinary rows, so the roles grid sets what they carry, but
 // they can't be renamed, deleted or ticked on a person; a user_roles row for
 // one (from before it was built in) is ignored. Until the row exists (first
 // load of /backstage/roles) the defaults apply.
-export const ATTENDEE_ROLE = "Attendee";
+export const ATTENDEE_ROLE = "2027 Attendee";
+export const ATTENDEE_2026_ROLE = "2026 Attendee";
 export const HOST_ROLE = "Session host";
 
 type Builtin = {
@@ -34,12 +36,18 @@ type Builtin = {
   holds: (userId: string) => Promise<boolean>;
 };
 
+const attendee = (year: number, defaults: Permission[]): Builtin => ({
+  auto: `has a claimed ${year} ticket`,
+  defaults,
+  holds: (userId) => hasClaimedTicketFor(userId, year),
+});
+
 const BUILTIN: Record<string, Builtin> = {
-  [ATTENDEE_ROLE]: {
-    auto: "has a ticket",
-    defaults: ["schedule.rsvps", "unconference.post"],
-    holds: hasClaimedTicket,
-  },
+  [ATTENDEE_ROLE]: attendee(EVENT_YEAR, [
+    "schedule.rsvps",
+    "unconference.post",
+  ]),
+  [ATTENDEE_2026_ROLE]: attendee(2026, []),
   [HOST_ROLE]: {
     auto: "hosts a session",
     defaults: ["schedule.preview"],
@@ -71,7 +79,7 @@ export type Role = {
   permissions: Permission[];
   /** Accounts assigned it, by name. */
   holders: { id: string; name: string; email: string }[];
-  /** Built-in: who gets it automatically, e.g. "has a ticket". */
+  /** Built-in: who gets it automatically, e.g. "has a claimed 2027 ticket". */
   auto?: string;
 };
 

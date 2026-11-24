@@ -253,14 +253,18 @@ export async function badgeCodesFor(
   return new Map(rows.map((r) => [r.userId!, r.badge!]));
 }
 
-/** Whether the user has claimed a paid ticket to this year's event. */
-export async function hasClaimedTicket(userId: string): Promise<boolean> {
+/** Whether the user has claimed a paid ticket to that year's event. */
+export async function hasClaimedTicketFor(
+  userId: string,
+  year: number,
+): Promise<boolean> {
   const [row] = await getDb()
     .select({ id: tickets.paymentId })
     .from(tickets)
     .where(
       and(
-        thisYear,
+        visible,
+        eq(tickets.year, year),
         eq(tickets.ownerUserId, userId),
         eq(tickets.status, "paid"),
       ),
@@ -268,6 +272,10 @@ export async function hasClaimedTicket(userId: string): Promise<boolean> {
     .limit(1);
   return row !== undefined;
 }
+
+/** Whether the user has claimed a paid ticket to this year's event. */
+export const hasClaimedTicket = (userId: string) =>
+  hasClaimedTicketFor(userId, EVENT_YEAR);
 
 export type ClaimResult =
   | { ok: true; ticket: TicketRow }

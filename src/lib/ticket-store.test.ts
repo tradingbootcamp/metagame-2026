@@ -29,6 +29,7 @@ const {
   claimTicket,
   claimTicketFor,
   hasClaimedTicket,
+  hasClaimedTicketFor,
   normalizeTicketCode,
   thisYearTicketsForUser,
   ticketsForUser,
@@ -361,6 +362,13 @@ describe("RSVP eligibility counts only this year's tickets", () => {
   it("still counts a claimed 2027 ticket", async () => {
     await seed("pi_new", { owner: "bob" });
     expect(await hasClaimedTicket("bob")).toBe(true);
+  });
+
+  it("asks about the year it's given, for the 2026 Attendee role", async () => {
+    await seed("pi_old", { owner: "ada", year: 2026 });
+    await seed("pi_new", { owner: "bob" });
+    expect(await hasClaimedTicketFor("ada", 2026)).toBe(true);
+    expect(await hasClaimedTicketFor("bob", 2026)).toBe(false);
   });
 
   it("offers only this year's held tickets, while the account list keeps both", async () => {

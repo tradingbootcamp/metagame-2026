@@ -15,19 +15,14 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { revalidateTag, unstable_cache } from "next/cache";
-import { after } from "next/server";
 import { getDb, schema } from "@/db";
 import { env } from "@/env";
 import { can } from "./access";
 import { likeContains } from "./like";
 import { currentSession, getAuth } from "./auth";
-import { sendWaitlistPromotionEmails } from "./email";
-import { reportError } from "./error-report";
 import type { HostSessionFields } from "./schedule-input";
 import {
   clashDescription,
-  formatPacificDay,
-  formatPacificTime,
   fromPacificWall,
   movedTimes,
   onGuestList,
@@ -657,94 +652,16 @@ async function promoteWaitlist(sessionId: string): Promise<void> {
     .from(rsvps)
     .where(and(eq(rsvps.sessionId, sessionId), eq(rsvps.status, "waitlist")))
     .orderBy(asc(rsvps.createdAt));
-  const promoted: string[] = [];
-  try {
-    for (const { userId } of waiting) {
-      // Still on the waitlist, so of two cancellations at once only the one
-      // that really moved someone tells them.
-      const moved = await db
+  for (const { userId } of waiting) {
+    try {
+      await db
         .update(rsvps)
         .set({ status: "going" })
-        .where(
-          and(
-            eq(rsvps.sessionId, sessionId),
-            eq(rsvps.userId, userId),
-            eq(rsvps.status, "waitlist"),
-          ),
-        )
-        .returning({ userId: rsvps.userId });
-      promoted.push(...moved.map((m) => m.userId));
+        .where(and(eq(rsvps.sessionId, sessionId), eq(rsvps.userId, userId)));
+    } catch (err) {
+      if (isFull(err)) return;
+      throw err;
     }
-  } catch (err) {
-    if (!isFull(err)) throw err;
-  } finally {
-    // After the response, so a slow or failing send can't touch the caller.
-    if (promoted.length > 0) {
-      const notify = () => notifyPromoted(sessionId, promoted);
-      try {
-        after(notify);
-      } catch {
-        // Outside a request (a script), so there's no response to wait for.
-        void notify();
-      }
-    }
-  }
-}
-
-/** Never throws: the seats are already taken, and only the notice is lost. */
-async function notifyPromoted(
-  sessionId: string,
-  userIds: string[],
-): Promise<void> {
-  try {
-    const db = getDb();
-    const [[session], people] = await Promise.all([
-      db
-        .select({
-          slug: sessions.slug,
-          title: sessions.title,
-          status: sessions.status,
-          startsAt: sessions.startsAt,
-          endsAt: sessions.endsAt,
-        })
-        .from(sessions)
-        .where(eq(sessions.id, sessionId)),
-      db
-        .select({ name: user.name, email: user.email })
-        .from(user)
-        .where(inArray(user.id, userIds)),
-    ]);
-    // Drafts are the team trying things out, and a finished session's seat is
-    // no news to anyone.
-    if (
-      session?.status !== "published" ||
-      !session.startsAt ||
-      !session.endsAt ||
-      session.endsAt <= new Date()
-    ) {
-      return;
-    }
-    const start = session.startsAt.toISOString();
-    const when = `${formatPacificDay(start)}, ${formatPacificTime(start)} – ${formatPacificTime(session.endsAt.toISOString())} Pacific`;
-    await sendWaitlistPromotionEmails(
-      people.map(({ name, email }) => ({
-        to: email,
-        name,
-        title: session.title,
-        slug: session.slug,
-        when,
-      })),
-    );
-  } catch (error) {
-    console.error("[schedule] waitlist notice failed", sessionId, error);
-    await reportError({
-      source: "Waitlist promotion",
-      summary:
-        "Someone moved off a waitlist into a seat but wasn't emailed about it",
-      details: { session: sessionId, users: userIds.join(", ") },
-      error,
-      mention: false,
-    });
   }
 }
 
@@ -842,7 +759,7 @@ export async function loadSessionPlans(sessionId: string) {
 
 /**
  * One session's RSVPs for the public page. Names only for a viewer holding
- * schedule.rsvps (the Attendee role carries it by default, so a claimed
+ * schedule.rsvps (the 2027 Attendee role carries it by default, so a claimed
  * ticket is enough); everyone else gets counts.
  */
 /**

@@ -2,13 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { HostSessionFields } from "./schedule-input";
 import { fakeNeon, type Statement } from "@/test/fake-neon";
 
-const h = vi.hoisted(() => ({
-  db: null as unknown,
-  afters: [] as (() => Promise<void>)[],
-  outsideRequest: false,
-  send: vi.fn(),
-  report: vi.fn(),
-}));
+const h = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock("@/db", async () => ({
   getDb: () => h.db,
   schema: await vi.importActual("@/db/schema"),
@@ -17,16 +11,8 @@ vi.mock("next/cache", () => ({
   revalidateTag: vi.fn(),
   unstable_cache: (f: unknown) => f,
 }));
-vi.mock("next/server", () => ({
-  after: (task: () => Promise<void>) => {
-    if (h.outsideRequest) throw new Error("`after` outside a request scope");
-    h.afters.push(task);
-  },
-}));
 vi.mock("./access", () => ({ can: vi.fn() }));
 vi.mock("./auth", () => ({ currentSession: vi.fn(), getAuth: vi.fn() }));
-vi.mock("./email", () => ({ sendWaitlistPromotionEmails: h.send }));
-vi.mock("./error-report", () => ({ reportError: h.report }));
 
 import {
   cancelRsvp,
@@ -38,19 +24,9 @@ import {
 type Row = { sessionId: string; userId: string; status: "going" | "waitlist" };
 
 const SESSION = "11111111-1111-4111-8111-111111111111";
-const START = new Date("2099-11-07T22:00:00.000Z");
-const END = new Date("2099-11-07T23:00:00.000Z");
 
 /** Just enough of the rsvps table and its capacity trigger to run the store. */
-function world({
-  capacity = 1,
-  seated = [] as Row[],
-  session = {
-    status: "published",
-    startsAt: START.toISOString(),
-    endsAt: END.toISOString(),
-  },
-} = {}) {
+function world({ capacity = 1, seated = [] as Row[] } = {}) {
   const rows = [...seated];
   const answer = (s: Statement): unknown[][] | void => {
     if (s.sql.startsWith('delete from "rsvps"')) {
@@ -63,12 +39,9 @@ function world({
     if (s.sql.startsWith('update "rsvps"')) {
       const [, sessionId, userId] = s.params;
       const row = rows.find(
-        (r) =>
-          r.sessionId === sessionId &&
-          r.userId === userId &&
-          r.status === "waitlist",
+        (r) => r.sessionId === sessionId && r.userId === userId,
       );
-      if (!row) return [];
+      if (!row || row.status === "going") return;
       const going = rows.filter((r) => r.status === "going").length;
       if (going >= capacity) {
         throw Object.assign(new Error("full"), {
@@ -76,24 +49,10 @@ function world({
         });
       }
       row.status = "going";
-      return [[userId]];
+      return;
     }
     if (s.sql.startsWith('select "user_id" from "rsvps"')) {
       return rows.filter((r) => r.status === "waitlist").map((r) => [r.userId]);
-    }
-    if (s.sql.includes('"slug"') && s.sql.includes('from "sessions"')) {
-      return [
-        [
-          "the-talk",
-          "The Talk",
-          session.status,
-          session.startsAt,
-          session.endsAt,
-        ],
-      ];
-    }
-    if (s.sql.includes('from "user"')) {
-      return (s.params as string[]).map((id) => [id, `${id}@example.com`]);
     }
   };
   const neon = fakeNeon(answer);
@@ -113,124 +72,27 @@ const waiting = (userId: string): Row => ({
 });
 const statusOf = (rows: Row[]) =>
   Object.fromEntries(rows.map((r) => [r.userId, r.status]));
-const afterResponse = async () => {
-  for (const task of h.afters.splice(0)) await task();
-};
 
 beforeEach(() => {
-  h.afters.length = 0;
-  h.outsideRequest = false;
-  h.send.mockReset();
-  h.send.mockResolvedValue(undefined);
-  h.report.mockReset();
-  vi.spyOn(console, "error").mockImplementation(() => {});
+  h.db = null;
 });
 
-describe("waitlist promotion notices", () => {
-  it("tells the promoted person the session and time", async () => {
+describe("waitlist promotion", () => {
+  it("seats the earliest waiting person when a seat frees", async () => {
     const { rows } = world({
       seated: [going("a"), waiting("b"), waiting("c")],
     });
     await cancelRsvp(SESSION, "a");
-    await afterResponse();
     expect(statusOf(rows)).toEqual({ b: "going", c: "waitlist" });
-    expect(h.send).toHaveBeenCalledExactlyOnceWith([
-      {
-        to: "b@example.com",
-        name: "b",
-        title: "The Talk",
-        slug: "the-talk",
-        when: "Sat, Nov 7, 2:00 PM – 3:00 PM Pacific",
-      },
-    ]);
   });
 
-  it("sends nothing until the response is on its way", async () => {
-    world({ seated: [going("a"), waiting("b")] });
-    await cancelRsvp(SESSION, "a");
-    expect(h.send).not.toHaveBeenCalled();
-    expect(h.afters).toHaveLength(1);
-  });
-
-  it("a failed email costs only the notice, and the team hears", async () => {
-    h.send.mockRejectedValue(new Error("Resend is down"));
-    const { rows } = world({ seated: [going("a"), waiting("b")] });
-    await expect(cancelRsvp(SESSION, "a")).resolves.toBeUndefined();
-    await expect(afterResponse()).resolves.toBeUndefined();
-    expect(statusOf(rows)).toEqual({ b: "going" });
-    expect(h.report).toHaveBeenCalledOnce();
-    expect(h.report.mock.calls[0][0].details.users).toBe("b");
-  });
-
-  it("a failed look-up of who to tell doesn't reach the caller either", async () => {
-    const { rows } = world({ seated: [going("a"), waiting("b")] });
-    await cancelRsvp(SESSION, "a");
-    h.db = null;
-    await expect(afterResponse()).resolves.toBeUndefined();
-    expect(statusOf(rows)).toEqual({ b: "going" });
-    expect(h.report).toHaveBeenCalledOnce();
-  });
-
-  it("still sends, and still cancels, outside a request", async () => {
-    h.outsideRequest = true;
-    const { rows } = world({ seated: [going("a"), waiting("b")] });
-    await expect(cancelRsvp(SESSION, "a")).resolves.toBeUndefined();
-    expect(statusOf(rows)).toEqual({ b: "going" });
-    await vi.waitFor(() => expect(h.send).toHaveBeenCalledOnce());
-  });
-
-  it("tells everyone a freed block of seats moved up, and no one else", async () => {
-    world({
+  it("fills every freed seat, and stops when full", async () => {
+    const { rows } = world({
       capacity: 2,
       seated: [going("a"), waiting("b"), waiting("c"), waiting("d")],
     });
     await cancelRsvp(SESSION, "a");
-    await afterResponse();
-    expect(h.send.mock.calls[0][0].map((p: { to: string }) => p.to)).toEqual([
-      "b@example.com",
-      "c@example.com",
-    ]);
-  });
-
-  it("stays quiet when nobody moved", async () => {
-    world({ seated: [going("a"), going("b"), waiting("c")], capacity: 1 });
-    await cancelRsvp(SESSION, "a");
-    expect(h.afters).toHaveLength(0);
-  });
-
-  it("only the update that moved someone tells them", async () => {
-    // A second cancellation seated them between the read and this update.
-    h.db = fakeNeon((s) =>
-      s.sql.startsWith('select "user_id"') ? [["b"]] : [],
-    ).db;
-    await cancelRsvp(SESSION, "a");
-    expect(h.afters).toHaveLength(0);
-  });
-
-  it("only moves people still on the waitlist", async () => {
-    const { statements } = world({ seated: [going("a"), waiting("b")] });
-    await cancelRsvp(SESSION, "a");
-    const update = statements.find((s) => s.sql.startsWith('update "rsvps"'));
-    expect(update?.params).toEqual(["going", SESSION, "b", "waitlist"]);
-  });
-
-  it.each([
-    ["a draft", { status: "draft" }],
-    ["a finished session", { endsAt: "2020-01-01T00:00:00.000Z" }],
-    ["an unplaced session", { startsAt: null, endsAt: null }],
-  ])("doesn't announce a seat at %s", async (_name, over) => {
-    const session = {
-      status: "published",
-      startsAt: START.toISOString(),
-      endsAt: END.toISOString(),
-      ...over,
-    } as never;
-    const { rows } = world({ seated: [going("a"), waiting("b")], session });
-    await cancelRsvp(SESSION, "a");
-    await afterResponse();
-    expect(statusOf(rows)).toEqual({ b: "going" });
-    expect(h.send).not.toHaveBeenCalled();
-    expect(h.report).not.toHaveBeenCalled();
+    expect(statusOf(rows)).toEqual({ b: "going", c: "going", d: "waitlist" });
   });
 });
 
