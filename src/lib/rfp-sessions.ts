@@ -13,7 +13,11 @@ import {
 } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { GradeInput, GradeValues, SessionText } from "./grade-input";
-import { COMMITTEE_EMAILS, committeeName } from "./rfp-committee";
+import {
+  COMMITTEE_EMAILS,
+  committeeConfigured,
+  committeeName,
+} from "./rfp-committee";
 import { nextStepsFor, SPACE_OPTION_LOCATIONS } from "./rfp-labels";
 import {
   gradeFields,
@@ -401,6 +405,7 @@ export async function getRfpSessionByRecordId(
 export async function committeeAccounts(): Promise<
   (Account & { committeeName: string })[]
 > {
+  if (!committeeConfigured()) return [];
   const rows = await getDb()
     .select(accountColumns)
     .from(user)
